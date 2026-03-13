@@ -33,10 +33,6 @@ describe('Auth Component', () => {
     expect(screen.getByLabelText(/Email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Password/i)).toBeInTheDocument();
 
-    // Check toggle for profile (Sou Passageiro / Sou Motorista)
-    expect(screen.getByRole('radio', { name: /Sou Passageiro/i })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /Sou Motorista/i })).toBeInTheDocument();
-
     // Main submit button
     expect(screen.getByRole('button', { name: /Entrar/i })).toBeInTheDocument();
 
@@ -44,13 +40,42 @@ describe('Auth Component', () => {
     expect(screen.getByRole('button', { name: /Criar Conta/i })).toBeInTheDocument();
   });
 
-  it('can toggle between Login and Resgisto modes', () => {
+  it('NÃO renderiza o Toggle de Perfil em modo Login', () => {
+    render(<Auth />);
+
+    // Em modo Login, os radio buttons de perfil NÃO devem estar presentes
+    expect(screen.queryByRole('radio', { name: /Sou Passageiro/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /Sou Motorista/i })).not.toBeInTheDocument();
+  });
+
+  it('NÃO renderiza campos Nome e Telefone em modo Login', () => {
+    render(<Auth />);
+
+    // Em modo Login, estes campos NÃO devem estar presentes
+    expect(screen.queryByLabelText(/Nome Completo/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Telefone/i)).not.toBeInTheDocument();
+  });
+
+  it('renderiza o Toggle de Perfil, Nome e Telefone em modo Criar Conta', () => {
+    render(<Auth />);
+
+    // Mudar para modo Criar Conta
+    fireEvent.click(screen.getByRole('button', { name: /Criar Conta/i }));
+
+    // Em modo Criar Conta, o toggle e os campos devem estar presentes
+    expect(screen.getByRole('radio', { name: /Sou Passageiro/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Sou Motorista/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Nome Completo/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Telefone/i)).toBeInTheDocument();
+  });
+
+  it('can toggle between Login and Registo modes', () => {
     render(<Auth />);
 
     const toggleModeBtn = screen.getByRole('button', { name: /Criar Conta/i });
     fireEvent.click(toggleModeBtn);
 
-    // Main submit button should say Registo or similar
+    // Main submit button should say Registar
     expect(screen.getByRole('button', { name: /Registar/i })).toBeInTheDocument();
 
     // Toggle back to login
@@ -60,8 +85,11 @@ describe('Auth Component', () => {
     expect(screen.getByRole('button', { name: /Entrar/i })).toBeInTheDocument();
   });
 
-  it('can select different profile types', () => {
+  it('can select different profile types in Criar Conta mode', () => {
     render(<Auth />);
+
+    // Mudar para modo Criar Conta para ver os radio buttons
+    fireEvent.click(screen.getByRole('button', { name: /Criar Conta/i }));
 
     const passengerRadio = screen.getByRole('radio', { name: /Sou Passageiro/i });
     const driverRadio = screen.getByRole('radio', { name: /Sou Motorista/i });
@@ -75,7 +103,7 @@ describe('Auth Component', () => {
     expect(driverRadio).toBeChecked();
   });
 
-  it('chama signUp com email, password e user_type ao submeter em modo Criar Conta', async () => {
+  it('chama signUp com o payload correto (tipo_perfil, nome_completo, telefone) ao submeter em modo Criar Conta', async () => {
     render(<Auth />);
 
     // Mudar para modo "Criar Conta"
@@ -88,18 +116,68 @@ describe('Auth Component', () => {
     fireEvent.change(screen.getByLabelText(/Password/i), {
       target: { value: 'password123' },
     });
+    fireEvent.change(screen.getByLabelText(/Nome Completo/i), {
+      target: { value: 'Nome Teste' },
+    });
+    fireEvent.change(screen.getByLabelText(/Telefone/i), {
+      target: { value: '999999999' },
+    });
 
-    // Submeter o formulário
+    // Submeter o formulário (perfil padrão é Passageiro)
     fireEvent.click(screen.getByRole('button', { name: /Registar/i }));
 
-    // Verificar que signUp foi chamado com os dados corretos
+    // Verificar que signUp foi chamado com o payload correto
     await waitFor(() => {
       expect(supabase.auth.signUp).toHaveBeenCalledTimes(1);
       expect(supabase.auth.signUp).toHaveBeenCalledWith({
         email: 'teste@boleia.co.ao',
         password: 'password123',
         options: {
-          data: { user_type: 'passageiro' },
+          data: {
+            tipo_perfil: 'Passageiro',
+            nome_completo: 'Nome Teste',
+            telefone: '999999999',
+          },
+        },
+      });
+    });
+  });
+
+  it('chama signUp com tipo_perfil Motorista quando o toggle Motorista está selecionado', async () => {
+    render(<Auth />);
+
+    // Mudar para modo "Criar Conta"
+    fireEvent.click(screen.getByRole('button', { name: /Criar Conta/i }));
+
+    // Selecionar Motorista
+    fireEvent.click(screen.getByRole('radio', { name: /Sou Motorista/i }));
+
+    // Preencher o formulário
+    fireEvent.change(screen.getByLabelText(/Email/i), {
+      target: { value: 'motorista@boleia.co.ao' },
+    });
+    fireEvent.change(screen.getByLabelText(/Password/i), {
+      target: { value: 'password123' },
+    });
+    fireEvent.change(screen.getByLabelText(/Nome Completo/i), {
+      target: { value: 'Nome Teste' },
+    });
+    fireEvent.change(screen.getByLabelText(/Telefone/i), {
+      target: { value: '999999999' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Registar/i }));
+
+    await waitFor(() => {
+      expect(supabase.auth.signUp).toHaveBeenCalledWith({
+        email: 'motorista@boleia.co.ao',
+        password: 'password123',
+        options: {
+          data: {
+            tipo_perfil: 'Motorista',
+            nome_completo: 'Nome Teste',
+            telefone: '999999999',
+          },
         },
       });
     });

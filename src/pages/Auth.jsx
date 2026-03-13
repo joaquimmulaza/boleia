@@ -9,10 +9,12 @@ import { supabase } from '../lib/supabase';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const [profileType, setProfileType] = useState('passageiro');
+  const [profileType, setProfileType] = useState('Passageiro');
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [nome, setNome] = useState('');
+  const [telefone, setTelefone] = useState('');
   const [feedback, setFeedback] = useState({ type: '', message: '' });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -30,7 +32,13 @@ const Auth = () => {
       const result = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { user_type: profileType } },
+        options: {
+          data: {
+            tipo_perfil: profileType,
+            nome_completo: nome,
+            telefone: telefone,
+          },
+        },
       });
       error = result.error;
     }
@@ -44,6 +52,14 @@ const Auth = () => {
     } else {
       setFeedback({ type: 'success', message: 'Bem-vindo de volta!' });
     }
+  };
+
+  const handleToggleMode = () => {
+    setIsLogin(!isLogin);
+    setFeedback({ type: '', message: '' });
+    setNome('');
+    setTelefone('');
+    setProfileType('Passageiro');
   };
 
   return (
@@ -61,38 +77,71 @@ const Auth = () => {
           </p>
         </div>
 
-        {/* Profile Toggle */}
-        <div className="px-8 mb-8">
-          <div className="flex relative h-14 w-full items-center justify-center rounded-full bg-gray-50 p-1.5 border border-gray-200 shadow-inner">
-            <label className={`flex h-full grow cursor-pointer items-center justify-center rounded-full px-4 transition-all duration-300 ${profileType === 'passageiro' ? 'bg-emerald-500 text-white shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>
-              <span className="truncate text-sm font-semibold z-10">Sou Passageiro</span>
-              <input 
-                checked={profileType === 'passageiro'} 
-                onChange={() => setProfileType('passageiro')}
-                className="sr-only" 
-                name="user-type" 
-                type="radio" 
-                value="passageiro"
-                aria-label="Sou Passageiro"
-              />
-            </label>
-            <label className={`flex h-full grow cursor-pointer items-center justify-center rounded-full px-4 transition-all duration-300 ${profileType === 'motorista' ? 'bg-emerald-500 text-white shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>
-              <span className="truncate text-sm font-semibold z-10">Sou Motorista</span>
-              <input 
-                checked={profileType === 'motorista'} 
-                onChange={() => setProfileType('motorista')}
-                className="sr-only" 
-                name="user-type" 
-                type="radio" 
-                value="motorista"
-                aria-label="Sou Motorista"
-              />
-            </label>
+        {/* Profile Toggle — apenas em modo Criar Conta */}
+        {!isLogin && (
+          <div className="px-8 mb-6">
+            <div className="flex relative h-14 w-full items-center justify-center rounded-full bg-gray-50 p-1.5 border border-gray-200 shadow-inner">
+              <label className={`flex h-full grow cursor-pointer items-center justify-center rounded-full px-4 transition-all duration-300 ${profileType === 'Passageiro' ? 'bg-emerald-500 text-white shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>
+                <span className="truncate text-sm font-semibold z-10">Sou Passageiro</span>
+                <input 
+                  checked={profileType === 'Passageiro'} 
+                  onChange={() => setProfileType('Passageiro')}
+                  className="sr-only" 
+                  name="user-type" 
+                  type="radio" 
+                  value="Passageiro"
+                  aria-label="Sou Passageiro"
+                />
+              </label>
+              <label className={`flex h-full grow cursor-pointer items-center justify-center rounded-full px-4 transition-all duration-300 ${profileType === 'Motorista' ? 'bg-emerald-500 text-white shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>
+                <span className="truncate text-sm font-semibold z-10">Sou Motorista</span>
+                <input 
+                  checked={profileType === 'Motorista'} 
+                  onChange={() => setProfileType('Motorista')}
+                  className="sr-only" 
+                  name="user-type" 
+                  type="radio" 
+                  value="Motorista"
+                  aria-label="Sou Motorista"
+                />
+              </label>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Form elements */}
         <form onSubmit={handleSubmit} className="flex flex-col gap-6 px-8 flex-grow">
+
+          {/* Campos Nome e Telefone — apenas em modo Criar Conta */}
+          {!isLogin && (
+            <>
+              <div className="flex flex-col gap-2">
+                <label htmlFor="nome" className="text-gray-500 text-sm font-medium ml-1">Nome Completo</label>
+                <input
+                  id="nome"
+                  className="flex w-full rounded-2xl border border-gray-200 bg-gray-50 text-gray-800 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400"
+                  placeholder="O seu nome completo"
+                  type="text"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label htmlFor="telefone" className="text-gray-500 text-sm font-medium ml-1">Telefone</label>
+                <input
+                  id="telefone"
+                  className="flex w-full rounded-2xl border border-gray-200 bg-gray-50 text-gray-800 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400"
+                  placeholder="+244 9XX XXX XXX"
+                  type="tel"
+                  value={telefone}
+                  onChange={(e) => setTelefone(e.target.value)}
+                  required
+                />
+              </div>
+            </>
+          )}
+
           <div className="flex flex-col gap-2">
             <label htmlFor="email" className="text-gray-500 text-sm font-medium ml-1">Email</label>
             <input 
@@ -167,7 +216,7 @@ const Auth = () => {
         <div className="mt-auto px-8 py-10 pb-12">
           <div className="flex flex-col items-center gap-4">
             <button 
-              onClick={() => { setIsLogin(!isLogin); setFeedback({ type: '', message: '' }); }}
+              onClick={handleToggleMode}
               className="text-gray-500 font-medium text-sm hover:text-emerald-600 transition-colors"
             >
               {isLogin ? 'Não tem conta? Criar Conta' : 'Já tem conta? Entrar na minha conta'}
