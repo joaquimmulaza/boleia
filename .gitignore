@@ -1,0 +1,82 @@
+# ===========================
+# Dependências
+# ===========================
+node_modules/
+
+# ===========================
+# Build / Output
+# ===========================
+dist/
+dist-ssr/
+build/
+
+# ===========================
+# Variáveis de Ambiente (SEGREDOS)
+# ===========================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# ===========================
+# Logs
+# ===========================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ===========================
+# Cache
+# ===========================
+.cache/
+.vite/
+*.tsbuildinfo
+
+# ===========================
+# Cobertura de Testes
+# ===========================
+coverage/
+.nyc_output/
+
+# ===========================
+# Ficheiros de SO
+# ===========================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ===========================
+# Editores / IDEs
+# ===========================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.bak
+
+# ===========================
+# Stitch (designs gerados localmente)
+# ===========================
+.stitch/
+
+# ===========================
+# Ficheiros temporários do Agente
+# ===========================
+stitch_auth.html
+
+# ===========================
+# Misc
+# ===========================
+*.local

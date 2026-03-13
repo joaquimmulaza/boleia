@@ -1,0 +1,25 @@
+# Contexto e Regras de Desenvolvimento (Boleia Certa)
+
+## 1. O Projeto (MVP)
+Plataforma de *matchmaking* para rotas de transporte diário e acordos de pagamento partilhado.
+Stack: React + Vite, Tailwind CSS, Lucide React (Frontend); Supabase (Backend/Auth/DB). Tudo alojado de forma 100% gratuita.
+
+## 2. Princípios de "Vibe Coding" com Disciplina (O Método Akita)
+* **TDD Obrigatório (Test-Driven Development):** NUNCA escrevas código de produção (features, componentes, rotas) sem antes escrevermos os testes correspondentes. O fluxo é: 1. Escrever Testes (e mockar o necessário) -> 2. Executar (vão falhar) -> 3. Escrever Código -> 4. Passar nos Testes.
+* **Modularidade:** Mantém os ficheiros pequenos e o código altamente modular. Se um ficheiro crescer demasiado, para e sugere uma refatoração.
+* **Um Passo de Cada Vez:** Resolve apenas o problema que foi pedido no prompt. Não tentes prever e construir funcionalidades futuras não solicitadas.
+* **Segurança Primeiro:** Nunca coloques passwords, chaves de API (como a do Supabase) ou tokens hardcoded no código. Usa sempre variáveis de ambiente (`.env`).
+* **Sem Confirmações Cegas:** Se te deparares com uma ambiguidade arquitetónica, para e pergunta. Não tomes o caminho de menor resistência se isso comprometer a qualidade.
+* **Refatoração Contínua:** Constantemente procura código morto, duplicações ou lógicas pesadas e sugere melhorias.
+
+## 3. Como a IA deve atuar
+Lê este documento antes de iniciares qualquer nova funcionalidade. Se eu te pedir para criar um componente X, a tua primeira resposta DEVE ser o código do teste para esse componente X.
+## 4. Integração com Google Stitch (Workflow de Alta Precisão)
+* Temos o MCP do Google Stitch e as `stitch-skills` instaladas.
+* **Contexto Visual Imutável:** A aplicação é estritamente sobre mobilidade urbana, transporte partilhado e boleias diárias (casa-trabalho) em Luanda, Angola. A moeda a utilizar é SEMPRE o Kwanza (Kz). O tom visual deve ser urbano, utilitário, de confiança e focado na rotina, NUNCA focado em turismo ou viagens de férias.
+* **Fluxo de Trabalho Obrigatório com Stitch (Secção a Secção):**
+  1. **TDD:** Escreves e corres os testes unitários da funcionalidade.
+  2. **Enhance Prompt:** Invocas a skill `enhance_prompt` passando os requisitos básicos e exigindo que a skill injete o "Contexto Visual Imutável" descrito acima para gerar um prompt de design perfeito.
+  3. **Geração:** Envias o prompt melhorado gerado no passo 2 para o Stitch via MCP.
+  4. **Integração:** Invocas a skill `react_components` para analisar o design gerado no Stitch e traduzi-lo fielmente para o código React do nosso projeto.
+  5. **Validação:** Ajustas o código importado para garantir que os testes do Passo 1 passam a verde.
