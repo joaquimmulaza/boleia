@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { Car, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
+/**
+ * @typedef {Readonly<{}>} AuthProps
+ * Page component — accepts no external props.
+ */
+
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [profileType, setProfileType] = useState('passageiro');

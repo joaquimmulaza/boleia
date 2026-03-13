@@ -1,9 +1,26 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
+  /* Brand colors – matches Stitch design tokens */
   --color-near-black: #111827;
   --color-confidence-green: #10b981;
   --color-soft-gray: #f9fafb;
   --color-medium-gray: #6b7280;
+  /* Tailwind standard aliases used in components */
+  --color-emerald-50: #ecfdf5;
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #059669;
+  --color-emerald-700: #047857;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-800: #1f2937;
+  --color-red-50: #fef2f2;
+  --color-red-200: #fecaca;
+  --color-red-600: #dc2626;
   --font-display: 'Plus Jakarta Sans', sans-serif;
 }
