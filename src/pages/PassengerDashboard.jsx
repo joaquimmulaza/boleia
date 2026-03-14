@@ -1,0 +1,300 @@
+import React, { useState } from 'react';
+import { MapPin, Navigation, Search, Clock, ChevronRight } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+
+/**
+ * @typedef {Readonly<{}>} PassengerDashboardProps
+ * Page component — accepts no external props.
+ */
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Formats a number as Angolan Kwanza (e.g. 25000 → "25.000 Kz/mês")
+ * @param {number} value
+ * @returns {string}
+ */
+const formatKwanza = (value) => {
+  return `${Number(value).toLocaleString('pt-PT')} Kz/mês`;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RouteCard sub-component
+// ─────────────────────────────────────────────────────────────────────────────
+const RouteCard = ({ rota }) => (
+  <div
+    data-testid="route-card"
+    className="bg-white rounded-xl overflow-hidden flex items-stretch"
+    style={{
+      boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
+      borderLeft: '4px solid #10B981',
+    }}
+  >
+    {/* Main content */}
+    <div className="flex-1 p-4 space-y-2">
+      {/* Route origin → destination */}
+      <div className="flex items-center gap-2">
+        <Navigation size={15} className="text-emerald-500 shrink-0" />
+        <p className="text-[#1A202C] font-bold text-sm leading-tight">
+          {rota.ponto_partida}
+          <span className="text-[#718096] font-normal mx-1">→</span>
+          {rota.ponto_chegada}
+        </p>
+      </div>
+
+      {/* Pickup time */}
+      <div className="flex items-center gap-1.5">
+        <Clock size={13} className="text-[#718096]" />
+        <span className="text-[#718096] text-xs">{rota.hora_recolha}</span>
+      </div>
+
+      {/* Price */}
+      <div>
+        <p className="text-emerald-500 font-extrabold text-base leading-tight">
+          {formatKwanza(rota.valor_mensal_total)}
+        </p>
+        <p className="text-[#718096] text-[11px] mt-0.5">
+          divisão de custos entre passageiros
+        </p>
+      </div>
+    </div>
+
+    {/* Chevron */}
+    <div className="flex items-center px-3">
+      <ChevronRight size={18} className="text-[#CBD5E0]" />
+    </div>
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main component
+// ─────────────────────────────────────────────────────────────────────────────
+const PassengerDashboard = () => {
+  const [pontoPartida, setPontoPartida] = useState('');
+  const [pontoChegada, setPontoChegada] = useState('');
+  const [rotas, setRotas] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [pesquisaFeita, setPesquisaFeita] = useState(false);
+
+  // ─── Pesquisa no Supabase ──────────────────────────────────────────────────
+  const handlePesquisar = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setPesquisaFeita(false);
+
+    const { data, error } = await supabase
+      .from('rotas_diarias')
+      .select('id, ponto_partida, ponto_chegada, hora_recolha, valor_mensal_total')
+      .ilike('ponto_partida', `%${pontoPartida}%`);
+
+    // Client-side filter for ponto_chegada (keeps mock compatibility with single-ilike chain)
+    const filtered = error || !data
+      ? []
+      : pontoChegada
+        ? data.filter((r) =>
+            r.ponto_chegada.toLowerCase().includes(pontoChegada.toLowerCase())
+          )
+        : data;
+
+    setIsLoading(false);
+    setPesquisaFeita(true);
+
+    setRotas(filtered);
+  };
+
+  return (
+    <div
+      className="font-[Plus_Jakarta_Sans,sans-serif] min-h-screen bg-[#F7F8FA] text-gray-800 antialiased flex flex-col"
+    >
+      {/* ── Header ── */}
+      <header className="sticky top-0 z-50 flex items-center justify-between bg-white px-4 py-3 border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          <div className="bg-emerald-500/10 p-1.5 rounded-lg">
+            <Navigation size={20} className="text-emerald-500" />
+          </div>
+          <h1 className="text-[#1A202C] text-base font-bold tracking-tight">
+            Boleia Certa
+          </h1>
+        </div>
+        <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1.5 rounded-full">
+          <MapPin size={12} className="text-emerald-500" />
+          <span className="text-emerald-700 text-xs font-semibold">Luanda, AO</span>
+        </div>
+      </header>
+
+      {/* ── Map Placeholder ── */}
+      <div
+        data-testid="map-container"
+        className="relative w-full bg-[#E2E8F0] flex items-center justify-center"
+        style={{ minHeight: '45vw', maxHeight: '260px', height: '45vw' }}
+        aria-label="Mapa"
+      >
+        {/* Subtle grid overlay */}
+        <div
+          className="absolute inset-0 opacity-20"
+          style={{
+            backgroundImage:
+              'linear-gradient(#94A3B8 1px, transparent 1px), linear-gradient(90deg, #94A3B8 1px, transparent 1px)',
+            backgroundSize: '28px 28px',
+          }}
+        />
+        {/* Map pin icon */}
+        <div className="relative z-10 flex flex-col items-center gap-2">
+          <div
+            className="bg-white rounded-full p-3"
+            style={{ boxShadow: '0 4px 12px rgba(16,185,129,0.3)' }}
+          >
+            <MapPin size={28} className="text-emerald-500" />
+          </div>
+          <span className="text-[#718096] text-xs font-medium bg-white/80 px-2 py-0.5 rounded-full">
+            Mapa
+          </span>
+        </div>
+      </div>
+
+      {/* ── Floating Search Card ── */}
+      <div className="px-4 -mt-5 z-20 relative">
+        <form
+          onSubmit={handlePesquisar}
+          className="bg-white rounded-2xl p-4 space-y-3"
+          style={{ boxShadow: '0 8px 24px rgba(0,0,0,0.10)' }}
+        >
+          {/* Ponto de Partida */}
+          <div className="space-y-1">
+            <label
+              htmlFor="pontoPartida"
+              className="text-[#1A202C] text-xs font-semibold flex items-center gap-1"
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
+              Ponto de Partida
+            </label>
+            <input
+              id="pontoPartida"
+              type="text"
+              className="w-full bg-[#F7F8FA] rounded-xl h-11 px-4 text-[#1A202C] text-sm focus:ring-2 focus:ring-emerald-500/40 transition-all outline-none placeholder-[#A0AEC0] border border-transparent focus:border-emerald-300"
+              placeholder="ex: Talatona"
+              value={pontoPartida}
+              onChange={(e) => setPontoPartida(e.target.value)}
+            />
+          </div>
+
+          {/* Ponto de Chegada */}
+          <div className="space-y-1">
+            <label
+              htmlFor="pontoChegada"
+              className="text-[#1A202C] text-xs font-semibold flex items-center gap-1"
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" />
+              Ponto de Chegada
+            </label>
+            <input
+              id="pontoChegada"
+              type="text"
+              className="w-full bg-[#F7F8FA] rounded-xl h-11 px-4 text-[#1A202C] text-sm focus:ring-2 focus:ring-emerald-500/40 transition-all outline-none placeholder-[#A0AEC0] border border-transparent focus:border-emerald-300"
+              placeholder="ex: Maianga"
+              value={pontoChegada}
+              onChange={(e) => setPontoChegada(e.target.value)}
+            />
+          </div>
+
+          {/* Search button */}
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <Search size={16} />
+            {isLoading ? 'A procurar...' : 'Procurar Boleia'}
+          </button>
+        </form>
+      </div>
+
+      {/* ── Route Results ── */}
+      <main className="flex-1 px-4 pt-5 pb-24 space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-[#1A202C] text-sm font-bold">Rotas Disponíveis</h2>
+          {pesquisaFeita && (
+            <span className="text-[#718096] text-xs">
+              {rotas.length} resultado{rotas.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+
+        {/* Results list */}
+        <div data-testid="route-results-list" className="space-y-3">
+          {rotas.map((rota) => (
+            <RouteCard key={rota.id} rota={rota} />
+          ))}
+
+          {/* Empty state - only after a search */}
+          {pesquisaFeita && rotas.length === 0 && (
+            <div className="flex flex-col items-center py-10 text-center">
+              <div className="bg-[#E2E8F0] p-4 rounded-full mb-3">
+                <MapPin size={28} className="text-[#A0AEC0]" />
+              </div>
+              <p className="text-[#1A202C] font-semibold text-sm">
+                Nenhuma rota encontrada
+              </p>
+              <p className="text-[#718096] text-xs mt-1">
+                Tenta outros pontos de partida ou chegada.
+              </p>
+            </div>
+          )}
+
+          {/* Placeholder cards before search */}
+          {!pesquisaFeita && (
+            <div className="flex flex-col items-center py-10 text-center">
+              <div className="bg-emerald-50 p-4 rounded-full mb-3">
+                <Search size={28} className="text-emerald-400" />
+              </div>
+              <p className="text-[#1A202C] font-semibold text-sm">
+                Pesquisa uma rota
+              </p>
+              <p className="text-[#718096] text-xs mt-1">
+                Indica o teu ponto de partida e chegada para ver boleias disponíveis.
+              </p>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* ── Bottom Navigation ── */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 px-6 pb-6 pt-3 flex justify-around items-center z-50">
+        <a href="#" className="flex flex-col items-center gap-1 group">
+          <span className="text-emerald-500 text-xl">🏠</span>
+          <span className="text-[10px] font-semibold text-emerald-500 uppercase tracking-wider">
+            Início
+          </span>
+        </a>
+        <a href="#" className="flex flex-col items-center gap-1 group">
+          <span className="text-[#718096] group-hover:text-emerald-500 transition-colors text-xl">
+            🔍
+          </span>
+          <span className="text-[10px] font-semibold text-[#718096] group-hover:text-emerald-500 uppercase tracking-wider">
+            Pesquisa
+          </span>
+        </a>
+        <a href="#" className="flex flex-col items-center gap-1 group">
+          <span className="text-[#718096] group-hover:text-emerald-500 transition-colors text-xl">
+            🤝
+          </span>
+          <span className="text-[10px] font-semibold text-[#718096] group-hover:text-emerald-500 uppercase tracking-wider">
+            Acordos
+          </span>
+        </a>
+        <a href="#" className="flex flex-col items-center gap-1 group">
+          <span className="text-[#718096] group-hover:text-emerald-500 transition-colors text-xl">
+            👤
+          </span>
+          <span className="text-[10px] font-semibold text-[#718096] group-hover:text-emerald-500 uppercase tracking-wider">
+            Perfil
+          </span>
+        </a>
+      </nav>
+    </div>
+  );
+};
+
+export default PassengerDashboard;
