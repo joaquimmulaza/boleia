@@ -13,6 +13,11 @@ vi.mock('../lib/supabase', () => ({
   },
 }));
 
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => mockNavigate,
+}));
+
 // Importar o mock DEPOIS do vi.mock para ter acesso às funções mockadas
 import { supabase } from '../lib/supabase';
 
@@ -21,8 +26,9 @@ describe('Auth Component', () => {
     // Limpar o histórico de chamadas entre testes
     vi.clearAllMocks();
     // Mock por defeito retorna sucesso sem erro
-    supabase.auth.signUp.mockResolvedValue({ data: {}, error: null });
-    supabase.auth.signInWithPassword.mockResolvedValue({ data: {}, error: null });
+    supabase.auth.signUp.mockResolvedValue({ data: { user: { user_metadata: { tipo_perfil: 'Passageiro' } } }, error: null });
+    supabase.auth.signInWithPassword.mockResolvedValue({ data: { user: { user_metadata: { tipo_perfil: 'Passageiro' } } }, error: null });
+    mockNavigate.mockClear();
   });
 
   it('renders correctly in Login mode by default', () => {
@@ -205,5 +211,49 @@ describe('Auth Component', () => {
         password: 'password123',
       });
     });
+  });
+
+  it('após login bem-sucedido como Motorista, redireciona para a rota apropriada', async () => {
+    supabase.auth.signInWithPassword.mockResolvedValueOnce({
+      data: { user: { user_metadata: { tipo_perfil: 'Motorista' } } },
+      error: null
+    });
+
+    render(<Auth />);
+    
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'teste@boleia.co.ao' } });
+    fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: 'password123' } });
+    fireEvent.click(screen.getByRole('button', { name: /Entrar/i }));
+
+    // Aguardar feedback de sucesso na interface
+    await waitFor(() => {
+      expect(screen.getByText('Bem-vindo de volta!')).toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/app/viagens');
+    }, { timeout: 2000 });
+  });
+
+  it('após login bem-sucedido como Passageiro, redireciona para a rota principal', async () => {
+    supabase.auth.signInWithPassword.mockResolvedValueOnce({
+      data: { user: { user_metadata: { tipo_perfil: 'Passageiro' } } },
+      error: null
+    });
+
+    render(<Auth />);
+    
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'teste@boleia.co.ao' } });
+    fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: 'password123' } });
+    fireEvent.click(screen.getByRole('button', { name: /Entrar/i }));
+
+    // Aguardar feedback de sucesso na interface
+    await waitFor(() => {
+      expect(screen.getByText('Bem-vindo de volta!')).toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/app');
+    }, { timeout: 2000 });
   });
 });

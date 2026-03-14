@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Car, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -8,6 +9,7 @@ import { supabase } from '../lib/supabase';
  */
 
 const Auth = () => {
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [profileType, setProfileType] = useState('Passageiro');
   const [showPassword, setShowPassword] = useState(false);
@@ -24,10 +26,12 @@ const Auth = () => {
     setIsLoading(true);
 
     let error;
+    let sessionUser = null;
 
     if (isLogin) {
       const result = await supabase.auth.signInWithPassword({ email, password });
       error = result.error;
+      sessionUser = result.data?.user;
     } else {
       const result = await supabase.auth.signUp({
         email,
@@ -41,6 +45,7 @@ const Auth = () => {
         },
       });
       error = result.error;
+      sessionUser = result.data?.user;
     }
 
     setIsLoading(false);
@@ -49,8 +54,26 @@ const Auth = () => {
       setFeedback({ type: 'error', message: error.message });
     } else if (!isLogin) {
       setFeedback({ type: 'success', message: 'Registo efetuado! Verifique o seu email para confirmar a conta.' });
+      
+      const tipoPerfil = sessionUser?.user_metadata?.tipo_perfil || profileType;
+      setTimeout(() => {
+        if (tipoPerfil === 'Motorista') {
+          navigate('/app/viagens');
+        } else {
+          navigate('/app');
+        }
+      }, 1000);
     } else {
       setFeedback({ type: 'success', message: 'Bem-vindo de volta!' });
+      
+      const tipoPerfil = sessionUser?.user_metadata?.tipo_perfil || 'Passageiro';
+      setTimeout(() => {
+        if (tipoPerfil === 'Motorista') {
+          navigate('/app/viagens');
+        } else {
+          navigate('/app');
+        }
+      }, 1000);
     }
   };
 
