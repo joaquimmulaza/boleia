@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Navigation, Search, Clock, ChevronRight } from 'lucide-react';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { supabase } from '../lib/supabase';
 
 /**
@@ -78,25 +79,44 @@ const PassengerDashboard = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [pesquisaFeita, setPesquisaFeita] = useState(false);
 
+  const mapContainerRef = useRef(null);
+  const mapRef = useRef(null);
+
+  useEffect(() => {
+    if (mapRef.current) return;
+    if (import.meta.env.MODE === 'test') return;
+    
+    import('maplibre-gl').then((module) => {
+      const maplibregl = module.default;
+      mapRef.current = new maplibregl.Map({
+        container: mapContainerRef.current,
+        style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+        center: [13.2343, -8.8368],
+        zoom: 12
+      });
+    }).catch(() => {});
+  }, []);
+
   // ─── Pesquisa no Supabase ──────────────────────────────────────────────────
   const handlePesquisar = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setPesquisaFeita(false);
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('rotas_diarias')
-      .select('id, ponto_partida, ponto_chegada, hora_recolha, valor_mensal_total')
-      .ilike('ponto_partida', `%${pontoPartida}%`);
+      .select('id, ponto_partida, ponto_chegada, hora_recolha, valor_mensal_total');
+      
+    if (pontoPartida) {
+      query = query.ilike('ponto_partida', `%${pontoPartida}%`);
+    }
+    if (pontoChegada) {
+      query = query.ilike('ponto_chegada', `%${pontoChegada}%`);
+    }
 
-    // Client-side filter for ponto_chegada (keeps mock compatibility with single-ilike chain)
-    const filtered = error || !data
-      ? []
-      : pontoChegada
-        ? data.filter((r) =>
-            r.ponto_chegada.toLowerCase().includes(pontoChegada.toLowerCase())
-          )
-        : data;
+    const { data, error } = await query;
+
+    const filtered = error || !data ? [] : data;
 
     setIsLoading(false);
     setPesquisaFeita(true);
@@ -127,32 +147,11 @@ const PassengerDashboard = () => {
       {/* ── Map Placeholder ── */}
       <div
         data-testid="map-container"
-        className="relative w-full bg-[#E2E8F0] flex items-center justify-center"
+        ref={mapContainerRef}
+        className="relative w-full bg-[#E2E8F0]"
         style={{ minHeight: '45vw', maxHeight: '260px', height: '45vw' }}
         aria-label="Mapa"
-      >
-        {/* Subtle grid overlay */}
-        <div
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage:
-              'linear-gradient(#94A3B8 1px, transparent 1px), linear-gradient(90deg, #94A3B8 1px, transparent 1px)',
-            backgroundSize: '28px 28px',
-          }}
-        />
-        {/* Map pin icon */}
-        <div className="relative z-10 flex flex-col items-center gap-2">
-          <div
-            className="bg-white rounded-full p-3"
-            style={{ boxShadow: '0 4px 12px rgba(16,185,129,0.3)' }}
-          >
-            <MapPin size={28} className="text-emerald-500" />
-          </div>
-          <span className="text-[#718096] text-xs font-medium bg-white/80 px-2 py-0.5 rounded-full">
-            Mapa
-          </span>
-        </div>
-      </div>
+      />
 
       {/* ── Floating Search Card ── */}
       <div className="px-4 -mt-5 z-20 relative">

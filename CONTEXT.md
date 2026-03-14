@@ -23,3 +23,12 @@ Lê este documento antes de iniciares qualquer nova funcionalidade. Se eu te ped
   3. **Geração:** Envias o prompt melhorado gerado no passo 2 para o Stitch via MCP.
   4. **Integração:** Invocas a skill `react_components` para analisar o design gerado no Stitch e traduzi-lo fielmente para o código React do nosso projeto.
   5. **Validação:** Ajustas o código importado para garantir que os testes do Passo 1 passam a verde.
+
+## 5. Master Version Control (Commit Automático)
+* Seguimos a regra de "Commit Often, With Clear Messages" do roadmap de Vibe Coding.
+* O **Agente Integrador** (ou o último agente a trabalhar numa *feature*) tem a OBRIGAÇÃO de fazer o commit do código SE, E SÓ SE, todos os testes (QA, AST Validator) passarem a 100% (Verde).
+* **Fluxo de Git Obrigatório após o Sucesso:**
+  1. Executar `git add .`
+  2. Executar `git commit -m "[Tipo]: Breve descrição do que foi feito e porquê"`. (Tipos válidos: `feat`, `fix`, `ui`, `refactor`, `test`, `chore`). A mensagem de commit deve ser clara e explicar *o que* mudou e *porquê*.
+  3. Executar `git push`.
+* Se os testes estiverem a falhar, o agente é ESTRITAMENTE PROIBIDO de fazer commit do código quebrado.
