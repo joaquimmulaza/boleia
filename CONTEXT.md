@@ -11,6 +11,7 @@ Stack: React + Vite, Tailwind CSS, Lucide React (Frontend); Supabase (Backend/Au
 * **Segurança Primeiro:** Nunca coloques passwords, chaves de API (como a do Supabase) ou tokens hardcoded no código. Usa sempre variáveis de ambiente (`.env`).
 * **Sem Confirmações Cegas:** Se te deparares com uma ambiguidade arquitetónica, para e pergunta. Não tomes o caminho de menor resistência se isso comprometer a qualidade.
 * **Refatoração Contínua:** Constantemente procura código morto, duplicações ou lógicas pesadas e sugere melhorias.
+* **Integração de Rotas Contínua:** Sempre que criares uma nova página (`.jsx`), tens OBRIGATORIAMENTE de ir ao ficheiro `src/App.jsx` e registar a nova rota correspondente dentro do `react-router-dom`. Além disso, deves verificar se os links de navegação (como os do `MainLayout.jsx`) precisam de ser atualizados para apontar para a nova página.
 
 ## 3. Como a IA deve atuar
 Lê este documento antes de iniciares qualquer nova funcionalidade. Se eu te pedir para criar um componente X, a tua primeira resposta DEVE ser o código do teste para esse componente X.

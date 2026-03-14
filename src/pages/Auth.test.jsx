@@ -231,7 +231,7 @@ describe('Auth Component', () => {
     });
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/app/viagens');
+      expect(mockNavigate).toHaveBeenCalledWith('/motorista');
     }, { timeout: 2000 });
   });
 
@@ -253,7 +253,7 @@ describe('Auth Component', () => {
     });
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/app');
+      expect(mockNavigate).toHaveBeenCalledWith('/passageiro');
     }, { timeout: 2000 });
   });
 });

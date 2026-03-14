@@ -58,9 +58,9 @@ const Auth = () => {
       const tipoPerfil = sessionUser?.user_metadata?.tipo_perfil || profileType;
       setTimeout(() => {
         if (tipoPerfil === 'Motorista') {
-          navigate('/app/viagens');
+          navigate('/motorista');
         } else {
-          navigate('/app');
+          navigate('/passageiro');
         }
       }, 1000);
     } else {
@@ -69,9 +69,9 @@ const Auth = () => {
       const tipoPerfil = sessionUser?.user_metadata?.tipo_perfil || 'Passageiro';
       setTimeout(() => {
         if (tipoPerfil === 'Motorista') {
-          navigate('/app/viagens');
+          navigate('/motorista');
         } else {
-          navigate('/app');
+          navigate('/passageiro');
         }
       }, 1000);
     }
