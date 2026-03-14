@@ -5,6 +5,7 @@ import Auth from './pages/Auth';
 import MainLayout from './layouts/MainLayout';
 import PassengerDashboard from './pages/PassengerDashboard';
 import DriverDashboard from './pages/DriverDashboard';
+import ProtectedRoute from './components/ProtectedRoute';
 
 const RootRedirect = () => {
   const [loading, setLoading] = useState(true);
@@ -41,12 +42,20 @@ function App() {
       <Routes>
         <Route path="/" element={<RootRedirect />} />
         <Route path="/auth" element={<Auth />} />
-        
-        {/* Rotas Protegidas envolvidas pelo MainLayout */}
+
+        {/* Rotas Protegidas envolvidas pelo MainLayout + ProtectedRoute (RBAC) */}
         <Route element={<MainLayout />}>
-          <Route path="/passageiro" element={<PassengerDashboard />} />
-          <Route path="/motorista" element={<DriverDashboard />} />
-          <Route path="/perfil" element={<div className="p-4 text-center mt-10 text-gray-500 font-semibold">Perfil (Em construção)</div>} />
+          <Route element={<ProtectedRoute allowedRole="Passageiro" />}>
+            <Route path="/passageiro" element={<PassengerDashboard />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRole="Motorista" />}>
+            <Route path="/motorista" element={<DriverDashboard />} />
+          </Route>
+
+          <Route element={<ProtectedRoute />}>
+            <Route path="/perfil" element={<div className="p-4 text-center mt-10 text-gray-500 font-semibold">Perfil (Em construção)</div>} />
+          </Route>
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
