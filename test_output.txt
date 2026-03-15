@@ -1,0 +1,864 @@
+﻿
+[1m[46m RUN [49m[22m [36mv4.1.0 [39m[90mC:/boleia-certa[39m
+
+ [31mÔØ»[39m src/pages/AbsenceTracker.test.jsx [2m([22m[2m14 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[33m 2802[2mms[22m[39m
+       [33m[2mÔ£ô[22m[39m renderiza o t├¡tulo da p├ígina [33m 347[2mms[22m[39m
+       [32mÔ£ô[39m renderiza um bot├úo "Registar Falta"[32m 61[2mms[22m[39m
+       [32mÔ£ô[39m exibe a mensagem "Nenhuma falta registada" quando n├úo h├í faltas[32m 34[2mms[22m[39m
+[31m       [31m├ù[31m exibe o total de descontos como 0 Kz quando n├úo h├í faltas[39m[33m 1018[2mms[22m[39m
+       [32mÔ£ô[39m calcula e exibe o total de descontos corretamente com m├║ltiplas faltas[32m 24[2mms[22m[39m
+       [32mÔ£ô[39m chama supabase.from("faltas") para buscar as faltas[32m 11[2mms[22m[39m
+       [32mÔ£ô[39m filtra por .eq("id_acordo", acordoId)[32m 7[2mms[22m[39m
+       [32mÔ£ô[39m exibe um cart├úo/item por cada falta devolvida pelo Supabase[32m 16[2mms[22m[39m
+       [32mÔ£ô[39m mostra a data da falta[32m 31[2mms[22m[39m
+       [32mÔ£ô[39m mostra o tipo da falta (Passageiro/Motorista)[32m 14[2mms[22m[39m
+[31m       [31m├ù[31m mostra o valor do desconto em Kz[39m[33m 1016[2mms[22m[39m
+       [32mÔ£ô[39m o modal N├âO est├í vis├¡vel antes de clicar em "Registar Falta"[32m 59[2mms[22m[39m
+       [32mÔ£ô[39m abre o modal ao clicar em "Registar Falta"[32m 81[2mms[22m[39m
+       [32mÔ£ô[39m o modal cont├®m os campos: Data, Tipo e Observa├º├úo[32m 77[2mms[22m[39m
+node.exe : 
+At C:\Program Files\nodejs\npx.ps1:16 char:5
++     & "$basedir/node$exe"  "$basedir/node_modules/npm/bin/npx-cli.js" ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[31mÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[39m[1m[41m Failed Tests 2 [49m[22m[31mÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[39m
+
+[41m[1m FAIL [22m[49m src/pages/AbsenceTracker.test.jsx[2m > [22mAbsenceTracker Component[2m > [22mEstado Vazio e Totais[2m > [22mexibe o total de descontos como 0 Kz quando n├úo h├í faltas
+[31m[1mTestingLibraryElementError[22m[39m: Unable to find an element with the text: /0 Kz/i. This could be because the text is broken up by multiple elements. In this case, you can provide a function 
+for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"font-[Plus_Jakarta_Sans,sans-serif] bg-[#f6f8f6] text-slate-900 min-h-screen flex flex-col"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"sticky top-0 z-10 bg-[#f6f8f6]/80 backdrop-blur-md px-4 py-4 flex items-center gap-4"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"Voltar"[39m
+          [33mclass[39m=[32m"w-10 h-10 flex items-center justify-center rounded-full hover:bg-emerald-500/10 transition-colors"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"lucide lucide-arrow-left text-slate-900"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m12 19-7-7 7-7"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M19 12H5"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+        [36m<h1[39m
+          [33mclass[39m=[32m"text-xl font-bold tracking-tight"[39m
+        [36m>[39m
+          [0mRegisto de Faltas[0m
+        [36m</h1>[39m
+      [36m</header>[39m
+      [36m<main[39m
+        [33mclass[39m=[32m"flex-1 px-4 pb-32"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"mt-4 p-6 bg-emerald-500/10 rounded-xl border border-emerald-500/20"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-emerald-500 font-semibold text-sm uppercase tracking-wider"[39m
+          [36m>[39m
+            [0mTotal a Descontar[0m
+          [36m</p>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-baseline gap-1 mt-1"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"text-3xl font-bold text-slate-900"[39m
+            [36m>[39m
+              [0m0[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"text-lg font-semibold text-slate-600"[39m
+            [36m>[39m
+              [0mKz[0m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"mt-4 flex items-center gap-2 text-xs text-slate-500"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mclass[39m=[32m"lucide lucide-info"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"16"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"16"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<circle[39m
+                [33mcx[39m=[32m"12"[39m
+                [33mcy[39m=[32m"12"[39m
+                [33mr[39m=[32m"10"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M12 16v-4"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M12 8h.01"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [36m<span>[39m
+              [0mCalculado com base nos acordos ativos[0m
+            [36m</span>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"mt-8 mb-4 flex justify-between items-center"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mclass[39m=[32m"text-lg font-bold"[39m
+          [36m>[39m
+            [0mHist├│rico de Aus├¬ncias[0m
+          [36m</h2>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-sm text-emerald-500 font-medium"[39m
+          [36m>[39m
+            [0mEste m├¬s[0m
+          [36m</span>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"space-y-3"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"text-center py-12 flex flex-col items-center justify-center space-y-3"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"bg-emerald-50 text-emerald-400 p-4 rounded-full"[39m
+            [36m>[39m
+              [36m<svg[39m
+                [33maria-hidden[39m=[32m"true"[39m
+                [33mclass[39m=[32m"lucide lucide-calendar"[39m
+                [33mfill[39m=[32m"none"[39m
+                [33mheight[39m=[32m"48"[39m
+                [33mstroke[39m=[32m"currentColor"[39m
+                [33mstroke-linecap[39m=[32m"round"[39m
+                [33mstroke-linejoin[39m=[32m"round"[39m
+                [33mstroke-width[39m=[32m"1.5"[39m
+                [33mviewBox[39m=[32m"0 0 24 24"[39m
+                [33mwidth[39m=[32m"48"[39m
+                [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+              [36m>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"M8 2v4"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"M16 2v4"[39m
+                [36m/>[39m
+                [36m<rect[39m
+                  [33mheight[39m=[32m"18"[39m
+                  [33mrx[39m=[32m"2"[39m
+                  [33mwidth[39m=[32m"18"[39m
+                  [33mx[39m=[32m"3"[39m
+                  [33my[39m=[32m"4"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"M3 10h18"[39m
+                [36m/>[39m
+              [36m</svg>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"text-slate-500 font-medium"[39m
+            [36m>[39m
+              [0mNenhuma falta registada[0m
+            [36m</p>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</main>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"fixed bottom-24 right-4 z-20"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"Registar Falta"[39m
+          [33mclass[39m=[32m"bg-emerald-500 hover:bg-emerald-600 text-white flex items-center gap-2 px-5 py-3.5 rounded-full shadow-lg shadow-emerald-500/30 font-bold transition-all active:scale-95"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"lucide lucide-plus"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M5 12h14"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 5v14"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+          [36m<span>[39m
+            [0mRegistar Falta[0m
+          [36m</span>[39m
+        [36m</button>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"font-[Plus_Jakarta_Sans,sans-serif] bg-[#f6f8f6] text-slate-900 min-h-screen flex flex-col"[39m
+      [36m>[39m
+        [36m<header[39m
+          [33mclass[39m=[32m"sticky top-0 z-10 bg-[#f6f8f6]/80 backdrop-blur-md px-4 py-4 flex items-center gap-4"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-label[39m=[32m"Voltar"[39m
+            [33mclass[39m=[32m"w-10 h-10 flex items-center justify-center rounded-full hover:bg-emerald-500/10 transition-colors"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mclass[39m=[32m"lucide lucide-arrow-left text-slate-900"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"m12 19-7-7 7-7"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M19 12H5"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+          [36m</button>[39m
+          [36m<h1[39m
+            [33mclass[39m=[32m"text-xl font-bold tracking-tight"[39m
+          [36m>[39m
+            [0mRegisto de Faltas[0m
+          [36m</h1>[39m
+        [36m</header>[39m
+        [36m<main[39m
+          [33mclass[39m=[32m"flex-1 px-4 pb-32"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"mt-4 p-6 bg-emerald-500/10 rounded-xl border border-emerald-500/20"[39m
+          [36m>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"text-emerald-500 font-semibold text-sm uppercase tracking-wider"[39m
+            [36m>[39m
+              [0mTotal a Descontar[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"flex items-baseline gap-1 mt-1"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"text-3xl font-bold text-slate-900"[39m
+              [36m>[39m
+                [0m0[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"text-lg font-semibold text-slate-600"[39m
+              [36m>[39m
+                [0mKz[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"mt-4 flex items-center gap-2 text-xs text-slate-500"[39m
+            [36m>[39m
+              [36m<svg[39m
+                [33maria-hidden[39m=[32m"true"[39m
+                [33mclass[39m=[32m"lucide lucide-info"[39m
+                [33mfill[39m=[32m"none"[39m
+                [33mheight[39m=[32m"16"[39m
+                [33mstroke[39m=[32m"currentColor"[39m
+                [33mstroke-linecap[39m=[32m"round"[39m
+                [33mstroke-linejoin[39m=[32m"round"[39m
+                [33mstroke-width[39m=[32m"2"[39m
+                [33mviewBox[39m=[32m"0 0 24 24"[39m
+                [33mwidth[39m=[32m"16"[39m
+                [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+              [36m>[39m
+                [36m<circle[39m
+                  [33mcx[39m=[32m"12"[39m
+                  [33mcy[39m=[32m"12"[39m
+                  [33mr[39m=[32m"10"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"M12 16v-4"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"M12 8h.01"[39m
+                [36m/>[39m
+              [36m</svg>[39m
+              [36m<span>[39m
+                [0mCalculado com base nos acordos ativos[0m
+              [36m</span>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"mt-8 mb-4 flex justify-between items-center"[39m
+          [36m>[39m
+            [36m<h2[39m
+              [33mclass[39m=[32m"text-lg font-bold"[39m
+            [36m>[39m
+              [0mHist├│rico de Aus├¬ncias[0m
+            [36m</h2>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"text-sm text-emerald-500 font-medium"[39m
+            [36m>[39m
+              [0mEste m├¬s[0m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"space-y-3"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-center py-12 flex flex-col items-center justify-center space-y-3"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"bg-emerald-50 text-emerald-400 p-4 rounded-full"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-calendar"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"48"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"1.5"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"48"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"M8 2v4"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"M16 2v4"[39m
+                  [36m/>[39m
+                  [36m<rect[39m
+                    [33mheight[39m=[32m"18"[39m
+                    [33mrx[39m=[32m"2"[39m
+                    [33mwidth[39m=[32m"18"[39m
+                    [33mx[39m=[32m"3"[39m
+                    [33my[39m=[32m"4"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"M3 10h18"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+              [36m</div>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"text-slate-500 font-medium"[39m
+              [36m>[39m
+                [0mNenhuma falta registada[0m
+              [36m</p>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</main>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"fixed bottom-24 right-4 z-20"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-label[39m=[32m"Registar Falta"[39m
+            [33mclass[39m=[32m"bg-emerald-500 hover:bg-emerald-600 text-white flex items-center gap-2 px-5 py-3.5 rounded-full shadow-lg shadow-emerald-500/30 font-bold transition-all 
+active:scale-95"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mclass[39m=[32m"lucide lucide-plus"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M5 12h14"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M12 5v14"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [36m<span>[39m
+              [0mRegistar Falta[0m
+            [36m</span>[39m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</body>[39m
+[36m</html>[39m
+[90m [2mÔØ»[22m Proxy.waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:[2m163:27[22m[39m
+[36m [2mÔØ»[22m src/pages/AbsenceTracker.test.jsx:[2m118:13[22m[39m
+    [90m116|[39m       [34mrender[39m([33m<[39m[33mAbsenceTracker[39m [33m/[39m[33m>[39m)[33m;[39m
+    [90m117|[39m
+    [90m118|[39m       [35mawait[39m [34mwaitFor[39m(() [33m=>[39m {
+    [90m   |[39m             [31m^[39m
+    [90m119|[39m         [34mexpect[39m(
+    [90m120|[39m           screen[33m.[39m[34mgetByText[39m([36m/Total de Descontos|Total a Descontar/i[39m)
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[1/2]ÔÄ»[22m[39m
+
+[41m[1m FAIL [22m[49m src/pages/AbsenceTracker.test.jsx[2m > [22mAbsenceTracker Component[2m > [22mConte├║do do Registo de Falta[2m > [22mmostra o valor do desconto em Kz
+[31m[1mTestingLibraryElementError[22m[39m: Found multiple elements with the text: /1[\s.,]*500|1500/i
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<span[39m
+  [33mclass[39m=[32m"text-3xl font-bold text-slate-900"[39m
+[36m>[39m
+  [0m1┬á500[0m
+[36m</span>[39m
+
+Ignored nodes: comments, script, style
+[36m<p[39m
+  [33mclass[39m=[32m"text-base font-bold text-red-500"[39m
+[36m>[39m
+  [0m-[0m
+  [0m1┬á500[0m
+  [0m Kz[0m
+[36m</p>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"font-[Plus_Jakarta_Sans,sans-serif] bg-[#f6f8f6] text-slate-900 min-h-screen flex flex-col"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"sticky top-0 z-10 bg-[#f6f8f6]/80 backdrop-blur-md px-4 py-4 flex items-center gap-4"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"Voltar"[39m
+          [33mclass[39m=[32m"w-10 h-10 flex items-center justify-center rounded-full hover:bg-emerald-500/10 transition-colors"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"lucide lucide-arrow-left text-slate-900"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"m12 19-7-7 7-7"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M19 12H5"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+        [36m<h1[39m
+          [33mclass[39m=[32m"text-xl font-bold tracking-tight"[39m
+        [36m>[39m
+          [0mRegisto de Faltas[0m
+        [36m</h1>[39m
+      [36m</header>[39m
+      [36m<main[39m
+        [33mclass[39m=[32m"flex-1 px-4 pb-32"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"mt-4 p-6 bg-emerald-500/10 rounded-xl border border-emerald-500/20"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-emerald-500 font-semibold text-sm uppercase tracking-wider"[39m
+          [36m>[39m
+            [0mTotal a Descontar[0m
+          [36m</p>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-baseline gap-1 mt-1"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"text-3xl font-bold text-slate-900"[39m
+            [36m>[39m
+              [0m1┬á500[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"text-lg font-semibold text-slate-600"[39m
+            [36m>[39m
+              [0mKz[0m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"mt-4 flex items-center gap-2 text-xs text-slate-500"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mclass[39m=[32m"lucide lucide-info"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"16"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"16"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<circle[39m
+                [33mcx[39m=[32m"12"[39m
+                [33mcy[39m=[32m"12"[39m
+                [33mr[39m=[32m"10"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M12 16v-4"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M12 8h.01"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [36m<span>[39m
+              [0mCalculado com base nos acordos ativos[0m
+            [36m</span>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"mt-8 mb-4 flex justify-between items-center"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mclass[39m=[32m"text-lg font-bold"[39m
+          [36m>[39m
+            [0mHist├│rico de Aus├¬ncias[0m
+          [36m</h2>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-sm text-emerald-500 font-medium"[39m
+          [36m>[39m
+            [0mEste m├¬s[0m
+          [36m</span>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"space-y-3"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex justify-between items-center"[39m
+            [33mdata-testid[39m=[32m"absence-card"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"flex flex-col gap-1"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"flex items-center gap-2"[39m
+              [36m>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"text-base font-bold"[39m
+                [36m>[39m
+                  [0m15/10/2023[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-red-100 text-red-600"[39m
+                [36m>[39m
+                  [0mPassageiro[0m
+                [36m</span>[39m
+              [36m</div>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"text-sm text-slate-500"[39m
+              [36m>[39m
+                [0mDoente[0m
+              [36m</p>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-right"[39m
+            [36m>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"text-base font-bold text-red-500"[39m
+              [36m>[39m
+                [0m-[0m
+                [0m1┬á500[0m
+                [0m Kz[0m
+              [36m</p>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</main>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"fixed bottom-24 right-4 z-20"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"Registar Falta"[39m
+          [33mclass[39m=[32m"bg-emerald-500 hover:bg-emerald-600 text-white flex items-center gap-2 px-5 py-3.5 rounded-full shadow-lg shadow-emerald-500/30 font-bold transition-all active:scale-95"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"lucide lucide-plus"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M5 12h14"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 5v14"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+          [36m<span>[39m
+            [0mRegistar Falta[0m
+          [36m</span>[39m
+        [36m</button>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"font-[Plus_Jakarta_Sans,sans-serif] bg-[#f6f8f6] text-slate-900 min-h-screen flex flex-col"[39m
+      [36m>[39m
+        [36m<header[39m
+          [33mclass[39m=[32m"sticky top-0 z-10 bg-[#f6f8f6]/80 backdrop-blur-md px-4 py-4 flex items-center gap-4"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-label[39m=[32m"Voltar"[39m
+            [33mclass[39m=[32m"w-10 h-10 flex items-center justify-center rounded-full hover:bg-emerald-500/10 transition-colors"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mclass[39m=[32m"lucide lucide-arrow-left text-slate-900"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"m12 19-7-7 7-7"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M19 12H5"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+          [36m</button>[39m
+          [36m<h1[39m
+            [33mclass[39m=[32m"text-xl font-bold tracking-tight"[39m
+          [36m>[39m
+            [0mRegisto de Faltas[0m
+          [36m</h1>[39m
+        [36m</header>[39m
+        [36m<main[39m
+          [33mclass[39m=[32m"flex-1 px-4 pb-32"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"mt-4 p-6 bg-emerald-500/10 rounded-xl border border-emerald-500/20"[39m
+          [36m>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"text-emerald-500 font-semibold text-sm uppercase tracking-wider"[39m
+            [36m>[39m
+              [0mTotal a Descontar[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"flex items-baseline gap-1 mt-1"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"text-3xl font-bold text-slate-900"[39m
+              [36m>[39m
+                [0m1┬á500[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"text-lg font-semibold text-slate-600"[39m
+              [36m>[39m
+                [0mKz[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"mt-4 flex items-center gap-2 text-xs text-slate-500"[39m
+            [36m>[39m
+              [36m<svg[39m
+                [33maria-hidden[39m=[32m"true"[39m
+                [33mclass[39m=[32m"lucide lucide-info"[39m
+                [33mfill[39m=[32m"none"[39m
+                [33mheight[39m=[32m"16"[39m
+                [33mstroke[39m=[32m"currentColor"[39m
+                [33mstroke-linecap[39m=[32m"round"[39m
+                [33mstroke-linejoin[39m=[32m"round"[39m
+                [33mstroke-width[39m=[32m"2"[39m
+                [33mviewBox[39m=[32m"0 0 24 24"[39m
+                [33mwidth[39m=[32m"16"[39m
+                [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+              [36m>[39m
+                [36m<circle[39m
+                  [33mcx[39m=[32m"12"[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m12 passed[39m[22m[90m (14)[39m
+[2m   Start at [22m 11:10:45
+[2m   Duration [22m 5.46s[2m (transform 196ms, setup 231ms, import 530ms, tests 2.80s, environment 1.58s)[22m
+
+                  [33mcy[39m=[32m"12"[39m
+                  [33mr[39m=[32m"10"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"M12 16v-4"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"M12 8h.01"[39m
+                [36m/>[39m
+              [36m</svg>[39m
+              [36m<span>[39m
+                [0mCalculado com base nos acordos ativos[0m
+              [36m</span>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"mt-8 mb-4 flex justify-between items-center"[39m
+          [36m>[39m
+            [36m<h2[39m
+              [33mclass[39m=[32m"text-lg font-bold"[39m
+            [36m>[39m
+              [0mHist├│rico de Aus├¬ncias[0m
+            [36m</h2>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"text-sm text-emerald-500 font-medium"[39m
+            [36m>[39m
+              [0mEste m├¬s[0m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"space-y-3"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex justify-between items-center"[39m
+              [33mdata-testid[39m=[32m"absence-card"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"flex flex-col gap-1"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"flex items-center gap-2"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"text-base font-bold"[39m
+                  [36m>[39m
+                    [0m15/10/2023[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-red-100 text-red-600"[39m
+                  [36m>[39m
+                    [0mPassageiro[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"text-sm text-slate-500"[39m
+                [36m>[39m
+                  [0mDoente[0m
+                [36m</p>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-right"[39m
+              [36m>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"text-base font-bold text-red-500"[39m
+                [36m>[39m
+                  [0m-[0m
+                  [0m1┬á500[0m
+                  [0m Kz[0m
+                [36m</p>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</main>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"fixed bottom-24 right-4 z-20"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-label[39m=[32m"Registar Falta"[39m
+            [33mclass[39m=[32m"bg-emerald-500 hover:bg-emerald-600 text-white flex items-center gap-2 px-5 py-3.5 rounded-full shadow-lg shadow-emerald-500/30 font-bold transition-all 
+active:scale-95"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mclass[39m=[32m"lucide lucide-plus"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M5 12h14"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M12 5v14"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [36m<span>[39m
+              [0mRegistar Falta[0m
+            [36m</span>[39m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</body>[39m
+[36m</html>[39m
+[90m [2mÔØ»[22m Proxy.waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:[2m163:27[22m[39m
+[36m [2mÔØ»[22m src/pages/AbsenceTracker.test.jsx:[2m204:13[22m[39m
+    [90m202|[39m       [34mrender[39m([33m<[39m[33mAbsenceTracker[39m [33m/[39m[33m>[39m)[33m;[39m
+    [90m203|[39m
+    [90m204|[39m       [35mawait[39m [34mwaitFor[39m(() [33m=>[39m {
+    [90m   |[39m             [31m^[39m
+    [90m205|[39m         expect(screen.getByText(/1[\s.,]*500|1500/i)).toBeInTheDocumenÔÇª
+    [90m206|[39m       })[33m;[39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[2/2]ÔÄ»[22m[39m
+
