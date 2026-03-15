@@ -5,6 +5,7 @@ import Auth from './pages/Auth';
 import MainLayout from './layouts/MainLayout';
 import PassengerDashboard from './pages/PassengerDashboard';
 import DriverDashboard from './pages/DriverDashboard';
+import AgreementsPage from './pages/AgreementsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 const RootRedirect = () => {
@@ -47,6 +48,7 @@ function App() {
         <Route element={<MainLayout />}>
           <Route element={<ProtectedRoute allowedRole="Passageiro" />}>
             <Route path="/passageiro" element={<PassengerDashboard />} />
+            <Route path="/acordos" element={<AgreementsPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRole="Motorista" />}>

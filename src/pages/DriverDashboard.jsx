@@ -336,32 +336,6 @@ const DriverDashboard = () => {
           </form>
         </section>
       </main>
-
-      {/* ── Bottom Navigation ── */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-emerald-500/5 px-6 pb-6 pt-3 flex justify-between items-center z-50">
-        <a href="#" className="flex flex-col items-center gap-1 group">
-          <span className="text-[#718096] group-hover:text-emerald-500 transition-colors text-2xl">🏠</span>
-          <span className="text-[10px] font-semibold text-[#718096] group-hover:text-emerald-500 uppercase tracking-wider">Início</span>
-        </a>
-        <a href="#" className="flex flex-col items-center gap-1 group">
-          <span className="text-[#718096] group-hover:text-emerald-500 transition-colors text-2xl">🗺️</span>
-          <span className="text-[10px] font-semibold text-[#718096] group-hover:text-emerald-500 uppercase tracking-wider">Rotas</span>
-        </a>
-        <a href="#" className="flex flex-col items-center gap-1 group">
-          <div className="bg-emerald-500 p-2 -mt-8 rounded-full shadow-lg shadow-emerald-500/30 border-4 border-white">
-            <Car size={20} className="text-white" />
-          </div>
-          <span className="text-[10px] font-semibold text-emerald-500 uppercase tracking-wider">Veículo</span>
-        </a>
-        <a href="#" className="flex flex-col items-center gap-1 group">
-          <span className="text-[#718096] group-hover:text-emerald-500 transition-colors text-2xl">🔔</span>
-          <span className="text-[10px] font-semibold text-[#718096] group-hover:text-emerald-500 uppercase tracking-wider">Alertas</span>
-        </a>
-        <a href="#" className="flex flex-col items-center gap-1 group">
-          <span className="text-[#718096] group-hover:text-emerald-500 transition-colors text-2xl">👤</span>
-          <span className="text-[10px] font-semibold text-[#718096] group-hover:text-emerald-500 uppercase tracking-wider">Perfil</span>
-        </a>
-      </nav>
     </div>
   );
 };
