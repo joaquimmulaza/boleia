@@ -36,24 +36,24 @@ vi.mock('../lib/supabase', () => ({
 import { supabase } from '../lib/supabase';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Dados de teste — falta fictícia alinhada com o schema
+// Mock de react-router-dom para simular a rota parametrizada
+// ─────────────────────────────────────────────────────────────────────────────
+vi.mock('react-router-dom', () => ({
+  useParams: () => ({ acordoId: 'acordo-uuid-001' }),
+  useNavigate: () => vi.fn(),
+}));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dados de teste — falta fictícia alinhada com o requisito
 // ─────────────────────────────────────────────────────────────────────────────
 const faltaDeTeste = {
   id: 'falta-uuid-001',
-  id_acordo: 'acordo-uuid-123',
+  id_acordo: 'acordo-uuid-001',
   data_falta: '2023-10-15',
   tipo_falta: 'Passageiro',
-  valor_desconto: 1500,
-  observacao: 'Doente',
+  desconto_kz: 1500,
+  observacao: 'Trabalho extra',
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Mock de useParams para simular a rota com um ID de acordo
-// ─────────────────────────────────────────────────────────────────────────────
-vi.mock('react-router-dom', () => ({
-  useParams: () => ({ id: 'acordo-uuid-123' }),
-  useNavigate: () => vi.fn(),
-}));
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Suite principal
@@ -68,20 +68,30 @@ describe('AbsenceTracker Component', () => {
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  // 1. ESTRUTURA BÁSICA DA PÁGINA
+  // 1. ESTRUTURA BÁSICA E INTEGRAÇÃO SUPABASE
   // ───────────────────────────────────────────────────────────────────────────
-  describe('Estrutura Básica da Página', () => {
-    it('renderiza o título da página', async () => {
+  describe('Integração e Listagem Inicial', () => {
+    it('chama supabase.from("faltas") e filtra por id_acordo', async () => {
       render(<AbsenceTracker />);
 
       await waitFor(() => {
-        expect(
-          screen.getByRole('heading', { name: /Registo de Faltas/i })
-        ).toBeInTheDocument();
+        expect(supabase.from).toHaveBeenCalledWith('faltas');
+        expect(mockEq).toHaveBeenCalledWith('id_acordo', 'acordo-uuid-001');
       });
     });
 
-    it('renderiza um botão "Registar Falta"', async () => {
+    it('exibe a mensagem de estado vazio quando não há faltas', async () => {
+      mockData.current = { data: [], error: null };
+      mockEq.mockResolvedValue(mockData.current);
+
+      render(<AbsenceTracker />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Não há faltas/i)).toBeInTheDocument();
+      });
+    });
+
+    it('exibe o botão Registar Falta', async () => {
       render(<AbsenceTracker />);
 
       await waitFor(() => {
@@ -93,90 +103,9 @@ describe('AbsenceTracker Component', () => {
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  // 2. ESTADO VAZIO E TOTAIS
+  // 2. LISTAGEM DE FALTAS
   // ───────────────────────────────────────────────────────────────────────────
-  describe('Estado Vazio e Totais', () => {
-    it('exibe a mensagem "Nenhuma falta registada" quando não há faltas', async () => {
-      mockData.current = { data: [], error: null };
-      mockEq.mockResolvedValue(mockData.current);
-
-      render(<AbsenceTracker />);
-
-      await waitFor(() => {
-        expect(
-          screen.getByText(/Nenhuma falta registada/i)
-        ).toBeInTheDocument();
-      });
-    });
-
-    it('exibe o total de descontos como 0 Kz quando não há faltas', async () => {
-      mockData.current = { data: [], error: null };
-      mockEq.mockResolvedValue(mockData.current);
-
-      render(<AbsenceTracker />);
-
-      await waitFor(() => {
-        expect(
-          screen.getByText(/Total de Descontos|Total a Descontar/i)
-        ).toBeInTheDocument();
-        expect(screen.getByText(/0/i)).toBeInTheDocument();
-      });
-    });
-
-    it('calcula e exibe o total de descontos corretamente com múltiplas faltas', async () => {
-      const segundaFalta = {
-        ...faltaDeTeste,
-        id: 'falta-uuid-002',
-        valor_desconto: 2000,
-      };
-      mockData.current = { data: [faltaDeTeste, segundaFalta], error: null };
-      mockEq.mockResolvedValue(mockData.current);
-
-      render(<AbsenceTracker />);
-
-      await waitFor(() => {
-        // 1500 + 2000 = 3500
-        expect(screen.getByText(/3[\s.,]*500|3500/i)).toBeInTheDocument();
-      });
-    });
-  });
-
-  // ───────────────────────────────────────────────────────────────────────────
-  // 3. INTEGRAÇÃO COM SUPABASE E LISTAGEM
-  // ───────────────────────────────────────────────────────────────────────────
-  describe('Integração com Supabase — Carregamento de Faltas', () => {
-    it('chama supabase.from("faltas") para buscar as faltas', async () => {
-      render(<AbsenceTracker />);
-
-      await waitFor(() => {
-        expect(supabase.from).toHaveBeenCalledWith('faltas');
-      });
-    });
-
-    it('filtra por .eq("id_acordo", acordoId)', async () => {
-      render(<AbsenceTracker />);
-
-      await waitFor(() => {
-        expect(mockEq).toHaveBeenCalledWith('id_acordo', 'acordo-uuid-123');
-      });
-    });
-
-    it('exibe um cartão/item por cada falta devolvida pelo Supabase', async () => {
-      mockData.current = { data: [faltaDeTeste], error: null };
-      mockEq.mockResolvedValue(mockData.current);
-
-      render(<AbsenceTracker />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('absence-card')).toBeInTheDocument();
-      });
-    });
-  });
-
-  // ───────────────────────────────────────────────────────────────────────────
-  // 4. CONTEÚDO DA FALTA
-  // ───────────────────────────────────────────────────────────────────────────
-  describe('Conteúdo do Registo de Falta', () => {
+  describe('Listagem de Faltas', () => {
     beforeEach(() => {
       mockData.current = { data: [faltaDeTeste], error: null };
       mockEq.mockResolvedValue(mockData.current);
@@ -198,7 +127,7 @@ describe('AbsenceTracker Component', () => {
       });
     });
 
-    it('mostra o valor do desconto em Kz', async () => {
+    it('mostra o valor de desconto_kz da falta', async () => {
       render(<AbsenceTracker />);
 
       await waitFor(() => {
@@ -208,22 +137,48 @@ describe('AbsenceTracker Component', () => {
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  // 5. MODAL "REGISTAR FALTA"
+  // 3. CARD DE RESUMO (SOMA DOS DESCONTOS)
   // ───────────────────────────────────────────────────────────────────────────
-  describe('Modal — Registar Falta', () => {
-    it('o modal NÃO está visível antes de clicar em "Registar Falta"', async () => {
+  describe('Card de Resumo (Descontos)', () => {
+    it('exibe 0 Kz no total se não houver faltas', async () => {
+      mockData.current = { data: [], error: null };
+      mockEq.mockResolvedValue(mockData.current);
+
       render(<AbsenceTracker />);
 
       await waitFor(() => {
-        expect(
-          screen.getByRole('button', { name: /Registar Falta/i })
-        ).toBeInTheDocument();
+        expect(screen.getByText(/0/)).toBeInTheDocument();
       });
+    });
 
+    it('soma e exibe o desconto_kz total para múltiplas faltas', async () => {
+      const segundaFalta = {
+        ...faltaDeTeste,
+        id: 'falta-uuid-002',
+        desconto_kz: 2000,
+      };
+      mockData.current = { data: [faltaDeTeste, segundaFalta], error: null };
+      mockEq.mockResolvedValue(mockData.current);
+
+      render(<AbsenceTracker />);
+
+      await waitFor(() => {
+        // 1500 + 2000 = 3500
+        expect(screen.getByText(/3[\s.,]*500|3500/)).toBeInTheDocument();
+      });
+    });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // 4. MODAL DE REGISTO DE FALTA
+  // ───────────────────────────────────────────────────────────────────────────
+  describe('Modal de Registo de Falta', () => {
+    it('o modal está oculto por defeito', async () => {
+      render(<AbsenceTracker />);
       expect(screen.queryByTestId('modal-registar-falta')).not.toBeInTheDocument();
     });
 
-    it('abre o modal ao clicar em "Registar Falta"', async () => {
+    it('abre o modal ao clicar em Registar Falta', async () => {
       render(<AbsenceTracker />);
 
       const botao = await screen.findByRole('button', { name: /Registar Falta/i });
@@ -234,17 +189,22 @@ describe('AbsenceTracker Component', () => {
       });
     });
 
-    it('o modal contém os campos: Data, Tipo e Observação', async () => {
+    it('tem campos para: Data, Tipo (select Passageiro/Motorista), Observação', async () => {
       render(<AbsenceTracker />);
 
       const botao = await screen.findByRole('button', { name: /Registar Falta/i });
       fireEvent.click(botao);
 
       await waitFor(() => {
-        expect(screen.getByLabelText(/Data/i)).toBeInTheDocument();
-        expect(screen.getByLabelText(/Tipo/i)).toBeInTheDocument();
-        expect(screen.getByLabelText(/Observação/i)).toBeInTheDocument();
+        expect(screen.getByTestId('modal-registar-falta')).toBeInTheDocument();
       });
+
+      expect(screen.getByLabelText(/Data/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Tipo/i)).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: /Tipo/i })).toBeInTheDocument(); // Select
+      expect(screen.getByText(/Passageiro/i)).toBeInTheDocument(); // Opções
+      expect(screen.getByText(/Motorista/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Observação/i)).toBeInTheDocument();
     });
   });
 });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AgreementsPage from './AgreementsPage';
 
@@ -86,7 +87,7 @@ describe('AgreementsPage Component', () => {
   // ───────────────────────────────────────────────────────────────────────────
   describe('Estrutura Básica da Página', () => {
     it('renderiza um título "Acordos" ou "As Minhas Boleias" na página', async () => {
-      render(<AgreementsPage />);
+      render(<MemoryRouter><AgreementsPage /></MemoryRouter>);
 
       await waitFor(() => {
         expect(
@@ -96,7 +97,7 @@ describe('AgreementsPage Component', () => {
     });
 
     it('renderiza um botão "Pedir Boleia"', async () => {
-      render(<AgreementsPage />);
+      render(<MemoryRouter><AgreementsPage /></MemoryRouter>);
 
       await waitFor(() => {
         expect(
@@ -113,7 +114,7 @@ describe('AgreementsPage Component', () => {
     it('exibe a mensagem "Ainda não tens boleias" quando não há acordos', async () => {
       mockData.current = { data: [], error: null };
 
-      render(<AgreementsPage />);
+      render(<MemoryRouter><AgreementsPage /></MemoryRouter>);
 
       await waitFor(() => {
         expect(
@@ -125,7 +126,7 @@ describe('AgreementsPage Component', () => {
     it('não renderiza cartões de acordo quando a lista está vazia', async () => {
       mockData.current = { data: [], error: null };
 
-      render(<AgreementsPage />);
+      render(<MemoryRouter><AgreementsPage /></MemoryRouter>);
 
       await waitFor(() => {
         expect(screen.queryByTestId('agreement-card')).not.toBeInTheDocument();
@@ -138,7 +139,7 @@ describe('AgreementsPage Component', () => {
   // ───────────────────────────────────────────────────────────────────────────
   describe('Integração com Supabase — Carregamento de Acordos', () => {
     it('chama supabase.auth.getUser() para obter o utilizador autenticado', async () => {
-      render(<AgreementsPage />);
+      render(<MemoryRouter><AgreementsPage /></MemoryRouter>);
 
       await waitFor(() => {
         expect(supabase.auth.getUser).toHaveBeenCalledTimes(1);
@@ -146,7 +147,7 @@ describe('AgreementsPage Component', () => {
     });
 
     it('chama supabase.from("acordos") para buscar os acordos', async () => {
-      render(<AgreementsPage />);
+      render(<MemoryRouter><AgreementsPage /></MemoryRouter>);
 
       await waitFor(() => {
         expect(supabase.from).toHaveBeenCalledWith('acordos');
@@ -154,7 +155,7 @@ describe('AgreementsPage Component', () => {
     });
 
     it('filtra por .eq("id_passageiro", user.id) com o id do utilizador autenticado', async () => {
-      render(<AgreementsPage />);
+      render(<MemoryRouter><AgreementsPage /></MemoryRouter>);
 
       await waitFor(() => {
         expect(mockEq).toHaveBeenCalledWith(
@@ -168,7 +169,7 @@ describe('AgreementsPage Component', () => {
       mockData.current = { data: [acordoDeTeste], error: null };
       mockEq.mockResolvedValue(mockData.current);
 
-      render(<AgreementsPage />);
+      render(<MemoryRouter><AgreementsPage /></MemoryRouter>);
 
       await waitFor(() => {
         expect(screen.getByTestId('agreement-card')).toBeInTheDocument();
@@ -186,7 +187,7 @@ describe('AgreementsPage Component', () => {
       mockData.current = { data: [acordoDeTeste, segundoAcordo], error: null };
       mockEq.mockResolvedValue(mockData.current);
 
-      render(<AgreementsPage />);
+      render(<MemoryRouter><AgreementsPage /></MemoryRouter>);
 
       await waitFor(() => {
         expect(screen.getAllByTestId('agreement-card')).toHaveLength(2);
@@ -204,7 +205,7 @@ describe('AgreementsPage Component', () => {
     });
 
     it('mostra a rota no formato "Partida → Chegada"', async () => {
-      render(<AgreementsPage />);
+      render(<MemoryRouter><AgreementsPage /></MemoryRouter>);
 
       await waitFor(() => {
         expect(screen.getByText(/Talatona/i)).toBeInTheDocument();
@@ -213,7 +214,7 @@ describe('AgreementsPage Component', () => {
     });
 
     it('mostra o estado do acordo (Ativo)', async () => {
-      render(<AgreementsPage />);
+      render(<MemoryRouter><AgreementsPage /></MemoryRouter>);
 
       await waitFor(() => {
         expect(screen.getByText(/Ativo/i)).toBeInTheDocument();
@@ -227,7 +228,7 @@ describe('AgreementsPage Component', () => {
       };
       mockEq.mockResolvedValue(mockData.current);
 
-      render(<AgreementsPage />);
+      render(<MemoryRouter><AgreementsPage /></MemoryRouter>);
 
       await waitFor(() => {
         expect(screen.getByText(/Pendente/i)).toBeInTheDocument();
@@ -241,7 +242,7 @@ describe('AgreementsPage Component', () => {
       };
       mockEq.mockResolvedValue(mockData.current);
 
-      render(<AgreementsPage />);
+      render(<MemoryRouter><AgreementsPage /></MemoryRouter>);
 
       await waitFor(() => {
         expect(screen.getByText(/Cancelado/i)).toBeInTheDocument();
@@ -249,7 +250,7 @@ describe('AgreementsPage Component', () => {
     });
 
     it('mostra o valor mensal em Kz', async () => {
-      render(<AgreementsPage />);
+      render(<MemoryRouter><AgreementsPage /></MemoryRouter>);
 
       await waitFor(() => {
         // Aceita formatos: "25 000 Kz", "25.000 Kz", "25000 Kz", etc.
@@ -258,7 +259,7 @@ describe('AgreementsPage Component', () => {
     });
 
     it('mostra a hora de recolha', async () => {
-      render(<AgreementsPage />);
+      render(<MemoryRouter><AgreementsPage /></MemoryRouter>);
 
       await waitFor(() => {
         expect(screen.getByText(/07:30/i)).toBeInTheDocument();
@@ -271,7 +272,7 @@ describe('AgreementsPage Component', () => {
   // ───────────────────────────────────────────────────────────────────────────
   describe('Modal de Confirmação — Pedir Boleia', () => {
     it('o modal NÃO está visível antes de clicar em "Pedir Boleia"', async () => {
-      render(<AgreementsPage />);
+      render(<MemoryRouter><AgreementsPage /></MemoryRouter>);
 
       // Espera que a página carregue
       await waitFor(() => {
@@ -284,7 +285,7 @@ describe('AgreementsPage Component', () => {
     });
 
     it('abre o modal ao clicar em "Pedir Boleia"', async () => {
-      render(<AgreementsPage />);
+      render(<MemoryRouter><AgreementsPage /></MemoryRouter>);
 
       const botao = await screen.findByRole('button', { name: /Pedir Boleia/i });
       fireEvent.click(botao);
@@ -295,7 +296,7 @@ describe('AgreementsPage Component', () => {
     });
 
     it('o modal de confirmação contém um botão para confirmar', async () => {
-      render(<AgreementsPage />);
+      render(<MemoryRouter><AgreementsPage /></MemoryRouter>);
 
       const botao = await screen.findByRole('button', { name: /Pedir Boleia/i });
       fireEvent.click(botao);
@@ -308,7 +309,7 @@ describe('AgreementsPage Component', () => {
     });
 
     it('o modal de confirmação contém um botão para cancelar ou fechar', async () => {
-      render(<AgreementsPage />);
+      render(<MemoryRouter><AgreementsPage /></MemoryRouter>);
 
       const botao = await screen.findByRole('button', { name: /Pedir Boleia/i });
       fireEvent.click(botao);
@@ -321,7 +322,7 @@ describe('AgreementsPage Component', () => {
     });
 
     it('fecha o modal ao clicar em "Cancelar"', async () => {
-      render(<AgreementsPage />);
+      render(<MemoryRouter><AgreementsPage /></MemoryRouter>);
 
       const botao = await screen.findByRole('button', { name: /Pedir Boleia/i });
       fireEvent.click(botao);

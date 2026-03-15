@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { ArrowLeft, Calendar, Info, Plus, ChevronDown } from 'lucide-react';
 
 const AbsenceTracker = () => {
-  const { id } = useParams();
+  const { acordoId } = useParams();
   const navigate = useNavigate();
   
   const [faltas, setFaltas] = useState([]);
@@ -25,7 +25,7 @@ const AbsenceTracker = () => {
         const { data, error } = await supabase
           .from('faltas')
           .select('*')
-          .eq('id_acordo', id);
+          .eq('id_acordo', acordoId);
         
         if (error) throw error;
         if (isMounted) {
@@ -39,9 +39,9 @@ const AbsenceTracker = () => {
     };
     fetchFaltas();
     return () => { isMounted = false; };
-  }, [id]);
+  }, [acordoId]);
 
-  const totalDesconto = faltas.reduce((acc, falta) => acc + (Number(falta.valor_desconto) || 0), 0);
+  const totalDesconto = faltas.reduce((acc, falta) => acc + (Number(falta.desconto_kz) || 0), 0);
 
   const formatCurrency = (value) => {
     return Number(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -96,7 +96,7 @@ const AbsenceTracker = () => {
               <div className="bg-emerald-50 text-emerald-400 p-4 rounded-full">
                 <Calendar size={48} strokeWidth={1.5} />
               </div>
-              <p className="text-slate-500 font-medium">Nenhuma falta registada</p>
+              <p className="text-slate-500 font-medium">Não há faltas</p>
             </div>
           ) : (
             faltas.map((falta) => (
@@ -122,7 +122,7 @@ const AbsenceTracker = () => {
                 </div>
                 <div className="text-right">
                   <p className="text-base font-bold text-red-500">
-                    -{formatCurrency(falta.valor_desconto)} Kz
+                    -{formatCurrency(falta.desconto_kz)} Kz
                   </p>
                 </div>
               </div>

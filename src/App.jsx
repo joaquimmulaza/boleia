@@ -6,6 +6,7 @@ import MainLayout from './layouts/MainLayout';
 import PassengerDashboard from './pages/PassengerDashboard';
 import DriverDashboard from './pages/DriverDashboard';
 import AgreementsPage from './pages/AgreementsPage';
+import AbsenceTracker from './pages/AbsenceTracker';
 import ProtectedRoute from './components/ProtectedRoute';
 
 const RootRedirect = () => {
@@ -49,6 +50,7 @@ function App() {
           <Route element={<ProtectedRoute allowedRole="Passageiro" />}>
             <Route path="/passageiro" element={<PassengerDashboard />} />
             <Route path="/acordos" element={<AgreementsPage />} />
+            <Route path="/faltas/:acordoId" element={<AbsenceTracker />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRole="Motorista" />}>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Car, Clock, CreditCard, MapPin, Plus, X, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -40,15 +41,16 @@ const getInitial = (nome) => (nome ? nome.charAt(0).toUpperCase() : '?');
 /**
  * Card de um acordo individual.
  */
-const AcordoCard = ({ acordo }) => {
+const AcordoCard = ({ acordo, onClick }) => {
   const isCancelado = acordo.estado === 'Cancelado';
 
   return (
     <article
       data-testid="agreement-card"
-      className={`bg-white rounded-2xl p-4 space-y-3 transition-opacity ${
+      className={`bg-white rounded-2xl p-4 space-y-3 transition-all cursor-pointer hover:shadow-lg active:scale-[0.99] ${
         isCancelado ? 'opacity-60' : 'opacity-100'
       }`}
+      onClick={onClick}
       style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.07)' }}
     >
       {/* Cabeçalho do card: avatar + nome + badge */}
@@ -197,6 +199,7 @@ const AgreementsPage = () => {
   const [acordos, setAcordos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [modalAberto, setModalAberto] = useState(false);
+  const navigate = useNavigate();
 
   // ─── Carrega acordos ao montar ──────────────────────────────────────────────
   useEffect(() => {
@@ -291,7 +294,11 @@ const AgreementsPage = () => {
         {!isLoading && acordos.length > 0 && (
           <section className="space-y-3" aria-label="Lista de acordos">
             {acordos.map((acordo) => (
-              <AcordoCard key={acordo.id} acordo={acordo} />
+              <AcordoCard 
+                key={acordo.id} 
+                acordo={acordo} 
+                onClick={() => navigate(`/faltas/${acordo.id}`)}
+              />
             ))}
           </section>
         )}
