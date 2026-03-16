@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Navigation, Search, Clock, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { MapPin, Navigation, Search, Clock, ChevronRight, AlertCircle, Loader2, Clock3 } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { supabase } from '../lib/supabase';
+import { requestSeat } from '../services/AgreementsService';
 
 /**
  * @typedef {Readonly<{}>} PassengerDashboardProps
@@ -24,20 +25,20 @@ const formatKwanza = (value) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // RouteCard sub-component
 // ─────────────────────────────────────────────────────────────────────────────
-const RouteCard = ({ rota }) => (
+const RouteCard = ({ rota, isProcessing, isRequested, onSolicitar }) => (
   <div
     data-testid="route-card"
     className="bg-white rounded-xl overflow-hidden flex items-stretch"
     style={{
       boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
-      borderLeft: '4px solid #10B981',
+      borderLeft: `4px solid ${isRequested ? '#D97706' : '#10B981'}`,
     }}
   >
     {/* Main content */}
     <div className="flex-1 p-4 space-y-2">
       {/* Route origin → destination */}
       <div className="flex items-center gap-2">
-        <Navigation size={15} className="text-emerald-500 shrink-0" />
+        <Navigation size={15} className={isRequested ? 'text-yellow-500 shrink-0' : 'text-emerald-500 shrink-0'} />
         <p className="text-[#1A202C] font-bold text-sm leading-tight">
           {rota.origin_name}
           <span className="text-[#718096] font-normal mx-1">→</span>
@@ -46,14 +47,14 @@ const RouteCard = ({ rota }) => (
       </div>
 
       {/* Pickup and Return time */}
-      <div className="flex items-center gap-1.5 focus:outline-none">
+      <div className="flex items-center gap-1.5">
         <Clock size={13} className="text-[#718096]" />
         <span className="text-[#718096] text-xs">{rota.departure_time} - {rota.return_time}</span>
       </div>
 
       {/* Price */}
       <div>
-        <p className="text-emerald-500 font-extrabold text-base leading-tight">
+        <p className={`font-extrabold text-base leading-tight ${isRequested ? 'text-yellow-600' : 'text-emerald-500'}`}>
           {formatKwanza(rota.monthly_price_per_seat)}
         </p>
         <p className="text-[#718096] text-[11px] mt-0.5">
@@ -62,11 +63,29 @@ const RouteCard = ({ rota }) => (
       </div>
     </div>
 
-    {/* Chevron and Button */}
+    {/* Action Button */}
     <div className="flex flex-col items-end justify-center px-4 py-2 gap-2">
-      <button className="bg-emerald-500 text-white font-semibold text-xs rounded-lg px-4 py-2 hover:bg-emerald-600 transition-colors shadow-sm active:scale-95">
-        Solicitar Vaga
-      </button>
+      {isRequested ? (
+        <button
+          disabled
+          className="bg-yellow-100 text-yellow-700 font-semibold text-xs rounded-lg px-3 py-2 flex items-center gap-1.5 cursor-not-allowed opacity-90"
+        >
+          <Clock3 size={12} />
+          Aguardando Confirmação
+        </button>
+      ) : (
+        <button
+          onClick={() => onSolicitar(rota)}
+          disabled={isProcessing}
+          className="bg-emerald-500 text-white font-semibold text-xs rounded-lg px-4 py-2 hover:bg-emerald-600 transition-colors shadow-sm active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
+        >
+          {isProcessing ? (
+            <><Loader2 size={12} className="animate-spin" /> A processar...</>
+          ) : (
+            'Solicitar Vaga'
+          )}
+        </button>
+      )}
       <ChevronRight size={18} className="text-[#CBD5E0]" />
     </div>
   </div>
@@ -81,9 +100,19 @@ const PassengerDashboard = () => {
   const [rotas, setRotas] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [pesquisaFeita, setPesquisaFeita] = useState(false);
+  const [processingRouteIds, setProcessingRouteIds] = useState(new Set());
+  const [requestedRouteIds, setRequestedRouteIds] = useState(new Set());
+  const [toastMessage, setToastMessage] = useState(null);
 
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
+
+  // ─── Dismiss Toast after 3 s ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = setTimeout(() => setToastMessage(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toastMessage]);
 
   useEffect(() => {
     if (mapRef.current) return;
@@ -144,7 +173,28 @@ const PassengerDashboard = () => {
     }
   };
 
+  // ─── Solicitar Vaga ───────────────────────────────────────────────────────
+  const handleSolicitarVaga = useCallback(async (rota) => {
+    setProcessingRouteIds((prev) => new Set(prev).add(rota.id));
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      await requestSeat(rota.id, user.id);
+
+      setRequestedRouteIds((prev) => new Set(prev).add(rota.id));
+    } catch (_err) {
+      setToastMessage('Erro ao solicitar vaga. Tenta novamente.');
+    } finally {
+      setProcessingRouteIds((prev) => {
+        const next = new Set(prev);
+        next.delete(rota.id);
+        return next;
+      });
+    }
+  }, []);
+
   return (
+    <>
     <div
       className="font-[Plus_Jakarta_Sans,sans-serif] min-h-screen bg-[#F7F8FA] text-gray-800 antialiased flex flex-col"
     >
@@ -244,7 +294,13 @@ const PassengerDashboard = () => {
         {/* Results list */}
         <div data-testid="route-results-list" className="space-y-3">
           {rotas.map((rota) => (
-            <RouteCard key={rota.id} rota={rota} />
+            <RouteCard
+              key={rota.id}
+              rota={rota}
+              isProcessing={processingRouteIds.has(rota.id)}
+              isRequested={requestedRouteIds.has(rota.id)}
+              onSolicitar={handleSolicitarVaga}
+            />
           ))}
 
           {/* Empty state - only after a search */}
@@ -280,6 +336,19 @@ const PassengerDashboard = () => {
       </main>
 
     </div>
+
+    {/* ── Toast de Erro ── */}
+    {toastMessage && (
+      <div
+        role="alert"
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-red-600 text-white text-sm font-medium px-5 py-3 rounded-2xl shadow-xl animate-bounce"
+        style={{ maxWidth: '90vw' }}
+      >
+        <AlertCircle size={16} />
+        {toastMessage}
+      </div>
+    )}
+    </>
   );
 };
 

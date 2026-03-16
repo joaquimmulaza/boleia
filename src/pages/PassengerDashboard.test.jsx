@@ -25,7 +25,7 @@ vi.mock('maplibre-gl', () => {
 // Simula a cadeia fluente: supabase.from().select().ilike().ilike()
 // que será usada para pesquisar rotas na tabela routes
 // ─────────────────────────────────────────────────────────────────────────────
-const { mockGt, mockIlike, mockSelect, mockFrom, mockData } = vi.hoisted(() => {
+const { mockGt, mockIlike, mockSelect, mockFrom, mockData, mockGetUser } = vi.hoisted(() => {
   const mockData = { current: { data: [], error: null } };
   const mockIlike = vi.fn(function() { return this; });
   const mockGt = vi.fn(function() { return this; });
@@ -37,14 +37,26 @@ const { mockGt, mockIlike, mockSelect, mockFrom, mockData } = vi.hoisted(() => {
   
   const mockSelect = vi.fn(() => mockQueryBuilder);
   const mockFrom = vi.fn(() => ({ select: mockSelect }));
+  const mockGetUser = vi.fn().mockResolvedValue({ data: { user: { id: 'passenger-123' } }, error: null });
 
-  return { mockGt, mockIlike, mockSelect, mockFrom, mockData };
+  return { mockGt, mockIlike, mockSelect, mockFrom, mockData, mockGetUser };
 });
 
 vi.mock('../lib/supabase', () => ({
   supabase: {
     from: mockFrom,
+    auth: {
+      getUser: mockGetUser
+    }
   },
+}));
+
+const { mockRequestSeat } = vi.hoisted(() => {
+  return { mockRequestSeat: vi.fn() };
+});
+
+vi.mock('../services/AgreementsService', () => ({
+  requestSeat: mockRequestSeat
 }));
 
 import { supabase } from '../lib/supabase';
@@ -72,6 +84,7 @@ describe('PassengerDashboard Component', () => {
 
     // Por defeito: pesquisa devolve array vazio (sem resultados)
     mockData.current = { data: [], error: null };
+    mockRequestSeat.mockResolvedValue({});
   });
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -246,4 +259,80 @@ describe('PassengerDashboard Component', () => {
       });
     });
   });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // 5. PROCESSO DE SOLICITAÇÃO DE VAGA
+  // ───────────────────────────────────────────────────────────────────────────
+  describe('Processo de Solicitar Vaga', () => {
+    beforeEach(async () => {
+      mockData.current = { data: [rotaDeTeste], error: null };
+    });
+
+    const setupSearchAndGetButton = async () => {
+      render(<PassengerDashboard />);
+      fireEvent.click(screen.getByRole('button', { name: /Procurar Boleia/i }));
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Solicitar Vaga/i })).toBeInTheDocument();
+      });
+      return screen.getByRole('button', { name: /Solicitar Vaga/i });
+    };
+
+    it('chama supabase.auth.getUser e requestSeat ao clicar em Solicitar Vaga', async () => {
+      const btn = await setupSearchAndGetButton();
+      
+      fireEvent.click(btn);
+
+      await waitFor(() => {
+        expect(mockGetUser).toHaveBeenCalled();
+        expect(mockRequestSeat).toHaveBeenCalledWith(rotaDeTeste.id, 'passenger-123');
+      });
+    });
+
+    it('muda o estado do botão para "A processar..." e desativa o botão durante a solicitação', async () => {
+      // Fazemos o mock do requestSeat demorar um pouco
+      let resolveRequest;
+      mockRequestSeat.mockImplementationOnce(() => new Promise(resolve => {
+        resolveRequest = resolve;
+      }));
+
+      const btn = await setupSearchAndGetButton();
+      fireEvent.click(btn);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /A processar.../i })).toBeInTheDocument();
+      });
+      expect(screen.getByRole('button', { name: /A processar.../i })).toBeDisabled();
+
+      // Resolvemos a promessa para não deixar pendente
+      resolveRequest({});
+    });
+
+    it('muda o estado do botão para "Aguardando Confirmação" após sucesso e bloqueia clique', async () => {
+      const btn = await setupSearchAndGetButton();
+      fireEvent.click(btn);
+
+      await waitFor(() => {
+        const successBtn = screen.getByRole('button', { name: /Aguardando Confirmação/i });
+        expect(successBtn).toBeInTheDocument();
+        expect(successBtn).toBeDisabled();
+      });
+    });
+
+    it('Sad Path: exibe mensagem de erro e restaura botão "Solicitar Vaga" caso requestSeat falhe', async () => {
+      mockRequestSeat.mockRejectedValueOnce(new Error('Erro simulado'));
+
+      const btn = await setupSearchAndGetButton();
+      fireEvent.click(btn);
+
+      // Botão passa para status inicial de volta
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Solicitar Vaga/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Solicitar Vaga/i })).not.toBeDisabled();
+      });
+
+      // E exibe a notificação de erro algures no ecrã
+      expect(screen.getByText(/Erro ao solicitar vaga. Tenta novamente./i)).toBeInTheDocument();
+    });
+  });
 });
+
