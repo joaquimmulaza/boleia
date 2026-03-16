@@ -33,3 +33,6 @@ Lê este documento antes de iniciares qualquer nova funcionalidade. Se eu te ped
   2. Executar `git commit -m "[Tipo]: Breve descrição do que foi feito e porquê"`. (Tipos válidos: `feat`, `fix`, `ui`, `refactor`, `test`, `chore`). A mensagem de commit deve ser clara e explicar *o que* mudou e *porquê*.
   3. Executar `git push`.
 * Se os testes estiverem a falhar, o agente é ESTRITAMENTE PROIBIDO de fazer commit do código quebrado.
+
+## 6. Débito Técnico / Próximos Passos
+* No futuro, será necessário adicionar colunas de latitude e longitude à tabela de rotas no Supabase e integrar uma API de Geocoding para converter as moradas em coordenadas exatas no momento de Publicar o Trajeto.

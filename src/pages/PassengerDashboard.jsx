@@ -39,31 +39,34 @@ const RouteCard = ({ rota }) => (
       <div className="flex items-center gap-2">
         <Navigation size={15} className="text-emerald-500 shrink-0" />
         <p className="text-[#1A202C] font-bold text-sm leading-tight">
-          {rota.ponto_partida}
+          {rota.origin_name}
           <span className="text-[#718096] font-normal mx-1">→</span>
-          {rota.ponto_chegada}
+          {rota.destination_name}
         </p>
       </div>
 
-      {/* Pickup time */}
-      <div className="flex items-center gap-1.5">
+      {/* Pickup and Return time */}
+      <div className="flex items-center gap-1.5 focus:outline-none">
         <Clock size={13} className="text-[#718096]" />
-        <span className="text-[#718096] text-xs">{rota.hora_recolha}</span>
+        <span className="text-[#718096] text-xs">{rota.departure_time} - {rota.return_time}</span>
       </div>
 
       {/* Price */}
       <div>
         <p className="text-emerald-500 font-extrabold text-base leading-tight">
-          {formatKwanza(rota.valor_mensal_total)}
+          {formatKwanza(rota.monthly_price_per_seat)}
         </p>
         <p className="text-[#718096] text-[11px] mt-0.5">
-          divisão de custos entre passageiros
+          por lugar na viatura
         </p>
       </div>
     </div>
 
-    {/* Chevron */}
-    <div className="flex items-center px-3">
+    {/* Chevron and Button */}
+    <div className="flex flex-col items-end justify-center px-4 py-2 gap-2">
+      <button className="bg-emerald-500 text-white font-semibold text-xs rounded-lg px-4 py-2 hover:bg-emerald-600 transition-colors shadow-sm active:scale-95">
+        Solicitar Vaga
+      </button>
       <ChevronRight size={18} className="text-[#CBD5E0]" />
     </div>
   </div>
@@ -84,7 +87,6 @@ const PassengerDashboard = () => {
 
   useEffect(() => {
     if (mapRef.current) return;
-    if (import.meta.env.MODE === 'test') return;
     
     import('maplibre-gl').then((module) => {
       const maplibregl = module.default;
@@ -104,14 +106,15 @@ const PassengerDashboard = () => {
     setPesquisaFeita(false);
 
     let query = supabase
-      .from('rotas_diarias')
-      .select('id, ponto_partida, ponto_chegada, hora_recolha, valor_mensal_total');
+      .from('routes')
+      .select('id, origin_name, destination_name, departure_time, return_time, available_seats, monthly_price_per_seat')
+      .gt('available_seats', 0);
       
     if (pontoPartida) {
-      query = query.ilike('ponto_partida', `%${pontoPartida}%`);
+      query = query.ilike('origin_name', `%${pontoPartida}%`);
     }
     if (pontoChegada) {
-      query = query.ilike('ponto_chegada', `%${pontoChegada}%`);
+      query = query.ilike('destination_name', `%${pontoChegada}%`);
     }
 
     const { data, error } = await query;
@@ -122,6 +125,23 @@ const PassengerDashboard = () => {
     setPesquisaFeita(true);
 
     setRotas(filtered);
+    
+    // Add markers to the map if it exists
+    if (mapRef.current && filtered.length > 0) {
+      import('maplibre-gl').then((module) => {
+        const maplibregl = module.default;
+        
+        filtered.forEach((r, idx) => {
+          // Mock coordinates around Luanda
+          const lng = 13.2343 + (Math.random() - 0.5) * 0.1;
+          const lat = -8.8368 + (Math.random() - 0.5) * 0.1;
+          
+          new maplibregl.Marker({ color: '#10B981' })
+            .setLngLat([lng, lat])
+            .addTo(mapRef.current);
+        });
+      }).catch(() => {});
+    }
   };
 
   return (

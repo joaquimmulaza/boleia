@@ -10,7 +10,12 @@ vi.mock('maplibre-gl', () => {
         this.remove = vi.fn();
         this.on = vi.fn();
         this.addControl = vi.fn();
-      }
+      },
+      Marker: vi.fn(function() {
+        this.setLngLat = vi.fn().mockReturnThis();
+        this.addTo = vi.fn().mockReturnThis();
+        this.remove = vi.fn();
+      })
     }
   };
 });
@@ -20,18 +25,20 @@ vi.mock('maplibre-gl', () => {
 // Simula a cadeia fluente: supabase.from().select().ilike().ilike()
 // que será usada para pesquisar rotas na tabela rotas_diarias
 // ─────────────────────────────────────────────────────────────────────────────
-const { mockIlike, mockSelect, mockFrom, mockData } = vi.hoisted(() => {
+const { mockGt, mockIlike, mockSelect, mockFrom, mockData } = vi.hoisted(() => {
   const mockData = { current: { data: [], error: null } };
   const mockIlike = vi.fn(function() { return this; });
+  const mockGt = vi.fn(function() { return this; });
   const mockQueryBuilder = {
     ilike: mockIlike,
+    gt: mockGt,
     then: function(resolve) { resolve(mockData.current); }
   };
   
   const mockSelect = vi.fn(() => mockQueryBuilder);
   const mockFrom = vi.fn(() => ({ select: mockSelect }));
 
-  return { mockIlike, mockSelect, mockFrom, mockData };
+  return { mockGt, mockIlike, mockSelect, mockFrom, mockData };
 });
 
 vi.mock('../lib/supabase', () => ({
@@ -48,10 +55,12 @@ import { supabase } from '../lib/supabase';
 // ─────────────────────────────────────────────────────────────────────────────
 const rotaDeTeste = {
   id: 'rota-uuid-001',
-  ponto_partida: 'Talatona',
-  ponto_chegada: 'Maianga',
-  hora_recolha: '07:30',
-  valor_mensal_total: 25000,
+  origin_name: 'Talatona',
+  destination_name: 'Maianga',
+  departure_time: '07:30',
+  return_time: '17:30',
+  available_seats: 3,
+  monthly_price_per_seat: 25000,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -130,7 +139,7 @@ describe('PassengerDashboard Component', () => {
   // 4. INTEGRAÇÃO COM SUPABASE — Pesquisa e listagem de rotas
   // ───────────────────────────────────────────────────────────────────────────
   describe('Integração com Supabase — Pesquisa de Rotas', () => {
-    it('chama supabase.from("rotas_diarias") ao clicar em "Procurar Boleia"', async () => {
+    it('chama supabase.from("routes") ao clicar em "Procurar Boleia" e filtra rotas com available_seats > 0', async () => {
       render(<PassengerDashboard />);
 
       fireEvent.change(screen.getByLabelText(/Ponto de Partida/i), {
@@ -143,7 +152,8 @@ describe('PassengerDashboard Component', () => {
       fireEvent.click(screen.getByRole('button', { name: /Procurar Boleia/i }));
 
       await waitFor(() => {
-        expect(supabase.from).toHaveBeenCalledWith('rotas_diarias');
+        expect(supabase.from).toHaveBeenCalledWith('routes');
+        expect(mockGt).toHaveBeenCalledWith('available_seats', 0);
       });
     });
 
@@ -205,6 +215,34 @@ describe('PassengerDashboard Component', () => {
       await waitFor(() => {
         // O componente deve exibir o valor com "Kz" na unidade
         expect(screen.getByText(/25[\s.,]*000|25000/i)).toBeInTheDocument();
+      });
+    });
+
+    it('renderiza o botão "Solicitar Vaga" no cartão da rota', async () => {
+      mockData.current = { data: [rotaDeTeste], error: null };
+
+      render(<PassengerDashboard />);
+
+      fireEvent.click(screen.getByRole('button', { name: /Procurar Boleia/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Solicitar Vaga/i })).toBeInTheDocument();
+      });
+    });
+
+    it('adiciona um marcador ao mapa quando pesquisa retorna rotas', async () => {
+      const maplibregl = await import('maplibre-gl');
+      mockData.current = { data: [rotaDeTeste], error: null };
+
+      render(<PassengerDashboard />);
+      
+      // ensure MapLibre dynamic import in useEffect completes and mapRef is set
+      await new Promise((r) => setTimeout(r, 100));
+      
+      fireEvent.click(screen.getByRole('button', { name: /Procurar Boleia/i }));
+
+      await waitFor(() => {
+        expect(maplibregl.default.Marker).toHaveBeenCalled();
       });
     });
   });
