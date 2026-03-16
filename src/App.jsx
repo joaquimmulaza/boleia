@@ -9,6 +9,7 @@ import AgreementsPage from './pages/AgreementsPage';
 import AbsenceTracker from './pages/AbsenceTracker';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublishRoute from './pages/PublishRoute';
+import MyAgreements from './pages/MyAgreements';
 
 const RootRedirect = () => {
   const [loading, setLoading] = useState(true);
@@ -61,6 +62,7 @@ function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route path="/perfil" element={<div className="p-4 text-center mt-10 text-gray-500 font-semibold">Perfil (Em construção)</div>} />
+            <Route path="/meus-acordos" element={<MyAgreements />} />
           </Route>
         </Route>
 
