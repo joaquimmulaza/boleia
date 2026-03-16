@@ -8,6 +8,7 @@ import DriverDashboard from './pages/DriverDashboard';
 import AgreementsPage from './pages/AgreementsPage';
 import AbsenceTracker from './pages/AbsenceTracker';
 import ProtectedRoute from './components/ProtectedRoute';
+import PublishRoute from './pages/PublishRoute';
 
 const RootRedirect = () => {
   const [loading, setLoading] = useState(true);
@@ -55,6 +56,7 @@ function App() {
 
           <Route element={<ProtectedRoute allowedRole="Motorista" />}>
             <Route path="/motorista" element={<DriverDashboard />} />
+            <Route path="/publicar-trajeto" element={<PublishRoute />} />
           </Route>
 
           <Route element={<ProtectedRoute />}>
