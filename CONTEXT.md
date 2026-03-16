@@ -38,3 +38,6 @@ Lê este documento antes de iniciares qualquer nova funcionalidade. Se eu te ped
 * A tabela `routes` é agora a única fonte de verdade para os trajetos dos motoristas. A antiga tabela `rotas_diarias` foi descontinuada e removida.
 * No futuro, será necessário adicionar colunas de latitude e longitude à tabela `routes` no Supabase e integrar uma API de Geocoding para converter as moradas em coordenadas exatas no momento de Publicar o Trajeto.
 
+## 7. Acordos (Agreements)
+Um Acordo na tabela `acordos` tem os seguintes estados (`estado`): 'pendente', 'ativo', e 'cancelado'.
+
