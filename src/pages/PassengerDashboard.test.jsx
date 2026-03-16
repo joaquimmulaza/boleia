@@ -23,7 +23,7 @@ vi.mock('maplibre-gl', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // Mock do módulo Supabase
 // Simula a cadeia fluente: supabase.from().select().ilike().ilike()
-// que será usada para pesquisar rotas na tabela rotas_diarias
+// que será usada para pesquisar rotas na tabela routes
 // ─────────────────────────────────────────────────────────────────────────────
 const { mockGt, mockIlike, mockSelect, mockFrom, mockData } = vi.hoisted(() => {
   const mockData = { current: { data: [], error: null } };
@@ -51,7 +51,7 @@ import { supabase } from '../lib/supabase';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Dados de teste — rota fictícia que o mock do Supabase vai devolvendo
-// Alinhados com o schema: rotas_diarias
+// Alinhados com o schema: routes
 // ─────────────────────────────────────────────────────────────────────────────
 const rotaDeTeste = {
   id: 'rota-uuid-001',

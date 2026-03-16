@@ -84,103 +84,48 @@ describe('DriverDashboard Component', () => {
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  // 2. FORMULÁRIO DE ROTA
+  // 2. EXIBIÇÃO DA ROTA (Read-only)
   // ───────────────────────────────────────────────────────────────────────────
-  describe('Formulário de Rota', () => {
-    it('renderiza um campo "Ponto de Partida"', () => {
-      render(<DriverDashboard />);
-      expect(screen.getByLabelText(/Ponto de Partida/i)).toBeInTheDocument();
-    });
+  describe('Exibição da Rota Diária', () => {
+    it('renderiza os dados da rota quando estes existem', async () => {
+      // Configuramos o mock para devolver uma rota existente
+      const rotaMock = {
+        origin_name: 'Talatona',
+        destination_name: 'Maianga',
+        departure_time: '07:30',
+        monthly_price_per_seat: 25000,
+      };
 
-    it('renderiza um campo "Ponto de Chegada"', () => {
-      render(<DriverDashboard />);
-      expect(screen.getByLabelText(/Ponto de Chegada/i)).toBeInTheDocument();
-    });
+      const mockEqFn = vi.fn().mockResolvedValue({ data: [rotaMock], error: null });
+      const mockSelectFn = vi.fn(() => ({ eq: mockEqFn }));
+      mockFrom.mockImplementation(() => ({
+        insert: mockInsert,
+        select: mockSelectFn,
+      }));
 
-    it('renderiza um campo "Hora de Recolha"', () => {
-      render(<DriverDashboard />);
-      expect(screen.getByLabelText(/Hora de Recolha/i)).toBeInTheDocument();
-    });
-
-    it('renderiza um campo "Valor Mensal Total (Kz)"', () => {
-      render(<DriverDashboard />);
-      expect(
-        screen.getByLabelText(/Valor Mensal Total \(Kz\)/i)
-      ).toBeInTheDocument();
-    });
-
-    it('renderiza um botão para guardar a rota', () => {
-      render(<DriverDashboard />);
-      expect(
-        screen.getByRole('button', { name: /Guardar Rota/i })
-      ).toBeInTheDocument();
-    });
-  });
-
-  // ───────────────────────────────────────────────────────────────────────────
-  // 3. INTEGRAÇÃO COM SUPABASE — Veículo
-  // ───────────────────────────────────────────────────────────────────────────
-  describe('Submissão do formulário de Veículo ao Supabase', () => {
-    it('chama supabase.from("veiculos").insert() com os dados corretos ao clicar em Guardar Veículo', async () => {
       render(<DriverDashboard />);
 
-      fireEvent.change(screen.getByLabelText(/Marca\/Modelo/i), {
-        target: { value: 'Toyota Corolla' },
-      });
-      fireEvent.change(screen.getByLabelText(/Matrícula/i), {
-        target: { value: 'LD-00-00-AA' },
-      });
-      fireEvent.change(screen.getByLabelText(/Lugares Disponíveis/i), {
-        target: { value: '3' },
+      // Apenas devemos ver os dados (textos) rendered, e não formulários com estes labels
+      await waitFor(() => {
+        expect(screen.getByText(/Talatona/i)).toBeInTheDocument();
+        expect(screen.getByText(/Maianga/i)).toBeInTheDocument();
+        expect(screen.getByText(/07:30/i)).toBeInTheDocument();
+        expect(screen.getByText(/25000/i)).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByRole('button', { name: /Guardar Veículo/i }));
+      // O botão de guardar rota não deve existir
+      expect(screen.queryByRole('button', { name: /Guardar Rota/i })).not.toBeInTheDocument();
+      // O input de Ponto de Partida não deve existir
+      expect(screen.queryByLabelText(/Ponto de Partida/i)).not.toBeInTheDocument();
+    });
+
+    it('exibe mensagem de rota não definida quando não há rota', async () => {
+      // Mock já configurado no beforeEach para devolver array vazio []
+
+      render(<DriverDashboard />);
 
       await waitFor(() => {
-        expect(supabase.from).toHaveBeenCalledWith('veiculos');
-        expect(mockInsert).toHaveBeenCalledWith([
-          {
-            marca_modelo: 'Toyota Corolla',
-            matricula: 'LD-00-00-AA',
-            lugares_disponiveis: 3,
-          },
-        ]);
-      });
-    });
-  });
-
-  // ───────────────────────────────────────────────────────────────────────────
-  // 4. INTEGRAÇÃO COM SUPABASE — Rota
-  // ───────────────────────────────────────────────────────────────────────────
-  describe('Submissão do formulário de Rota ao Supabase', () => {
-    it('chama supabase.from("rotas_diarias").insert() com os dados corretos ao clicar em Guardar Rota', async () => {
-      render(<DriverDashboard />);
-
-      fireEvent.change(screen.getByLabelText(/Ponto de Partida/i), {
-        target: { value: 'Talatona' },
-      });
-      fireEvent.change(screen.getByLabelText(/Ponto de Chegada/i), {
-        target: { value: 'Maianga' },
-      });
-      fireEvent.change(screen.getByLabelText(/Hora de Recolha/i), {
-        target: { value: '07:30' },
-      });
-      fireEvent.change(screen.getByLabelText(/Valor Mensal Total \(Kz\)/i), {
-        target: { value: '25000' },
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: /Guardar Rota/i }));
-
-      await waitFor(() => {
-        expect(supabase.from).toHaveBeenCalledWith('rotas_diarias');
-        expect(mockInsert).toHaveBeenCalledWith([
-          {
-            ponto_partida: 'Talatona',
-            ponto_chegada: 'Maianga',
-            hora_recolha: '07:30',
-            valor_mensal_total: 25000,
-          },
-        ]);
+        expect(screen.getByText(/Ainda não publicaste nenhuma rota diária/i)).toBeInTheDocument();
       });
     });
   });

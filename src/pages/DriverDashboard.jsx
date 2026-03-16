@@ -47,16 +47,16 @@ const DriverDashboard = () => {
 
       // 3. Carrega rota existente (se houver)
       const { data: rotasData } = await supabase
-        .from('rotas_diarias')
-        .select('ponto_partida, ponto_chegada, hora_recolha, valor_mensal_total')
-        .eq('id_motorista', idMotorista);
+        .from('routes')
+        .select('origin_name, destination_name, departure_time, monthly_price_per_seat')
+        .eq('driver_id', idMotorista);
 
       if (rotasData && rotasData.length > 0) {
         const r = rotasData[0];
-        setPontoPartida(r.ponto_partida ?? '');
-        setPontoChegada(r.ponto_chegada ?? '');
-        setHoraRecolha(r.hora_recolha ?? '');
-        setValorMensal(String(r.valor_mensal_total ?? ''));
+        setPontoPartida(r.origin_name ?? '');
+        setPontoChegada(r.destination_name ?? '');
+        setHoraRecolha(r.departure_time ?? '');
+        setValorMensal(String(r.monthly_price_per_seat ?? ''));
       }
     };
 
@@ -86,28 +86,7 @@ const DriverDashboard = () => {
     }
   };
 
-  const handleGuardarRota = async (e) => {
-    e.preventDefault();
-    setFeedbackRota({ type: '', message: '' });
-    setIsLoadingRota(true);
-
-    const { error } = await supabase.from('rotas_diarias').insert([
-      {
-        ponto_partida: pontoPartida,
-        ponto_chegada: pontoChegada,
-        hora_recolha: horaRecolha,
-        valor_mensal_total: parseFloat(valorMensal),
-      },
-    ]);
-
-    setIsLoadingRota(false);
-
-    if (error) {
-      setFeedbackRota({ type: 'error', message: error.message });
-    } else {
-      setFeedbackRota({ type: 'success', message: 'Rota guardada com sucesso!' });
-    }
-  };
+  // A rota é agora read-only (os dados de criação estão no ecrã Publish Route)
 
   return (
     <div className="font-[Plus_Jakarta_Sans,sans-serif] min-h-screen bg-[#F2F4F7] text-gray-800 antialiased">
@@ -231,109 +210,40 @@ const DriverDashboard = () => {
             <h2 className="text-[#1A202C] text-lg font-bold">A Minha Rota Diária</h2>
           </div>
 
-          <form
-            onSubmit={handleGuardarRota}
+          <div
             className="bg-white rounded-xl p-5 space-y-4 border border-emerald-500/5"
             style={{ boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)' }}
           >
-            {/* Ponto de Partida */}
-            <div className="space-y-1">
-              <label
-                htmlFor="pontoPartida"
-                className="text-[#1A202C] text-sm font-semibold"
-              >
-                Ponto de Partida
-              </label>
-              <input
-                id="pontoPartida"
-                type="text"
-                className="w-full bg-[#F7F8FA] border-none rounded-lg h-12 px-4 text-[#1A202C] focus:ring-2 focus:ring-emerald-500/50 transition-all outline-none placeholder-[#718096]"
-                placeholder="ex: Talatona"
-                value={pontoPartida}
-                onChange={(e) => setPontoPartida(e.target.value)}
-                required
-              />
-            </div>
+            {pontoPartida ? (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+                  <div>
+                    <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Origem</p>
+                    <p className="text-[#1A202C] font-bold text-lg">{pontoPartida}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Destino</p>
+                    <p className="text-[#1A202C] font-bold text-lg">{pontoChegada}</p>
+                  </div>
+                </div>
 
-            {/* Ponto de Chegada */}
-            <div className="space-y-1">
-              <label
-                htmlFor="pontoChegada"
-                className="text-[#1A202C] text-sm font-semibold"
-              >
-                Ponto de Chegada
-              </label>
-              <input
-                id="pontoChegada"
-                type="text"
-                className="w-full bg-[#F7F8FA] border-none rounded-lg h-12 px-4 text-[#1A202C] focus:ring-2 focus:ring-emerald-500/50 transition-all outline-none placeholder-[#718096]"
-                placeholder="ex: Maianga"
-                value={pontoChegada}
-                onChange={(e) => setPontoChegada(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* Hora de Recolha */}
-            <div className="space-y-1">
-              <label
-                htmlFor="horaRecolha"
-                className="text-[#1A202C] text-sm font-semibold px-1"
-              >
-                Hora de Recolha
-              </label>
-              <input
-                id="horaRecolha"
-                type="time"
-                className="w-full bg-[#F7F8FA] border-none rounded-lg h-12 px-4 text-[#1A202C] focus:ring-2 focus:ring-emerald-500/50 transition-all outline-none"
-                value={horaRecolha}
-                onChange={(e) => setHoraRecolha(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* Valor Mensal Total (Kz) */}
-            <div className="space-y-1">
-              <label
-                htmlFor="valorMensal"
-                className="text-[#1A202C] text-sm font-semibold px-1"
-              >
-                Valor Mensal Total (Kz)
-              </label>
-              <input
-                id="valorMensal"
-                type="number"
-                min="0"
-                className="w-full bg-[#F7F8FA] border-none rounded-lg h-12 px-4 text-[#1A202C] focus:ring-2 focus:ring-emerald-500/50 transition-all outline-none placeholder-[#718096]"
-                placeholder="ex: 25000"
-                value={valorMensal}
-                onChange={(e) => setValorMensal(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* Feedback Rota */}
-            {feedbackRota.message && (
-              <div
-                role="alert"
-                className={`rounded-lg px-4 py-3 text-sm font-medium text-center ${
-                  feedbackRota.type === 'error'
-                    ? 'bg-red-50 text-red-600 border border-red-200'
-                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                }`}
-              >
-                {feedbackRota.message}
+                <div className="flex justify-between items-center bg-[#F7F8FA] p-3 rounded-lg">
+                  <div>
+                    <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Hora de Recolha</p>
+                    <p className="text-[#1A202C] font-bold">{horaRecolha}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Valor Mensal (Kz)</p>
+                    <p className="text-emerald-600 font-bold">{valorMensal}</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-6 text-gray-500 text-sm">
+                Ainda não publicaste nenhuma rota diária.
               </div>
             )}
-
-            <button
-              type="submit"
-              disabled={isLoadingRota}
-              className="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white font-bold py-4 rounded-lg transition-all mt-2 shadow-lg shadow-emerald-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isLoadingRota ? 'A guardar...' : 'Guardar Rota'}
-            </button>
-          </form>
+          </div>
         </section>
       </main>
     </div>
