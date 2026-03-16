@@ -2,10 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import Auth from './pages/Auth';
-import MainLayout from './layouts/MainLayout';
+import Layout from './layouts/Layout';
 import PassengerDashboard from './pages/PassengerDashboard';
 import DriverDashboard from './pages/DriverDashboard';
-import AgreementsPage from './pages/AgreementsPage';
 import AbsenceTracker from './pages/AbsenceTracker';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublishRoute from './pages/PublishRoute';
@@ -44,28 +43,40 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Rotas públicas */}
         <Route path="/" element={<RootRedirect />} />
         <Route path="/auth" element={<Auth />} />
 
-        {/* Rotas Protegidas envolvidas pelo MainLayout + ProtectedRoute (RBAC) */}
-        <Route element={<MainLayout />}>
+        {/* Rotas protegidas envolvidas pelo Layout global (com BottomBar) */}
+        <Route element={<Layout />}>
+          {/* Rotas exclusivas do Passageiro */}
           <Route element={<ProtectedRoute allowedRole="Passageiro" />}>
             <Route path="/passageiro" element={<PassengerDashboard />} />
-            <Route path="/acordos" element={<AgreementsPage />} />
-            <Route path="/faltas/:acordoId" element={<AbsenceTracker />} />
           </Route>
 
+          {/* Rotas exclusivas do Motorista */}
           <Route element={<ProtectedRoute allowedRole="Motorista" />}>
             <Route path="/motorista" element={<DriverDashboard />} />
             <Route path="/publicar-trajeto" element={<PublishRoute />} />
           </Route>
 
+          {/* Rotas partilhadas (qualquer utilizador autenticado) */}
           <Route element={<ProtectedRoute />}>
-            <Route path="/perfil" element={<div className="p-4 text-center mt-10 text-gray-500 font-semibold">Perfil (Em construção)</div>} />
-            <Route path="/meus-acordos" element={<MyAgreements />} />
+            <Route path="/acordos" element={<MyAgreements />} />
+            <Route path="/faltas" element={<AbsenceTracker />} />
+            <Route path="/faltas/:acordoId" element={<AbsenceTracker />} />
+            <Route
+              path="/perfil"
+              element={
+                <div className="p-4 text-center mt-10 text-gray-500 font-semibold">
+                  Perfil (Em construção)
+                </div>
+              }
+            />
           </Route>
         </Route>
 
+        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

@@ -12,6 +12,7 @@ Stack: React + Vite, Tailwind CSS, Lucide React (Frontend); Supabase (Backend/Au
 * **Sem Confirmações Cegas:** Se te deparares com uma ambiguidade arquitetónica, para e pergunta. Não tomes o caminho de menor resistência se isso comprometer a qualidade.
 * **Refatoração Contínua:** Constantemente procura código morto, duplicações ou lógicas pesadas e sugere melhorias.
 * **Integração de Rotas Contínua:** Sempre que criares uma nova página (`.jsx`), tens OBRIGATORIAMENTE de ir ao ficheiro `src/App.jsx` e registar a nova rota correspondente dentro do `react-router-dom`. Além disso, deves verificar se os links de navegação (como os do `MainLayout.jsx`) precisam de ser atualizados para apontar para a nova página.
+* **REGRA DE OURO UI:** Todas as interfaces devem ser implementadas usando a skill `react-components` lendo diretamente os designs do Google Stitch via MCP. É estritamente proibido inventar ou adivinhar estilos Tailwind. O design do Stitch é a única fonte de verdade.
 
 ## 3. Como a IA deve atuar
 Lê este documento antes de iniciares qualquer nova funcionalidade. Se eu te pedir para criar um componente X, a tua primeira resposta DEVE ser o código do teste para esse componente X.
@@ -40,4 +41,22 @@ Lê este documento antes de iniciares qualquer nova funcionalidade. Se eu te ped
 
 ## 7. Acordos (Agreements)
 Um Acordo na tabela `acordos` tem os seguintes estados (`estado`): 'pendente', 'ativo', e 'cancelado'.
+A página de gestão de acordos é **exclusivamente** `MyAgreements.jsx` (rota `/acordos`). A antiga `AgreementsPage` foi descontinuada e removida.
 
+## 8. Rotas e Navegação (Estrutura de Componentes)
+A aplicação usa um componente `<Layout>` global que envolve todas as páginas autenticadas e inclui a `BottomBar` de navegação inferior. A árvore de navegação é:
+
+```
+<App>
+  <BrowserRouter>
+    ├── /login          → <Auth />          (pública)
+    └── <Layout>        (global, contém <BottomBar>)
+        ├── /           → <Home />          (redireciona por perfil)
+        ├── /passageiro → <PassengerDashboard />
+        ├── /motorista  → <DriverDashboard />
+        ├── /acordos    → <MyAgreements />  ← PADRÃO (único componente de acordos)
+        ├── /faltas     → <AbsenceTracker />
+        └── /perfil     → <Profile />
+```
+
+**BottomBar** liga as 4 secções principais: **Início**, **Acordos/Rotas**, **Faltas** e **Perfil**.

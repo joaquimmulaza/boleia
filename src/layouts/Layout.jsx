@@ -1,9 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { Search, CarFront, User, HandshakeIcon, LogOut } from 'lucide-react';
+import { Search, CarFront, User, HandshakeIcon, CalendarX2, LogOut } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
-const MainLayout = () => {
+/**
+ * Layout global que envolve todas as páginas autenticadas.
+ * Inclui o cabeçalho com logout e a BottomBar de navegação inferior.
+ * A navegação é condicional pelo papel (Motorista / Passageiro).
+ */
+const Layout = () => {
   const navigate = useNavigate();
   const [tipoPerfil, setTipoPerfil] = useState(null);
 
@@ -26,6 +31,12 @@ const MainLayout = () => {
 
   const isMotorista = tipoPerfil === 'Motorista';
 
+  /** Classe CSS partilhada para cada item de nav */
+  const navItemClass = ({ isActive }) =>
+    `flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
+      isActive ? 'text-emerald-500' : 'text-gray-500 hover:text-gray-800'
+    }`;
+
   return (
     <div className="flex flex-col min-h-screen bg-white">
       {/* Barra de topo com botão de Logout */}
@@ -47,52 +58,43 @@ const MainLayout = () => {
         </div>
       </main>
 
-      {/* Bottom Navigation Fixa – Condicional por role */}
-      <nav className="fixed bottom-0 w-full bg-gray-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] border-t border-gray-100 pb-safe z-50">
+      {/* ── Bottom Navigation ─────────────────────────────────────────── */}
+      <nav
+        aria-label="Navegação principal"
+        className="fixed bottom-0 w-full bg-gray-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] border-t border-gray-100 pb-safe z-50"
+      >
         <div className="flex justify-around items-center h-16 sm:h-20 max-w-md mx-auto px-2">
           {isMotorista ? (
-            // ── Navegação do Motorista ──────────────────────────────
+            // ── Navegação do Motorista ──────────────────────────────────
             <>
-              <NavLink
-                to="/motorista"
-                className={({ isActive }) =>
-                  `flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
-                    isActive ? 'text-emerald-500' : 'text-gray-500 hover:text-gray-800'
-                  }`
-                }
-              >
+              <NavLink to="/motorista" className={navItemClass}>
                 {({ isActive }) => (
                   <>
                     <CarFront size={24} strokeWidth={isActive ? 2.5 : 2} />
-                    <span className="text-[10px] sm:text-xs font-semibold">Meu Veículo</span>
+                    <span className="text-[10px] sm:text-xs font-semibold">Início</span>
                   </>
                 )}
               </NavLink>
 
-              <NavLink
-                to="/passageiros"
-                className={({ isActive }) =>
-                  `flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
-                    isActive ? 'text-emerald-500' : 'text-gray-500 hover:text-gray-800'
-                  }`
-                }
-              >
+              <NavLink to="/acordos" className={navItemClass}>
                 {({ isActive }) => (
                   <>
-                    <User size={24} strokeWidth={isActive ? 2.5 : 2} />
-                    <span className="text-[10px] sm:text-xs font-semibold">Passageiros</span>
+                    <HandshakeIcon size={24} strokeWidth={isActive ? 2.5 : 2} />
+                    <span className="text-[10px] sm:text-xs font-semibold">Acordos</span>
                   </>
                 )}
               </NavLink>
 
-              <NavLink
-                to="/perfil"
-                className={({ isActive }) =>
-                  `flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
-                    isActive ? 'text-emerald-500' : 'text-gray-500 hover:text-gray-800'
-                  }`
-                }
-              >
+              <NavLink to="/faltas" className={navItemClass}>
+                {({ isActive }) => (
+                  <>
+                    <CalendarX2 size={24} strokeWidth={isActive ? 2.5 : 2} />
+                    <span className="text-[10px] sm:text-xs font-semibold">Faltas</span>
+                  </>
+                )}
+              </NavLink>
+
+              <NavLink to="/perfil" className={navItemClass}>
                 {({ isActive }) => (
                   <>
                     <User size={24} strokeWidth={isActive ? 2.5 : 2} />
@@ -102,48 +104,36 @@ const MainLayout = () => {
               </NavLink>
             </>
           ) : (
-            // ── Navegação do Passageiro ─────────────────────────────
+            // ── Navegação do Passageiro ─────────────────────────────────
             <>
-              <NavLink
-                to="/passageiro"
-                className={({ isActive }) =>
-                  `flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
-                    isActive ? 'text-emerald-500' : 'text-gray-500 hover:text-gray-800'
-                  }`
-                }
-              >
+              <NavLink to="/passageiro" className={navItemClass}>
                 {({ isActive }) => (
                   <>
                     <Search size={24} strokeWidth={isActive ? 2.5 : 2} />
-                    <span className="text-[10px] sm:text-xs font-semibold">Mapa</span>
+                    <span className="text-[10px] sm:text-xs font-semibold">Início</span>
                   </>
                 )}
               </NavLink>
 
-              <NavLink
-                to="/acordos"
-                className={({ isActive }) =>
-                  `flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
-                    isActive ? 'text-emerald-500' : 'text-gray-500 hover:text-gray-800'
-                  }`
-                }
-              >
+              <NavLink to="/acordos" className={navItemClass}>
                 {({ isActive }) => (
                   <>
                     <HandshakeIcon size={24} strokeWidth={isActive ? 2.5 : 2} />
-                    <span className="text-[10px] sm:text-xs font-semibold">Meus Acordos</span>
+                    <span className="text-[10px] sm:text-xs font-semibold">Acordos</span>
                   </>
                 )}
               </NavLink>
 
-              <NavLink
-                to="/perfil"
-                className={({ isActive }) =>
-                  `flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
-                    isActive ? 'text-emerald-500' : 'text-gray-500 hover:text-gray-800'
-                  }`
-                }
-              >
+              <NavLink to="/faltas" className={navItemClass}>
+                {({ isActive }) => (
+                  <>
+                    <CalendarX2 size={24} strokeWidth={isActive ? 2.5 : 2} />
+                    <span className="text-[10px] sm:text-xs font-semibold">Faltas</span>
+                  </>
+                )}
+              </NavLink>
+
+              <NavLink to="/perfil" className={navItemClass}>
                 {({ isActive }) => (
                   <>
                     <User size={24} strokeWidth={isActive ? 2.5 : 2} />
@@ -159,4 +149,4 @@ const MainLayout = () => {
   );
 };
 
-export default MainLayout;
+export default Layout;
