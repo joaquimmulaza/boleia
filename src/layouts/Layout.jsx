@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { Search, CarFront, User, HandshakeIcon, CalendarX2, LogOut } from 'lucide-react';
+import { Home, Search, CarFront, User, HandshakeIcon, CalendarX2, LogOut } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 /**
@@ -70,8 +70,17 @@ const Layout = () => {
               <NavLink to="/motorista" className={navItemClass}>
                 {({ isActive }) => (
                   <>
-                    <CarFront size={24} strokeWidth={isActive ? 2.5 : 2} />
+                    <Home size={24} strokeWidth={isActive ? 2.5 : 2} />
                     <span className="text-[10px] sm:text-xs font-semibold">Início</span>
+                  </>
+                )}
+              </NavLink>
+
+              <NavLink to="/veiculo" className={navItemClass}>
+                {({ isActive }) => (
+                  <>
+                    <CarFront size={24} strokeWidth={isActive ? 2.5 : 2} />
+                    <span className="text-[10px] sm:text-xs font-semibold">Veículo</span>
                   </>
                 )}
               </NavLink>

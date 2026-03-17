@@ -1,26 +1,23 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
 @import "tailwindcss";
 
 @theme {
-  /* Brand colors – matches Stitch design tokens */
-  --color-near-black: #111827;
-  --color-confidence-green: #10b981;
-  --color-soft-gray: #f9fafb;
-  --color-medium-gray: #6b7280;
-  /* Tailwind standard aliases used in components */
-  --color-emerald-50: #ecfdf5;
-  --color-emerald-500: #10b981;
-  --color-emerald-600: #059669;
-  --color-emerald-700: #047857;
-  --color-gray-50: #f9fafb;
-  --color-gray-100: #f3f4f6;
-  --color-gray-200: #e5e7eb;
-  --color-gray-400: #9ca3af;
-  --color-gray-500: #6b7280;
-  --color-gray-600: #4b5563;
-  --color-gray-800: #1f2937;
-  --color-red-50: #fef2f2;
-  --color-red-200: #fecaca;
-  --color-red-600: #dc2626;
+  --color-primary: #10b748;
+  --color-background-light: #f6f8f6;
+  --color-background-dark: #102216;
+  --color-charcoal: #1A202C;
+  --color-emerald: #10B981;
+  --color-amber: #F59E0B;
+  --color-coral: #EF4444;
+  --color-dark-charcoal: #1A202C;
+  --color-cool-gray: #718096;
+  --color-light-gray: #F7F8FA;
+  
   --font-display: 'Plus Jakarta Sans', sans-serif;
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+}
+
+body {
+    -webkit-tap-highlight-color: transparent;
 }

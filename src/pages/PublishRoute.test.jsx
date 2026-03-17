@@ -38,10 +38,10 @@ describe('PublishRoute Component', () => {
     renderComponent();
     
     expect(screen.getByLabelText(/Local de Partida/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Destino/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Hora de Partida/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Hora de Regresso/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Vagas/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Local de Chegada/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Ida/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Volta/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Nº Vagas/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Valor Mensal/i)).toBeInTheDocument();
   });
 
@@ -49,10 +49,10 @@ describe('PublishRoute Component', () => {
     renderComponent();
     
     fireEvent.change(screen.getByLabelText(/Local de Partida/i), { target: { value: 'Luanda' } });
-    fireEvent.change(screen.getByLabelText(/Destino/i), { target: { value: 'Benguela' } });
-    fireEvent.change(screen.getByLabelText(/Hora de Partida/i), { target: { value: '08:00' } });
-    fireEvent.change(screen.getByLabelText(/Hora de Regresso/i), { target: { value: '18:00' } });
-    fireEvent.change(screen.getByLabelText(/Vagas/i), { target: { value: '3' } });
+    fireEvent.change(screen.getByLabelText(/Local de Chegada/i), { target: { value: 'Benguela' } });
+    fireEvent.change(screen.getByLabelText(/^Ida/i), { target: { value: '08:00' } });
+    fireEvent.change(screen.getByLabelText(/Volta/i), { target: { value: '18:00' } });
+    fireEvent.change(screen.getByLabelText(/Nº Vagas/i), { target: { value: '3' } });
     fireEvent.change(screen.getByLabelText(/Valor Mensal/i), { target: { value: '15000' } });
 
     const submitButton = screen.getByRole('button', { name: /Publicar Trajeto/i });
@@ -83,13 +83,13 @@ describe('PublishRoute Component', () => {
   it('enforces poka-yoke constraints on inputs', () => {
     renderComponent();
 
-    const departureTimeInput = screen.getByLabelText(/Hora de Partida/i);
+    const departureTimeInput = screen.getByLabelText(/^Ida/i);
     expect(departureTimeInput).toHaveAttribute('type', 'time');
 
-    const returnTimeInput = screen.getByLabelText(/Hora de Regresso/i);
+    const returnTimeInput = screen.getByLabelText(/Volta/i);
     expect(returnTimeInput).toHaveAttribute('type', 'time');
 
-    const seatsInput = screen.getByLabelText(/Vagas/i);
+    const seatsInput = screen.getByLabelText(/Nº Vagas/i);
     expect(seatsInput).toHaveAttribute('type', 'number');
     expect(seatsInput).toHaveAttribute('min', '1');
     expect(seatsInput).toHaveAttribute('max', '4');

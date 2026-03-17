@@ -126,19 +126,29 @@ describe('MyAgreements Component', () => {
       });
     });
 
-    it('exibe badge PENDENTE para acordo com estado pendente', async () => {
+    it('exibe badge PENDENTE e botão "Aguardando Confirmação" para acordo pendente', async () => {
       mockData.current = { data: [acordoPendente], error: null };
       render(<MyAgreements />);
       await waitFor(() => {
         expect(screen.getByText(/pendente/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Aguardando Confirmação/i })).toBeInTheDocument();
       });
     });
 
-    it('exibe badge ATIVO para acordo com estado ativo', async () => {
+    it('exibe badge ATIVO e botão "Ver Detalhes" para acordo ativo', async () => {
       mockData.current = { data: [acordoAtivo], error: null };
       render(<MyAgreements />);
       await waitFor(() => {
         expect(screen.getByText(/ativo/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Ver Detalhes/i })).toBeInTheDocument();
+      });
+    });
+
+    it('renderiza o FAB de "Pedir Boleia" apenas para Passageiros', async () => {
+      mockData.current = { data: [], error: null };
+      render(<MyAgreements />);
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Pedir Boleia/i })).toBeInTheDocument();
       });
     });
 
@@ -202,6 +212,14 @@ describe('MyAgreements Component', () => {
       });
     });
 
+    it('NÃO renderiza o FAB de "Pedir Boleia" para Motoristas', async () => {
+      mockData.current = { data: [], error: null };
+      render(<MyAgreements />);
+      await waitFor(() => {
+        expect(screen.queryByRole('button', { name: /Pedir Boleia/i })).not.toBeInTheDocument();
+      });
+    });
+
     it('renderiza botões "Aceitar" e "Rejeitar" para acordos PENDENTES', async () => {
       mockData.current = { data: [acordoPendente], error: null };
       render(<MyAgreements />);
@@ -258,7 +276,7 @@ describe('MyAgreements Component', () => {
   // 4. BADGES DE COR
   // ───────────────────────────────────────────────────────────────────────────
   describe('Badges de Estado', () => {
-    it('badge PENDENTE tem classes de cor amarela (bg-yellow-100)', async () => {
+    it('badge PENDENTE tem classes de cor amber (bg-amber/10)', async () => {
       mockGetUser.mockResolvedValue({
         data: {
           user: {
@@ -272,12 +290,12 @@ describe('MyAgreements Component', () => {
       render(<MyAgreements />);
       await waitFor(() => {
         const badge = screen.getByTestId('badge-estado');
-        expect(badge.className).toMatch(/bg-yellow-100/);
-        expect(badge.className).toMatch(/text-yellow-800/);
+        expect(badge.className).toMatch(/bg-amber\/10/);
+        expect(badge.className).toMatch(/text-amber/);
       });
     });
 
-    it('badge ATIVO tem classes de cor verde (bg-green-100)', async () => {
+    it('badge ATIVO tem classes de cor emerald (bg-emerald/10)', async () => {
       mockGetUser.mockResolvedValue({
         data: {
           user: {
@@ -291,8 +309,8 @@ describe('MyAgreements Component', () => {
       render(<MyAgreements />);
       await waitFor(() => {
         const badge = screen.getByTestId('badge-estado');
-        expect(badge.className).toMatch(/bg-green-100/);
-        expect(badge.className).toMatch(/text-green-800/);
+        expect(badge.className).toMatch(/bg-emerald\/10/);
+        expect(badge.className).toMatch(/text-emerald/);
       });
     });
   });

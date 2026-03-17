@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+
+<html lang="pt"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Boleia Certa - Meus Acordos</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#10b748",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102216",
+                        "charcoal": "#1A202C",
+                        "emerald": "#10B981",
+                        "amber": "#F59E0B",
+                        "coral": "#EF4444",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Header -->
+<header class="sticky top-0 z-30 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-primary/10 px-4 py-3">
+<div class="flex items-center justify-between max-w-md mx-auto">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-2xl">directions_car</span>
+<h1 class="text-charcoal dark:text-slate-100 text-lg font-bold tracking-tight">Boleia Certa</h1>
+</div>
+<button class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">person</span>
+</button>
+</div>
+</header>
+<main class="flex-1 max-w-md mx-auto w-full pb-32">
+<!-- Title Section -->
+<div class="px-5 pt-8 pb-6">
+<h2 class="text-charcoal dark:text-slate-100 text-3xl font-bold tracking-tight">Meus Acordos</h2>
+<p class="text-slate-500 dark:text-slate-400 mt-1">As tuas boleias do mês</p>
+</div>
+<!-- Agreement List -->
+<div class="px-4 space-y-4">
+<!-- Card 1: Active -->
+<div class="bg-white dark:bg-slate-800/50 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-full bg-emerald/20 flex items-center justify-center text-emerald">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">account_circle</span>
+</div>
+<div>
+<p class="font-bold text-charcoal dark:text-slate-100">Carlos Mendes</p>
+<span class="inline-block px-2 py-0.5 rounded-full bg-emerald/10 text-emerald text-[10px] font-bold uppercase tracking-wider">Ativo</span>
+</div>
+</div>
+<button class="text-slate-400">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<div class="space-y-3 mb-4">
+<div class="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined text-lg text-primary">route</span>
+<p class="text-sm font-medium">Talatona → Maianga</p>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined text-lg">schedule</span>
+<p class="text-sm">07:30</p>
+</div>
+<div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined text-lg">payments</span>
+<p class="text-sm">25 000 Kz/mês</p>
+</div>
+</div>
+</div>
+<button class="w-full py-2.5 bg-primary text-white rounded-lg font-semibold text-sm">
+                    Ver Detalhes
+                </button>
+</div>
+<!-- Card 2: Pending -->
+<div class="bg-white dark:bg-slate-800/50 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-full bg-amber/20 flex items-center justify-center text-amber">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">account_circle</span>
+</div>
+<div>
+<p class="font-bold text-charcoal dark:text-slate-100">Ana Rodrigues</p>
+<span class="inline-block px-2 py-0.5 rounded-full bg-amber/10 text-amber text-[10px] font-bold uppercase tracking-wider">Pendente</span>
+</div>
+</div>
+<button class="text-slate-400">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<div class="space-y-3 mb-4">
+<div class="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined text-lg text-amber">route</span>
+<p class="text-sm font-medium">Viana → Ingombota</p>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined text-lg">schedule</span>
+<p class="text-sm">06:45</p>
+</div>
+<div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined text-lg">payments</span>
+<p class="text-sm">18 500 Kz/mês</p>
+</div>
+</div>
+</div>
+<button class="w-full py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 rounded-lg font-semibold text-sm">
+                    Aguardando Confirmação
+                </button>
+</div>
+<!-- Card 3: Cancelled (Faded) -->
+<div class="bg-white/60 dark:bg-slate-800/30 rounded-xl p-4 shadow-sm border border-slate-100/50 dark:border-slate-700/50 opacity-60">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-400">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">account_circle</span>
+</div>
+<div>
+<p class="font-bold text-charcoal dark:text-slate-100">Desconhecido</p>
+<span class="inline-block px-2 py-0.5 rounded-full bg-coral/10 text-coral text-[10px] font-bold uppercase tracking-wider">Cancelado</span>
+</div>
+</div>
+</div>
+<div class="space-y-3">
+<div class="flex items-center gap-2 text-slate-400">
+<span class="material-symbols-outlined text-lg">block</span>
+<p class="text-sm font-medium italic">Acordo cancelado este mês</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- FAB -->
+<button class="fixed bottom-24 right-6 bg-primary text-white flex items-center gap-2 px-5 py-3.5 rounded-full shadow-lg shadow-primary/30 z-40">
+<span class="material-symbols-outlined">add</span>
+<span class="font-bold text-sm tracking-wide">Pedir Boleia</span>
+</button>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 px-6 pb-6 pt-3 z-50">
+<div class="max-w-md mx-auto flex justify-between items-center">
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">Início</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">handshake</span>
+<span class="text-[10px] font-bold">Acordos</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="text-[10px] font-medium">Mensagens</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-medium">Perfil</span>
+</a>
+</div>
+</nav>
+</body></html>

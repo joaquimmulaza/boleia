@@ -103,12 +103,12 @@ describe('PassengerDashboard Component', () => {
   describe('Formulário de Pesquisa', () => {
     it('renderiza um campo de input para "Ponto de Partida"', () => {
       render(<PassengerDashboard />);
-      expect(screen.getByLabelText(/Ponto de Partida/i)).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/Ponto de Partida/i)).toBeInTheDocument();
     });
 
     it('renderiza um campo de input para "Ponto de Chegada"', () => {
       render(<PassengerDashboard />);
-      expect(screen.getByLabelText(/Ponto de Chegada/i)).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/Ponto de Chegada/i)).toBeInTheDocument();
     });
 
     it('renderiza um botão "Procurar Boleia"', () => {
@@ -120,14 +120,14 @@ describe('PassengerDashboard Component', () => {
 
     it('permite escrever no campo "Ponto de Partida"', () => {
       render(<PassengerDashboard />);
-      const input = screen.getByLabelText(/Ponto de Partida/i);
+      const input = screen.getByPlaceholderText(/Ponto de Partida/i);
       fireEvent.change(input, { target: { value: 'Talatona' } });
       expect(input.value).toBe('Talatona');
     });
 
     it('permite escrever no campo "Ponto de Chegada"', () => {
       render(<PassengerDashboard />);
-      const input = screen.getByLabelText(/Ponto de Chegada/i);
+      const input = screen.getByPlaceholderText(/Ponto de Chegada/i);
       fireEvent.change(input, { target: { value: 'Maianga' } });
       expect(input.value).toBe('Maianga');
     });
@@ -155,10 +155,10 @@ describe('PassengerDashboard Component', () => {
     it('chama supabase.from("routes") ao clicar em "Procurar Boleia" e filtra rotas com available_seats > 0', async () => {
       render(<PassengerDashboard />);
 
-      fireEvent.change(screen.getByLabelText(/Ponto de Partida/i), {
+      fireEvent.change(screen.getByPlaceholderText(/Ponto de Partida/i), {
         target: { value: 'Talatona' },
       });
-      fireEvent.change(screen.getByLabelText(/Ponto de Chegada/i), {
+      fireEvent.change(screen.getByPlaceholderText(/Ponto de Chegada/i), {
         target: { value: 'Maianga' },
       });
 
@@ -176,10 +176,10 @@ describe('PassengerDashboard Component', () => {
 
       render(<PassengerDashboard />);
 
-      fireEvent.change(screen.getByLabelText(/Ponto de Partida/i), {
+      fireEvent.change(screen.getByPlaceholderText(/Ponto de Partida/i), {
         target: { value: 'Talatona' },
       });
-      fireEvent.change(screen.getByLabelText(/Ponto de Chegada/i), {
+      fireEvent.change(screen.getByPlaceholderText(/Ponto de Chegada/i), {
         target: { value: 'Maianga' },
       });
 
@@ -196,10 +196,10 @@ describe('PassengerDashboard Component', () => {
 
       render(<PassengerDashboard />);
 
-      fireEvent.change(screen.getByLabelText(/Ponto de Partida/i), {
+      fireEvent.change(screen.getByPlaceholderText(/Ponto de Partida/i), {
         target: { value: 'Talatona' },
       });
-      fireEvent.change(screen.getByLabelText(/Ponto de Chegada/i), {
+      fireEvent.change(screen.getByPlaceholderText(/Ponto de Chegada/i), {
         target: { value: 'Maianga' },
       });
 
@@ -216,10 +216,10 @@ describe('PassengerDashboard Component', () => {
 
       render(<PassengerDashboard />);
 
-      fireEvent.change(screen.getByLabelText(/Ponto de Partida/i), {
+      fireEvent.change(screen.getByPlaceholderText(/Ponto de Partida/i), {
         target: { value: 'Talatona' },
       });
-      fireEvent.change(screen.getByLabelText(/Ponto de Chegada/i), {
+      fireEvent.change(screen.getByPlaceholderText(/Ponto de Chegada/i), {
         target: { value: 'Maianga' },
       });
 
@@ -299,7 +299,8 @@ describe('PassengerDashboard Component', () => {
       fireEvent.click(btn);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /A processar.../i })).toBeInTheDocument();
+        const processingBtn = screen.getByRole('button', { name: /A processar.../i });
+        expect(processingBtn).toBeInTheDocument();
       });
       expect(screen.getByRole('button', { name: /A processar.../i })).toBeDisabled();
 
@@ -315,6 +316,7 @@ describe('PassengerDashboard Component', () => {
         const successBtn = screen.getByRole('button', { name: /Aguardando Confirmação/i });
         expect(successBtn).toBeInTheDocument();
         expect(successBtn).toBeDisabled();
+        expect(successBtn.className).toMatch(/bg-yellow-100|text-yellow-700/i);
       });
     });
 

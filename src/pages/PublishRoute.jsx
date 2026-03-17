@@ -44,7 +44,6 @@ const PublishRoute = () => {
       if (error) throw error;
 
       setMessage({ type: 'success', text: 'Trajeto publicado com sucesso!' });
-      // Reset form or navigate
       setFormData({
         origin_name: '',
         destination_name: '',
@@ -63,113 +62,172 @@ const PublishRoute = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-md mt-8">
-      <h1 className="text-2xl font-bold mb-6 text-gray-800 text-center">Publicar Trajeto</h1>
-      
-      {message.text && (
-        <div className={`p-4 mb-4 rounded ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-          {message.text}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="origin_name" className="block text-sm font-medium text-gray-700">Local de Partida</label>
-          <input
-            type="text"
-            id="origin_name"
-            name="origin_name"
-            required
-            value={formData.origin_name}
-            onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-            placeholder="Ex: Luanda"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="destination_name" className="block text-sm font-medium text-gray-700">Destino</label>
-          <input
-            type="text"
-            id="destination_name"
-            name="destination_name"
-            required
-            value={formData.destination_name}
-            onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-            placeholder="Ex: Benguela"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="departure_time" className="block text-sm font-medium text-gray-700">Hora de Partida</label>
-            <input
-              type="time"
-              id="departure_time"
-              name="departure_time"
-              required
-              value={formData.departure_time}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-            />
-          </div>
-          <div>
-            <label htmlFor="return_time" className="block text-sm font-medium text-gray-700">Hora de Regresso</label>
-            <input
-              type="time"
-              id="return_time"
-              name="return_time"
-              required
-              value={formData.return_time}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="available_seats" className="block text-sm font-medium text-gray-700">Vagas (1-4)</label>
-            <input
-              type="number"
-              id="available_seats"
-              name="available_seats"
-              required
-              min="1"
-              max="4"
-              value={formData.available_seats}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-            />
-          </div>
-          <div>
-            <label htmlFor="monthly_price_per_seat" className="block text-sm font-medium text-gray-700">Valor Mensal (Kz)</label>
-            <input
-              type="number"
-              id="monthly_price_per_seat"
-              name="monthly_price_per_seat"
-              required
-              min="0"
-              step="100"
-              value={formData.monthly_price_per_seat}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-              placeholder="Ex: 15000"
-            />
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
-            loading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
-          }`}
+    <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark font-sans text-dark-charcoal dark:text-light-gray overflow-x-hidden">
+      {/* Top App Bar */}
+      <header className="sticky top-0 z-50 flex items-center bg-white/80 dark:bg-background-dark/80 backdrop-blur-md p-4 pb-4 justify-between border-b border-primary/10">
+        <div 
+          onClick={() => navigate(-1)}
+          className="text-dark-charcoal dark:text-slate-100 flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 transition-colors cursor-pointer"
         >
-          {loading ? 'A publicar...' : 'Publicar Trajeto'}
-        </button>
-      </form>
+          <span className="material-symbols-outlined">arrow_back</span>
+        </div>
+        <h2 className="text-dark-charcoal dark:text-slate-100 text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-10">
+          Publicar Trajeto
+        </h2>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full pb-32">
+        {message.text && (
+          <div className={`p-4 mb-6 rounded-xl text-sm font-medium ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+            {message.text}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+          {/* Route Section */}
+          <div className="flex flex-col gap-4">
+            <h3 className="text-primary text-sm font-bold uppercase tracking-wider px-1">Percurso</h3>
+            <div className="flex flex-col gap-4">
+              <label className="flex flex-col w-full" htmlFor="origin_name">
+                <span className="text-dark-charcoal dark:text-slate-200 text-sm font-semibold mb-2 ml-1">Local de Partida</span>
+                <div className="relative flex items-center">
+                  <span className="material-symbols-outlined absolute left-4 text-primary text-xl" aria-hidden="true">location_on</span>
+                  <input 
+                    id="origin_name"
+                    type="text"
+                    name="origin_name"
+                    required
+                    value={formData.origin_name}
+                    onChange={handleChange}
+                    className="w-full pl-12 pr-4 h-14 bg-white dark:bg-slate-800 border border-transparent rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-cool-gray outline-none shadow-[0_2px_4px_rgba(0,0,0,0.02)]" 
+                    placeholder="Ex: Viana, Luanda" 
+                  />
+                </div>
+              </label>
+              
+              <label className="flex flex-col w-full" htmlFor="destination_name">
+                <span className="text-dark-charcoal dark:text-slate-200 text-sm font-semibold mb-2 ml-1">Local de Chegada</span>
+                <div className="relative flex items-center">
+                  <span className="material-symbols-outlined absolute left-4 text-primary text-xl" aria-hidden="true">flag</span>
+                  <input 
+                    id="destination_name"
+                    type="text"
+                    name="destination_name"
+                    required
+                    value={formData.destination_name}
+                    onChange={handleChange}
+                    className="w-full pl-12 pr-4 h-14 bg-white dark:bg-slate-800 border border-transparent rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-cool-gray outline-none shadow-[0_2px_4px_rgba(0,0,0,0.02)]" 
+                    placeholder="Ex: Talatona, Luanda" 
+                  />
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {/* Schedule Section */}
+          <div className="flex flex-col gap-4">
+            <h3 className="text-primary text-sm font-bold uppercase tracking-wider px-1">Horário</h3>
+            <div className="flex gap-4">
+              <label className="flex flex-col flex-1" htmlFor="departure_time">
+                <span className="text-dark-charcoal dark:text-slate-200 text-sm font-semibold mb-2 ml-1">Ida</span>
+                <div className="relative flex items-center">
+                  <span className="material-symbols-outlined absolute left-4 text-primary text-xl" aria-hidden="true">schedule</span>
+                  <input 
+                    id="departure_time"
+                    type="time"
+                    name="departure_time"
+                    required
+                    value={formData.departure_time}
+                    onChange={handleChange}
+                    className="w-full pl-12 pr-4 h-14 bg-white dark:bg-slate-800 border border-transparent rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none shadow-[0_2px_4px_rgba(0,0,0,0.02)]" 
+                  />
+                </div>
+              </label>
+              <label className="flex flex-col flex-1" htmlFor="return_time">
+                <span className="text-dark-charcoal dark:text-slate-200 text-sm font-semibold mb-2 ml-1">Volta</span>
+                <div className="relative flex items-center">
+                  <span className="material-symbols-outlined absolute left-4 text-primary text-xl" aria-hidden="true">history</span>
+                  <input 
+                    id="return_time"
+                    type="time"
+                    name="return_time"
+                    required
+                    value={formData.return_time}
+                    onChange={handleChange}
+                    className="w-full pl-12 pr-4 h-14 bg-white dark:bg-slate-800 border border-transparent rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none shadow-[0_2px_4px_rgba(0,0,0,0.02)]" 
+                  />
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {/* Capacity and Price Section */}
+          <div className="flex flex-col gap-4">
+            <h3 className="text-primary text-sm font-bold uppercase tracking-wider px-1">Vagas e Custo</h3>
+            <div className="flex gap-4">
+              <label className="flex flex-col flex-1" htmlFor="available_seats">
+                <span className="text-dark-charcoal dark:text-slate-200 text-sm font-semibold mb-2 ml-1">Nº Vagas</span>
+                <div className="relative flex items-center">
+                  <span className="material-symbols-outlined absolute left-4 text-primary text-xl" aria-hidden="true">group</span>
+                  <input 
+                    id="available_seats"
+                    type="number"
+                    name="available_seats"
+                    required
+                    min="1"
+                    max="4"
+                    value={formData.available_seats}
+                    onChange={handleChange}
+                    className="w-full pl-11 pr-4 h-14 bg-white dark:bg-slate-800 border border-transparent rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none shadow-[0_2px_4px_rgba(0,0,0,0.02)]" 
+                    placeholder="4" 
+                  />
+                </div>
+              </label>
+              <label className="flex flex-col flex-1" htmlFor="monthly_price_per_seat">
+                <span className="text-dark-charcoal dark:text-slate-200 text-sm font-semibold mb-2 ml-1">Valor Mensal</span>
+                <div className="relative flex items-center">
+                  <span className="material-symbols-outlined absolute left-4 text-primary text-xl" aria-hidden="true">payments</span>
+                  <input 
+                    id="monthly_price_per_seat"
+                    type="number"
+                    name="monthly_price_per_seat"
+                    required
+                    min="0"
+                    step="100"
+                    value={formData.monthly_price_per_seat}
+                    onChange={handleChange}
+                    className="w-full pl-11 pr-8 h-14 bg-white dark:bg-slate-800 border border-transparent rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none shadow-[0_2px_4px_rgba(0,0,0,0.02)]" 
+                    placeholder="25.000" 
+                  />
+                  <span className="absolute right-4 text-cool-gray font-bold text-xs">Kz</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {/* Additional Options (Subtle) */}
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-primary/5 border border-primary/10 mt-2">
+            <span className="material-symbols-outlined text-primary text-xl shrink-0">info</span>
+            <p className="text-xs text-cool-gray dark:text-slate-400 leading-relaxed">Ao publicar, você concorda em seguir as diretrizes de segurança da comunidade Boleia Certa.</p>
+          </div>
+
+          {/* Footer Button - Fixed to bottom */}
+          <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background-light dark:from-background-dark via-background-light/95 dark:via-background-dark/95 to-transparent flex justify-center z-40 translate-y-[-env(safe-area-inset-bottom,0px)]">
+            <div className="w-full max-w-[480px] mx-auto relative">
+              <button 
+                type="submit"
+                disabled={loading}
+                className="bg-primary hover:bg-primary/90 text-white font-bold text-lg py-4 px-8 rounded-full w-full shadow-lg shadow-primary/20 flex items-center justify-center gap-2 transition-transform active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                <span className="material-symbols-outlined">publish</span>
+                {loading ? 'A publicar...' : 'Publicar Trajeto'}
+              </button>
+            </div>
+          </div>
+
+        </form>
+      </main>
     </div>
   );
 };

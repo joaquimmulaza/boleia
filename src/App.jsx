@@ -9,6 +9,7 @@ import AbsenceTracker from './pages/AbsenceTracker';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublishRoute from './pages/PublishRoute';
 import MyAgreements from './pages/MyAgreements';
+import VehicleSetup from './pages/VehicleSetup';
 
 const RootRedirect = () => {
   const [loading, setLoading] = useState(true);
@@ -57,6 +58,7 @@ function App() {
           {/* Rotas exclusivas do Motorista */}
           <Route element={<ProtectedRoute allowedRole="Motorista" />}>
             <Route path="/motorista" element={<DriverDashboard />} />
+            <Route path="/veiculo" element={<VehicleSetup />} />
             <Route path="/publicar-trajeto" element={<PublishRoute />} />
           </Route>
 

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Boleia Certa - Configuração do Veículo</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#22C55E",
+                        "background-light": "#F2F4F7",
+                        "background-dark": "#122017",
+                        "dark-charcoal": "#1A202C",
+                        "cool-gray": "#718096",
+                        "light-gray": "#F7F8FA"
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100dvh;
+        }
+        .ios-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-dark-charcoal">
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+<header class="sticky top-0 z-50 flex items-center bg-white/80 backdrop-blur-md px-4 py-4 justify-between border-b border-primary/10">
+<div class="flex items-center gap-3">
+<div class="bg-primary/10 p-2 rounded-lg">
+<span class="material-symbols-outlined text-primary text-2xl">directions_car</span>
+</div>
+<div>
+<h1 class="text-dark-charcoal dark:text-slate-100 text-lg font-bold tracking-tight">Configuração</h1>
+<p class="text-cool-gray dark:text-slate-400 text-xs font-medium">Boleia Certa</p>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<p class="text-cool-gray dark:text-slate-400 text-xs font-medium">Motorista</p>
+<p class="text-dark-charcoal dark:text-slate-200 text-sm font-bold">Luanda, AO</p>
+</div>
+</header>
+<main class="flex-1 px-4 py-8 max-w-md mx-auto w-full">
+<section class="space-y-6">
+<div class="text-center space-y-2 mb-2">
+<h2 class="text-dark-charcoal dark:text-slate-100 text-2xl font-bold">O Meu Veículo</h2>
+<p class="text-cool-gray dark:text-slate-400 text-sm">Mantenha os dados do seu veículo atualizados para as suas boleias.</p>
+</div>
+<div class="bg-white dark:bg-slate-900 rounded-xl p-6 ios-shadow space-y-5 border border-primary/5">
+<div class="space-y-1.5">
+<label class="text-dark-charcoal dark:text-slate-300 text-sm font-semibold px-1">Marca/Modelo</label>
+<input class="w-full bg-light-gray dark:bg-slate-800 border-none rounded-lg h-12 px-4 text-dark-charcoal dark:text-slate-100 focus:ring-2 focus:ring-primary/50 transition-all" placeholder="Ex: Toyota Fortuner" type="text" value="Toyota Fortuner"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-dark-charcoal dark:text-slate-300 text-sm font-semibold px-1">Matrícula</label>
+<input class="w-full bg-light-gray dark:bg-slate-800 border-none rounded-lg h-12 px-4 text-dark-charcoal dark:text-slate-100 focus:ring-2 focus:ring-primary/50 transition-all" placeholder="LD-00-00-AA" type="text"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-dark-charcoal dark:text-slate-300 text-sm font-semibold px-1">Lugares Disponíveis</label>
+<div class="relative">
+<input class="w-full bg-light-gray dark:bg-slate-800 border-none rounded-lg h-12 px-4 text-dark-charcoal dark:text-slate-100 focus:ring-2 focus:ring-primary/50 transition-all" placeholder="4" type="number"/>
+<span class="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-cool-gray">event_seat</span>
+</div>
+</div>
+<button class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-lg transition-all active:scale-[0.98] mt-4 shadow-lg shadow-primary/20">
+                        Guardar Veículo
+                    </button>
+</div>
+<div class="flex items-center justify-center gap-2 text-cool-gray dark:text-slate-500 py-4">
+<span class="material-symbols-outlined text-sm">verified_user</span>
+<p class="text-[11px] font-medium uppercase tracking-wider">Dados seguros em Luanda</p>
+</div>
+</section>
+</main>
+<nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-primary/5 px-6 pb-6 pt-3 flex justify-between items-center z-50">
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-cool-gray group-hover:text-primary transition-colors">home</span>
+<span class="text-[10px] font-semibold text-cool-gray group-hover:text-primary uppercase tracking-wider">Início</span>
+</a>
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-cool-gray group-hover:text-primary transition-colors">map</span>
+<span class="text-[10px] font-semibold text-cool-gray group-hover:text-primary uppercase tracking-wider">Rotas</span>
+</a>
+<a class="flex flex-col items-center gap-1 group" href="#">
+<div class="bg-primary p-2.5 -mt-9 rounded-full shadow-lg shadow-primary/30 border-4 border-background-light dark:border-background-dark">
+<span class="material-symbols-outlined text-white">directions_car</span>
+</div>
+<span class="text-[10px] font-semibold text-primary uppercase tracking-wider">Veículo</span>
+</a>
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-cool-gray group-hover:text-primary transition-colors">notifications</span>
+<span class="text-[10px] font-semibold text-cool-gray group-hover:text-primary uppercase tracking-wider">Alertas</span>
+</a>
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-cool-gray group-hover:text-primary transition-colors">person</span>
+<span class="text-[10px] font-semibold text-cool-gray group-hover:text-primary uppercase tracking-wider">Perfil</span>
+</a>
+</nav>
+<div class="h-24"></div>
+</div>
+
+</body></html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+
+<html class="light" lang="pt"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#10b748",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102216",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<title>Boleia Certa - Registar Falta</title>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased text-slate-900 dark:text-slate-100">
+<!-- Background Content (Simulated List Screen) -->
+<div class="fixed inset-0 flex flex-col p-4 space-y-4">
+<header class="flex items-center justify-between py-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">directions_car</span>
+<h1 class="text-xl font-bold">Boleia Certa</h1>
+</div>
+<button class="p-2 rounded-full bg-slate-200 dark:bg-slate-800">
+<span class="material-symbols-outlined">person</span>
+</button>
+</header>
+<div class="flex flex-col gap-4 opacity-50">
+<h2 class="text-lg font-semibold px-1">Histórico de Faltas</h2>
+<div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 flex justify-between items-center">
+<div>
+<p class="font-medium">12 de Outubro</p>
+<p class="text-sm text-slate-500">Motorista • Luanda Sul</p>
+</div>
+<div class="text-red-500 font-bold">-2.500 Kz</div>
+</div>
+<div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 flex justify-between items-center">
+<div>
+<p class="font-medium">08 de Outubro</p>
+<p class="text-sm text-slate-500">Passageiro • Talatona</p>
+</div>
+<div class="text-red-500 font-bold">-1.200 Kz</div>
+</div>
+<div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 flex justify-between items-center">
+<div>
+<p class="font-medium">05 de Outubro</p>
+<p class="text-sm text-slate-500">Motorista • Viana</p>
+</div>
+<div class="text-red-500 font-bold">-2.500 Kz</div>
+</div>
+</div>
+</div>
+<!-- Bottom Sheet Modal Overlay -->
+<div class="fixed inset-0 bg-slate-900/60 dark:bg-black/80 flex flex-col justify-end z-50">
+<!-- Bottom Sheet Content -->
+<div class="bg-white dark:bg-slate-900 rounded-t-xl overflow-hidden shadow-2xl max-w-md mx-auto w-full">
+<!-- Handle -->
+<div class="flex h-6 w-full items-center justify-center">
+<div class="h-1.5 w-12 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+</div>
+<div class="px-6 pt-2 pb-8">
+<h3 class="text-2xl font-bold text-slate-900 dark:text-white mb-6">Registar Falta</h3>
+<form class="space-y-5">
+<!-- Date Input -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Data</label>
+<div class="relative flex items-center">
+<input class="w-full h-14 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:ring-primary focus:border-primary text-base px-4 pr-12" placeholder="Selecionar data" type="text" value="24 de Outubro, 2023"/>
+<span class="material-symbols-outlined absolute right-4 text-slate-400">calendar_today</span>
+</div>
+</div>
+<!-- Type Selector -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Tipo</label>
+<div class="relative">
+<select class="w-full h-14 appearance-none bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:ring-primary focus:border-primary text-base px-4">
+<option value="motorista">Motorista</option>
+<option value="passageiro">Passageiro</option>
+</select>
+<span class="material-symbols-outlined absolute right-4 top-4 pointer-events-none text-slate-400">expand_more</span>
+</div>
+</div>
+<!-- Observation -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Observação (opcional)</label>
+<textarea class="w-full min-h-[120px] bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:ring-primary focus:border-primary text-base p-4 resize-none" placeholder="Adicionar notas sobre a ausência..."></textarea>
+</div>
+<!-- Summary Info -->
+<div class="p-4 bg-primary/5 border border-primary/10 rounded-xl flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">info</span>
+<p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                            O desconto será calculado automaticamente com base no seu percurso habitual em <span class="font-bold">Luanda</span>.
+                        </p>
+</div>
+<!-- Actions -->
+<div class="flex gap-3 pt-4">
+<button class="flex-1 h-14 font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors" type="button">
+                            Cancelar
+                        </button>
+<button class="flex-1 h-14 font-semibold bg-primary text-white hover:bg-primary/90 rounded-xl transition-colors shadow-lg shadow-primary/20" type="submit">
+                            Guardar
+                        </button>
+</div>
+</form>
+</div>
+<!-- Safe Area Bottom Spacing -->
+<div class="h-6 bg-white dark:bg-slate-900"></div>
+</div>
+</div>
+</body></html>

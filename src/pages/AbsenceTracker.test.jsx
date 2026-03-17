@@ -4,36 +4,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AbsenceTracker from './AbsenceTracker';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Mock do módulo Supabase
-//
-// Simula a cadeia fluente usada pela página de Faltas:
-//   supabase.from('faltas').select(...).eq('id_acordo', acordoId)
+// Mock do serviço de faltas (Clean Architecture)
 // ─────────────────────────────────────────────────────────────────────────────
-const { mockEq, mockSelect, mockFrom, mockData } =
+const { mockGetAbsences, mockData } =
   vi.hoisted(() => {
     const mockData = { current: { data: [], error: null } };
+    const mockGetAbsences = vi.fn().mockImplementation(() => Promise.resolve(mockData.current));
 
-    // .eq() é o fim da cadeia — devolve uma Promise
-    const mockEq = vi.fn(function () {
-      return Promise.resolve(mockData.current);
-    });
-
-    // .select() devolve o query builder com .eq()
-    const mockSelect = vi.fn(() => ({ eq: mockEq }));
-
-    // .from() devolve o query builder com .select()
-    const mockFrom = vi.fn(() => ({ select: mockSelect }));
-
-    return { mockEq, mockSelect, mockFrom, mockData };
+    return { mockGetAbsences, mockData };
   });
 
-vi.mock('../lib/supabase', () => ({
-  supabase: {
-    from: mockFrom,
-  },
+vi.mock('../services/AbsenceService', () => ({
+  getAbsences: mockGetAbsences,
 }));
 
-import { supabase } from '../lib/supabase';
+import { getAbsences } from '../services/AbsenceService';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mock de react-router-dom para simular a rota parametrizada
@@ -64,25 +49,24 @@ describe('AbsenceTracker Component', () => {
 
     // Por defeito: sem faltas
     mockData.current = { data: [], error: null };
-    mockEq.mockResolvedValue(mockData.current);
+    mockGetAbsences.mockResolvedValue(mockData.current);
   });
 
   // ───────────────────────────────────────────────────────────────────────────
   // 1. ESTRUTURA BÁSICA E INTEGRAÇÃO SUPABASE
   // ───────────────────────────────────────────────────────────────────────────
   describe('Integração e Listagem Inicial', () => {
-    it('chama supabase.from("faltas") e filtra por id_acordo', async () => {
+    it('chama getAbsences do AbsenceService', async () => {
       render(<AbsenceTracker />);
 
       await waitFor(() => {
-        expect(supabase.from).toHaveBeenCalledWith('faltas');
-        expect(mockEq).toHaveBeenCalledWith('id_acordo', 'acordo-uuid-001');
+        expect(mockGetAbsences).toHaveBeenCalledWith('acordo-uuid-001');
       });
     });
 
     it('exibe a mensagem de estado vazio quando não há faltas', async () => {
       mockData.current = { data: [], error: null };
-      mockEq.mockResolvedValue(mockData.current);
+      mockGetAbsences.mockResolvedValue(mockData.current);
 
       render(<AbsenceTracker />);
 
@@ -108,14 +92,14 @@ describe('AbsenceTracker Component', () => {
   describe('Listagem de Faltas', () => {
     beforeEach(() => {
       mockData.current = { data: [faltaDeTeste], error: null };
-      mockEq.mockResolvedValue(mockData.current);
+      mockGetAbsences.mockResolvedValue(mockData.current);
     });
 
     it('mostra a data da falta', async () => {
       render(<AbsenceTracker />);
 
       await waitFor(() => {
-        expect(screen.getByText(/2023-10-15|15\/10\/2023/i)).toBeInTheDocument();
+        expect(screen.getByText(/2023-10-15|15\/10\/2023|15 de Outubro/i)).toBeInTheDocument();
       });
     });
 
@@ -142,7 +126,7 @@ describe('AbsenceTracker Component', () => {
   describe('Card de Resumo (Descontos)', () => {
     it('exibe 0 Kz no total se não houver faltas', async () => {
       mockData.current = { data: [], error: null };
-      mockEq.mockResolvedValue(mockData.current);
+      mockGetAbsences.mockResolvedValue(mockData.current);
 
       render(<AbsenceTracker />);
 
@@ -158,7 +142,7 @@ describe('AbsenceTracker Component', () => {
         desconto_kz: 2000,
       };
       mockData.current = { data: [faltaDeTeste, segundaFalta], error: null };
-      mockEq.mockResolvedValue(mockData.current);
+      mockGetAbsences.mockResolvedValue(mockData.current);
 
       render(<AbsenceTracker />);
 

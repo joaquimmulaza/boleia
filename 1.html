@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+
+<html lang="pt-AO"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#10b77f",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#10221c",
+                        "near-black": "#1E1E1E",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<title>Boleia Certa - Publicar Trajeto</title>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased">
+<div class="relative flex h-screen w-full max-w-[480px] mx-auto flex-col bg-background-light dark:bg-background-dark overflow-x-hidden">
+<!-- Top App Bar -->
+<div class="sticky top-0 z-10 flex items-center bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md p-4 pb-4 justify-between border-b border-primary/10">
+<div class="text-near-black dark:text-slate-100 flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 transition-colors cursor-pointer">
+<span class="material-symbols-outlined">arrow_back</span>
+</div>
+<h2 class="text-near-black dark:text-slate-100 text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-10">Publicar Trajeto</h2>
+</div>
+<!-- Main Content -->
+<div class="flex flex-col gap-6 p-4 pb-32">
+<!-- Route Section -->
+<div class="flex flex-col gap-4">
+<h3 class="text-primary text-sm font-bold uppercase tracking-wider px-1">Percurso</h3>
+<div class="flex flex-col gap-4">
+<label class="flex flex-col w-full">
+<span class="text-near-black dark:text-slate-200 text-sm font-semibold mb-2 ml-1">Local de Partida</span>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-4 text-primary">location_on</span>
+<input class="form-input w-full pl-12 pr-4 h-14 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:ring-primary/20 transition-all placeholder:text-slate-400" placeholder="Ex: Viana, Luanda" type="text"/>
+</div>
+</label>
+<label class="flex flex-col w-full">
+<span class="text-near-black dark:text-slate-200 text-sm font-semibold mb-2 ml-1">Local de Chegada</span>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-4 text-primary">flag</span>
+<input class="form-input w-full pl-12 pr-4 h-14 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:ring-primary/20 transition-all placeholder:text-slate-400" placeholder="Ex: Talatona, Luanda" type="text"/>
+</div>
+</label>
+</div>
+</div>
+<!-- Schedule Section -->
+<div class="flex flex-col gap-4">
+<h3 class="text-primary text-sm font-bold uppercase tracking-wider px-1">Horário</h3>
+<div class="flex gap-4">
+<label class="flex flex-col flex-1">
+<span class="text-near-black dark:text-slate-200 text-sm font-semibold mb-2 ml-1">Ida</span>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-4 text-primary text-xl">schedule</span>
+<input class="form-input w-full pl-12 pr-4 h-14 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:ring-primary/20 transition-all" placeholder="07:00" type="text"/>
+</div>
+</label>
+<label class="flex flex-col flex-1">
+<span class="text-near-black dark:text-slate-200 text-sm font-semibold mb-2 ml-1">Volta</span>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-4 text-primary text-xl">history</span>
+<input class="form-input w-full pl-12 pr-4 h-14 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:ring-primary/20 transition-all" placeholder="17:00" type="text"/>
+</div>
+</label>
+</div>
+</div>
+<!-- Capacity and Price Section -->
+<div class="flex flex-col gap-4">
+<h3 class="text-primary text-sm font-bold uppercase tracking-wider px-1">Vagas e Custo</h3>
+<div class="flex gap-4">
+<label class="flex flex-col flex-1">
+<span class="text-near-black dark:text-slate-200 text-sm font-semibold mb-2 ml-1">Nº Vagas</span>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-4 text-primary">group</span>
+<input class="form-input w-full pl-12 pr-4 h-14 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:ring-primary/20 transition-all" placeholder="4" type="number"/>
+</div>
+</label>
+<label class="flex flex-col flex-1">
+<span class="text-near-black dark:text-slate-200 text-sm font-semibold mb-2 ml-1">Valor Mensal</span>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-4 text-primary">payments</span>
+<input class="form-input w-full pl-12 pr-12 h-14 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:ring-primary/20 transition-all" placeholder="25.000" type="text"/>
+<span class="absolute right-4 text-slate-400 font-bold text-xs">Kz</span>
+</div>
+</label>
+</div>
+</div>
+<!-- Additional Options (Subtle) -->
+<div class="flex items-center gap-2 p-4 rounded-xl bg-primary/5 border border-primary/10">
+<span class="material-symbols-outlined text-primary">info</span>
+<p class="text-xs text-slate-600 dark:text-slate-400">Ao publicar, você concorda em seguir as diretrizes de segurança da comunidade Boleia Certa.</p>
+</div>
+</div>
+<!-- Footer Button -->
+<div class="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background-light dark:from-background-dark via-background-light/95 dark:via-background-dark/95 to-transparent flex justify-center max-w-[480px] mx-auto">
+<button class="bg-primary hover:bg-primary/90 text-white font-bold text-lg py-4 px-8 rounded-full w-full shadow-lg shadow-primary/20 flex items-center justify-center gap-2 transition-transform active:scale-95">
+<span class="material-symbols-outlined">publish</span>
+                Publicar Trajeto
+            </button>
+</div>
+</div>
+</body></html>
