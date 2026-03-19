@@ -113,7 +113,9 @@ const PassengerDashboard = () => {
         center: [13.2343, -8.8368], // Luanda
         zoom: 12
       });
-    }).catch(() => {});
+    }).catch((err) => {
+      console.error('Error initializing map:', err);
+    });
   }, []);
 
   const handlePesquisar = async (e) => {
@@ -152,7 +154,9 @@ const PassengerDashboard = () => {
             .setLngLat([lng, lat])
             .addTo(mapRef.current);
         });
-      }).catch(() => {});
+      }).catch((err) => {
+        console.error('Error loading markers:', err);
+      });
     }
   };
 
