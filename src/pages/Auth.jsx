@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Car, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { validateTelefone } from '../utils/validation';
 
 /**
  * @typedef {Readonly<{}>} AuthProps
@@ -18,12 +19,23 @@ const Auth = () => {
   const [nome, setNome] = useState('');
   const [telefone, setTelefone] = useState('');
   const [feedback, setFeedback] = useState({ type: '', message: '' });
+  const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFeedback({ type: '', message: '' });
+    setErrors({});
     setIsLoading(true);
+
+    if (!isLogin && !validateTelefone(telefone)) {
+      setErrors((prev) => ({
+        ...prev,
+        telefone: 'Número de telefone inválido. Use o formato: +244 9XXXXXXXX'
+      }));
+      setIsLoading(false);
+      return;
+    }
 
     let error;
     let sessionUser = null;
@@ -80,6 +92,7 @@ const Auth = () => {
   const handleToggleMode = () => {
     setIsLogin(!isLogin);
     setFeedback({ type: '', message: '' });
+    setErrors({});
     setNome('');
     setTelefone('');
     setProfileType('Passageiro');
@@ -133,7 +146,11 @@ const Auth = () => {
         )}
 
         {/* Form elements */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6 px-8 flex-grow">
+        <form
+          aria-label="auth-form"
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-6 px-8 flex-grow"
+        >
 
           {/* Campos Nome e Telefone — apenas em modo Criar Conta */}
           {!isLogin && (
@@ -154,13 +171,27 @@ const Auth = () => {
                 <label htmlFor="telefone" className="text-gray-500 text-sm font-medium ml-1">Telefone</label>
                 <input
                   id="telefone"
-                  className="flex w-full rounded-2xl border border-gray-200 bg-gray-50 text-gray-800 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400"
+                  className={`flex w-full rounded-2xl border bg-gray-50 text-gray-800 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400 ${
+                    errors.telefone
+                      ? 'border-red-500 focus:ring-4 focus:ring-red-500/10'
+                      : 'border-gray-200 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500'
+                  }`}
                   placeholder="+244 9XX XXX XXX"
                   type="tel"
                   value={telefone}
-                  onChange={(e) => setTelefone(e.target.value)}
+                  onChange={(e) => {
+                    setTelefone(e.target.value);
+                    if (errors.telefone) setErrors((prev) => ({ ...prev, telefone: null }));
+                  }}
+                  pattern="^(\+244\s?)?9[0-9]{2}\s?[0-9]{3}\s?[0-9]{3}$|^(\+244\s?)?9[0-9]{8}$"
+                  title="Introduza um número de telefone válido de Angola (ex: +244 9XXXXXXXX)"
                   required
                 />
+                {errors.telefone && (
+                  <span className="text-red-500 text-xs ml-1 font-medium animate-in fade-in slide-in-from-top-1">
+                    {errors.telefone}
+                  </span>
+                )}
               </div>
             </>
           )}
