@@ -55,9 +55,9 @@ const VehicleSetup = () => {
   };
 
   return (
-    <div className="bg-background-light dark:bg-background-dark font-display text-dark-charcoal min-h-screen">
+    <div className="bg-background-light dark:bg-background-dark font-display text-dark-charcoal min-h-screen antialiased">
       <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">
-        <header className="sticky top-0 z-50 flex items-center bg-white/80 backdrop-blur-md px-4 py-4 justify-between border-b border-primary/10">
+        <header className="sticky top-0 z-50 flex items-center bg-white/80 dark:bg-background-dark/80 backdrop-blur-md px-4 py-4 justify-between border-b border-primary/10">
           <div className="flex items-center gap-3">
             <div className="bg-primary/10 p-2 rounded-lg">
               <span className="material-symbols-outlined text-primary text-2xl">directions_car</span>
@@ -89,7 +89,7 @@ const VehicleSetup = () => {
                   type="text"
                   value={marcaModelo}
                   onChange={(e) => setMarcaModelo(e.target.value)}
-                  className="w-full bg-light-gray dark:bg-slate-800 border-none rounded-lg h-12 px-4 text-dark-charcoal dark:text-slate-100 focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-cool-gray outline-none" 
+                  className="w-full bg-[#F7F8FA] dark:bg-slate-800 border-none rounded-lg h-12 px-4 text-dark-charcoal dark:text-slate-100 focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-cool-gray outline-none"
                   placeholder="Ex: Toyota Fortuner"
                   required
                 />
@@ -102,7 +102,7 @@ const VehicleSetup = () => {
                   type="text"
                   value={matricula}
                   onChange={(e) => setMatricula(e.target.value)}
-                  className="w-full bg-light-gray dark:bg-slate-800 border-none rounded-lg h-12 px-4 text-dark-charcoal dark:text-slate-100 focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-cool-gray outline-none" 
+                  className="w-full bg-[#F7F8FA] dark:bg-slate-800 border-none rounded-lg h-12 px-4 text-dark-charcoal dark:text-slate-100 focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-cool-gray outline-none"
                   placeholder="Ex: LD-00-00-AA"
                   required
                 />
@@ -117,11 +117,11 @@ const VehicleSetup = () => {
                     min="1"
                     value={lugaresDisponiveis}
                     onChange={(e) => setLugaresDisponiveis(e.target.value)}
-                    className="w-full bg-light-gray dark:bg-slate-800 border-none rounded-lg h-12 px-4 text-dark-charcoal dark:text-slate-100 focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-cool-gray outline-none" 
+                    className="w-full bg-[#F7F8FA] dark:bg-slate-800 border-none rounded-lg h-12 px-4 pr-10 text-dark-charcoal dark:text-slate-100 focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-cool-gray outline-none"
                     placeholder="4"
                     required
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-cool-gray">event_seat</span>
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-cool-gray pointer-events-none">event_seat</span>
                 </div>
               </div>
 
@@ -154,6 +154,7 @@ const VehicleSetup = () => {
           </section>
         </main>
         
+        {/* Safe Area bottom space for navigation (nav is normally in Layout, keeping space here) */}
         <div className="h-24"></div>
       </div>
     </div>

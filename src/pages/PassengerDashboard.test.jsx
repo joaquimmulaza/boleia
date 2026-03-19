@@ -321,7 +321,7 @@ describe('PassengerDashboard Component', () => {
     });
 
     it('Sad Path: exibe mensagem de erro e restaura botão "Solicitar Vaga" caso requestSeat falhe', async () => {
-      mockRequestSeat.mockRejectedValueOnce(new Error('Erro simulado'));
+      mockRequestSeat.mockRejectedValueOnce(new Error('Erro ao solicitar vaga. Tente novamente.'));
 
       const btn = await setupSearchAndGetButton();
       fireEvent.click(btn);
@@ -333,7 +333,7 @@ describe('PassengerDashboard Component', () => {
       });
 
       // E exibe a notificação de erro algures no ecrã
-      expect(screen.getByText(/Erro ao solicitar vaga. Tenta novamente./i)).toBeInTheDocument();
+      expect(screen.getByText(/Erro ao solicitar vaga. Tente novamente./i)).toBeInTheDocument();
     });
   });
 });

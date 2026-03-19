@@ -35,23 +35,24 @@ const AbsenceTracker = () => {
   const totalDesconto = faltas.reduce((acc, falta) => acc + (Number(falta.desconto_kz) || 0), 0);
 
   const handleLogAbsence = (formData) => {
+      // Logic handled in Modal parent component/service if needed, currently just closes
       setIsModalOpen(false);
   };
 
   return (
-    <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col font-['Plus_Jakarta_Sans',_sans-serif]">
+    <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col font-['Plus_Jakarta_Sans',_sans-serif] antialiased">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md px-4 py-4 flex items-center gap-4">
         <button 
           onClick={() => navigate(-1)}
           className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors"
         >
-          <ArrowLeft className="text-slate-900 dark:text-slate-100" />
+          <span className="material-symbols-outlined text-slate-900 dark:text-slate-100">arrow_back</span>
         </button>
         <h1 className="text-xl font-bold tracking-tight">Registo de Faltas</h1>
       </header>
       
-      <main className="flex-1 px-4 pb-32">
+      <main className="flex-1 px-4 pb-32 max-w-md mx-auto w-full">
         {/* Summary Card */}
         <div className="mt-4 p-6 bg-primary/10 dark:bg-primary/20 rounded-xl border border-primary/20">
           <p className="text-primary font-semibold text-sm uppercase tracking-wider">Total a Descontar</p>
@@ -60,7 +61,7 @@ const AbsenceTracker = () => {
             <span className="text-lg font-semibold text-slate-600 dark:text-slate-400">Kz</span>
           </div>
           <div className="mt-4 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-            <Info className="text-sm" size={16} />
+            <span className="material-symbols-outlined text-sm">info</span>
             <span>Calculado com base nos acordos ativos</span>
           </div>
         </div>
@@ -106,12 +107,15 @@ const AbsenceTracker = () => {
            onClick={() => setIsModalOpen(true)}
            className="bg-primary hover:bg-primary/90 text-white flex items-center gap-2 px-5 py-3.5 rounded-full shadow-lg shadow-primary/30 font-bold transition-all active:scale-95"
         >
-          <Plus size={24} />
+          <span className="material-symbols-outlined">add</span>
           <span>Registar Falta</span>
         </button>
       </div>
 
       <LogAbsenceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleLogAbsence} />
+
+      {/* Safe Area bottom space for navigation (nav is normally in Layout, keeping space here) */}
+      <div className="h-24"></div>
     </div>
   );
 };
