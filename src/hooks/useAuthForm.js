@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { validateTelefone } from '../utils/validation';
 
 export const useAuthForm = () => {
   const navigate = useNavigate();
@@ -12,12 +13,23 @@ export const useAuthForm = () => {
   const [nome, setNome] = useState('');
   const [telefone, setTelefone] = useState('');
   const [feedback, setFeedback] = useState({ type: '', message: '' });
+  const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFeedback({ type: '', message: '' });
+    setErrors({});
     setIsLoading(true);
+
+    if (!isLogin && !validateTelefone(telefone)) {
+      setErrors((prev) => ({
+        ...prev,
+        telefone: 'Número de telefone inválido. Use o formato: +244 9XXXXXXXX'
+      }));
+      setIsLoading(false);
+      return;
+    }
 
     let error;
     let sessionUser = null;
@@ -74,8 +86,10 @@ export const useAuthForm = () => {
   const handleToggleMode = () => {
     setIsLogin(!isLogin);
     setFeedback({ type: '', message: '' });
+    setErrors({});
     setNome('');
     setTelefone('');
+    setPassword('');
     setProfileType('Passageiro');
   };
 
@@ -88,6 +102,7 @@ export const useAuthForm = () => {
     nome,
     telefone,
     feedback,
+    errors,
     isLoading,
     setEmail,
     setPassword,
@@ -95,6 +110,7 @@ export const useAuthForm = () => {
     setTelefone,
     setProfileType,
     setShowPassword,
+    setErrors,
     handleSubmit,
     handleToggleMode,
   };
