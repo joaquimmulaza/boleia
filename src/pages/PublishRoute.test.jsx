@@ -3,27 +3,16 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import PublishRoute from './PublishRoute';
-import { supabase } from '../lib/supabase';
+import { publishRoute } from '../services/RouteService';
 
-vi.mock('../lib/supabase', () => ({
-  supabase: {
-    from: vi.fn(),
-    auth: {
-      getUser: vi.fn()
-    }
-  }
+vi.mock('../services/RouteService', () => ({
+  publishRoute: vi.fn()
 }));
-
-const mockInsert = vi.fn();
 
 describe('PublishRoute Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    supabase.from.mockReturnValue({
-      insert: mockInsert
-    });
-    mockInsert.mockResolvedValue({ error: null });
-    supabase.auth.getUser.mockResolvedValue({ data: { user: { id: 'test-driver-id' } }, error: null });
+    publishRoute.mockResolvedValue({ success: true });
   });
 
   const renderComponent = () => {
@@ -64,15 +53,14 @@ describe('PublishRoute Component', () => {
     expect(screen.getByText(/A publicar.../i)).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(mockInsert).toHaveBeenCalledWith([{
-        driver_id: 'test-driver-id',
+      expect(publishRoute).toHaveBeenCalledWith({
         origin_name: 'Luanda',
         destination_name: 'Benguela',
         departure_time: '08:00',
         return_time: '18:00',
-        available_seats: 3,
-        monthly_price_per_seat: 15000
-      }]);
+        available_seats: '3',
+        monthly_price_per_seat: '15000'
+      });
     });
 
     await waitFor(() => {
@@ -97,5 +85,34 @@ describe('PublishRoute Component', () => {
     const priceInput = screen.getByLabelText(/Valor Mensal/i);
     expect(priceInput).toHaveAttribute('type', 'number');
     expect(priceInput).toHaveAttribute('min', '0');
+  });
+
+  it('shows error message when database insertion fails', async () => {
+    publishRoute.mockRejectedValueOnce(new Error('DB Error'));
+    renderComponent();
+
+    fireEvent.change(screen.getByLabelText(/Local de Partida/i), { target: { value: 'Luanda' } });
+    fireEvent.change(screen.getByLabelText(/Local de Chegada/i), { target: { value: 'Benguela' } });
+    fireEvent.change(screen.getByLabelText(/^Ida/i), { target: { value: '08:00' } });
+    fireEvent.change(screen.getByLabelText(/Volta/i), { target: { value: '18:00' } });
+    fireEvent.change(screen.getByLabelText(/Nº Vagas/i), { target: { value: '3' } });
+    fireEvent.change(screen.getByLabelText(/Valor Mensal/i), { target: { value: '15000' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Publicar Trajeto/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Erro ao publicar trajeto. Tente novamente./i)).toBeInTheDocument();
+    });
+  });
+
+  it('shows error message when user is not authenticated', async () => {
+    publishRoute.mockRejectedValueOnce(new Error('Não autenticado'));
+    renderComponent();
+
+    fireEvent.click(screen.getByRole('button', { name: /Publicar Trajeto/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Erro ao publicar trajeto. Tente novamente./i)).toBeInTheDocument();
+    });
   });
 });
