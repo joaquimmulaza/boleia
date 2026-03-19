@@ -191,4 +191,5 @@ describe('AbsenceTracker Component', () => {
       expect(screen.getByLabelText(/Observação/i)).toBeInTheDocument();
     });
   });
+
 });
