@@ -9,6 +9,7 @@ vi.mock('../lib/supabase', () => ({
     auth: {
       getSession: vi.fn(),
     },
+    from: vi.fn(),
   },
 }));
 
@@ -52,10 +53,22 @@ describe('ProtectedRoute', () => {
     supabase.auth.getSession.mockResolvedValue({
       data: {
         session: {
-          user: { user_metadata: { tipo_perfil: 'Motorista' } },
+          user: { id: 'mock-id-1', user_metadata: { tipo_perfil: 'Motorista' } },
         },
       },
     });
+
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { tipo_perfil: 'Motorista' },
+            error: null,
+          })
+        })
+      })
+    });
+
     // Route with allowedRole="Passageiro", but user is "Motorista"
     render(
       <MemoryRouter initialEntries={['/protegido']}>
@@ -82,10 +95,22 @@ describe('ProtectedRoute', () => {
     supabase.auth.getSession.mockResolvedValue({
       data: {
         session: {
-          user: { user_metadata: { tipo_perfil: 'Passageiro' } },
+          user: { id: 'mock-id-2', user_metadata: { tipo_perfil: 'Passageiro' } },
         },
       },
     });
+
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { tipo_perfil: 'Passageiro' },
+            error: null,
+          })
+        })
+      })
+    });
+
     render(
       <MemoryRouter initialEntries={['/protegido-motorista']}>
         <Routes>
@@ -111,9 +136,20 @@ describe('ProtectedRoute', () => {
     supabase.auth.getSession.mockResolvedValue({
       data: {
         session: {
-          user: { user_metadata: { tipo_perfil: 'Passageiro' } },
+          user: { id: 'mock-id-3', user_metadata: { tipo_perfil: 'Passageiro' } },
         },
       },
+    });
+
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { tipo_perfil: 'Passageiro' },
+            error: null,
+          })
+        })
+      })
     });
 
     renderWithRouter(<></>, { initialEntries: ['/protegido'] });
@@ -127,7 +163,7 @@ describe('ProtectedRoute', () => {
     supabase.auth.getSession.mockResolvedValue({
       data: {
         session: {
-          user: { user_metadata: { tipo_perfil: 'Passageiro' } },
+          user: { id: 'mock-id-4', user_metadata: { tipo_perfil: 'Passageiro' } },
         },
       },
     });

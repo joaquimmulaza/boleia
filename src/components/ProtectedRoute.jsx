@@ -29,8 +29,22 @@ const ProtectedRoute = ({ allowedRole }) => {
       }
 
       // 2. Com sessão mas role inválido → redireciona para o dashboard correto
+      // 🛡️ Sentinel: Do not trust session.user.user_metadata as it can be modified by the user
       if (allowedRole) {
-        const tipoPerfil = session.user?.user_metadata?.tipo_perfil;
+        const { data: perfilData, error: perfilError } = await supabase
+          .from('perfis')
+          .select('tipo_perfil')
+          .eq('id', session.user.id)
+          .single();
+
+        if (perfilError || !perfilData) {
+          // Fallback redirect if profile is missing
+          setRedirectPath('/auth');
+          setStatus('redirect');
+          return;
+        }
+
+        const tipoPerfil = perfilData.tipo_perfil;
         if (tipoPerfil !== allowedRole) {
           const correctPath = tipoPerfil === 'Motorista' ? '/motorista' : '/passageiro';
           setRedirectPath(correctPath);
