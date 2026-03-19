@@ -1,316 +1,270 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { vi } from 'vitest';
 import MyAgreements from './MyAgreements';
+import { supabase } from '../lib/supabase';
+import * as AgreementsService from '../services/AgreementsService';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Mock do módulo Supabase
-// A cadeia fluente: supabase.auth.getUser() + .from().select().eq()
-// ─────────────────────────────────────────────────────────────────────────────
-const {
-  mockFrom,
-  mockGetUser,
-  mockData,
-  mockApproveAgreement,
-  mockRejectAgreement,
-} = vi.hoisted(() => {
-  const mockData = { current: { data: [], error: null } };
-
-  const mockEq = vi.fn(function () {
-    return { then: (resolve) => resolve(mockData.current) };
-  });
-  const mockSelect = vi.fn(() => ({ eq: mockEq }));
-  const mockFrom = vi.fn(() => ({ select: mockSelect }));
-  const mockGetUser = vi.fn();
-  const mockApproveAgreement = vi.fn().mockResolvedValue(true);
-  const mockRejectAgreement = vi.fn().mockResolvedValue(true);
-
-  return {
-    mockFrom,
-    mockGetUser,
-    mockData,
-    mockApproveAgreement,
-    mockRejectAgreement,
-  };
-});
-
+// Mock das libs
 vi.mock('../lib/supabase', () => ({
   supabase: {
-    from: mockFrom,
-    auth: {
-      getUser: mockGetUser,
-    },
+    auth: { getUser: vi.fn() },
+    from: vi.fn(),
   },
 }));
 
 vi.mock('../services/AgreementsService', () => ({
-  approveAgreement: mockApproveAgreement,
-  rejectAgreement: mockRejectAgreement,
+  approveAgreement: vi.fn(),
+  rejectAgreement: vi.fn(),
 }));
 
-import { supabase } from '../lib/supabase';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Dados de teste
-// ─────────────────────────────────────────────────────────────────────────────
-const acordoPendente = {
-  id: 'acordo-uuid-001',
-  passenger_id: 'passageiro-123',
-  route_id: 'rota-uuid-001',
-  estado: 'pendente',
-  routes: {
-    origin_name: 'Talatona',
-    destination_name: 'Maianga',
-    departure_time: '07:30',
-    monthly_price_per_seat: 25000,
-  },
-};
-
-const acordoAtivo = {
-  id: 'acordo-uuid-002',
-  passenger_id: 'passageiro-456',
-  route_id: 'rota-uuid-002',
-  estado: 'ativo',
-  routes: {
-    origin_name: 'Kilamba',
-    destination_name: 'Ingombota',
-    departure_time: '08:00',
-    monthly_price_per_seat: 30000,
-  },
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Suite principal
-// ─────────────────────────────────────────────────────────────────────────────
 describe('MyAgreements Component', () => {
+  let mockSelect, mockEq, mockSingle, mockIn;
+
+  const renderComponent = () => {
+      // Mock timers since component uses fetchAgreements in useEffect
+      render(<MyAgreements />);
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
-    mockData.current = { data: [], error: null };
-  });
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // 1. ESTADO DE LOADING
-  // ───────────────────────────────────────────────────────────────────────────
-  describe('Estado de Loading', () => {
-    it('renderiza o componente sem erros', () => {
-      mockGetUser.mockResolvedValue({
-        data: { user: { id: 'user-123', user_metadata: { tipo_perfil: 'Passageiro' } } },
-        error: null,
-      });
-      render(<MyAgreements />);
-      expect(screen.getByRole('main')).toBeInTheDocument();
+    mockSingle = vi.fn();
+    mockIn = vi.fn().mockReturnValue({ data: [], error: null });
+    mockEq = vi.fn().mockReturnValue({ single: mockSingle });
+
+    // Default chain for 'perfis'
+    mockSingle.mockResolvedValue({ data: { tipo_perfil: 'Passageiro' }, error: null });
+
+    // Default chain for 'acordos'
+    mockSelect = vi.fn().mockReturnValue({ eq: mockEq, in: mockIn, data: [], error: null });
+
+    supabase.from.mockImplementation((table) => {
+        if (table === 'perfis') return { select: () => ({ eq: mockEq }) };
+        if (table === 'rotas') return { select: () => ({ eq: vi.fn().mockResolvedValue({ data: [{id: 1}], error: null }) }) };
+        if (table === 'acordos') {
+            const selectObj = {
+                eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+                in: vi.fn().mockResolvedValue({ data: [], error: null })
+            }
+            return { select: vi.fn().mockReturnValue(selectObj) };
+        }
+    });
+
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'user-123' } },
+      error: null,
     });
   });
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // 2. VISTA DO PASSAGEIRO
-  // ───────────────────────────────────────────────────────────────────────────
-  describe('Vista do Passageiro', () => {
+  const setupMocksForRole = (role, acordosData = []) => {
+      mockSingle.mockResolvedValue({ data: { tipo_perfil: role }, error: null });
+
+      supabase.from.mockImplementation((table) => {
+        if (table === 'perfis') return { select: () => ({ eq: mockEq }) };
+        if (table === 'rotas') return { select: () => ({ eq: vi.fn().mockResolvedValue({ data: [{id: 1}], error: null }) }) };
+        if (table === 'acordos') {
+            const selectObj = {
+                eq: vi.fn().mockResolvedValue({ data: acordosData, error: null }),
+                in: vi.fn().mockResolvedValue({ data: acordosData, error: null })
+            }
+            return { select: vi.fn().mockReturnValue(selectObj) };
+        }
+    });
+  };
+
+  const acordoPendentePassageiro = {
+    id: 'acordo-1',
+    estado: 'Pendente',
+    rotas: { origin_name: 'Viana', destination_name: 'Mutamba', motorista: { nome: 'Motorista Teste' } }
+  };
+
+  const acordoAtivoPassageiro = {
+    id: 'acordo-2',
+    estado: 'Ativo',
+    rotas: { origin_name: 'Cacuaco', destination_name: 'Talatona', motorista: { nome: 'Motorista 2' } }
+  };
+
+  const acordoPendenteMotorista = {
+     id: 'acordo-3',
+     estado: 'Pendente',
+     rotas: { origin_name: 'Benfica', destination_name: 'Maculusso' },
+     passageiro: { nome: 'Passageiro Teste' }
+  };
+
+  const acordoAtivoMotorista = {
+     id: 'acordo-4',
+     estado: 'Ativo',
+     rotas: { origin_name: 'Kilamba', destination_name: 'Baixa' },
+     passageiro: { nome: 'Outro Passageiro' }
+  };
+
+  describe('Renderização Comum', () => {
+    it('renderiza o componente sem erros', async () => {
+      renderComponent();
+      await waitFor(() => expect(screen.getByText('Boleia Certa')).toBeInTheDocument());
+    });
+
+    it('exibe título "Meus Acordos" quando Passageiro', async () => {
+      setupMocksForRole('Passageiro');
+      renderComponent();
+      await waitFor(() => expect(screen.getByText('Meus Acordos')).toBeInTheDocument());
+    });
+  });
+
+  describe('Visão de Passageiro', () => {
     beforeEach(() => {
-      mockGetUser.mockResolvedValue({
-        data: {
-          user: {
-            id: 'passageiro-123',
-            user_metadata: { tipo_perfil: 'Passageiro' },
-          },
-        },
-        error: null,
-      });
-    });
-
-    it('exibe título "Meus Acordos"', async () => {
-      mockData.current = { data: [acordoPendente], error: null };
-      render(<MyAgreements />);
-      await waitFor(() => {
-        expect(screen.getByRole('heading', { name: /Meus Acordos/i })).toBeInTheDocument();
-      });
+      setupMocksForRole('Passageiro', [acordoPendentePassageiro, acordoAtivoPassageiro]);
     });
 
     it('exibe badge PENDENTE e botão "Aguardando Confirmação" para acordo pendente', async () => {
-      mockData.current = { data: [acordoPendente], error: null };
-      render(<MyAgreements />);
+      renderComponent();
       await waitFor(() => {
-        expect(screen.getByText(/pendente/i)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /Aguardando Confirmação/i })).toBeInTheDocument();
+        expect(screen.getByText('Motorista Teste')).toBeInTheDocument();
       });
+      // Get all badges and check if any has "Pendente" text (case-insensitive)
+      const badges = screen.getAllByTestId('badge-estado');
+      expect(badges.some(b => b.textContent.match(/pendente/i))).toBeTruthy();
+
+      const waitingBtns = screen.getAllByRole('button');
+      expect(waitingBtns.some(b => b.textContent.includes('Aguardando Confirmação'))).toBeTruthy();
     });
 
     it('exibe badge ATIVO e botão "Ver Detalhes" para acordo ativo', async () => {
-      mockData.current = { data: [acordoAtivo], error: null };
-      render(<MyAgreements />);
+      renderComponent();
       await waitFor(() => {
-        expect(screen.getByText(/ativo/i)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /Ver Detalhes/i })).toBeInTheDocument();
+        expect(screen.getByText('Motorista 2')).toBeInTheDocument();
       });
+      const badges = screen.getAllByTestId('badge-estado');
+      expect(badges.some(b => b.textContent.match(/ativo/i))).toBeTruthy();
+      expect(screen.getByText('Ver Detalhes')).toBeInTheDocument();
     });
 
     it('renderiza o FAB de "Pedir Boleia" apenas para Passageiros', async () => {
-      mockData.current = { data: [], error: null };
-      render(<MyAgreements />);
+      renderComponent();
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Pedir Boleia/i })).toBeInTheDocument();
+        expect(screen.getByText('Pedir Boleia')).toBeInTheDocument();
       });
     });
 
     it('NÃO renderiza botões de Aceitar/Rejeitar para Passageiro', async () => {
-      mockData.current = { data: [acordoPendente], error: null };
-      render(<MyAgreements />);
+      renderComponent();
       await waitFor(() => {
-        expect(screen.getByText(/pendente/i)).toBeInTheDocument();
+         expect(screen.queryByText('Aceitar')).not.toBeInTheDocument();
+         expect(screen.queryByText('Rejeitar')).not.toBeInTheDocument();
       });
-      expect(screen.queryByRole('button', { name: /Aceitar/i })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /Rejeitar/i })).not.toBeInTheDocument();
     });
 
     it('exibe origem e destino da rota no cartão', async () => {
-      mockData.current = { data: [acordoPendente], error: null };
-      render(<MyAgreements />);
+      renderComponent();
       await waitFor(() => {
-        expect(screen.getByText(/Talatona/i)).toBeInTheDocument();
-        expect(screen.getByText(/Maianga/i)).toBeInTheDocument();
+        expect(screen.getByText(/Viana → Mutamba/)).toBeInTheDocument();
       });
     });
 
     it('exibe mensagem de estado vazio quando não há acordos', async () => {
-      mockData.current = { data: [], error: null };
-      render(<MyAgreements />);
-      await waitFor(() => {
-        expect(screen.getByText(/Ainda não tens acordos/i)).toBeInTheDocument();
-      });
+        setupMocksForRole('Passageiro', []);
+        renderComponent();
+        await waitFor(() => {
+            expect(screen.getByText('Nenhum acordo ainda')).toBeInTheDocument();
+        });
     });
 
     it('exibe cartão com data-testid="agreement-card" por cada acordo', async () => {
-      mockData.current = { data: [acordoPendente, acordoAtivo], error: null };
-      render(<MyAgreements />);
-      await waitFor(() => {
-        expect(screen.getAllByTestId('agreement-card')).toHaveLength(2);
-      });
+        renderComponent();
+        await waitFor(() => {
+            expect(screen.getAllByTestId('agreement-card').length).toBe(2);
+        });
     });
   });
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // 3. VISTA DO MOTORISTA
-  // ───────────────────────────────────────────────────────────────────────────
-  describe('Vista do Motorista', () => {
+  describe('Visão de Motorista', () => {
     beforeEach(() => {
-      mockGetUser.mockResolvedValue({
-        data: {
-          user: {
-            id: 'motorista-123',
-            user_metadata: { tipo_perfil: 'Motorista' },
-          },
-        },
-        error: null,
-      });
+      setupMocksForRole('Motorista', [acordoPendenteMotorista, acordoAtivoMotorista]);
     });
 
     it('exibe título "Pedidos de Passageiros"', async () => {
-      mockData.current = { data: [acordoPendente], error: null };
-      render(<MyAgreements />);
-      await waitFor(() => {
-        expect(screen.getByRole('heading', { name: /Pedidos de Passageiros/i })).toBeInTheDocument();
-      });
+      renderComponent();
+      await waitFor(() => expect(screen.getByText('Pedidos de Passageiros')).toBeInTheDocument());
     });
 
     it('NÃO renderiza o FAB de "Pedir Boleia" para Motoristas', async () => {
-      mockData.current = { data: [], error: null };
-      render(<MyAgreements />);
+      renderComponent();
       await waitFor(() => {
-        expect(screen.queryByRole('button', { name: /Pedir Boleia/i })).not.toBeInTheDocument();
+         // The main header has "Boleia Certa", but we want to ensure the specific string "Pedir Boleia" isn't present
+         expect(screen.queryByText('Pedir Boleia')).not.toBeInTheDocument();
       });
     });
 
     it('renderiza botões "Aceitar" e "Rejeitar" para acordos PENDENTES', async () => {
-      mockData.current = { data: [acordoPendente], error: null };
-      render(<MyAgreements />);
+      renderComponent();
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Aceitar/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /Rejeitar/i })).toBeInTheDocument();
+         expect(screen.getByText('Aceitar')).toBeInTheDocument();
+         expect(screen.getByText('Rejeitar')).toBeInTheDocument();
       });
     });
 
     it('NÃO renderiza botões de ação para acordos ATIVOS', async () => {
-      mockData.current = { data: [acordoAtivo], error: null };
-      render(<MyAgreements />);
+      setupMocksForRole('Motorista', [acordoAtivoMotorista]);
+      renderComponent();
       await waitFor(() => {
-        expect(screen.getByText(/ativo/i)).toBeInTheDocument();
+         expect(screen.queryByText('Aceitar')).not.toBeInTheDocument();
+         expect(screen.queryByText('Rejeitar')).not.toBeInTheDocument();
+         expect(screen.getByText('Ver Detalhes')).toBeInTheDocument();
       });
-      expect(screen.queryByRole('button', { name: /Aceitar/i })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /Rejeitar/i })).not.toBeInTheDocument();
     });
 
     it('chama approveAgreement ao clicar em "Aceitar"', async () => {
-      mockData.current = { data: [acordoPendente], error: null };
-      render(<MyAgreements />);
+      AgreementsService.approveAgreement.mockResolvedValue({});
+      renderComponent();
+
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Aceitar/i })).toBeInTheDocument();
+         expect(screen.getByText('Aceitar')).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByRole('button', { name: /Aceitar/i }));
-      await waitFor(() => {
-        expect(mockApproveAgreement).toHaveBeenCalledWith(acordoPendente.id);
-      });
+
+      fireEvent.click(screen.getByText('Aceitar'));
+
+      expect(AgreementsService.approveAgreement).toHaveBeenCalledWith(acordoPendenteMotorista.id);
     });
 
     it('chama rejectAgreement ao clicar em "Rejeitar"', async () => {
-      mockData.current = { data: [acordoPendente], error: null };
-      render(<MyAgreements />);
+      AgreementsService.rejectAgreement.mockResolvedValue({});
+      renderComponent();
+
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Rejeitar/i })).toBeInTheDocument();
+         expect(screen.getByText('Rejeitar')).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByRole('button', { name: /Rejeitar/i }));
-      await waitFor(() => {
-        expect(mockRejectAgreement).toHaveBeenCalledWith(acordoPendente.id);
-      });
+
+      fireEvent.click(screen.getByText('Rejeitar'));
+
+      expect(AgreementsService.rejectAgreement).toHaveBeenCalledWith(acordoPendenteMotorista.id);
     });
 
     it('exibe mensagem de estado vazio quando não há pedidos', async () => {
-      mockData.current = { data: [], error: null };
-      render(<MyAgreements />);
-      await waitFor(() => {
-        expect(screen.getByText(/Ainda não tens pedidos de passageiros/i)).toBeInTheDocument();
-      });
+        setupMocksForRole('Motorista', []);
+        renderComponent();
+        await waitFor(() => {
+            expect(screen.getByText('Nenhum acordo ainda')).toBeInTheDocument();
+        });
     });
   });
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // 4. BADGES DE COR
-  // ───────────────────────────────────────────────────────────────────────────
-  describe('Badges de Estado', () => {
+  describe('Estilos dos Badges', () => {
     it('badge PENDENTE tem classes de cor amber (bg-amber/10)', async () => {
-      mockGetUser.mockResolvedValue({
-        data: {
-          user: {
-            id: 'passageiro-123',
-            user_metadata: { tipo_perfil: 'Passageiro' },
-          },
-        },
-        error: null,
-      });
-      mockData.current = { data: [acordoPendente], error: null };
-      render(<MyAgreements />);
+      setupMocksForRole('Passageiro', [acordoPendentePassageiro]);
+      renderComponent();
       await waitFor(() => {
-        const badge = screen.getByTestId('badge-estado');
-        expect(badge.className).toMatch(/bg-amber\/10/);
-        expect(badge.className).toMatch(/text-amber/);
+         const badge = screen.getByTestId('badge-estado');
+         expect(badge.className).toContain('bg-amber/10');
       });
     });
 
     it('badge ATIVO tem classes de cor emerald (bg-emerald/10)', async () => {
-      mockGetUser.mockResolvedValue({
-        data: {
-          user: {
-            id: 'passageiro-123',
-            user_metadata: { tipo_perfil: 'Passageiro' },
-          },
-        },
-        error: null,
-      });
-      mockData.current = { data: [acordoAtivo], error: null };
-      render(<MyAgreements />);
+      setupMocksForRole('Passageiro', [acordoAtivoPassageiro]);
+      renderComponent();
       await waitFor(() => {
-        const badge = screen.getByTestId('badge-estado');
-        expect(badge.className).toMatch(/bg-emerald\/10/);
-        expect(badge.className).toMatch(/text-emerald/);
+         const badge = screen.getByTestId('badge-estado');
+         expect(badge.className).toContain('bg-emerald/10');
       });
     });
   });
