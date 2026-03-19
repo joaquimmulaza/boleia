@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AbsenceTracker from './AbsenceTracker';
 
@@ -57,7 +57,7 @@ describe('AbsenceTracker Component', () => {
   // ───────────────────────────────────────────────────────────────────────────
   describe('Integração e Listagem Inicial', () => {
     it('chama getAbsences do AbsenceService', async () => {
-      render(<AbsenceTracker />);
+      await act(async () => { render(<AbsenceTracker />); });
 
       await waitFor(() => {
         expect(mockGetAbsences).toHaveBeenCalledWith('acordo-uuid-001');
@@ -68,7 +68,7 @@ describe('AbsenceTracker Component', () => {
       mockData.current = { data: [], error: null };
       mockGetAbsences.mockResolvedValue(mockData.current);
 
-      render(<AbsenceTracker />);
+      await act(async () => { render(<AbsenceTracker />); });
 
       await waitFor(() => {
         expect(screen.getByText(/Não há faltas/i)).toBeInTheDocument();
@@ -76,7 +76,7 @@ describe('AbsenceTracker Component', () => {
     });
 
     it('exibe o botão Registar Falta', async () => {
-      render(<AbsenceTracker />);
+      await act(async () => { render(<AbsenceTracker />); });
 
       await waitFor(() => {
         expect(
@@ -96,7 +96,7 @@ describe('AbsenceTracker Component', () => {
     });
 
     it('mostra a data da falta', async () => {
-      render(<AbsenceTracker />);
+      await act(async () => { render(<AbsenceTracker />); });
 
       await waitFor(() => {
         expect(screen.getByText(/2023-10-15|15\/10\/2023|15 de Outubro/i)).toBeInTheDocument();
@@ -104,7 +104,7 @@ describe('AbsenceTracker Component', () => {
     });
 
     it('mostra o tipo da falta (Passageiro/Motorista)', async () => {
-      render(<AbsenceTracker />);
+      await act(async () => { render(<AbsenceTracker />); });
 
       await waitFor(() => {
         expect(screen.getByText(/Passageiro/i)).toBeInTheDocument();
@@ -112,7 +112,7 @@ describe('AbsenceTracker Component', () => {
     });
 
     it('mostra o valor de desconto_kz da falta', async () => {
-      render(<AbsenceTracker />);
+      await act(async () => { render(<AbsenceTracker />); });
 
       await waitFor(() => {
         expect(screen.getAllByText(/1[\s.,]*500|1500/i)[0]).toBeInTheDocument();
@@ -128,7 +128,7 @@ describe('AbsenceTracker Component', () => {
       mockData.current = { data: [], error: null };
       mockGetAbsences.mockResolvedValue(mockData.current);
 
-      render(<AbsenceTracker />);
+      await act(async () => { render(<AbsenceTracker />); });
 
       await waitFor(() => {
         expect(screen.getByText(/0/)).toBeInTheDocument();
@@ -144,7 +144,7 @@ describe('AbsenceTracker Component', () => {
       mockData.current = { data: [faltaDeTeste, segundaFalta], error: null };
       mockGetAbsences.mockResolvedValue(mockData.current);
 
-      render(<AbsenceTracker />);
+      await act(async () => { render(<AbsenceTracker />); });
 
       await waitFor(() => {
         // 1500 + 2000 = 3500
@@ -158,12 +158,12 @@ describe('AbsenceTracker Component', () => {
   // ───────────────────────────────────────────────────────────────────────────
   describe('Modal de Registo de Falta', () => {
     it('o modal está oculto por defeito', async () => {
-      render(<AbsenceTracker />);
+      await act(async () => { render(<AbsenceTracker />); });
       expect(screen.queryByTestId('modal-registar-falta')).not.toBeInTheDocument();
     });
 
     it('abre o modal ao clicar em Registar Falta', async () => {
-      render(<AbsenceTracker />);
+      await act(async () => { render(<AbsenceTracker />); });
 
       const botao = await screen.findByRole('button', { name: /Registar Falta/i });
       fireEvent.click(botao);
@@ -174,7 +174,7 @@ describe('AbsenceTracker Component', () => {
     });
 
     it('tem campos para: Data, Tipo (select Passageiro/Motorista), Observação', async () => {
-      render(<AbsenceTracker />);
+      await act(async () => { render(<AbsenceTracker />); });
 
       const botao = await screen.findByRole('button', { name: /Registar Falta/i });
       fireEvent.click(botao);
@@ -191,4 +191,5 @@ describe('AbsenceTracker Component', () => {
       expect(screen.getByLabelText(/Observação/i)).toBeInTheDocument();
     });
   });
+
 });

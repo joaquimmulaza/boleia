@@ -36,7 +36,16 @@ const MyAgreements = () => {
       .select('id, passenger_id, route_id, estado, routes(origin_name, destination_name, departure_time, monthly_price_per_seat)');
 
     if (role === 'Motorista') {
-      query = query.eq('driver_id', uid);
+      // Find driver's routes
+      const { data: rotasMotorista } = await supabase.from('routes').select('id').eq('driver_id', uid);
+      const rotaIds = rotasMotorista?.map(r => r.id) || [];
+      if (rotaIds.length > 0) {
+          query = query.in('route_id', rotaIds);
+      } else {
+          setAcordos([]);
+          setIsLoading(false);
+          return;
+      }
     } else {
       query = query.eq('passenger_id', uid);
     }

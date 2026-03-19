@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Info, ChevronDown } from 'lucide-react';
 
 const LogAbsenceModal = ({ isOpen, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
@@ -16,8 +15,8 @@ const LogAbsenceModal = ({ isOpen, onClose, onSubmit }) => {
   };
 
   return (
-    <div data-testid="modal-registar-falta" className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 flex flex-col justify-end z-[9999]">
-      <div className="bg-white dark:bg-slate-900 rounded-t-xl overflow-hidden shadow-2xl max-w-md mx-auto w-full font-['Plus_Jakarta_Sans',_sans-serif]">
+    <div data-testid="modal-registar-falta" className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 flex flex-col justify-end z-[9999] font-display antialiased">
+      <div className="bg-white dark:bg-slate-900 rounded-t-xl overflow-hidden shadow-2xl max-w-md mx-auto w-full">
         
         {/* Handle */}
         <div className="flex h-6 w-full items-center justify-center">
@@ -37,7 +36,7 @@ const LogAbsenceModal = ({ isOpen, onClose, onSubmit }) => {
                 <input 
                   id="dataFalta"
                   type="date"
-                  className="w-full h-14 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:ring-primary focus:border-primary text-base px-4 pr-12 dark:text-white"
+                  className="w-full h-14 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:ring-primary focus:border-primary text-base px-4 pr-12 dark:text-white outline-none"
                   value={formData.dataFalta}
                   onChange={(e) => setFormData({...formData, dataFalta: e.target.value})}
                   required
@@ -52,14 +51,14 @@ const LogAbsenceModal = ({ isOpen, onClose, onSubmit }) => {
                 {/* Poka-yoke: Select nativo do mobile em vez de dropdown custom */}
                 <select 
                   id="tipoFalta"
-                  className="w-full h-14 appearance-none bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:ring-primary focus:border-primary text-base px-4 dark:text-white"
+                  className="w-full h-14 appearance-none bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:ring-primary focus:border-primary text-base px-4 dark:text-white outline-none"
                   value={formData.tipo}
                   onChange={(e) => setFormData({...formData, tipo: e.target.value})}
                 >
                   <option value="Motorista">Motorista</option>
                   <option value="Passageiro">Passageiro</option>
                 </select>
-                <ChevronDown className="absolute right-4 top-4 pointer-events-none text-slate-400" size={24} />
+                <span className="material-symbols-outlined absolute right-4 top-4 pointer-events-none text-slate-400">expand_more</span>
               </div>
             </div>
 
@@ -68,7 +67,7 @@ const LogAbsenceModal = ({ isOpen, onClose, onSubmit }) => {
               <label htmlFor="observacao" className="text-sm font-semibold text-slate-700 dark:text-slate-300">Observação (opcional)</label>
               <textarea 
                 id="observacao"
-                className="w-full min-h-[120px] bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:ring-primary focus:border-primary text-base p-4 resize-none dark:text-white"
+                className="w-full min-h-[120px] bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:ring-primary focus:border-primary text-base p-4 resize-none dark:text-white outline-none"
                 placeholder="Adicionar notas sobre a ausência..."
                 value={formData.observacao}
                 onChange={(e) => setFormData({...formData, observacao: e.target.value})}
@@ -77,7 +76,7 @@ const LogAbsenceModal = ({ isOpen, onClose, onSubmit }) => {
 
             {/* Summary Info */}
             <div className="p-4 bg-primary/5 border border-primary/10 rounded-xl flex items-center gap-3">
-              <Info className="text-primary shrink-0" size={24} />
+              <span className="material-symbols-outlined text-primary shrink-0">info</span>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                 O desconto será calculado automaticamente com base no seu percurso habitual em <span className="font-bold">Luanda</span>.
               </p>
