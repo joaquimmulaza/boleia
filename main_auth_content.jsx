@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Car, Eye, EyeOff } from 'lucide-react';
-import { useAuthForm } from '../hooks/useAuthForm';
+import { supabase } from '../lib/supabase';
 
 /**
  * @typedef {Readonly<{}>} AuthProps
@@ -8,32 +9,86 @@ import { useAuthForm } from '../hooks/useAuthForm';
  */
 
 const Auth = () => {
-  const {
-    isLogin,
-    profileType,
-    showPassword,
-    email,
-    password,
-    nome,
-    telefone,
-    feedback,
-    errors,
-    isLoading,
-    setEmail,
-    setPassword,
-    setNome,
-    setTelefone,
-    setProfileType,
-    setShowPassword,
-    setErrors,
-    handleSubmit,
-    handleToggleMode,
-  } = useAuthForm();
+  const navigate = useNavigate();
+  const [isLogin, setIsLogin] = useState(true);
+  const [profileType, setProfileType] = useState('Passageiro');
+  const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [nome, setNome] = useState('');
+  const [telefone, setTelefone] = useState('');
+  const [feedback, setFeedback] = useState({ type: '', message: '' });
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setFeedback({ type: '', message: '' });
+    setIsLoading(true);
+
+    let error;
+    let sessionUser = null;
+
+    if (isLogin) {
+      const result = await supabase.auth.signInWithPassword({ email, password });
+      error = result.error;
+      sessionUser = result.data?.user;
+    } else {
+      const result = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            tipo_perfil: profileType,
+            nome_completo: nome,
+            telefone: telefone,
+          },
+        },
+      });
+      error = result.error;
+      sessionUser = result.data?.user;
+    }
+
+    setIsLoading(false);
+
+    if (error) {
+      setFeedback({ type: 'error', message: error.message });
+    } else if (!isLogin) {
+      setFeedback({ type: 'success', message: 'Registo efetuado! Verifique o seu email para confirmar a conta.' });
+
+      const tipoPerfil = sessionUser?.user_metadata?.tipo_perfil || profileType;
+      setTimeout(() => {
+        if (tipoPerfil === 'Motorista') {
+          navigate('/motorista');
+        } else {
+          navigate('/passageiro');
+        }
+      }, 1000);
+    } else {
+      setFeedback({ type: 'success', message: 'Bem-vindo de volta!' });
+
+      const tipoPerfil = sessionUser?.user_metadata?.tipo_perfil || 'Passageiro';
+      setTimeout(() => {
+        if (tipoPerfil === 'Motorista') {
+          navigate('/motorista');
+        } else {
+          navigate('/passageiro');
+        }
+      }, 1000);
+    }
+  };
+
+  const handleToggleMode = () => {
+    setIsLogin(!isLogin);
+    setFeedback({ type: '', message: '' });
+    setNome('');
+    setTelefone('');
+    setProfileType('Passageiro');
+  };
 
   return (
     <div className="font-[Plus Jakarta Sans,sans-serif] min-h-screen bg-white text-gray-800 antialiased flex flex-col items-center justify-center p-0 sm:p-4">
       <div className="relative flex min-h-screen sm:min-h-[812px] max-w-[400px] w-full flex-col bg-white overflow-hidden shadow-none sm:shadow-xl sm:rounded-3xl border-0 sm:border border-gray-100">
-        
+
         {/* Header Section */}
         <div className="flex flex-col items-center pt-16 pb-8 px-8 text-center">
           <div className="text-emerald-500 mb-6 bg-emerald-50 p-4 rounded-full">
@@ -51,24 +106,24 @@ const Auth = () => {
             <div className="flex relative h-14 w-full items-center justify-center rounded-full bg-gray-50 p-1.5 border border-gray-200 shadow-inner">
               <label className={`flex h-full grow cursor-pointer items-center justify-center rounded-full px-4 transition-all duration-300 ${profileType === 'Passageiro' ? 'bg-emerald-500 text-white shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>
                 <span className="truncate text-sm font-semibold z-10">Sou Passageiro</span>
-                <input 
-                  checked={profileType === 'Passageiro'} 
+                <input
+                  checked={profileType === 'Passageiro'}
                   onChange={() => setProfileType('Passageiro')}
-                  className="sr-only" 
-                  name="user-type" 
-                  type="radio" 
+                  className="sr-only"
+                  name="user-type"
+                  type="radio"
                   value="Passageiro"
                   aria-label="Sou Passageiro"
                 />
               </label>
               <label className={`flex h-full grow cursor-pointer items-center justify-center rounded-full px-4 transition-all duration-300 ${profileType === 'Motorista' ? 'bg-emerald-500 text-white shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>
                 <span className="truncate text-sm font-semibold z-10">Sou Motorista</span>
-                <input 
-                  checked={profileType === 'Motorista'} 
+                <input
+                  checked={profileType === 'Motorista'}
                   onChange={() => setProfileType('Motorista')}
-                  className="sr-only" 
-                  name="user-type" 
-                  type="radio" 
+                  className="sr-only"
+                  name="user-type"
+                  type="radio"
                   value="Motorista"
                   aria-label="Sou Motorista"
                 />
@@ -78,11 +133,7 @@ const Auth = () => {
         )}
 
         {/* Form elements */}
-        <form
-          aria-label="auth-form"
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-6 px-8 flex-grow"
-        >
+        <form onSubmit={handleSubmit} className="flex flex-col gap-6 px-8 flex-grow">
 
           {/* Campos Nome e Telefone — apenas em modo Criar Conta */}
           {!isLogin && (
@@ -103,59 +154,45 @@ const Auth = () => {
                 <label htmlFor="telefone" className="text-gray-500 text-sm font-medium ml-1">Telefone</label>
                 <input
                   id="telefone"
-                  className={`flex w-full rounded-2xl border bg-gray-50 text-gray-800 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400 ${
-                    errors.telefone
-                      ? 'border-red-500 focus:ring-4 focus:ring-red-500/10'
-                      : 'border-gray-200 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500'
-                  }`}
+                  className="flex w-full rounded-2xl border border-gray-200 bg-gray-50 text-gray-800 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400"
                   placeholder="+244 9XX XXX XXX"
                   type="tel"
                   value={telefone}
-                  onChange={(e) => {
-                    setTelefone(e.target.value);
-                    if (errors.telefone) setErrors((prev) => ({ ...prev, telefone: null }));
-                  }}
-                  pattern="^(\+244\s?)?9[0-9]{2}\s?[0-9]{3}\s?[0-9]{3}$|^(\+244\s?)?9[0-9]{8}$"
-                  title="Introduza um número de telefone válido de Angola (ex: +244 9XXXXXXXX)"
+                  onChange={(e) => setTelefone(e.target.value)}
                   required
                 />
-                {errors.telefone && (
-                  <span className="text-red-500 text-xs ml-1 font-medium animate-in fade-in slide-in-from-top-1">
-                    {errors.telefone}
-                  </span>
-                )}
               </div>
             </>
           )}
 
           <div className="flex flex-col gap-2">
             <label htmlFor="email" className="text-gray-500 text-sm font-medium ml-1">Email</label>
-            <input 
+            <input
               id="email"
-              className="flex w-full rounded-2xl border border-gray-200 bg-gray-50 text-gray-800 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400" 
-              placeholder="nome@email.com" 
+              className="flex w-full rounded-2xl border border-gray-200 bg-gray-50 text-gray-800 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400"
+              placeholder="nome@email.com"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
-          
+
           <div className="flex flex-col gap-2">
             <div className="flex justify-between items-center ml-1">
               <label htmlFor="password" className="text-gray-500 text-sm font-medium">Password</label>
             </div>
             <div className="relative flex items-center">
-              <input 
+              <input
                 id="password"
-                className="flex w-full rounded-2xl border border-gray-200 bg-gray-50 text-gray-800 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 h-14 p-4 pr-12 text-base outline-none transition-all placeholder:text-gray-400" 
-                placeholder="••••••••" 
+                className="flex w-full rounded-2xl border border-gray-200 bg-gray-50 text-gray-800 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 h-14 p-4 pr-12 text-base outline-none transition-all placeholder:text-gray-400"
+                placeholder="••••••••"
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-              <button 
+              <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-4 text-gray-400 hover:text-gray-600 transition-colors"
@@ -186,7 +223,7 @@ const Auth = () => {
               {feedback.message}
             </div>
           )}
-          
+
           <div className="mt-2">
             <button
               type="submit"
@@ -201,7 +238,7 @@ const Auth = () => {
         {/* Footer Toggle Section */}
         <div className="mt-auto px-8 py-10 pb-12">
           <div className="flex flex-col items-center gap-4">
-            <button 
+            <button
               onClick={handleToggleMode}
               className="text-gray-500 font-medium text-sm hover:text-emerald-600 transition-colors"
             >
