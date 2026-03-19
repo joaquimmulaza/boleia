@@ -3,21 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getAbsences } from '../services/AbsenceService';
 import LogAbsenceModal from '../components/LogAbsenceModal';
 import { ArrowLeft, Info, Plus } from 'lucide-react';
-
-const formatCurrency = (value) => {
-  return Number(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-};
-
-const formatDate = (dateString) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return dateString;
-  const meses = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-  ];
-  return `${date.getDate().toString().padStart(2, '0')} de ${meses[date.getMonth()]}`;
-};
+import { formatDate, formatCurrency } from '../utils/formatters';
 
 const AbsenceTracker = () => {
   const { acordoId } = useParams();
