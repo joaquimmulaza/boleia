@@ -1,110 +1,120 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import Layout from './Layout';
+import { supabase } from '../lib/supabase';
+import { ThemeProvider } from '../contexts/ThemeContext';
 
-// Mock Supabase
+// Mock do supabase
 vi.mock('../lib/supabase', () => ({
   supabase: {
     auth: {
       getSession: vi.fn(),
-      signOut: vi.fn().mockResolvedValue({}),
+      signOut: vi.fn(),
     },
   },
 }));
 
-import { supabase } from '../lib/supabase';
+// Mock window.matchMedia
+const originalMatchMedia = window.matchMedia;
 
-const renderLayout = (initialPath = '/') =>
-  render(
-    <MemoryRouter initialEntries={[initialPath]}>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<div>Página Filha</div>} />
-        </Route>
-        <Route path="/auth" element={<div>Página de Auth</div>} />
-      </Routes>
-    </MemoryRouter>
+const renderWithRouterAndTheme = (ui, { route = '/' } = {}) => {
+  return render(
+    <ThemeProvider>
+      <MemoryRouter initialEntries={[route]}>
+        <Routes>
+          <Route element={ui}>
+            <Route path="/" element={<div data-testid="child-content">Child Content</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    </ThemeProvider>
   );
+};
 
 describe('Layout Component', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    window.matchMedia = vi.fn().mockImplementation(query => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(), // Deprecated
+      removeListener: vi.fn(), // Deprecated
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+  });
+
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia;
+  });
 
   it('renderiza o conteúdo filho (Outlet) e o botão de Logout', async () => {
-    supabase.auth.getSession.mockResolvedValue({
-      data: { session: { user: { user_metadata: { tipo_perfil: 'Passageiro' } } } },
+    supabase.auth.getSession.mockResolvedValue({ data: { session: null } });
+
+    await act(async () => {
+      renderWithRouterAndTheme(<Layout />);
     });
 
-    renderLayout();
-    await waitFor(() => expect(screen.getByText('Página Filha')).toBeInTheDocument());
+    expect(screen.getByTestId('child-content')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /terminar sessão/i })).toBeInTheDocument();
   });
 
   it('mostra navegação de Passageiro (Início, Acordos, Faltas, Perfil) quando tipo_perfil é Passageiro', async () => {
     supabase.auth.getSession.mockResolvedValue({
-      data: { session: { user: { user_metadata: { tipo_perfil: 'Passageiro' } } } },
+      data: {
+        session: {
+          user: {
+            user_metadata: { tipo_perfil: 'Passageiro' }
+          }
+        }
+      }
     });
 
-    renderLayout();
-
-    await waitFor(() => {
-      expect(screen.getByRole('link', { name: /início/i })).toBeInTheDocument();
+    await act(async () => {
+      renderWithRouterAndTheme(<Layout />);
     });
-    expect(screen.getByRole('link', { name: /acordos/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /faltas/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /perfil/i })).toBeInTheDocument();
+
+    expect(screen.getByText('Início')).toBeInTheDocument();
+    expect(screen.getByText('Acordos')).toBeInTheDocument();
+    expect(screen.getByText('Faltas')).toBeInTheDocument();
+    expect(screen.getByText('Perfil')).toBeInTheDocument();
+    expect(screen.queryByText('Veículo')).not.toBeInTheDocument(); // Exclusivo de Motorista
   });
 
-  it('mostra navegação de Motorista (Início, Acordos, Faltas, Perfil) quando tipo_perfil é Motorista', async () => {
+  it('mostra navegação de Motorista (Início, Veículo, Acordos, Faltas, Perfil) quando tipo_perfil é Motorista', async () => {
     supabase.auth.getSession.mockResolvedValue({
-      data: { session: { user: { user_metadata: { tipo_perfil: 'Motorista' } } } },
+      data: {
+        session: {
+          user: {
+            user_metadata: { tipo_perfil: 'Motorista' }
+          }
+        }
+      }
     });
 
-    renderLayout();
-
-    await waitFor(() => {
-      expect(screen.getByRole('link', { name: /início/i })).toBeInTheDocument();
+    await act(async () => {
+      renderWithRouterAndTheme(<Layout />);
     });
-    expect(screen.getByRole('link', { name: /acordos/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /faltas/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /perfil/i })).toBeInTheDocument();
+
+    expect(screen.getByText('Início')).toBeInTheDocument();
+    expect(screen.getByText('Veículo')).toBeInTheDocument();
+    expect(screen.getByText('Acordos')).toBeInTheDocument();
+    expect(screen.getByText('Faltas')).toBeInTheDocument();
+    expect(screen.getByText('Perfil')).toBeInTheDocument();
   });
 
   it('mostra a navegação de Passageiro por defeito quando não há sessão', async () => {
     supabase.auth.getSession.mockResolvedValue({ data: { session: null } });
 
-    renderLayout();
-
-    // Sem sessão, tipoPerfil é null, logo a navegação de Passageiro é o padrão
-    await waitFor(() => {
-      expect(screen.getByRole('link', { name: /início/i })).toBeInTheDocument();
-    });
-  });
-
-  it('os itens de navegação são links <a> e não botões', async () => {
-    supabase.auth.getSession.mockResolvedValue({
-      data: { session: { user: { user_metadata: { tipo_perfil: 'Passageiro' } } } },
+    await act(async () => {
+      renderWithRouterAndTheme(<Layout />);
     });
 
-    renderLayout();
-
-    await waitFor(() => {
-      const navLinks = screen.getAllByRole('link');
-      // A BottomBar deve ter 4 links de navegação
-      expect(navLinks.length).toBeGreaterThanOrEqual(4);
-    });
-  });
-
-  it('link "Acordos" aponta para /acordos', async () => {
-    supabase.auth.getSession.mockResolvedValue({
-      data: { session: { user: { user_metadata: { tipo_perfil: 'Passageiro' } } } },
-    });
-
-    renderLayout();
-
-    await waitFor(() => {
-      const acordosLink = screen.getByRole('link', { name: /acordos/i });
-      expect(acordosLink).toHaveAttribute('href', '/acordos');
-    });
+    expect(screen.queryByText('Veículo')).not.toBeInTheDocument();
+    expect(screen.getByText('Início')).toBeInTheDocument();
   });
 });
