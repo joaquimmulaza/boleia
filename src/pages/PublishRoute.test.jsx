@@ -141,14 +141,6 @@ describe('PublishRoute Component', () => {
     await act(async () => { renderWithRouter(<PublishRoute />); });
 
     // Fill form (minimum required)
-    fireEvent.change(document.querySelector('input[name="origin_name"]'), { target: { value: 'Luanda' } });
-    fireEvent.change(document.querySelector('input[name="destination_name"]'), { target: { value: 'Talatona' } });
-    fireEvent.change(document.querySelector('input[name="departure_time"]'), { target: { value: '07:00' } });
-    fireEvent.change(document.querySelector('input[name="return_time"]'), { target: { value: '17:00' } });
-    fireEvent.change(document.querySelector('input[name="available_seats"]'), { target: { value: '3' } });
-    fireEvent.change(document.querySelector('input[name="monthly_price_per_seat"]'), { target: { value: '25000' } });
-
-<<<<<<< HEAD
     fireEvent.change(screen.getByLabelText(/Local de Partida/i), { target: { value: 'Luanda' } });
     fireEvent.change(screen.getByLabelText(/Local de Chegada/i), { target: { value: 'Benguela' } });
     fireEvent.change(screen.getByLabelText(/^Ida/i), { target: { value: '08:00' } });
@@ -156,10 +148,9 @@ describe('PublishRoute Component', () => {
     fireEvent.change(screen.getByLabelText(/Nº Vagas/i), { target: { value: '3' } });
     fireEvent.change(screen.getByLabelText(/Valor Mensal/i), { target: { value: '15000' } });
 
-    fireEvent.click(screen.getByRole('button', { name: /Publicar Trajeto/i }));
-=======
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Publicar Trajeto/i })); });
->>>>>>> f3ece36a6a74704fdf3dce1d51a651195f36454c
+    await act(async () => { 
+      fireEvent.click(screen.getByRole('button', { name: /Publicar Trajeto/i })); 
+    });
 
     await waitFor(() => {
       expect(screen.getByText(/Você precisa estar logado para publicar uma rota./i)).toBeInTheDocument();
