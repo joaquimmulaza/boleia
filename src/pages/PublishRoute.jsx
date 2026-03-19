@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { publishRoute } from '../services/RouteService';
 import { useNavigate } from 'react-router-dom';
 
 const PublishRoute = () => {
@@ -26,22 +26,7 @@ const PublishRoute = () => {
     setMessage({ type: '', text: '' });
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Não autenticado');
-
-      const routeData = {
-        driver_id: user.id,
-        origin_name: formData.origin_name,
-        destination_name: formData.destination_name,
-        departure_time: formData.departure_time,
-        return_time: formData.return_time,
-        available_seats: parseInt(formData.available_seats, 10),
-        monthly_price_per_seat: parseFloat(formData.monthly_price_per_seat)
-      };
-
-      const { error } = await supabase.from('routes').insert([routeData]);
-      
-      if (error) throw error;
+      await publishRoute(formData);
 
       setMessage({ type: 'success', text: 'Trajeto publicado com sucesso!' });
       setFormData({
