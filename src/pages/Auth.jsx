@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
 import { Car, Eye, EyeOff } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { useAuthForm } from '../hooks/useAuthForm';
 
 /**
  * @typedef {Readonly<{}>} AuthProps
@@ -9,81 +8,27 @@ import { supabase } from '../lib/supabase';
  */
 
 const Auth = () => {
-  const navigate = useNavigate();
-  const [isLogin, setIsLogin] = useState(true);
-  const [profileType, setProfileType] = useState('Passageiro');
-  const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [nome, setNome] = useState('');
-  const [telefone, setTelefone] = useState('');
-  const [feedback, setFeedback] = useState({ type: '', message: '' });
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setFeedback({ type: '', message: '' });
-    setIsLoading(true);
-
-    let error;
-    let sessionUser = null;
-
-    if (isLogin) {
-      const result = await supabase.auth.signInWithPassword({ email, password });
-      error = result.error;
-      sessionUser = result.data?.user;
-    } else {
-      const result = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            tipo_perfil: profileType,
-            nome_completo: nome,
-            telefone: telefone,
-          },
-        },
-      });
-      error = result.error;
-      sessionUser = result.data?.user;
-    }
-
-    setIsLoading(false);
-
-    if (error) {
-      setFeedback({ type: 'error', message: error.message });
-    } else if (!isLogin) {
-      setFeedback({ type: 'success', message: 'Registo efetuado! Verifique o seu email para confirmar a conta.' });
-      
-      const tipoPerfil = sessionUser?.user_metadata?.tipo_perfil || profileType;
-      setTimeout(() => {
-        if (tipoPerfil === 'Motorista') {
-          navigate('/motorista');
-        } else {
-          navigate('/passageiro');
-        }
-      }, 1000);
-    } else {
-      setFeedback({ type: 'success', message: 'Bem-vindo de volta!' });
-      
-      const tipoPerfil = sessionUser?.user_metadata?.tipo_perfil || 'Passageiro';
-      setTimeout(() => {
-        if (tipoPerfil === 'Motorista') {
-          navigate('/motorista');
-        } else {
-          navigate('/passageiro');
-        }
-      }, 1000);
-    }
-  };
-
-  const handleToggleMode = () => {
-    setIsLogin(!isLogin);
-    setFeedback({ type: '', message: '' });
-    setNome('');
-    setTelefone('');
-    setProfileType('Passageiro');
-  };
+  const {
+    isLogin,
+    profileType,
+    showPassword,
+    email,
+    password,
+    nome,
+    telefone,
+    feedback,
+    errors,
+    isLoading,
+    setEmail,
+    setPassword,
+    setNome,
+    setTelefone,
+    setProfileType,
+    setShowPassword,
+    setErrors,
+    handleSubmit,
+    handleToggleMode,
+  } = useAuthForm();
 
   return (
     <div className="font-[Plus Jakarta Sans,sans-serif] min-h-screen bg-white text-gray-800 antialiased flex flex-col items-center justify-center p-0 sm:p-4">
@@ -133,7 +78,11 @@ const Auth = () => {
         )}
 
         {/* Form elements */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6 px-8 flex-grow">
+        <form
+          aria-label="auth-form"
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-6 px-8 flex-grow"
+        >
 
           {/* Campos Nome e Telefone — apenas em modo Criar Conta */}
           {!isLogin && (
@@ -154,13 +103,27 @@ const Auth = () => {
                 <label htmlFor="telefone" className="text-gray-500 text-sm font-medium ml-1">Telefone</label>
                 <input
                   id="telefone"
-                  className="flex w-full rounded-2xl border border-gray-200 bg-gray-50 text-gray-800 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400"
+                  className={`flex w-full rounded-2xl border bg-gray-50 text-gray-800 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400 ${
+                    errors.telefone
+                      ? 'border-red-500 focus:ring-4 focus:ring-red-500/10'
+                      : 'border-gray-200 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500'
+                  }`}
                   placeholder="+244 9XX XXX XXX"
                   type="tel"
                   value={telefone}
-                  onChange={(e) => setTelefone(e.target.value)}
+                  onChange={(e) => {
+                    setTelefone(e.target.value);
+                    if (errors.telefone) setErrors((prev) => ({ ...prev, telefone: null }));
+                  }}
+                  pattern="^(\+244\s?)?9[0-9]{2}\s?[0-9]{3}\s?[0-9]{3}$|^(\+244\s?)?9[0-9]{8}$"
+                  title="Introduza um número de telefone válido de Angola (ex: +244 9XXXXXXXX)"
                   required
                 />
+                {errors.telefone && (
+                  <span className="text-red-500 text-xs ml-1 font-medium animate-in fade-in slide-in-from-top-1">
+                    {errors.telefone}
+                  </span>
+                )}
               </div>
             </>
           )}
