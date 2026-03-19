@@ -60,3 +60,9 @@ A aplicação usa um componente `<Layout>` global que envolve todas as páginas 
 ```
 
 **BottomBar** liga as 4 secções principais: **Início**, **Acordos/Rotas**, **Faltas** e **Perfil**.
+
+## Diretrizes de Desenvolvimento e UI/UX
+
+REGRA ABSOLUTA DE DESIGN E INTERFACE (STITCH-FIRST):
+O Google Stitch é o nosso Design System e a Única Fonte de Verdade. Tudo o que estiver relacionado com a interface de utilizador (UI) tem de passar obrigatoriamente primeiro pelo Stitch via MCP antes de ir para o código.
+Fluxo de Trabalho Obrigatório: A interface é primeiro desenhada no Stitch, e só depois é implementada no código. É estritamente proibido inventar designs, estilos Tailwind ou fluxos de UX diretamente no código.
