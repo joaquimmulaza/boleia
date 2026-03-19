@@ -1,7 +1,7 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { vi } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 import PublishRoute from './PublishRoute';
 import { supabase } from '../lib/supabase';
 
@@ -25,8 +25,8 @@ describe('PublishRoute Component', () => {
     vi.clearAllMocks();
   });
 
-  it('renders all form fields correctly', () => {
-    renderWithRouter(<PublishRoute />);
+  it('renders all form fields correctly', async () => {
+    await act(async () => { renderWithRouter(<PublishRoute />); });
 
     expect(screen.getByLabelText(/Local de Partida/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Local de Chegada/i)).toBeInTheDocument();
@@ -54,7 +54,7 @@ describe('PublishRoute Component', () => {
     });
     supabase.from.mockReturnValue({ insert: mockInsert });
 
-    renderWithRouter(<PublishRoute />);
+    await act(async () => { renderWithRouter(<PublishRoute />); });
 
     // Fill form
     fireEvent.change(document.querySelector('input[name="origin_name"]'), { target: { value: 'Luanda' } });
@@ -87,8 +87,8 @@ describe('PublishRoute Component', () => {
     });
   });
 
-  it('enforces poka-yoke constraints on inputs', () => {
-    renderWithRouter(<PublishRoute />);
+  it('enforces poka-yoke constraints on inputs', async () => {
+    await act(async () => { renderWithRouter(<PublishRoute />); });
 
     const seatsInput = document.querySelector('input[name="available_seats"]');
     expect(seatsInput).toHaveAttribute('type', 'number');
@@ -101,6 +101,7 @@ describe('PublishRoute Component', () => {
   });
 
   it('shows error message when database insertion fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     // Mock user
     supabase.auth.getUser.mockResolvedValue({
       data: { user: { id: 'test-user-id' } },
@@ -113,7 +114,7 @@ describe('PublishRoute Component', () => {
     });
     supabase.from.mockReturnValue({ insert: mockInsert });
 
-    renderWithRouter(<PublishRoute />);
+    await act(async () => { renderWithRouter(<PublishRoute />); });
 
     // Fill form (minimum required)
     fireEvent.change(document.querySelector('input[name="origin_name"]'), { target: { value: 'Luanda' } });
@@ -123,7 +124,7 @@ describe('PublishRoute Component', () => {
     fireEvent.change(document.querySelector('input[name="available_seats"]'), { target: { value: '3' } });
     fireEvent.change(document.querySelector('input[name="monthly_price_per_seat"]'), { target: { value: '25000' } });
 
-    fireEvent.click(screen.getByRole('button', { name: /Publicar Trajeto/i }));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Publicar Trajeto/i })); });
 
     await waitFor(() => {
       expect(screen.getByText(/Erro ao publicar trajeto. Tente novamente./i)).toBeInTheDocument();
@@ -137,7 +138,7 @@ describe('PublishRoute Component', () => {
       error: null,
     });
 
-    renderWithRouter(<PublishRoute />);
+    await act(async () => { renderWithRouter(<PublishRoute />); });
 
     // Fill form (minimum required)
     fireEvent.change(document.querySelector('input[name="origin_name"]'), { target: { value: 'Luanda' } });
@@ -147,6 +148,7 @@ describe('PublishRoute Component', () => {
     fireEvent.change(document.querySelector('input[name="available_seats"]'), { target: { value: '3' } });
     fireEvent.change(document.querySelector('input[name="monthly_price_per_seat"]'), { target: { value: '25000' } });
 
+<<<<<<< HEAD
     fireEvent.change(screen.getByLabelText(/Local de Partida/i), { target: { value: 'Luanda' } });
     fireEvent.change(screen.getByLabelText(/Local de Chegada/i), { target: { value: 'Benguela' } });
     fireEvent.change(screen.getByLabelText(/^Ida/i), { target: { value: '08:00' } });
@@ -155,6 +157,9 @@ describe('PublishRoute Component', () => {
     fireEvent.change(screen.getByLabelText(/Valor Mensal/i), { target: { value: '15000' } });
 
     fireEvent.click(screen.getByRole('button', { name: /Publicar Trajeto/i }));
+=======
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Publicar Trajeto/i })); });
+>>>>>>> f3ece36a6a74704fdf3dce1d51a651195f36454c
 
     await waitFor(() => {
       expect(screen.getByText(/Você precisa estar logado para publicar uma rota./i)).toBeInTheDocument();

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PassengerDashboard from './PassengerDashboard';
 
@@ -25,7 +25,7 @@ vi.mock('maplibre-gl', () => {
 // Simula a cadeia fluente: supabase.from().select().ilike().ilike()
 // que será usada para pesquisar rotas na tabela routes
 // ─────────────────────────────────────────────────────────────────────────────
-const { mockGt, mockIlike, mockSelect, mockFrom, mockData, mockGetUser } = vi.hoisted(() => {
+const { mockGt, mockFrom, mockData, mockGetUser } = vi.hoisted(() => {
   const mockData = { current: { data: [], error: null } };
   const mockIlike = vi.fn(function() { return this; });
   const mockGt = vi.fn(function() { return this; });
@@ -39,7 +39,7 @@ const { mockGt, mockIlike, mockSelect, mockFrom, mockData, mockGetUser } = vi.ho
   const mockFrom = vi.fn(() => ({ select: mockSelect }));
   const mockGetUser = vi.fn().mockResolvedValue({ data: { user: { id: 'passenger-123' } }, error: null });
 
-  return { mockGt, mockIlike, mockSelect, mockFrom, mockData, mockGetUser };
+  return { mockGt, mockFrom, mockData, mockGetUser };
 });
 
 vi.mock('../lib/supabase', () => ({
@@ -91,8 +91,8 @@ describe('PassengerDashboard Component', () => {
   // 1. CONTENTOR DO MAPA
   // ───────────────────────────────────────────────────────────────────────────
   describe('Contentor do Mapa', () => {
-    it('renderiza um contentor para o mapa com data-testid="map-container"', () => {
-      render(<PassengerDashboard />);
+    it('renderiza um contentor para o mapa com data-testid="map-container"', async () => {
+      await act(async () => { render(<PassengerDashboard />); });
       expect(screen.getByTestId('map-container')).toBeInTheDocument();
     });
   });
@@ -101,34 +101,34 @@ describe('PassengerDashboard Component', () => {
   // 2. FORMULÁRIO DE PESQUISA
   // ───────────────────────────────────────────────────────────────────────────
   describe('Formulário de Pesquisa', () => {
-    it('renderiza um campo de input para "Ponto de Partida"', () => {
-      render(<PassengerDashboard />);
+    it('renderiza um campo de input para "Ponto de Partida"', async () => {
+      await act(async () => { render(<PassengerDashboard />); });
       expect(screen.getByPlaceholderText(/Ponto de Partida/i)).toBeInTheDocument();
     });
 
-    it('renderiza um campo de input para "Ponto de Chegada"', () => {
-      render(<PassengerDashboard />);
+    it('renderiza um campo de input para "Ponto de Chegada"', async () => {
+      await act(async () => { render(<PassengerDashboard />); });
       expect(screen.getByPlaceholderText(/Ponto de Chegada/i)).toBeInTheDocument();
     });
 
-    it('renderiza um botão "Procurar Boleia"', () => {
-      render(<PassengerDashboard />);
+    it('renderiza um botão "Procurar Boleia"', async () => {
+      await act(async () => { render(<PassengerDashboard />); });
       expect(
         screen.getByRole('button', { name: /Procurar Boleia/i })
       ).toBeInTheDocument();
     });
 
-    it('permite escrever no campo "Ponto de Partida"', () => {
-      render(<PassengerDashboard />);
+    it('permite escrever no campo "Ponto de Partida"', async () => {
+      await act(async () => { render(<PassengerDashboard />); });
       const input = screen.getByPlaceholderText(/Ponto de Partida/i);
-      fireEvent.change(input, { target: { value: 'Talatona' } });
+      await act(async () => { fireEvent.change(input, { target: { value: 'Talatona' } }); });
       expect(input.value).toBe('Talatona');
     });
 
-    it('permite escrever no campo "Ponto de Chegada"', () => {
-      render(<PassengerDashboard />);
+    it('permite escrever no campo "Ponto de Chegada"', async () => {
+      await act(async () => { render(<PassengerDashboard />); });
       const input = screen.getByPlaceholderText(/Ponto de Chegada/i);
-      fireEvent.change(input, { target: { value: 'Maianga' } });
+      await act(async () => { fireEvent.change(input, { target: { value: 'Maianga' } }); });
       expect(input.value).toBe('Maianga');
     });
   });
@@ -137,13 +137,13 @@ describe('PassengerDashboard Component', () => {
   // 3. LISTA DE RESULTADOS — Estado vazio
   // ───────────────────────────────────────────────────────────────────────────
   describe('Lista de Resultados — Estado Inicial', () => {
-    it('renderiza um contentor para a lista de rotas', () => {
-      render(<PassengerDashboard />);
+    it('renderiza um contentor para a lista de rotas', async () => {
+      await act(async () => { render(<PassengerDashboard />); });
       expect(screen.getByTestId('route-results-list')).toBeInTheDocument();
     });
 
-    it('não mostra cartões de rota antes de fazer uma pesquisa', () => {
-      render(<PassengerDashboard />);
+    it('não mostra cartões de rota antes de fazer uma pesquisa', async () => {
+      await act(async () => { render(<PassengerDashboard />); });
       expect(screen.queryByTestId('route-card')).not.toBeInTheDocument();
     });
   });
@@ -153,7 +153,7 @@ describe('PassengerDashboard Component', () => {
   // ───────────────────────────────────────────────────────────────────────────
   describe('Integração com Supabase — Pesquisa de Rotas', () => {
     it('chama supabase.from("routes") ao clicar em "Procurar Boleia" e filtra rotas com available_seats > 0', async () => {
-      render(<PassengerDashboard />);
+      await act(async () => { render(<PassengerDashboard />); });
 
       fireEvent.change(screen.getByPlaceholderText(/Ponto de Partida/i), {
         target: { value: 'Talatona' },
@@ -174,7 +174,7 @@ describe('PassengerDashboard Component', () => {
       // Configura o mock para devolver a rota de teste nesta suite
       mockData.current = { data: [rotaDeTeste], error: null };
 
-      render(<PassengerDashboard />);
+      await act(async () => { render(<PassengerDashboard />); });
 
       fireEvent.change(screen.getByPlaceholderText(/Ponto de Partida/i), {
         target: { value: 'Talatona' },
@@ -194,7 +194,7 @@ describe('PassengerDashboard Component', () => {
     it('exibe o ponto de partida e chegada da rota encontrada no cartão', async () => {
       mockData.current = { data: [rotaDeTeste], error: null };
 
-      render(<PassengerDashboard />);
+      await act(async () => { render(<PassengerDashboard />); });
 
       fireEvent.change(screen.getByPlaceholderText(/Ponto de Partida/i), {
         target: { value: 'Talatona' },
@@ -214,7 +214,7 @@ describe('PassengerDashboard Component', () => {
     it('exibe o valor mensal da rota encontrada no cartão (em Kz)', async () => {
       mockData.current = { data: [rotaDeTeste], error: null };
 
-      render(<PassengerDashboard />);
+      await act(async () => { render(<PassengerDashboard />); });
 
       fireEvent.change(screen.getByPlaceholderText(/Ponto de Partida/i), {
         target: { value: 'Talatona' },
@@ -234,7 +234,7 @@ describe('PassengerDashboard Component', () => {
     it('renderiza o botão "Solicitar Vaga" no cartão da rota', async () => {
       mockData.current = { data: [rotaDeTeste], error: null };
 
-      render(<PassengerDashboard />);
+      await act(async () => { render(<PassengerDashboard />); });
 
       fireEvent.click(screen.getByRole('button', { name: /Procurar Boleia/i }));
 
@@ -247,7 +247,7 @@ describe('PassengerDashboard Component', () => {
       const maplibregl = await import('maplibre-gl');
       mockData.current = { data: [rotaDeTeste], error: null };
 
-      render(<PassengerDashboard />);
+      await act(async () => { render(<PassengerDashboard />); });
       
       // ensure MapLibre dynamic import in useEffect completes and mapRef is set
       await new Promise((r) => setTimeout(r, 100));
@@ -269,7 +269,7 @@ describe('PassengerDashboard Component', () => {
     });
 
     const setupSearchAndGetButton = async () => {
-      render(<PassengerDashboard />);
+      await act(async () => { render(<PassengerDashboard />); });
       fireEvent.click(screen.getByRole('button', { name: /Procurar Boleia/i }));
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /Solicitar Vaga/i })).toBeInTheDocument();
@@ -280,7 +280,7 @@ describe('PassengerDashboard Component', () => {
     it('chama supabase.auth.getUser e requestSeat ao clicar em Solicitar Vaga', async () => {
       const btn = await setupSearchAndGetButton();
       
-      fireEvent.click(btn);
+      await act(async () => { fireEvent.click(btn); });
 
       await waitFor(() => {
         expect(mockGetUser).toHaveBeenCalled();
@@ -296,7 +296,7 @@ describe('PassengerDashboard Component', () => {
       }));
 
       const btn = await setupSearchAndGetButton();
-      fireEvent.click(btn);
+      await act(async () => { fireEvent.click(btn); });
 
       await waitFor(() => {
         const processingBtn = screen.getByRole('button', { name: /A processar.../i });
@@ -305,12 +305,12 @@ describe('PassengerDashboard Component', () => {
       expect(screen.getByRole('button', { name: /A processar.../i })).toBeDisabled();
 
       // Resolvemos a promessa para não deixar pendente
-      resolveRequest({});
+      await act(async () => { resolveRequest({}); });
     });
 
     it('muda o estado do botão para "Aguardando Confirmação" após sucesso e bloqueia clique', async () => {
       const btn = await setupSearchAndGetButton();
-      fireEvent.click(btn);
+      await act(async () => { fireEvent.click(btn); });
 
       await waitFor(() => {
         const successBtn = screen.getByRole('button', { name: /Aguardando Confirmação/i });
@@ -321,10 +321,11 @@ describe('PassengerDashboard Component', () => {
     });
 
     it('Sad Path: exibe mensagem de erro e restaura botão "Solicitar Vaga" caso requestSeat falhe', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockRequestSeat.mockRejectedValueOnce(new Error('Erro ao solicitar vaga. Tente novamente.'));
 
       const btn = await setupSearchAndGetButton();
-      fireEvent.click(btn);
+      await act(async () => { fireEvent.click(btn); });
 
       // Botão passa para status inicial de volta
       await waitFor(() => {
@@ -334,6 +335,7 @@ describe('PassengerDashboard Component', () => {
 
       // E exibe a notificação de erro algures no ecrã
       expect(screen.getByText(/Erro ao solicitar vaga. Tente novamente./i)).toBeInTheDocument();
+      consoleSpy.mockRestore();
     });
   });
 });
