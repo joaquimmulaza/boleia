@@ -5,64 +5,105 @@ describe('GoogleMapsService', () => {
   const mockApiKey = 'mock-api-key';
   const mockSessionToken = 'mock-session-token';
 
+  const originalCreateElement = document.createElement.bind(document);
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
     vi.stubEnv('VITE_GOOGLE_MAPS_API_KEY', mockApiKey);
-    global.fetch = vi.fn();
+    
+    // reset DOM
+    document.head.innerHTML = '';
+    
+    // default global mock
+    global.window.google = {
+      maps: {
+        places: {
+          AutocompleteService: vi.fn(),
+          PlacesService: vi.fn(),
+          AutocompleteSessionToken: vi.fn().mockImplementation(() => 'new-session-token'),
+          PlacesServiceStatus: {
+            OK: 'OK',
+            ZERO_RESULTS: 'ZERO_RESULTS',
+            INVALID_REQUEST: 'INVALID_REQUEST',
+            REQUEST_DENIED: 'REQUEST_DENIED'
+          }
+        }
+      }
+    };
+
     // Silence console.error in tests
     vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    // Mock document.createElement to handle script loading
+    vi.spyOn(document, 'createElement').mockImplementation((tagName) => {
+      const el = originalCreateElement(tagName);
+      if (tagName === 'script') {
+        setTimeout(() => {
+          if (el.onload) el.onload();
+        }, 0);
+      }
+      return el;
+    });
   });
 
   describe('getPlacePredictions', () => {
     it('returns empty array if input is empty', async () => {
       const result = await getPlacePredictions('', mockSessionToken);
       expect(result).toEqual([]);
-      expect(fetch).not.toHaveBeenCalled();
     });
 
     it('throws error if API key is not configured', async () => {
       vi.stubEnv('VITE_GOOGLE_MAPS_API_KEY', '');
+      delete window.google; // Ensure script needs to load
       await expect(getPlacePredictions('Luanda', mockSessionToken)).rejects.toThrow('Chave de API do Google Maps não configurada.');
     });
 
     it('returns predictions on success (status OK)', async () => {
       const mockPredictions = [{ description: 'Luanda, Angola', place_id: '123' }];
-      global.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ status: 'OK', predictions: mockPredictions })
+      
+      const getPlacePredictionsMock = vi.fn((request, callback) => {
+        expect(request.input).toBe('Luanda');
+        expect(request.componentRestrictions).toEqual({ country: 'ao' });
+        expect(request.sessionToken).toBe(mockSessionToken);
+        callback({ predictions: mockPredictions }, 'OK');
+      });
+
+      window.google.maps.places.AutocompleteService.mockImplementation(function() {
+        return {
+          getPlacePredictions: getPlacePredictionsMock
+        };
       });
 
       const result = await getPlacePredictions('Luanda', mockSessionToken);
 
-      expect(fetch).toHaveBeenCalledWith(
-        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=Luanda&components=country:ao&sessiontoken=${mockSessionToken}&key=${mockApiKey}`
-      );
+      expect(getPlacePredictionsMock).toHaveBeenCalled();
       expect(result).toEqual(mockPredictions);
     });
 
     it('returns empty array on ZERO_RESULTS', async () => {
-       global.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ status: 'ZERO_RESULTS', predictions: [] })
+      const getPlacePredictionsMock = vi.fn((request, callback) => {
+        callback(null, 'ZERO_RESULTS');
+      });
+
+      window.google.maps.places.AutocompleteService.mockImplementation(function() {
+        return {
+          getPlacePredictions: getPlacePredictionsMock
+        };
       });
 
       const result = await getPlacePredictions('UnknownPlace123', mockSessionToken);
       expect(result).toEqual([]);
     });
 
-    it('throws error on non-OK HTTP status', async () => {
-      global.fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 500
+    it('throws error on API error status', async () => {
+      const getPlacePredictionsMock = vi.fn((request, callback) => {
+        callback(null, 'INVALID_REQUEST');
       });
 
-      await expect(getPlacePredictions('Luanda', mockSessionToken)).rejects.toThrow('Erro HTTP: 500');
-    });
-
-    it('throws error if API returns an error status', async () => {
-       global.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ status: 'INVALID_REQUEST' })
+      window.google.maps.places.AutocompleteService.mockImplementation(function() {
+        return {
+          getPlacePredictions: getPlacePredictionsMock
+        };
       });
 
       await expect(getPlacePredictions('Luanda', mockSessionToken)).rejects.toThrow('Google Maps API Erro: INVALID_REQUEST');
@@ -73,62 +114,67 @@ describe('GoogleMapsService', () => {
     it('returns null if placeId is empty', async () => {
       const result = await getPlaceDetails('', mockSessionToken);
       expect(result).toBeNull();
-      expect(fetch).not.toHaveBeenCalled();
     });
 
     it('throws error if API key is not configured', async () => {
       vi.stubEnv('VITE_GOOGLE_MAPS_API_KEY', '');
+      delete window.google;
       await expect(getPlaceDetails('123', mockSessionToken)).rejects.toThrow('Chave de API do Google Maps não configurada.');
     });
 
     it('returns coordinates on success', async () => {
       const mockLat = -8.839988;
       const mockLng = 13.289437;
-      global.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          status: 'OK',
-          result: {
-            geometry: {
-              location: { lat: mockLat, lng: mockLng }
+      
+      const getDetailsMock = vi.fn((request, callback) => {
+        expect(request.placeId).toBe('123');
+        expect(request.fields).toEqual(['geometry']);
+        expect(request.sessionToken).toBe(mockSessionToken);
+        callback({
+          geometry: {
+            location: {
+              lat: () => mockLat,
+              lng: () => mockLng
             }
           }
-        })
+        }, 'OK');
+      });
+
+      window.google.maps.places.PlacesService.mockImplementation(function() {
+        return {
+          getDetails: getDetailsMock
+        };
       });
 
       const result = await getPlaceDetails('123', mockSessionToken);
 
-      expect(fetch).toHaveBeenCalledWith(
-        `https://maps.googleapis.com/maps/api/place/details/json?place_id=123&fields=geometry&sessiontoken=${mockSessionToken}&key=${mockApiKey}`
-      );
+      expect(getDetailsMock).toHaveBeenCalled();
       expect(result).toEqual({ lat: mockLat, lng: mockLng });
     });
 
     it('throws error if geometry is missing', async () => {
-       global.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          status: 'OK',
-          result: {}
-        })
+      const getDetailsMock = vi.fn((request, callback) => {
+        callback({}, 'OK');
+      });
+
+      window.google.maps.places.PlacesService.mockImplementation(function() {
+        return {
+          getDetails: getDetailsMock
+        };
       });
 
       await expect(getPlaceDetails('123', mockSessionToken)).rejects.toThrow('Coordenadas não encontradas para o local.');
     });
 
-    it('throws error on non-OK HTTP status', async () => {
-      global.fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 404
+    it('throws error on API error status', async () => {
+      const getDetailsMock = vi.fn((request, callback) => {
+        callback(null, 'REQUEST_DENIED');
       });
 
-      await expect(getPlaceDetails('123', mockSessionToken)).rejects.toThrow('Erro HTTP: 404');
-    });
-
-    it('throws error if API returns an error status', async () => {
-       global.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ status: 'REQUEST_DENIED' })
+      window.google.maps.places.PlacesService.mockImplementation(function() {
+        return {
+          getDetails: getDetailsMock
+        };
       });
 
       await expect(getPlaceDetails('123', mockSessionToken)).rejects.toThrow('Google Maps API Erro: REQUEST_DENIED');
