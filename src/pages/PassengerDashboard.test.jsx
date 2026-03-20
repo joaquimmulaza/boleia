@@ -15,8 +15,12 @@ vi.mock('maplibre-gl', () => {
         this.on = vi.fn();
         this.addControl = vi.fn();
       },
+      Popup: vi.fn(function() {
+        this.setHTML = vi.fn().mockReturnThis();
+      }),
       Marker: vi.fn(function() {
         this.setLngLat = vi.fn().mockReturnThis();
+        this.setPopup = vi.fn().mockReturnThis();
         this.addTo = vi.fn().mockReturnThis();
         this.remove = vi.fn();
       })
@@ -77,6 +81,8 @@ const rotaDeTeste = {
   return_time: '17:30',
   available_seats: 3,
   monthly_price_per_seat: 25000,
+  origin_lat: -8.840,
+  origin_lng: 13.280,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

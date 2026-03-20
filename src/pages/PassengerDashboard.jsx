@@ -77,7 +77,7 @@ const PassengerDashboard = () => {
 
   const mapContainer = useRef(null);
   const mapInstance = useRef(null);
-  const markerInstance = useRef(null);
+  const markersRef = useRef([]);
 
   const carregarRotas = useCallback(async (filtroOrigem = '', filtroDestino = '') => {
     setIsSearching(true);
@@ -94,15 +94,6 @@ const PassengerDashboard = () => {
       const { data, error: err } = await query;
       if (err) throw err;
       setRotas(data || []);
-      
-      if (data && data.length > 0 && mapInstance.current) {
-          import('maplibre-gl').then((maplibregl) => {
-             if (markerInstance.current) markerInstance.current.remove();
-             markerInstance.current = new maplibregl.default.Marker()
-                .setLngLat([13.2343, -8.8383])
-                .addTo(mapInstance.current);
-          });
-      }
 
     } catch (err) {
       console.error('Erro ao buscar rotas:', err);
@@ -129,8 +120,7 @@ const PassengerDashboard = () => {
           container: mapContainer.current,
           style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
           center: [13.2343, -8.8383],
-          zoom: 11,
-          interactive: false
+          zoom: 11
         });
     });
 
@@ -141,6 +131,29 @@ const PassengerDashboard = () => {
         }
     }
   }, []);
+
+  useEffect(() => {
+    if (!mapInstance.current || rotas.length === 0) return;
+    
+    import('maplibre-gl').then((maplibregl) => {
+      markersRef.current.forEach(m => m.remove());
+      markersRef.current = [];
+
+      rotas.forEach(rota => {
+        if (rota.origin_lat && rota.origin_lng) {
+            const popup = new maplibregl.default.Popup({ offset: 25 })
+                .setHTML(`<div class="text-slate-900 font-bold text-xs">${rota.destination_name}</div><div class="text-primary font-bold text-sm">${formatKwanza(rota.monthly_price_per_seat)} Kz</div>`);
+
+            const marker = new maplibregl.default.Marker()
+                .setLngLat([rota.origin_lng, rota.origin_lat])
+                .setPopup(popup)
+                .addTo(mapInstance.current);
+
+            markersRef.current.push(marker);
+        }
+      });
+    });
+  }, [rotas]);
 
   const handleSearch = (e) => {
     e.preventDefault();
