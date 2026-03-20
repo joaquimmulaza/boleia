@@ -3,7 +3,7 @@ import { getPlacePredictions, getPlaceDetails } from './GoogleMapsService';
 
 describe('GoogleMapsService', () => {
   const mockApiKey = 'mock-api-key';
-  const mockSessionToken = 'mock-session-token';
+  const mockSessionToken = { token: 'mock-session-token-object' };
 
   const originalCreateElement = document.createElement.bind(document);
 

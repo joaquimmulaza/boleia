@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { getPlacePredictions, getPlaceDetails } from '../services/GoogleMapsService';
-import { v4 as uuidv4 } from 'uuid';
+import { getPlacePredictions, getPlaceDetails, loadGoogleMapsScript } from '../services/GoogleMapsService';
 
 export const useAutocomplete = () => {
   const [suggestions, setSuggestions] = useState([]);
@@ -15,7 +14,13 @@ export const useAutocomplete = () => {
     }
 
     if (!sessionTokenRef.current) {
-      sessionTokenRef.current = uuidv4();
+      try {
+        await loadGoogleMapsScript();
+        sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
+      } catch (err) {
+        setError(err.message || 'Erro ao carregar o Google Maps.');
+        return;
+      }
     }
 
     setLoading(true);
