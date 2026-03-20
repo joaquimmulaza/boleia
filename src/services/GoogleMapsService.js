@@ -84,32 +84,20 @@ export const getPlaceDetails = async (placeId, sessionToken) => {
 
   await loadGoogleMapsScript();
 
-  return new Promise((resolve, reject) => {
-    const service = new window.google.maps.places.PlacesService(document.createElement('div'));
-    const token = sessionToken || new window.google.maps.places.AutocompleteSessionToken();
+  try {
+    const place = new window.google.maps.places.Place({ id: placeId });
+    await place.fetchFields({ fields: ['location'] });
 
-    service.getDetails(
-      {
-        placeId,
-        fields: ['geometry'],
-        sessionToken: token
-      },
-      (place, status) => {
-        if (status === window.google.maps.places.PlacesServiceStatus.OK) {
-          const location = place?.geometry?.location;
-          if (location) {
-            resolve({
-              lat: typeof location.lat === 'function' ? location.lat() : location.lat,
-              lng: typeof location.lng === 'function' ? location.lng() : location.lng,
-            });
-          } else {
-            reject(new Error('Coordenadas não encontradas para o local.'));
-          }
-        } else {
-          console.error('Google Maps API Erro:', status);
-          reject(new Error(`Google Maps API Erro: ${status}`));
-        }
-      }
-    );
-  });
+    if (place.location) {
+      return {
+        lat: typeof place.location.lat === 'function' ? place.location.lat() : place.location.lat,
+        lng: typeof place.location.lng === 'function' ? place.location.lng() : place.location.lng,
+      };
+    } else {
+      throw new Error('Coordenadas não encontradas para o local.');
+    }
+  } catch (error) {
+    console.error('Google Maps API Erro:', error);
+    throw error;
+  }
 };

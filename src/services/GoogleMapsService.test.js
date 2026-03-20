@@ -21,8 +21,7 @@ describe('GoogleMapsService', () => {
           AutocompleteSuggestion: {
             fetchAutocompleteSuggestions: vi.fn()
           },
-          PlacesService: vi.fn(),
-          AutocompleteSessionToken: vi.fn().mockImplementation(() => 'new-session-token'),
+          Place: vi.fn(),
           PlacesServiceStatus: {
             OK: 'OK',
             ZERO_RESULTS: 'ZERO_RESULTS',
@@ -115,58 +114,41 @@ describe('GoogleMapsService', () => {
       const mockLat = -8.839988;
       const mockLng = 13.289437;
       
-      const getDetailsMock = vi.fn((request, callback) => {
-        expect(request.placeId).toBe('123');
-        expect(request.fields).toEqual(['geometry']);
-        expect(request.sessionToken).toBe(mockSessionToken);
-        callback({
-          geometry: {
-            location: {
-              lat: () => mockLat,
-              lng: () => mockLng
-            }
-          }
-        }, 'OK');
-      });
-
-      window.google.maps.places.PlacesService.mockImplementation(function() {
-        return {
-          getDetails: getDetailsMock
+      const fetchFieldsMock = vi.fn();
+      
+      window.google.maps.places.Place.mockImplementation(function({ id }) {
+        expect(id).toBe('123');
+        this.fetchFields = fetchFieldsMock;
+        this.location = {
+           lat: () => mockLat,
+           lng: () => mockLng
         };
       });
 
       const result = await getPlaceDetails('123', mockSessionToken);
 
-      expect(getDetailsMock).toHaveBeenCalled();
+      expect(window.google.maps.places.Place).toHaveBeenCalledWith({ id: '123' });
+      expect(fetchFieldsMock).toHaveBeenCalledWith({ fields: ['location'] });
       expect(result).toEqual({ lat: mockLat, lng: mockLng });
     });
 
     it('throws error if geometry is missing', async () => {
-      const getDetailsMock = vi.fn((request, callback) => {
-        callback({}, 'OK');
-      });
-
-      window.google.maps.places.PlacesService.mockImplementation(function() {
-        return {
-          getDetails: getDetailsMock
-        };
+      const fetchFieldsMock = vi.fn();
+      
+      window.google.maps.places.Place.mockImplementation(function({ id }) {
+        this.fetchFields = fetchFieldsMock;
+        this.location = null;
       });
 
       await expect(getPlaceDetails('123', mockSessionToken)).rejects.toThrow('Coordenadas não encontradas para o local.');
     });
 
     it('throws error on API error status', async () => {
-      const getDetailsMock = vi.fn((request, callback) => {
-        callback(null, 'REQUEST_DENIED');
+      window.google.maps.places.Place.mockImplementation(function({ id }) {
+        this.fetchFields = vi.fn().mockRejectedValue(new Error('REQUEST_DENIED'));
       });
 
-      window.google.maps.places.PlacesService.mockImplementation(function() {
-        return {
-          getDetails: getDetailsMock
-        };
-      });
-
-      await expect(getPlaceDetails('123', mockSessionToken)).rejects.toThrow('Google Maps API Erro: REQUEST_DENIED');
+      await expect(getPlaceDetails('123', mockSessionToken)).rejects.toThrow('REQUEST_DENIED');
     });
   });
 });
