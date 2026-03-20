@@ -4,6 +4,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import DriverDashboard from './DriverDashboard';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Mock do módulo react-router-dom
+// ─────────────────────────────────────────────────────────────────────────────
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => mockNavigate,
+}));
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Mock do módulo Supabase
 // Simula supabase.auth.getUser() e as operações de base de dados
 // com uma cadeia fluente: .from().select().eq() e .from().insert()
@@ -28,7 +36,7 @@ vi.mock('../lib/supabase', () => ({
   },
 }));
 
-import { supabase } from '../lib/supabase';
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Suite principal
@@ -36,6 +44,7 @@ import { supabase } from '../lib/supabase';
 describe('DriverDashboard Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockNavigate.mockClear();
 
     // Por defeito: utilizador autenticado com ID fictício
     mockGetUser.mockResolvedValue({
@@ -127,6 +136,21 @@ describe('DriverDashboard Component', () => {
       await waitFor(() => {
         expect(screen.getByText(/Ainda não publicaste nenhuma rota diária/i)).toBeInTheDocument();
       });
+    });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // 3. NAVEGAÇÃO / FAB
+  // ───────────────────────────────────────────────────────────────────────────
+  describe('Navegação (Floating Action Button)', () => {
+    it('renderiza o botão "Publicar Trajeto" e navega corretamente', () => {
+      render(<DriverDashboard />);
+
+      const fabButton = screen.getByRole('button', { name: /Publicar Trajeto/i });
+      expect(fabButton).toBeInTheDocument();
+
+      fireEvent.click(fabButton);
+      expect(mockNavigate).toHaveBeenCalledWith('/publicar-trajeto');
     });
   });
 });

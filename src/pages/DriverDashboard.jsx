@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Car, MapPin, Truck } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * @typedef {Readonly<{}>} DriverDashboardProps
@@ -8,6 +9,7 @@ import { supabase } from '../lib/supabase';
  */
 
 const DriverDashboard = () => {
+  const navigate = useNavigate();
   // ─── Veículo state ─────────────────────────────────────────────────────────
   const [marcaModelo, setMarcaModelo] = useState('');
   const [matricula, setMatricula] = useState('');
@@ -20,8 +22,7 @@ const DriverDashboard = () => {
   const [pontoChegada, setPontoChegada] = useState('');
   const [horaRecolha, setHoraRecolha] = useState('');
   const [valorMensal, setValorMensal] = useState('');
-  const [feedbackRota, setFeedbackRota] = useState({ type: '', message: '' });
-  const [isLoadingRota, setIsLoadingRota] = useState(false);
+
 
   // ─── Carrega dados existentes ao montar o componente ───────────────────────
   useEffect(() => {
@@ -246,6 +247,20 @@ const DriverDashboard = () => {
           </div>
         </section>
       </main>
+
+      {/* Floating Action Button (FAB) para Publicar Trajeto */}
+      <div className="fixed bottom-24 right-4 z-20">
+        <button
+           onClick={() => navigate('/publicar-trajeto')}
+           className="bg-primary hover:bg-primary/90 text-white flex items-center gap-2 px-5 py-3.5 rounded-full shadow-lg shadow-primary/30 font-bold transition-all active:scale-95"
+        >
+          <span className="material-symbols-outlined">add</span>
+          <span>Publicar Trajeto</span>
+        </button>
+      </div>
+
+      {/* Safe Area bottom space for navigation (nav is normally in Layout, keeping space here) */}
+      <div className="h-24"></div>
     </div>
   );
 };
