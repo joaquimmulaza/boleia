@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { supabase } from '../lib/supabase';
 import { requestSeat } from '../services/AgreementsService';
+import SearchAddressInput from '../components/SearchAddressInput';
+
 
 const formatKwanza = (value) => {
   return Number(value).toLocaleString('pt-PT');
@@ -206,21 +208,21 @@ const PassengerDashboard = () => {
                                 </div>
                                 <div className="flex-1 space-y-2 ml-10">
                                     <div className="relative">
-                                        <input
-                                            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-full py-3 px-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none text-slate-900 dark:text-white placeholder:text-slate-400"
+                                        <SearchAddressInput
+                                            id="origem"
+                                            name="origem"
                                             placeholder="Ponto de Partida"
-                                            type="text"
                                             value={origem}
-                                            onChange={(e) => setOrigem(e.target.value)}
+                                            onChange={setOrigem}
                                         />
                                     </div>
                                     <div className="relative">
-                                        <input
-                                            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-full py-3 px-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none text-slate-900 dark:text-white placeholder:text-slate-400"
+                                        <SearchAddressInput
+                                            id="destino"
+                                            name="destino"
                                             placeholder="Ponto de Chegada"
-                                            type="text"
                                             value={destino}
-                                            onChange={(e) => setDestino(e.target.value)}
+                                            onChange={setDestino}
                                         />
                                     </div>
                                 </div>

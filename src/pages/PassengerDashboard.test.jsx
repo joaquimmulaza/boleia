@@ -1,6 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+vi.mock('../services/GoogleMapsService', () => ({
+  getPlacePredictions: vi.fn().mockResolvedValue([]),
+  getPlaceDetails: vi.fn().mockResolvedValue({ lat: -8.839, lng: 13.289 }),
+}));
 import PassengerDashboard from './PassengerDashboard';
 
 vi.mock('maplibre-gl', () => {

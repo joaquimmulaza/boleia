@@ -1,0 +1,2 @@
+#!/bin/bash
+sed -i "s/import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';/import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';\nvi.mock('..\/services\/GoogleMapsService', () => ({\n  getPlacePredictions: vi.fn().mockResolvedValue([]),\n  getPlaceDetails: vi.fn().mockResolvedValue({ lat: -8.839, lng: 13.289 }),\n}));/g" src/pages/PassengerDashboard.test.jsx

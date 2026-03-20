@@ -1,22 +1,47 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { publishRoute } from '../services/RouteService';
+import AddressInput from '../components/AddressInput';
 
 const PublishRoute = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+
   const [formData, setFormData] = useState({
     origin_name: '',
+    origin_lat: null,
+    origin_lng: null,
     destination_name: '',
+    destination_lat: null,
+    destination_lng: null,
     departure_time: '',
     return_time: '',
     available_seats: '',
-    monthly_price_per_seat: '',
+    monthly_price_per_seat: ''
   });
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSelectOrigin = (coordinates) => {
+    setFormData((prev) => ({
+      ...prev,
+      origin_lat: coordinates.lat,
+      origin_lng: coordinates.lng,
+    }));
+  };
+
+  const handleSelectDestination = (coordinates) => {
+    setFormData((prev) => ({
+      ...prev,
+      destination_lat: coordinates.lat,
+      destination_lng: coordinates.lng,
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -25,37 +50,16 @@ const PublishRoute = () => {
     setMessage({ type: '', text: '' });
 
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (!user || authError) {
-        setMessage({ type: 'error', text: 'Você precisa estar logado para publicar uma rota.' });
-        setLoading(false);
-        return;
-      }
-
-      const { data: routeData, error: routeError } = await supabase
-        .from('rotas')
-        .insert([
-          {
-            id_motorista: user.id,
-            origin_name: formData.origin_name,
-            destination_name: formData.destination_name,
-            departure_time: formData.departure_time,
-            return_time: formData.return_time,
-            available_seats: parseInt(formData.available_seats, 10),
-            monthly_price_per_seat: parseFloat(formData.monthly_price_per_seat),
-          },
-        ])
-        .select();
-
-      if (routeError) throw routeError;
-
+      await publishRoute(formData);
       setMessage({ type: 'success', text: 'Trajeto publicado com sucesso!' });
-      setTimeout(() => {
-        navigate('/motorista/dashboard');
-      }, 2000);
+      setTimeout(() => navigate(-1), 2000);
     } catch (error) {
-      console.error('Erro ao publicar trajeto:', error);
-      setMessage({ type: 'error', text: 'Erro ao publicar trajeto. Tente novamente.' });
+      if (error.message === 'Não autenticado') {
+        setMessage({ type: 'error', text: 'Você precisa estar logado para publicar uma rota.' });
+      } else {
+        console.error('Erro ao publicar trajeto:', error);
+        setMessage({ type: 'error', text: 'Erro ao publicar trajeto. Tente novamente.' });
+      }
     } finally {
       setLoading(false);
     }
@@ -89,39 +93,27 @@ const PublishRoute = () => {
           <div className="flex flex-col gap-4">
             <h3 className="text-primary text-sm font-bold uppercase tracking-wider px-1">Percurso</h3>
             <div className="flex flex-col gap-4">
-              <label className="flex flex-col w-full" htmlFor="origin_name">
-                <span className="text-near-black dark:text-slate-200 text-sm font-semibold mb-2 ml-1">Local de Partida</span>
-                <div className="relative flex items-center">
-                  <span className="material-symbols-outlined absolute left-4 text-primary" aria-hidden="true">location_on</span>
-                  <input 
-                    id="origin_name"
-                    type="text"
-                    name="origin_name"
-                    required
-                    value={formData.origin_name}
-                    onChange={handleChange}
-                    className="form-input w-full pl-12 pr-4 h-14 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:ring-primary/20 transition-all placeholder:text-slate-400 outline-none"
-                    placeholder="Ex: Viana, Luanda" 
-                  />
-                </div>
-              </label>
+              <AddressInput
+                id="origin_name"
+                name="origin_name"
+                label="Local de Partida"
+                icon="location_on"
+                placeholder="Ex: Viana, Luanda"
+                value={formData.origin_name}
+                onChange={handleChange}
+                onSelectCoordinates={handleSelectOrigin}
+              />
               
-              <label className="flex flex-col w-full" htmlFor="destination_name">
-                <span className="text-near-black dark:text-slate-200 text-sm font-semibold mb-2 ml-1">Local de Chegada</span>
-                <div className="relative flex items-center">
-                  <span className="material-symbols-outlined absolute left-4 text-primary" aria-hidden="true">flag</span>
-                  <input 
-                    id="destination_name"
-                    type="text"
-                    name="destination_name"
-                    required
-                    value={formData.destination_name}
-                    onChange={handleChange}
-                    className="form-input w-full pl-12 pr-4 h-14 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:ring-primary/20 transition-all placeholder:text-slate-400 outline-none"
-                    placeholder="Ex: Talatona, Luanda" 
-                  />
-                </div>
-              </label>
+              <AddressInput
+                id="destination_name"
+                name="destination_name"
+                label="Local de Chegada"
+                icon="flag"
+                placeholder="Ex: Talatona, Luanda"
+                value={formData.destination_name}
+                onChange={handleChange}
+                onSelectCoordinates={handleSelectDestination}
+              />
             </div>
           </div>
 

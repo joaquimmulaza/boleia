@@ -14,7 +14,11 @@ export const publishRoute = async (formData) => {
   const routeData = {
     driver_id: user.id,
     origin_name: formData.origin_name,
+    origin_lat: formData.origin_lat,
+    origin_lng: formData.origin_lng,
     destination_name: formData.destination_name,
+    destination_lat: formData.destination_lat,
+    destination_lng: formData.destination_lng,
     departure_time: formData.departure_time,
     return_time: formData.return_time,
     available_seats: parseInt(formData.available_seats, 10),
