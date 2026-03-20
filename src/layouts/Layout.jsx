@@ -18,7 +18,13 @@ const Layout = () => {
     const loadSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (isMounted && session) {
-        setTipoPerfil(session.user?.user_metadata?.tipo_perfil ?? null);
+        // Secure RBAC: Use perfis table instead of client-editable user_metadata
+        const { data: perfil } = await supabase
+          .from('perfis')
+          .select('tipo_perfil')
+          .eq('id', session.user.id)
+          .single();
+        setTipoPerfil(perfil?.tipo_perfil ?? null);
       }
     };
     loadSession();

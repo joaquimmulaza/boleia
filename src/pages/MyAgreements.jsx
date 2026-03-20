@@ -78,7 +78,14 @@ const MyAgreements = () => {
         return;
       }
       
-      const role = user.user_metadata?.tipo_perfil || 'Passageiro';
+      // Secure RBAC: Use perfis table instead of client-editable user_metadata
+      const { data: perfil } = await supabase
+        .from('perfis')
+        .select('tipo_perfil')
+        .eq('id', user.id)
+        .single();
+
+      const role = perfil?.tipo_perfil || 'Passageiro';
       setUserRole(role);
       setUserId(user.id);
       await carregarAcordos(user.id, role);

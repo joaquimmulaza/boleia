@@ -24,7 +24,14 @@ const RootRedirect = () => {
       if (!session) {
         if (isMounted) setRedirectPath('/auth');
       } else {
-        const perf = session.user?.user_metadata?.tipo_perfil;
+        // Secure RBAC: Use perfis table instead of client-editable user_metadata
+        const { data: perfil } = await supabase
+          .from('perfis')
+          .select('tipo_perfil')
+          .eq('id', session.user.id)
+          .single();
+
+        const perf = perfil?.tipo_perfil;
         if (perf === 'Motorista') {
           if (isMounted) setRedirectPath('/motorista');
         } else {

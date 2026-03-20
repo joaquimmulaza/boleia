@@ -30,7 +30,14 @@ const ProtectedRoute = ({ allowedRole }) => {
 
       // 2. Com sessão mas role inválido → redireciona para o dashboard correto
       if (allowedRole) {
-        const tipoPerfil = session.user?.user_metadata?.tipo_perfil;
+        // Secure RBAC: Use perfis table instead of client-editable user_metadata
+        const { data: perfil } = await supabase
+          .from('perfis')
+          .select('tipo_perfil')
+          .eq('id', session.user.id)
+          .single();
+
+        const tipoPerfil = perfil?.tipo_perfil;
         if (tipoPerfil !== allowedRole) {
           const correctPath = tipoPerfil === 'Motorista' ? '/motorista' : '/passageiro';
           setRedirectPath(correctPath);

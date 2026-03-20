@@ -12,6 +12,7 @@ vi.mock('../lib/supabase', () => ({
       getSession: vi.fn(),
       signOut: vi.fn(),
     },
+    from: vi.fn(),
   },
 }));
 
@@ -68,10 +69,18 @@ describe('Layout Component', () => {
       data: {
         session: {
           user: {
+            id: 'user-123',
             user_metadata: { tipo_perfil: 'Passageiro' }
           }
         }
       }
+    });
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: { tipo_perfil: 'Passageiro' } }),
+        }),
+      }),
     });
 
     await act(async () => {
@@ -90,10 +99,18 @@ describe('Layout Component', () => {
       data: {
         session: {
           user: {
+            id: 'user-123',
             user_metadata: { tipo_perfil: 'Motorista' }
           }
         }
       }
+    });
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: { tipo_perfil: 'Motorista' } }),
+        }),
+      }),
     });
 
     await act(async () => {

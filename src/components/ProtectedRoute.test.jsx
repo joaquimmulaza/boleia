@@ -9,6 +9,7 @@ vi.mock('../lib/supabase', () => ({
     auth: {
       getSession: vi.fn(),
     },
+    from: vi.fn(),
   },
 }));
 
@@ -56,6 +57,13 @@ describe('ProtectedRoute', () => {
         },
       },
     });
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: { tipo_perfil: 'Motorista' } }),
+        }),
+      }),
+    });
     // Route with allowedRole="Passageiro", but user is "Motorista"
     render(
       <MemoryRouter initialEntries={['/protegido']}>
@@ -86,6 +94,13 @@ describe('ProtectedRoute', () => {
         },
       },
     });
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: { tipo_perfil: 'Passageiro' } }),
+        }),
+      }),
+    });
     render(
       <MemoryRouter initialEntries={['/protegido-motorista']}>
         <Routes>
@@ -114,6 +129,13 @@ describe('ProtectedRoute', () => {
           user: { user_metadata: { tipo_perfil: 'Passageiro' } },
         },
       },
+    });
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: { tipo_perfil: 'Passageiro' } }),
+        }),
+      }),
     });
 
     renderWithRouter(<></>, { initialEntries: ['/protegido'] });
