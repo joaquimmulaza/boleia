@@ -1,9 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { Car, User, Plus } from 'lucide-react';
 
 import { approveAgreement, rejectAgreement } from '../services/AgreementsService';
 import AcordoCardPassageiro from '../components/AcordoCardPassageiro';
 import AcordoCardMotorista from '../components/AcordoCardMotorista';
+import EmptyState from '../components/EmptyState';
+
+// ─── Componentes Auxiliares ───────────────────────────────────────────────────
+
+const LoadingSkeleton = () => (
+  <div className="space-y-4 animate-pulse pt-2">
+    {[1, 2, 3].map((i) => (
+      <div key={i} className="h-40 bg-slate-200 dark:bg-slate-800/50 rounded-2xl w-full" />
+    ))}
+  </div>
+);
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 
@@ -14,25 +26,10 @@ const MyAgreements = () => {
   const [userId, setUserId] = useState(null);
 
   const carregarAcordos = useCallback(async (uid, role) => {
+    if (!uid) return;
     setIsLoading(true);
 
-    let query = supabase
-      .from('acordos')
-      .select('id, passenger_id, route_id, estado, routes(origin_name, destination_name, departure_time, monthly_price_per_seat)');
-
-      const uid = user.id;
-      // Busca o perfil do usuário para determinar se é Motorista ou Passageiro
-      const { data: perfil, error: perfilError } = await supabase
-        .from('perfis')
-        .select('tipo_perfil')
-        .eq('id', uid)
-        .single();
-
-      if (perfilError) throw perfilError;
-
-      const role = perfil?.tipo_perfil || user.user_metadata?.tipo_perfil;
-      setUserRole(role);
-
+    try {
       let query = supabase.from('acordos').select(`
         *,
         routes:route_id (
@@ -44,25 +41,33 @@ const MyAgreements = () => {
       `);
 
       if (role === 'Motorista') {
-        // Find driver's routes
-        const { data: rotasMotorista } = await supabase.from('routes').select('id').eq('driver_id', uid);
+        // Busca as rotas do motorista
+        const { data: rotasMotorista } = await supabase
+          .from('routes')
+          .select('id')
+          .eq('driver_id', uid);
+        
         const rotaIds = rotasMotorista?.map(r => r.id) || [];
+        
         if (rotaIds.length > 0) {
-            query = query.in('route_id', rotaIds);
+          query = query.in('route_id', rotaIds);
         } else {
-            setAcordos([]);
-            setLoading(false);
-            return;
+          setAcordos([]);
+          setIsLoading(false);
+          return;
         }
       } else {
         query = query.eq('passenger_id', uid);
       }
 
-    const { data, error } = await query;
-    if (!error && data) {
-      setAcordos(data);
+      const { data, error } = await query;
+      if (error) throw error;
+      setAcordos(data || []);
+    } catch (err) {
+      console.error('Erro ao carregar acordos:', err);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -72,7 +77,8 @@ const MyAgreements = () => {
         setIsLoading(false);
         return;
       }
-      const role = user.user_metadata?.tipo_perfil;
+      
+      const role = user.user_metadata?.tipo_perfil || 'Passageiro';
       setUserRole(role);
       setUserId(user.id);
       await carregarAcordos(user.id, role);
@@ -124,33 +130,29 @@ const MyAgreements = () => {
           <p className="text-slate-500 dark:text-slate-400 mt-1">{subtitulo}</p>
         </div>
 
-        {/* Loading */}
-        <div className="px-4">
-          {isLoading && <LoadingSkeleton />}
+        {/* Loading / Lista / Estado Vazio */}
+        <div className="px-4 space-y-4">
+          {isLoading ? (
+            <LoadingSkeleton />
+          ) : acordos.length === 0 ? (
+            <EmptyState message={emptyMessage} />
+          ) : (
+            <section className="space-y-4" aria-label="Lista de acordos">
+              {acordos.map((acordo) =>
+                isMotorista ? (
+                  <AcordoCardMotorista
+                    key={acordo.id}
+                    acordo={acordo}
+                    onAccept={handleAccept}
+                    onReject={handleReject}
+                  />
+                ) : (
+                  <AcordoCardPassageiro key={acordo.id} acordo={acordo} />
+                )
+              )}
+            </section>
+          )}
         </div>
-
-        {/* Estado vazio */}
-        {!isLoading && acordos.length === 0 && (
-          <EmptyState message={emptyMessage} />
-        )}
-
-        {/* Lista de acordos */}
-        {!isLoading && acordos.length > 0 && (
-          <section className="px-4 space-y-4" aria-label="Lista de acordos">
-            {acordos.map((acordo) =>
-              isMotorista ? (
-                <AcordoCardMotorista
-                  key={acordo.id}
-                  acordo={acordo}
-                  onAccept={handleAccept}
-                  onReject={handleReject}
-                />
-              ) : (
-                <AcordoCardPassageiro key={acordo.id} acordo={acordo} />
-              )
-            )}
-          </section>
-        )}
       </main>
 
       {/* Floating Action Button - APENAS para Passageiros */}

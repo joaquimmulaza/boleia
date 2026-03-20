@@ -11,6 +11,7 @@ import PublishRoute from './pages/PublishRoute';
 import MyAgreements from './pages/MyAgreements';
 import VehicleSetup from './pages/VehicleSetup';
 import Profile from './pages/Profile';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 const RootRedirect = () => {
   const [loading, setLoading] = useState(true);
@@ -43,39 +44,41 @@ const RootRedirect = () => {
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Rotas públicas */}
-        <Route path="/" element={<RootRedirect />} />
-        <Route path="/auth" element={<Auth />} />
+    <ThemeProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Rotas públicas */}
+          <Route path="/" element={<RootRedirect />} />
+          <Route path="/auth" element={<Auth />} />
 
-        {/* Rotas protegidas envolvidas pelo Layout global (com BottomBar) */}
-        <Route element={<Layout />}>
-          {/* Rotas exclusivas do Passageiro */}
-          <Route element={<ProtectedRoute allowedRole="Passageiro" />}>
-            <Route path="/passageiro" element={<PassengerDashboard />} />
+          {/* Rotas protegidas envolvidas pelo Layout global (com BottomBar) */}
+          <Route element={<Layout />}>
+            {/* Rotas exclusivas do Passageiro */}
+            <Route element={<ProtectedRoute allowedRole="Passageiro" />}>
+              <Route path="/passageiro" element={<PassengerDashboard />} />
+            </Route>
+
+            {/* Rotas exclusivas do Motorista */}
+            <Route element={<ProtectedRoute allowedRole="Motorista" />}>
+              <Route path="/motorista" element={<DriverDashboard />} />
+              <Route path="/veiculo" element={<VehicleSetup />} />
+              <Route path="/publicar-trajeto" element={<PublishRoute />} />
+            </Route>
+
+            {/* Rotas partilhadas (qualquer utilizador autenticado) */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/acordos" element={<MyAgreements />} />
+              <Route path="/faltas" element={<AbsenceTracker />} />
+              <Route path="/faltas/:acordoId" element={<AbsenceTracker />} />
+              <Route path="/perfil" element={<Profile />} />
+            </Route>
           </Route>
 
-          {/* Rotas exclusivas do Motorista */}
-          <Route element={<ProtectedRoute allowedRole="Motorista" />}>
-            <Route path="/motorista" element={<DriverDashboard />} />
-            <Route path="/veiculo" element={<VehicleSetup />} />
-            <Route path="/publicar-trajeto" element={<PublishRoute />} />
-          </Route>
-
-          {/* Rotas partilhadas (qualquer utilizador autenticado) */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/acordos" element={<MyAgreements />} />
-            <Route path="/faltas" element={<AbsenceTracker />} />
-            <Route path="/faltas/:acordoId" element={<AbsenceTracker />} />
-            <Route path="/perfil" element={<Profile />} />
-          </Route>
-        </Route>
-
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
 
