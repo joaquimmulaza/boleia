@@ -148,8 +148,8 @@ describe('PublishRoute Component', () => {
     fireEvent.change(screen.getByLabelText(/Nº Vagas/i), { target: { value: '3' } });
     fireEvent.change(screen.getByLabelText(/Valor Mensal/i), { target: { value: '15000' } });
 
-    await act(async () => { 
-      fireEvent.click(screen.getByRole('button', { name: /Publicar Trajeto/i })); 
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Publicar Trajeto/i }));
     });
 
     await waitFor(() => {

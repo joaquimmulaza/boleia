@@ -116,7 +116,7 @@ const Auth = () => {
             <label htmlFor="email" className="text-gray-500 text-sm font-medium ml-1">Email</label>
             <input 
               id="email"
-              className={`flex w-full rounded-2xl border ${errors?.email ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/10'} bg-gray-50 text-gray-800 focus:ring-4 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400`} 
+              className={`flex w-full rounded-2xl border ${errors?.email ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/10'} bg-gray-50 text-gray-800 focus:ring-4 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400`}
               placeholder="nome@email.com" 
               type="email"
               value={email}
@@ -133,7 +133,7 @@ const Auth = () => {
             <div className="relative flex items-center">
               <input 
                 id="password"
-                className={`flex w-full rounded-2xl border ${errors?.password ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/10'} bg-gray-50 text-gray-800 focus:ring-4 h-14 p-4 pr-12 text-base outline-none transition-all placeholder:text-gray-400`} 
+                className={`flex w-full rounded-2xl border ${errors?.password ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/10'} bg-gray-50 text-gray-800 focus:ring-4 h-14 p-4 pr-12 text-base outline-none transition-all placeholder:text-gray-400`}
                 placeholder="••••••••" 
                 type={showPassword ? "text" : "password"}
                 value={password}
