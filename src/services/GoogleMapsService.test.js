@@ -18,7 +18,9 @@ describe('GoogleMapsService', () => {
     global.window.google = {
       maps: {
         places: {
-          AutocompleteService: vi.fn(),
+          AutocompleteSuggestion: {
+            fetchAutocompleteSuggestions: vi.fn()
+          },
           PlacesService: vi.fn(),
           AutocompleteSessionToken: vi.fn().mockImplementation(() => 'new-session-token'),
           PlacesServiceStatus: {
@@ -58,55 +60,42 @@ describe('GoogleMapsService', () => {
       await expect(getPlacePredictions('Luanda', mockSessionToken)).rejects.toThrow('Chave de API do Google Maps não configurada.');
     });
 
-    it('returns predictions on success (status OK)', async () => {
-      const mockPredictions = [{ description: 'Luanda, Angola', place_id: '123' }];
+    it('returns predictions on success', async () => {
+      const mockResponse = {
+        suggestions: [
+          {
+            placePrediction: {
+              text: { text: 'Luanda, Angola' },
+              placeId: '123'
+            }
+          }
+        ]
+      };
       
-      const getPlacePredictionsMock = vi.fn((request, callback) => {
-        expect(request.input).toBe('Luanda');
-        expect(request.componentRestrictions).toEqual({ country: 'ao' });
-        expect(request.sessionToken).toBe(mockSessionToken);
-        callback({ predictions: mockPredictions }, 'OK');
-      });
-
-      window.google.maps.places.AutocompleteService.mockImplementation(function() {
-        return {
-          getPlacePredictions: getPlacePredictionsMock
-        };
-      });
+      window.google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions.mockResolvedValueOnce(mockResponse);
 
       const result = await getPlacePredictions('Luanda', mockSessionToken);
 
-      expect(getPlacePredictionsMock).toHaveBeenCalled();
-      expect(result).toEqual(mockPredictions);
+      expect(window.google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions).toHaveBeenCalledWith({
+        input: 'Luanda',
+        includedRegionCodes: ['AO'],
+        sessionToken: mockSessionToken
+      });
+      
+      expect(result).toEqual([{ description: 'Luanda, Angola', place_id: '123' }]);
     });
 
-    it('returns empty array on ZERO_RESULTS', async () => {
-      const getPlacePredictionsMock = vi.fn((request, callback) => {
-        callback(null, 'ZERO_RESULTS');
-      });
-
-      window.google.maps.places.AutocompleteService.mockImplementation(function() {
-        return {
-          getPlacePredictions: getPlacePredictionsMock
-        };
-      });
+    it('returns empty array if no suggestions', async () => {
+      window.google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions.mockResolvedValueOnce({ suggestions: [] });
 
       const result = await getPlacePredictions('UnknownPlace123', mockSessionToken);
       expect(result).toEqual([]);
     });
 
-    it('throws error on API error status', async () => {
-      const getPlacePredictionsMock = vi.fn((request, callback) => {
-        callback(null, 'INVALID_REQUEST');
-      });
+    it('throws error on API error', async () => {
+      window.google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions.mockRejectedValueOnce(new Error('INVALID_REQUEST'));
 
-      window.google.maps.places.AutocompleteService.mockImplementation(function() {
-        return {
-          getPlacePredictions: getPlacePredictionsMock
-        };
-      });
-
-      await expect(getPlacePredictions('Luanda', mockSessionToken)).rejects.toThrow('Google Maps API Erro: INVALID_REQUEST');
+      await expect(getPlacePredictions('Luanda', mockSessionToken)).rejects.toThrow('INVALID_REQUEST');
     });
   });
 

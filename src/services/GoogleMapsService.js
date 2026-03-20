@@ -49,28 +49,33 @@ export const getPlacePredictions = async (input, sessionToken) => {
 
   await loadGoogleMapsScript();
 
-  return new Promise((resolve, reject) => {
-    const service = new window.google.maps.places.AutocompleteService();
-    // Using passed session token or creating a new one if not available
-    const token = sessionToken || new window.google.maps.places.AutocompleteSessionToken();
-
-    service.getPlacePredictions(
-      {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const token = sessionToken || new window.google.maps.places.AutocompleteSessionToken();
+      // Using the new AutocompleteSuggestion API instead of AutocompleteService
+      const request = {
         input,
-        componentRestrictions: { country: 'ao' },
+        includedRegionCodes: ['AO'],
         sessionToken: token
-      },
-      (response, status) => {
-        if (status === window.google.maps.places.PlacesServiceStatus.OK) {
-          resolve(response?.predictions || []);
-        } else if (status === window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-          resolve([]);
-        } else {
-          console.error('Google Maps API Erro:', status);
-          reject(new Error(`Google Maps API Erro: ${status}`));
-        }
-      }
-    );
+      };
+
+      const response = await window.google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
+      
+      const mappedPredictions = (response.suggestions || []).map(suggestion => {
+         if (suggestion.placePrediction) {
+            return {
+               description: suggestion.placePrediction.text?.text || suggestion.placePrediction.text || '',
+               place_id: suggestion.placePrediction.placeId || suggestion.placePrediction.place_id
+            };
+         }
+         return null;
+      }).filter(Boolean);
+
+      resolve(mappedPredictions);
+    } catch (error) {
+       console.error('Google Maps API Erro:', error);
+       reject(error);
+    }
   });
 };
 
