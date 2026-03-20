@@ -1,7 +1,7 @@
+cat << 'INNER_EOF' > src/pages/MyAgreements.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 
-import { approveAgreement, rejectAgreement } from '../services/AgreementsService';
 import AcordoCardPassageiro from '../components/AcordoCardPassageiro';
 import AcordoCardMotorista from '../components/AcordoCardMotorista';
 
@@ -134,7 +134,7 @@ const MyAgreements = () => {
           ) : (
              acordos.map(acordo => (
                  userRole === 'Motorista'
-                    ? <AcordoCardMotorista key={acordo.id} acordo={acordo} onAccept={approveAgreement} onReject={rejectAgreement} onUpdate={fetchAgreements} />
+                    ? <AcordoCardMotorista key={acordo.id} acordo={acordo} onAccept={() => {}} onReject={() => {}} onUpdate={fetchAgreements} />
                     : <AcordoCardPassageiro key={acordo.id} acordo={acordo} />
              ))
           )}
@@ -156,3 +156,4 @@ const MyAgreements = () => {
 };
 
 export default MyAgreements;
+INNER_EOF
