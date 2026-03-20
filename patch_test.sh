@@ -1,3 +1,4 @@
+cat << 'INNER_EOF' > src/pages/MyAgreements.test.jsx
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -132,6 +133,12 @@ describe('MyAgreements Component', () => {
         expect(badges.some(b => b.textContent.match(/pendente/i))).toBeTruthy();
         expect(screen.getByText('Aguardando Confirmação')).toBeInTheDocument();
       });
+      // Get all badges and check if any has "Pendente" text (case-insensitive)
+      const badges = screen.getAllByTestId('badge-estado');
+      expect(badges.some(b => b.textContent.match(/pendente/i))).toBeTruthy();
+
+      const waitingBtns = screen.getAllByRole('button');
+      expect(waitingBtns.some(b => b.textContent.includes('Aguardando Confirmação'))).toBeTruthy();
     });
 
     it('exibe badge ATIVO e botão "Ver Detalhes" para acordo ativo', async () => {
@@ -142,6 +149,9 @@ describe('MyAgreements Component', () => {
         expect(badges.some(b => b.textContent.match(/ativo/i))).toBeTruthy();
         expect(screen.getByText('Ver Detalhes')).toBeInTheDocument();
       });
+      const badges = screen.getAllByTestId('badge-estado');
+      expect(badges.some(b => b.textContent.match(/ativo/i))).toBeTruthy();
+      expect(screen.getByText('Ver Detalhes')).toBeInTheDocument();
     });
 
     it('renderiza o FAB de "Pedir Boleia" apenas para Passageiros', async () => {
@@ -276,3 +286,4 @@ describe('MyAgreements Component', () => {
     });
   });
 });
+INNER_EOF

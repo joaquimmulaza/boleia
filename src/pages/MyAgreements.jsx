@@ -1,24 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Car, User, Plus } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { approveAgreement, rejectAgreement } from '../services/AgreementsService';
 
+import { approveAgreement, rejectAgreement } from '../services/AgreementsService';
 import AcordoCardPassageiro from '../components/AcordoCardPassageiro';
 import AcordoCardMotorista from '../components/AcordoCardMotorista';
-import EmptyState from '../components/EmptyState';
-
-// ─── Sub-componentes auxiliares ───────────────────────────────────────────────
-
-const LoadingSkeleton = () => (
-  <div className="space-y-3" aria-busy="true" aria-label="A carregar acordos">
-    {[1, 2, 3].map((i) => (
-      <div
-        key={i}
-        className="bg-white dark:bg-slate-800/50 rounded-xl p-4 h-36 animate-pulse shadow-sm border border-slate-100 dark:border-slate-700"
-      />
-    ))}
-  </div>
-);
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 
@@ -35,20 +20,43 @@ const MyAgreements = () => {
       .from('acordos')
       .select('id, passenger_id, route_id, estado, routes(origin_name, destination_name, departure_time, monthly_price_per_seat)');
 
-    if (role === 'Motorista') {
-      // Find driver's routes
-      const { data: rotasMotorista } = await supabase.from('routes').select('id').eq('driver_id', uid);
-      const rotaIds = rotasMotorista?.map(r => r.id) || [];
-      if (rotaIds.length > 0) {
-          query = query.in('route_id', rotaIds);
+      const uid = user.id;
+      // Busca o perfil do usuário para determinar se é Motorista ou Passageiro
+      const { data: perfil, error: perfilError } = await supabase
+        .from('perfis')
+        .select('tipo_perfil')
+        .eq('id', uid)
+        .single();
+
+      if (perfilError) throw perfilError;
+
+      const role = perfil?.tipo_perfil || user.user_metadata?.tipo_perfil;
+      setUserRole(role);
+
+      let query = supabase.from('acordos').select(`
+        *,
+        routes:route_id (
+          origin_name,
+          destination_name,
+          departure_time,
+          monthly_price_per_seat
+        )
+      `);
+
+      if (role === 'Motorista') {
+        // Find driver's routes
+        const { data: rotasMotorista } = await supabase.from('routes').select('id').eq('driver_id', uid);
+        const rotaIds = rotasMotorista?.map(r => r.id) || [];
+        if (rotaIds.length > 0) {
+            query = query.in('route_id', rotaIds);
+        } else {
+            setAcordos([]);
+            setLoading(false);
+            return;
+        }
       } else {
-          setAcordos([]);
-          setIsLoading(false);
-          return;
+        query = query.eq('passenger_id', uid);
       }
-    } else {
-      query = query.eq('passenger_id', uid);
-    }
 
     const { data, error } = await query;
     if (!error && data) {
