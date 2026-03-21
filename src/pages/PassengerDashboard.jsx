@@ -182,8 +182,8 @@ const PassengerDashboard = () => {
 
   return (
     <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen font-['Plus_Jakarta_Sans',_sans-serif] antialiased">
-        <div className="relative mx-auto w-full min-h-screen flex flex-col pb-24">
-            <header className="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between">
+        <div className="relative mx-auto w-full min-h-screen flex flex-col pb-24 pointer-events-none">
+            <header className="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between pointer-events-auto">
                 <div className="flex items-center gap-2">
                     <div className="bg-primary p-1.5 rounded-lg flex items-center justify-center">
                         <span className="material-symbols-outlined text-white text-xl">directions_car</span>
@@ -197,12 +197,12 @@ const PassengerDashboard = () => {
             </header>
 
             <section className="relative h-[35vh] w-full flex items-center justify-center overflow-hidden bg-[#e2e8f0] dark:bg-slate-800">
-                <div data-testid="map-container" ref={mapContainer} className="absolute inset-0 w-full h-full z-0"></div>
-                <div className="absolute inset-0 bg-gradient-to-t from-background-light dark:from-background-dark via-transparent to-transparent z-0"></div>
+                <div data-testid="map-container" ref={mapContainer} className="absolute inset-0 w-full h-full z-0 touch-none pointer-events-auto"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-background-light dark:from-background-dark via-transparent to-transparent z-0 pointer-events-none"></div>
             </section>
 
             <section className="relative px-4 -mt-16 z-20">
-                <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 p-5 space-y-4">
+                <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 p-5 space-y-4 pointer-events-auto">
                     <form onSubmit={handleSearch} className="space-y-4">
                         <div className="space-y-3">
                             <div className="relative flex items-center">
@@ -258,7 +258,7 @@ const PassengerDashboard = () => {
                     {!loading && <span className="text-primary text-xs font-bold bg-primary/10 px-2 py-1 rounded">{rotas.length} Encontradas</span>}
                 </div>
 
-                <div data-testid="route-results-list" className="space-y-4">
+                <div data-testid="route-results-list" className="space-y-4 pointer-events-auto">
                     {loading ? (
                          <div className="flex flex-col gap-4">
                            <div className="h-32 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-xl"></div>
