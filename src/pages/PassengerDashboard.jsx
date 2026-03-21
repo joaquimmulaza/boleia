@@ -118,8 +118,8 @@ const PassengerDashboard = () => {
         
         mapInstance.current = new maplibregl.default.Map({
           container: mapContainer.current,
-          style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-          center: [13.2343, -8.8383],
+          style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+          center: [13.2343, -8.8368],
           zoom: 11
         });
     });
@@ -197,16 +197,8 @@ const PassengerDashboard = () => {
             </header>
 
             <section className="relative h-[35vh] w-full flex items-center justify-center overflow-hidden bg-[#e2e8f0] dark:bg-slate-800">
-                <div data-testid="map-container" ref={mapContainer} className="absolute inset-0 z-0"></div>
+                <div data-testid="map-container" ref={mapContainer} className="absolute inset-0 w-full h-full z-0"></div>
                 <div className="absolute inset-0 bg-gradient-to-t from-background-light dark:from-background-dark via-transparent to-transparent z-0"></div>
-                <div className="relative z-10 flex flex-col items-center mt-[-40px]">
-                    <div className="animate-bounce">
-                        <span className="material-symbols-outlined text-primary text-5xl drop-shadow-lg" style={{fontVariationSettings: "'FILL' 1"}}>location_on</span>
-                    </div>
-                    <div className="mt-2 bg-white dark:bg-slate-800 px-3 py-1 rounded-full shadow-sm border border-slate-100 dark:border-slate-700">
-                        <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Sua localização</p>
-                    </div>
-                </div>
             </section>
 
             <section className="relative px-4 -mt-16 z-20">
