@@ -8,22 +8,29 @@ vi.mock('../services/GoogleMapsService', () => ({
 import PassengerDashboard from './PassengerDashboard';
 
 vi.mock('maplibre-gl', () => {
+  const Map = function() {
+    this.remove = vi.fn();
+    this.on = vi.fn();
+    this.addControl = vi.fn();
+  };
+  const Popup = vi.fn(function() {
+    this.setHTML = vi.fn().mockReturnThis();
+    this.addTo = vi.fn().mockReturnThis();
+  });
+  const Marker = vi.fn(function() {
+    this.setLngLat = vi.fn().mockReturnThis();
+    this.setPopup = vi.fn().mockReturnThis();
+    this.addTo = vi.fn().mockReturnThis();
+    this.remove = vi.fn();
+  });
+  const GeolocateControl = vi.fn();
+
   return {
     default: {
-      Map: function() {
-        this.remove = vi.fn();
-        this.on = vi.fn();
-        this.addControl = vi.fn();
-      },
-      Popup: vi.fn(function() {
-        this.setHTML = vi.fn().mockReturnThis();
-      }),
-      Marker: vi.fn(function() {
-        this.setLngLat = vi.fn().mockReturnThis();
-        this.setPopup = vi.fn().mockReturnThis();
-        this.addTo = vi.fn().mockReturnThis();
-        this.remove = vi.fn();
-      })
+      Map,
+      Popup,
+      Marker,
+      GeolocateControl
     }
   };
 });

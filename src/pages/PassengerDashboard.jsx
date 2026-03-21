@@ -116,12 +116,19 @@ const PassengerDashboard = () => {
     import('maplibre-gl').then((maplibregl) => {
         if(!isMounted) return;
         
-        mapInstance.current = new maplibregl.default.Map({
+        const map = new maplibregl.default.Map({
           container: mapContainer.current,
           style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
           center: [13.2343, -8.8368],
           zoom: 11
         });
+
+        map.addControl(new maplibregl.default.GeolocateControl({
+            positionOptions: { enableHighAccuracy: true },
+            trackUserLocation: true
+        }));
+
+        mapInstance.current = map;
     });
 
     return () => {
@@ -133,27 +140,27 @@ const PassengerDashboard = () => {
   }, []);
 
   useEffect(() => {
-    if (!mapInstance.current || rotas.length === 0) return;
+    if (!mapInstance.current) return;
     
     import('maplibre-gl').then((maplibregl) => {
+      // Cleanup existing markers
       markersRef.current.forEach(m => m.remove());
       markersRef.current = [];
 
+      // Render new markers
       rotas.forEach(rota => {
         if (rota.origin_lat && rota.origin_lng) {
-            const popup = new maplibregl.default.Popup({ offset: 25 })
-                .setHTML(`<div class="text-slate-900 font-bold text-xs">${rota.destination_name}</div><div class="text-primary font-bold text-sm">${formatKwanza(rota.monthly_price_per_seat)} Kz</div>`);
-
             const marker = new maplibregl.default.Marker()
                 .setLngLat([rota.origin_lng, rota.origin_lat])
-                .setPopup(popup)
+                .setPopup(new maplibregl.default.Popup({ offset: 25 })
+                    .setHTML(`<div class="text-slate-900 font-bold text-xs">${rota.destination_name}</div><div class="text-primary font-bold text-sm">${formatKwanza(rota.monthly_price_per_seat)} Kz</div>`))
                 .addTo(mapInstance.current);
 
             markersRef.current.push(marker);
         }
       });
     });
-  }, [rotas]);
+  }, [rotas, mapInstance.current]); 
 
   const handleSearch = (e) => {
     e.preventDefault();
