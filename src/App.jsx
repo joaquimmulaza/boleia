@@ -20,11 +20,11 @@ const RootRedirect = () => {
   useEffect(() => {
     let isMounted = true;
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) {
         if (isMounted) setRedirectPath('/auth');
       } else {
-        const perf = session.user?.user_metadata?.tipo_perfil;
+        const perf = user.user_metadata?.tipo_perfil;
         if (perf === 'Motorista') {
           if (isMounted) setRedirectPath('/motorista');
         } else {

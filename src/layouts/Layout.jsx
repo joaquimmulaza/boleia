@@ -16,9 +16,9 @@ const Layout = () => {
   useEffect(() => {
     let isMounted = true;
     const loadSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (isMounted && session) {
-        setTipoPerfil(session.user?.user_metadata?.tipo_perfil ?? null);
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (isMounted && !error && user) {
+        setTipoPerfil(user.user_metadata?.tipo_perfil ?? null);
       }
     };
     loadSession();
