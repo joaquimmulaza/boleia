@@ -1,2 +1,1 @@
-#!/bin/bash
-sed -i "s/import { describe, it, expect, vi, beforeEach } from 'vitest';/import { describe, it, expect, vi, beforeEach } from 'vitest';\nvi.mock('..\/services\/GoogleMapsService', () => ({\n  getPlacePredictions: vi.fn().mockResolvedValue([]),\n  getPlaceDetails: vi.fn().mockResolvedValue({ lat: -8.839, lng: 13.289 }),\n}));/g" src/pages/PassengerDashboard.test.jsx
+sed -i 's/if (maplibregl.default.Map.mock.results.length > 0) {/if (maplibregl.default.Map.mock && maplibregl.default.Map.mock.results && maplibregl.default.Map.mock.results.length > 0) {/' src/pages/PassengerDashboard.test.jsx

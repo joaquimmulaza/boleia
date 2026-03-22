@@ -1,14 +1,14 @@
 const fs = require('fs');
-let content = fs.readFileSync('src/pages/PassengerDashboard.jsx', 'utf8');
+let code = fs.readFileSync('src/pages/PassengerDashboard.jsx', 'utf8');
 
-content = content.replace(
-  /<input\s+className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-full py-3 px-4 text-sm font-medium focus:ring-2 focus:ring-primary\/20 outline-none text-slate-900 dark:text-white placeholder:text-slate-400"\s+placeholder="Ponto de Partida"\s+type="text"\s+value={origem}\s+onChange={\(e\) => setOrigem\(e.target.value\)}\s+\/>/g,
-  '<SearchAddressInput\n                                            id="origem"\n                                            name="origem"\n                                            placeholder="Ponto de Partida"\n                                            value={origem}\n                                            onChange={setOrigem}\n                                        />'
-);
+code = code.replace(/const mapInstance = useRef\(null\);/, 'const [mapInstance, setMapInstance] = useState(null);');
+code = code.replace(/mapInstance\.current = map;/g, 'setMapInstance(map);');
+code = code.replace(/mapInstance\.current\.remove\(\);/g, 'if (mapInstance) { mapInstance.remove(); }');
+code = code.replace(/if \(!mapInstance\.current \|\| !true\) return;/g, 'if (!mapInstance) return;');
+code = code.replace(/mapInstance\.current/g, 'mapInstance');
 
-content = content.replace(
-  /<input\s+className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-full py-3 px-4 text-sm font-medium focus:ring-2 focus:ring-primary\/20 outline-none text-slate-900 dark:text-white placeholder:text-slate-400"\s+placeholder="Ponto de Chegada"\s+type="text"\s+value={destino}\s+onChange={\(e\) => setDestino\(e.target.value\)}\s+\/>/g,
-  '<SearchAddressInput\n                                            id="destino"\n                                            name="destino"\n                                            placeholder="Ponto de Chegada"\n                                            value={destino}\n                                            onChange={setDestino}\n                                        />'
-);
+code = code.replace(/const \[true, setMapLoaded\] = useState\(false\);/, '');
+code = code.replace(/map\.on\("load", \(\) => setMapLoaded\(true\)\);/, '');
+code = code.replace(/}, \[rotas, true\]\);/g, '}, [rotas, mapInstance]);');
 
-fs.writeFileSync('src/pages/PassengerDashboard.jsx', content);
+fs.writeFileSync('src/pages/PassengerDashboard.jsx', code);

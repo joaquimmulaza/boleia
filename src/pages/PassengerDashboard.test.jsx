@@ -268,6 +268,11 @@ describe('PassengerDashboard Component', () => {
       
       // ensure MapLibre dynamic import in useEffect completes and mapRef is set
       await new Promise((r) => setTimeout(r, 100));
+      if (maplibregl.default.Map.mock && maplibregl.default.Map.mock.results && maplibregl.default.Map.mock.results.length > 0) {
+        const mapInstance = maplibregl.default.Map.mock.results[0].value;
+        const loadCall = mapInstance.on.mock.calls.find(call => call[0] === "load");
+        if (loadCall) loadCall[1]();
+      }
       
       fireEvent.click(screen.getByRole('button', { name: /Procurar Boleia/i }));
 
