@@ -17,20 +17,20 @@ const ProtectedRoute = ({ allowedRole }) => {
     let isMounted = true;
 
     const checkAccess = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { user } } = await supabase.auth.getUser();
 
       if (!isMounted) return;
 
-      // 1. Sem sessão → redireciona para login
-      if (!session) {
+      // 1. Sem utilizador → redireciona para login
+      if (!user) {
         setRedirectPath('/auth');
         setStatus('redirect');
         return;
       }
 
-      // 2. Com sessão mas role inválido → redireciona para o dashboard correto
+      // 2. Com utilizador mas role inválido → redireciona para o dashboard correto
       if (allowedRole) {
-        const tipoPerfil = session.user?.user_metadata?.tipo_perfil;
+        const tipoPerfil = user.user_metadata?.tipo_perfil;
         if (tipoPerfil !== allowedRole) {
           const correctPath = tipoPerfil === 'Motorista' ? '/motorista' : '/passageiro';
           setRedirectPath(correctPath);

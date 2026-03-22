@@ -9,7 +9,7 @@ import { ThemeProvider } from '../contexts/ThemeContext';
 vi.mock('../lib/supabase', () => ({
   supabase: {
     auth: {
-      getSession: vi.fn(),
+      getUser: vi.fn(),
       signOut: vi.fn(),
     },
   },
@@ -53,7 +53,7 @@ describe('Layout Component', () => {
   });
 
   it('renderiza o conteúdo filho (Outlet) e o botão de Logout', async () => {
-    supabase.auth.getSession.mockResolvedValue({ data: { session: null } });
+    supabase.auth.getUser.mockResolvedValue({ data: { user: null } });
 
     await act(async () => {
       renderWithRouterAndTheme(<Layout />);
@@ -64,12 +64,10 @@ describe('Layout Component', () => {
   });
 
   it('mostra navegação de Passageiro (Início, Acordos, Faltas, Perfil) quando tipo_perfil é Passageiro', async () => {
-    supabase.auth.getSession.mockResolvedValue({
+    supabase.auth.getUser.mockResolvedValue({
       data: {
-        session: {
-          user: {
-            user_metadata: { tipo_perfil: 'Passageiro' }
-          }
+        user: {
+          user_metadata: { tipo_perfil: 'Passageiro' }
         }
       }
     });
@@ -86,12 +84,10 @@ describe('Layout Component', () => {
   });
 
   it('mostra navegação de Motorista (Início, Veículo, Acordos, Faltas, Perfil) quando tipo_perfil é Motorista', async () => {
-    supabase.auth.getSession.mockResolvedValue({
+    supabase.auth.getUser.mockResolvedValue({
       data: {
-        session: {
-          user: {
-            user_metadata: { tipo_perfil: 'Motorista' }
-          }
+        user: {
+          user_metadata: { tipo_perfil: 'Motorista' }
         }
       }
     });
@@ -108,7 +104,7 @@ describe('Layout Component', () => {
   });
 
   it('mostra a navegação de Passageiro por defeito quando não há sessão', async () => {
-    supabase.auth.getSession.mockResolvedValue({ data: { session: null } });
+    supabase.auth.getUser.mockResolvedValue({ data: { user: null } });
 
     await act(async () => {
       renderWithRouterAndTheme(<Layout />);
