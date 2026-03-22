@@ -76,7 +76,8 @@ const PassengerDashboard = () => {
   const [solicitacaoFeedback, setSolicitacaoFeedback] = useState({ show: false, message: '', type: '' });
 
   const mapContainer = useRef(null);
-  const mapInstance = useRef(null);
+  const [mapInstance, setMapInstance] = useState(null);
+
   const markersRef = useRef([]);
 
   const carregarRotas = useCallback(async (filtroOrigem = '', filtroDestino = '') => {
@@ -128,19 +129,20 @@ const PassengerDashboard = () => {
             trackUserLocation: true
         }));
 
-        mapInstance.current = map;
+        setMapInstance(map);
+
     });
 
     return () => {
         isMounted = false;
-        if (mapInstance.current) {
-            mapInstance.current.remove();
+        if (mapInstance) {
+            if (mapInstance) { mapInstance.remove(); }
         }
     }
   }, []);
 
   useEffect(() => {
-    if (!mapInstance.current) return;
+    if (!mapInstance) return;
     
     import('maplibre-gl').then((maplibregl) => {
       // Cleanup existing markers
@@ -154,13 +156,13 @@ const PassengerDashboard = () => {
                 .setLngLat([rota.origin_lng, rota.origin_lat])
                 .setPopup(new maplibregl.default.Popup({ offset: 25 })
                     .setHTML(`<div class="text-slate-900 font-bold text-xs">${rota.destination_name}</div><div class="text-primary font-bold text-sm">${formatKwanza(rota.monthly_price_per_seat)} Kz</div>`))
-                .addTo(mapInstance.current);
+                .addTo(mapInstance);
 
             markersRef.current.push(marker);
         }
       });
     });
-  }, [rotas, mapInstance.current]); 
+  }, [rotas, mapInstance]);
 
   const handleSearch = (e) => {
     e.preventDefault();
