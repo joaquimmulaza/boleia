@@ -153,20 +153,34 @@ const PassengerDashboard = () => {
         rotas.forEach(rota => {
           // Render markers
           if (rota.origin_lat && rota.origin_lng) {
+            const originPopupContent = document.createElement('div');
+            originPopupContent.className = 'text-slate-900 font-bold text-xs';
+            originPopupContent.textContent = `Partida: ${rota.origin_name}`;
+
             const marker = new maplibregl.default.Marker({ color: '#3b82f6' }) // Blue for origin
                 .setLngLat([rota.origin_lng, rota.origin_lat])
                 .setPopup(new maplibregl.default.Popup({ offset: 25 })
-                    .setHTML(`<div class="text-slate-900 font-bold text-xs">Partida: ${rota.origin_name}</div>`))
+                    .setDOMContent(originPopupContent))
                 .addTo(mapInstance);
 
             markersRef.current.push(marker);
           }
 
           if (rota.destination_lat && rota.destination_lng) {
+            const destPopupContent = document.createElement('div');
+            const destTitle = document.createElement('div');
+            destTitle.className = 'text-slate-900 font-bold text-xs';
+            destTitle.textContent = `Destino: ${rota.destination_name}`;
+            const destPrice = document.createElement('div');
+            destPrice.className = 'text-primary font-bold text-sm';
+            destPrice.textContent = `${formatKwanza(rota.monthly_price_per_seat)} Kz`;
+            destPopupContent.appendChild(destTitle);
+            destPopupContent.appendChild(destPrice);
+
             const marker = new maplibregl.default.Marker({ color: '#ef4444' }) // Red for destination
                 .setLngLat([rota.destination_lng, rota.destination_lat])
                 .setPopup(new maplibregl.default.Popup({ offset: 25 })
-                    .setHTML(`<div class="text-slate-900 font-bold text-xs">Destino: ${rota.destination_name}</div><div class="text-primary font-bold text-sm">${formatKwanza(rota.monthly_price_per_seat)} Kz</div>`))
+                    .setDOMContent(destPopupContent))
                 .addTo(mapInstance);
 
             markersRef.current.push(marker);
