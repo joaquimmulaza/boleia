@@ -12,6 +12,8 @@ vi.mock('maplibre-gl', () => {
     constructor() {
       this.remove = vi.fn();
       this.on = vi.fn();
+      this.once = vi.fn();
+      this.isStyleLoaded = vi.fn().mockReturnValue(true);
       this.addControl = vi.fn();
       this.addSource = vi.fn();
       this.addLayer = vi.fn();
@@ -97,6 +99,8 @@ const rotaDeTeste = {
   monthly_price_per_seat: 25000,
   origin_lat: -8.840,
   origin_lng: 13.280,
+  destination_lat: -8.810,
+  destination_lng: 13.250,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

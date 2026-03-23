@@ -149,9 +149,10 @@ const PassengerDashboard = () => {
       markersRef.current.forEach(m => m.remove());
       markersRef.current = [];
 
-      // Render new markers
-      rotas.forEach(rota => {
-        if (rota.origin_lat && rota.origin_lng) {
+      const drawRouteLines = () => {
+        rotas.forEach(rota => {
+          // Render markers
+          if (rota.origin_lat && rota.origin_lng) {
             const marker = new maplibregl.default.Marker()
                 .setLngLat([rota.origin_lng, rota.origin_lat])
                 .setPopup(new maplibregl.default.Popup({ offset: 25 })
@@ -159,8 +160,59 @@ const PassengerDashboard = () => {
                 .addTo(mapInstance);
 
             markersRef.current.push(marker);
-        }
-      });
+          }
+
+          // Draw route line
+          if (rota.origin_lat && rota.origin_lng && rota.destination_lat && rota.destination_lng) {
+            const sourceId = `route-source-${rota.id}`;
+            const layerId = `route-layer-${rota.id}`;
+
+            // Cleanup previous source/layer if they exist
+            if (mapInstance.getLayer(layerId)) {
+                mapInstance.removeLayer(layerId);
+            }
+            if (mapInstance.getSource(sourceId)) {
+                mapInstance.removeSource(sourceId);
+            }
+
+            mapInstance.addSource(sourceId, {
+                type: 'geojson',
+                data: {
+                    type: 'Feature',
+                    properties: {},
+                    geometry: {
+                        type: 'LineString',
+                        coordinates: [
+                            [rota.origin_lng, rota.origin_lat],
+                            [rota.destination_lng, rota.destination_lat]
+                        ]
+                    }
+                }
+            });
+
+            mapInstance.addLayer({
+                id: layerId,
+                type: 'line',
+                source: sourceId,
+                layout: {
+                    'line-join': 'round',
+                    'line-cap': 'round'
+                },
+                paint: {
+                    'line-color': '#3b82f6', // primary blue
+                    'line-width': 4,
+                    'line-opacity': 0.6
+                }
+            });
+          }
+        });
+      };
+
+      if (mapInstance.isStyleLoaded()) {
+        drawRouteLines();
+      } else {
+        mapInstance.once('load', drawRouteLines);
+      }
     });
   }, [rotas, mapInstance]);
 
