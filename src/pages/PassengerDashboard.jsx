@@ -244,8 +244,16 @@ const PassengerDashboard = () => {
         setTimeout(() => setSolicitacaoFeedback({ show: false, message: '', type: '' }), 5000);
     } catch (error) {
        console.error("Erro ao solicitar vaga:", error);
-       setSolicitacaoFeedback({ show: true, message: error.message || 'Erro ao solicitar vaga. Tente novamente.', type: 'error' });
-       setTimeout(() => setSolicitacaoFeedback({ show: false, message: '', type: '' }), 5000);
+       const errorMessage = error.message?.includes('violates check constraint') 
+          ? 'Não foi possível enviar a solicitação devido a um erro de validação. Por favor, tente novamente.'
+          : 'Ocorreu um erro ao solicitar a sua vaga. Verifique a sua ligação e tente novamente.';
+       
+       setSolicitacaoFeedback({ 
+          show: true, 
+          message: errorMessage, 
+          type: 'error' 
+       });
+       setTimeout(() => setSolicitacaoFeedback({ show: false, message: '', type: '' }), 6000);
     } finally {
         setProcessingRouteId(null);
     }

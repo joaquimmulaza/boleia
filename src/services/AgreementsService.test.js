@@ -13,8 +13,8 @@ describe('AgreementsService', () => {
     vi.clearAllMocks();
   });
 
-  it('requestSeat insere um registo na tabela acordos com o estado pendente', async () => {
-    const mockSingle = vi.fn().mockResolvedValue({ data: { id: 1, estado: 'pendente' }, error: null });
+  it('requestSeat insere um registo na tabela acordos com o estado Pendente', async () => {
+    const mockSingle = vi.fn().mockResolvedValue({ data: { id: 1, estado: 'Pendente' }, error: null });
     const mockSelect = vi.fn().mockReturnValue({ single: mockSingle });
     const mockInsert = vi.fn().mockReturnValue({ select: mockSelect });
     supabase.from.mockReturnValue({ insert: mockInsert });
@@ -23,16 +23,16 @@ describe('AgreementsService', () => {
 
     expect(supabase.from).toHaveBeenCalledWith('acordos');
     expect(mockInsert).toHaveBeenCalledWith([
-      { route_id: 'route-1', passenger_id: 'passenger-1', estado: 'pendente' }
+      { id_rota: 'route-1', id_passageiro: 'passenger-1', estado: 'Pendente' }
     ]);
-    expect(result.estado).toEqual('pendente');
+    expect(result.estado).toEqual('Pendente');
   });
 
-  it('approveAgreement altera o estado do acordo para ativo e diminui available_seats em 1', async () => {
+  it('approveAgreement altera o estado do acordo para Ativo e diminui available_seats em 1', async () => {
     const mockEq = vi.fn().mockResolvedValue({ error: null });
     const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
     
-    const mockSingleSelect = vi.fn().mockResolvedValue({ data: { route_id: 'route-1' }, error: null });
+    const mockSingleSelect = vi.fn().mockResolvedValue({ data: { id_rota: 'route-1' }, error: null });
     const mockEqSelect = vi.fn().mockReturnValue({ single: mockSingleSelect });
     const mockSelect = vi.fn().mockReturnValue({ eq: mockEqSelect, select: vi.fn().mockReturnThis() });
     
@@ -59,7 +59,7 @@ describe('AgreementsService', () => {
     await approveAgreement('agreement-1');
 
     expect(supabase.from).toHaveBeenCalledWith('acordos');
-    expect(mockUpdate).toHaveBeenCalledWith({ estado: 'ativo' });
+    expect(mockUpdate).toHaveBeenCalledWith({ estado: 'Ativo' });
     expect(mockEq).toHaveBeenCalledWith('id', 'agreement-1');
     
     expect(supabase.from).toHaveBeenCalledWith('routes');
@@ -67,7 +67,7 @@ describe('AgreementsService', () => {
     expect(mockEq).toHaveBeenCalledWith('id', 'route-1');
   });
 
-  it('rejectAgreement altera o estado para cancelado', async () => {
+  it('rejectAgreement altera o estado para Cancelado', async () => {
     const mockEq = vi.fn().mockResolvedValue({ error: null });
     const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
     
@@ -76,7 +76,7 @@ describe('AgreementsService', () => {
     await rejectAgreement('agreement-1');
 
     expect(supabase.from).toHaveBeenCalledWith('acordos');
-    expect(mockUpdate).toHaveBeenCalledWith({ estado: 'cancelado' });
+    expect(mockUpdate).toHaveBeenCalledWith({ estado: 'Cancelado' });
     expect(mockEq).toHaveBeenCalledWith('id', 'agreement-1');
   });
 });
