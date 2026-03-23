@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Car, Menu, Search, Handshake, PiggyBank, Bus, Clock } from 'lucide-react';
+import ThemeToggle from '../components/ThemeToggle';
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -20,8 +21,11 @@ export default function LandingPage() {
           <a className="text-sm font-medium hover:text-primary transition-colors" href="#">Vantagens</a>
           <a className="text-sm font-medium hover:text-primary transition-colors" href="#">Segurança</a>
         </nav>
-        <div className="text-slate-900 dark:text-slate-100 flex size-10 items-center justify-center md:hidden">
-          <Menu size={24} />
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
+          <div className="text-slate-900 dark:text-slate-100 flex size-10 items-center justify-center md:hidden">
+            <Menu size={24} />
+          </div>
         </div>
       </header>
 
@@ -47,13 +51,13 @@ export default function LandingPage() {
               </div>
               <div className="flex flex-wrap gap-4">
                 <button
-                  onClick={() => navigate('/auth?role=passenger')}
+                  onClick={() => navigate('/auth?mode=register&role=passenger')}
                   className="flex min-w-[160px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-6 bg-primary text-slate-900 text-base font-bold transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20"
                 >
                   Sou Passageiro
                 </button>
                 <button
-                  onClick={() => navigate('/auth?role=driver')}
+                  onClick={() => navigate('/auth?mode=register&role=driver')}
                   className="flex min-w-[160px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-6 bg-white dark:bg-slate-800 border-2 border-primary/30 text-slate-900 dark:text-white text-base font-bold transition-all hover:border-primary/60 active:scale-95"
                 >
                   Sou Motorista
