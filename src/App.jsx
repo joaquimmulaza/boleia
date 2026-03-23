@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './lib/supabase';
+import LandingPage from './pages/LandingPage';
 import Auth from './pages/Auth';
 import Layout from './layouts/Layout';
 import PassengerDashboard from './pages/PassengerDashboard';
@@ -13,7 +14,7 @@ import VehicleSetup from './pages/VehicleSetup';
 import Profile from './pages/Profile';
 import { ThemeProvider } from './contexts/ThemeContext';
 
-const RootRedirect = () => {
+const RootRoute = () => {
   const [loading, setLoading] = useState(true);
   const [redirectPath, setRedirectPath] = useState(null);
 
@@ -21,9 +22,7 @@ const RootRedirect = () => {
     let isMounted = true;
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        if (isMounted) setRedirectPath('/auth');
-      } else {
+      if (session) {
         const perf = session.user?.user_metadata?.tipo_perfil;
         if (perf === 'Motorista') {
           if (isMounted) setRedirectPath('/motorista');
@@ -39,7 +38,8 @@ const RootRedirect = () => {
 
   if (loading) return <div className="flex h-screen items-center justify-center text-gray-500">A carregar...</div>;
   if (redirectPath) return <Navigate to={redirectPath} replace />;
-  return null;
+
+  return <LandingPage />;
 };
 
 function App() {
@@ -48,7 +48,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           {/* Rotas públicas */}
-          <Route path="/" element={<RootRedirect />} />
+          <Route path="/" element={<RootRoute />} />
           <Route path="/auth" element={<Auth />} />
 
           {/* Rotas protegidas envolvidas pelo Layout global (com BottomBar) */}
