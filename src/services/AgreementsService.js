@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 export const requestSeat = async (routeId, passengerId) => {
   const { data, error } = await supabase
     .from('acordos')
-    .insert([{ id_rota: routeId, id_passageiro: passengerId, estado: 'Pendente' }])
+    .insert([{ route_id: routeId, passenger_id: passengerId, estado: 'Pendente' }])
     .select()
     .single();
 
@@ -21,7 +21,7 @@ export const approveAgreement = async (agreementId) => {
 
   const { data: agreementData, error: selectError } = await supabase
     .from('acordos')
-    .select('id_rota')
+    .select('route_id')
     .eq('id', agreementId)
     .single();
 
@@ -30,7 +30,7 @@ export const approveAgreement = async (agreementId) => {
   const { data: routeData, error: routeError } = await supabase
     .from('routes')
     .select('available_seats')
-    .eq('id', agreementData.id_rota)
+    .eq('id', agreementData.route_id)
     .single();
 
   if (routeError) throw routeError;
@@ -38,7 +38,7 @@ export const approveAgreement = async (agreementId) => {
   const { error: updateRouteError } = await supabase
     .from('routes')
     .update({ available_seats: routeData.available_seats - 1 })
-    .eq('id', agreementData.id_rota);
+    .eq('id', agreementData.route_id);
 
   if (updateRouteError) throw updateRouteError;
 

@@ -23,7 +23,7 @@ describe('AgreementsService', () => {
 
     expect(supabase.from).toHaveBeenCalledWith('acordos');
     expect(mockInsert).toHaveBeenCalledWith([
-      { id_rota: 'route-1', id_passageiro: 'passenger-1', estado: 'Pendente' }
+      { route_id: 'route-1', passenger_id: 'passenger-1', estado: 'Pendente' }
     ]);
     expect(result.estado).toEqual('Pendente');
   });
@@ -32,7 +32,7 @@ describe('AgreementsService', () => {
     const mockEq = vi.fn().mockResolvedValue({ error: null });
     const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
     
-    const mockSingleSelect = vi.fn().mockResolvedValue({ data: { id_rota: 'route-1' }, error: null });
+    const mockSingleSelect = vi.fn().mockResolvedValue({ data: { route_id: 'route-1' }, error: null });
     const mockEqSelect = vi.fn().mockReturnValue({ single: mockSingleSelect });
     const mockSelect = vi.fn().mockReturnValue({ eq: mockEqSelect, select: vi.fn().mockReturnThis() });
     
