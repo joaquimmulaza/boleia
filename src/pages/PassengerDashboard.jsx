@@ -153,10 +153,20 @@ const PassengerDashboard = () => {
         rotas.forEach(rota => {
           // Render markers
           if (rota.origin_lat && rota.origin_lng) {
-            const marker = new maplibregl.default.Marker()
+            const marker = new maplibregl.default.Marker({ color: '#3b82f6' }) // Blue for origin
                 .setLngLat([rota.origin_lng, rota.origin_lat])
                 .setPopup(new maplibregl.default.Popup({ offset: 25 })
-                    .setHTML(`<div class="text-slate-900 font-bold text-xs">${rota.destination_name}</div><div class="text-primary font-bold text-sm">${formatKwanza(rota.monthly_price_per_seat)} Kz</div>`))
+                    .setHTML(`<div class="text-slate-900 font-bold text-xs">Partida: ${rota.origin_name}</div>`))
+                .addTo(mapInstance);
+
+            markersRef.current.push(marker);
+          }
+
+          if (rota.destination_lat && rota.destination_lng) {
+            const marker = new maplibregl.default.Marker({ color: '#ef4444' }) // Red for destination
+                .setLngLat([rota.destination_lng, rota.destination_lat])
+                .setPopup(new maplibregl.default.Popup({ offset: 25 })
+                    .setHTML(`<div class="text-slate-900 font-bold text-xs">Destino: ${rota.destination_name}</div><div class="text-primary font-bold text-sm">${formatKwanza(rota.monthly_price_per_seat)} Kz</div>`))
                 .addTo(mapInstance);
 
             markersRef.current.push(marker);
