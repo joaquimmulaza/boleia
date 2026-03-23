@@ -16,6 +16,7 @@ vi.mock('../lib/supabase', () => ({
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
+  useSearchParams: () => [new URLSearchParams()],
 }));
 
 // Importar o mock DEPOIS do vi.mock para ter acesso às funções mockadas

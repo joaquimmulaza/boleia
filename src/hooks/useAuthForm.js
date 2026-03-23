@@ -1,12 +1,18 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { validateTelefone } from '../utils/validation';
 
 export const useAuthForm = () => {
   const navigate = useNavigate();
-  const [isLogin, setIsLogin] = useState(true);
-  const [profileType, setProfileType] = useState('Passageiro');
+  const [searchParams] = useSearchParams();
+
+  const initialMode = searchParams.get('mode');
+  const initialRole = searchParams.get('role');
+
+  const [isLogin, setIsLogin] = useState(initialMode !== 'register');
+  const [profileType, setProfileType] = useState(initialRole === 'driver' ? 'Motorista' : 'Passageiro');
+
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -15,6 +21,15 @@ export const useAuthForm = () => {
   const [feedback, setFeedback] = useState({ type: '', message: '' });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const currentMode = searchParams.get('mode');
+    const currentRole = searchParams.get('role');
+
+    if (currentMode === 'register') setIsLogin(false);
+    if (currentRole === 'driver') setProfileType('Motorista');
+    if (currentRole === 'passenger') setProfileType('Passageiro');
+  }, [searchParams]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
