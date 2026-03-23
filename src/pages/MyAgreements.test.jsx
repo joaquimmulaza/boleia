@@ -11,6 +11,8 @@ vi.mock('../lib/supabase', () => ({
     auth: {
       getUser: vi.fn(),
     },
+    channel: vi.fn(),
+    removeChannel: vi.fn(),
     from: vi.fn(),
   },
 }));
@@ -32,6 +34,9 @@ describe('MyAgreements Component', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    const mockChannelObj = { on: vi.fn().mockReturnThis(), subscribe: vi.fn() };
+    supabase.channel.mockReturnValue(mockChannelObj);
 
     mockSingle = vi.fn();
     mockIn = vi.fn().mockReturnValue({ data: [], error: null });
