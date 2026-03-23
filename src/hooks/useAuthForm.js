@@ -1,12 +1,17 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { validateTelefone } from '../utils/validation';
 
 export const useAuthForm = () => {
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const initialIsLogin = queryParams.get('mode') !== 'register';
+  const initialRole = queryParams.get('role') === 'driver' ? 'Motorista' : 'Passageiro';
+
   const navigate = useNavigate();
-  const [isLogin, setIsLogin] = useState(true);
-  const [profileType, setProfileType] = useState('Passageiro');
+  const [isLogin, setIsLogin] = useState(initialIsLogin);
+  const [profileType, setProfileType] = useState(initialRole);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

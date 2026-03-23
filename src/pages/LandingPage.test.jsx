@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
+import { ThemeProvider } from '../contexts/ThemeContext';
 import LandingPage from './LandingPage';
 
 const mockNavigate = vi.fn();
@@ -13,6 +14,21 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
+
 describe('LandingPage Component', () => {
   afterEach(() => {
     cleanup();
@@ -21,9 +37,11 @@ describe('LandingPage Component', () => {
 
   it('renders Hero text correctly', () => {
     render(
-      <BrowserRouter>
-        <LandingPage />
-      </BrowserRouter>
+      <ThemeProvider>
+        <BrowserRouter>
+          <LandingPage />
+        </BrowserRouter>
+      </ThemeProvider>
     );
 
     expect(screen.getByText('Sua rota diária, mais simples e barata.')).toBeInTheDocument();
@@ -32,27 +50,31 @@ describe('LandingPage Component', () => {
 
   it('navigates to /auth?role=passenger when clicking "Sou Passageiro"', () => {
     render(
-      <BrowserRouter>
-        <LandingPage />
-      </BrowserRouter>
+      <ThemeProvider>
+        <BrowserRouter>
+          <LandingPage />
+        </BrowserRouter>
+      </ThemeProvider>
     );
 
     const passengerButton = screen.getByText('Sou Passageiro');
     fireEvent.click(passengerButton);
 
-    expect(mockNavigate).toHaveBeenCalledWith('/auth?role=passenger');
+    expect(mockNavigate).toHaveBeenCalledWith('/auth?mode=register&role=passenger');
   });
 
   it('navigates to /auth?role=driver when clicking "Sou Motorista"', () => {
     render(
-      <BrowserRouter>
-        <LandingPage />
-      </BrowserRouter>
+      <ThemeProvider>
+        <BrowserRouter>
+          <LandingPage />
+        </BrowserRouter>
+      </ThemeProvider>
     );
 
     const driverButton = screen.getByText('Sou Motorista');
     fireEvent.click(driverButton);
 
-    expect(mockNavigate).toHaveBeenCalledWith('/auth?role=driver');
+    expect(mockNavigate).toHaveBeenCalledWith('/auth?mode=register&role=driver');
   });
 });
