@@ -17,20 +17,29 @@ const ProtectedRoute = ({ allowedRole }) => {
     let isMounted = true;
 
     const checkAccess = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      // Securely fetch user from server to prevent session manipulation
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
 
       if (!isMounted) return;
 
-      // 1. Sem sessão → redireciona para login
-      if (!session) {
+      // 1. Sem sessão ou erro na auth → redireciona para login
+      if (authError || !user) {
         setRedirectPath('/auth');
         setStatus('redirect');
         return;
       }
 
       // 2. Com sessão mas role inválido → redireciona para o dashboard correto
+      // Buscar o tipo_perfil da tabela perfis (seguro) e não do user_metadata (inseguro)
       if (allowedRole) {
-        const tipoPerfil = session.user?.user_metadata?.tipo_perfil;
+        const { data: perfil, error: dbError } = await supabase
+          .from('perfis')
+          .select('tipo_perfil')
+          .eq('id', user.id)
+          .single();
+
+        const tipoPerfil = !dbError && perfil ? perfil.tipo_perfil : null;
+
         if (tipoPerfil !== allowedRole) {
           const correctPath = tipoPerfil === 'Motorista' ? '/motorista' : '/passageiro';
           setRedirectPath(correctPath);
