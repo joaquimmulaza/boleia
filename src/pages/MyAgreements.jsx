@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Car, User, Plus, CheckCircle, XCircle, X } from 'lucide-react';
 
@@ -21,6 +22,7 @@ const LoadingSkeleton = () => (
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 const MyAgreements = () => {
+  const navigate = useNavigate();
   const [acordos, setAcordos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
@@ -176,7 +178,7 @@ const MyAgreements = () => {
 
       {/* Floating Action Button - APENAS para Passageiros */}
       {!isMotorista && (
-        <button className="fixed bottom-24 right-6 bg-primary hover:bg-primary/90 text-white flex items-center gap-2 px-5 py-3.5 rounded-full shadow-lg shadow-primary/30 z-40 transition-all active:scale-95">
+        <button onClick={() => navigate('/passageiro')} className="fixed bottom-24 right-6 bg-primary hover:bg-primary/90 text-white flex items-center gap-2 px-5 py-3.5 rounded-full shadow-lg shadow-primary/30 z-40 transition-all active:scale-95">
           <Plus size={20} className="shrink-0" />
           <span className="font-bold text-sm tracking-wide">Pedir Boleia</span>
         </button>

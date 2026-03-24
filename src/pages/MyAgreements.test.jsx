@@ -2,6 +2,8 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MyAgreements from './MyAgreements';
+import { MemoryRouter } from 'react-router-dom';
+
 import { supabase } from '../lib/supabase';
 import * as AgreementsService from '../services/AgreementsService';
 
@@ -17,6 +19,14 @@ vi.mock('../lib/supabase', () => ({
   },
 }));
 
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => vi.fn(),
+  };
+});
+
 vi.mock('../services/AgreementsService', () => ({
   approveAgreement: vi.fn(),
   rejectAgreement: vi.fn(),
@@ -29,7 +39,7 @@ describe('MyAgreements Component', () => {
   let mockSingle;
 
   const renderComponent = async () => {
-      await act(async () => { render(<MyAgreements />); });
+      await act(async () => { render(<MemoryRouter><MyAgreements /></MemoryRouter>); });
   }
 
   beforeEach(() => {
