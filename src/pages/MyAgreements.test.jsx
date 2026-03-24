@@ -1,132 +1,80 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import MyAgreements from './MyAgreements';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { supabase } from '../lib/supabase';
 import * as AgreementsService from '../services/AgreementsService';
+import MyAgreements from './MyAgreements';
 
-// Mock dependências externas
+// Mocks globais
 vi.mock('../lib/supabase', () => ({
   supabase: {
     auth: {
       getUser: vi.fn(),
     },
-    channel: vi.fn(),
-    removeChannel: vi.fn(),
     from: vi.fn(),
   },
 }));
 
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom');
-  return {
-    ...actual,
-    useNavigate: () => vi.fn(),
-  };
-});
-
 vi.mock('../services/AgreementsService', () => ({
+  getAgreementsForUser: vi.fn(),
   approveAgreement: vi.fn(),
   rejectAgreement: vi.fn(),
 }));
 
-describe('MyAgreements Component', () => {
-  let mockSelect;
-  let mockEq;
-  let mockIn;
-  let mockSingle;
-
-  const renderComponent = async () => {
-      await act(async () => { render(<MemoryRouter><MyAgreements /></MemoryRouter>); });
-  }
-
+describe('Página MyAgreements', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-
-    const mockChannelObj = { on: vi.fn().mockReturnThis(), subscribe: vi.fn() };
-    supabase.channel.mockReturnValue(mockChannelObj);
-
-    mockSingle = vi.fn();
-    mockIn = vi.fn().mockReturnValue({ data: [], error: null });
-    mockEq = vi.fn().mockReturnValue({ single: mockSingle });
-
-    // Default chain for 'perfis'
-    mockSingle.mockResolvedValue({ data: { tipo_perfil: 'Passageiro' }, error: null });
-
-    // Default chain for 'acordos'
-    mockSelect = vi.fn().mockReturnValue({ eq: mockEq, in: mockIn, data: [], error: null });
-
-    supabase.from.mockImplementation((table) => {
-        if (table === 'perfis') return { select: () => ({ eq: mockEq }) };
-        if (table === 'rotas') return { select: () => ({ eq: vi.fn().mockResolvedValue({ data: [{id: 1}], error: null }) }) };
-        if (table === 'routes') return { select: () => ({ eq: vi.fn().mockResolvedValue({ data: [{id: 1}], error: null }) }) };
-        if (table === 'acordos') {
-            const selectObj = {
-                eq: vi.fn().mockResolvedValue({ data: [], error: null }),
-                in: vi.fn().mockResolvedValue({ data: [], error: null })
-            }
-            return { select: vi.fn().mockReturnValue(selectObj) };
-        }
-    });
-
-    supabase.auth.getUser.mockResolvedValue({
-      data: { user: { id: 'user-123', user_metadata: { tipo_perfil: 'Passageiro' } } },
-      error: null,
-    });
   });
 
+  const renderComponent = async () => {
+    render(
+      <MemoryRouter>
+        <MyAgreements />
+      </MemoryRouter>
+    );
+  };
+
   const setupMocksForRole = (role, acordosData = []) => {
-      supabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-123', user_metadata: { tipo_perfil: role } } },
-        error: null,
-      });
-
-      const roleMockSingle = vi.fn().mockResolvedValue({ data: { tipo_perfil: role }, error: null });
-      const roleMockEq = vi.fn().mockReturnValue({ single: roleMockSingle });
-
-      supabase.from.mockImplementation((table) => {
-        if (table === 'perfis') return { select: () => ({ eq: roleMockEq }) };
-        if (table === 'routes') return { select: () => ({ eq: vi.fn().mockResolvedValue({ data: [{id: 1}], error: null }) }) };
-        if (table === 'acordos') {
-            const selectObj = {
-                eq: vi.fn().mockResolvedValue({ data: acordosData, error: null }),
-                in: vi.fn().mockResolvedValue({ data: acordosData, error: null })
-            }
-            return { select: vi.fn().mockReturnValue(selectObj) };
-        }
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: `user-${role}`, user_metadata: { tipo_perfil: role } } },
+      error: null,
     });
+    AgreementsService.getAgreementsForUser.mockResolvedValue(acordosData);
   };
 
   const acordoPendentePassageiro = {
-    id: 'acordo-1',
-    estado: 'Pendente',
-    routes: { origin_name: 'Viana', destination_name: 'Mutamba', motorista: { nome: 'Motorista Teste' } }
+     id: 'acordo-1',
+     estado: 'Pendente',
+     routes: { origin_name: 'Viana', destination_name: 'Mutamba', monthly_price_per_seat: 10000 },
+     contraparte: { nome_completo: 'Motorista 1' }
   };
 
   const acordoAtivoPassageiro = {
-    id: 'acordo-2',
-    estado: 'Ativo',
-    routes: { origin_name: 'Cacuaco', destination_name: 'Talatona', motorista: { nome: 'Motorista 2' } }
+     id: 'acordo-2',
+     estado: 'Ativo',
+     routes: { origin_name: 'Luanda', destination_name: 'Talatona', monthly_price_per_seat: 15000 },
+     contraparte: { nome_completo: 'Motorista 2' },
+     veiculo: { marca_modelo: 'Toyota Hilux 2022', matricula: 'LD-12-34-AB' }
   };
 
   const acordoPendenteMotorista = {
      id: 'acordo-3',
      estado: 'Pendente',
-     routes: { origin_name: 'Benfica', destination_name: 'Maculusso' },
-     passageiro: { nome: 'Passageiro Teste' }
+     routes: { origin_name: 'Benfica', destination_name: 'Maculusso', monthly_price_per_seat: 5000 },
+     contraparte: { nome_completo: 'Passageiro Teste' }
   };
 
   const acordoAtivoMotorista = {
      id: 'acordo-4',
      estado: 'Ativo',
-     routes: { origin_name: 'Kilamba', destination_name: 'Baixa' },
-     passageiro: { nome: 'Outro Passageiro' }
+     routes: { origin_name: 'Kilamba', destination_name: 'Baixa', monthly_price_per_seat: 12000 },
+     contraparte: { nome_completo: 'Outro Passageiro' }
   };
 
   describe('Renderização Comum', () => {
     it('renderiza o componente sem erros', async () => {
+      setupMocksForRole('Passageiro');
       await renderComponent();
       await waitFor(() => expect(screen.getByText('Boleia Certa')).toBeInTheDocument());
     });
@@ -292,38 +240,43 @@ describe('MyAgreements Component', () => {
   });
 });
 
-// --- Adicionando testes para o Modal e Kebab Menu ---
+// --- Testes para o Modal e Kebab Menu ---
 describe('MyAgreements - Modal and Context Menu interactions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  const mockAtivoAcordo = {
+  const mockAtivoAcordoPassageiro = {
     id: 99,
     estado: 'ativo',
-    passenger_id: 'pass-1',
-    route_id: 1,
     routes: {
       origin_name: 'Luanda',
       destination_name: 'Talatona',
       departure_time: '08:00',
       monthly_price_per_seat: 15000
-    }
+    },
+    contraparte: { nome_completo: 'Motorista Real', telefone: '+244999999999' },
+    veiculo: { marca_modelo: 'Toyota Real', matricula: 'XYZ' }
   };
 
-  it('Passenger should see Ver Detalhes and open Modal for Active Agreement', async () => {
+  const mockAtivoAcordoMotorista = {
+    id: 100,
+    estado: 'ativo',
+    routes: {
+      origin_name: 'Luanda',
+      destination_name: 'Talatona',
+      departure_time: '08:00',
+      monthly_price_per_seat: 15000
+    },
+    contraparte: { nome_completo: 'Passageiro Real', telefone: '+244888888888' }
+  };
+
+  it('Passenger should see Ver Detalhes and open Modal with dynamic data', async () => {
     supabase.auth.getUser.mockResolvedValue({
       data: { user: { id: 'pass-1', user_metadata: { tipo_perfil: 'Passageiro' } } },
       error: null
     });
-    supabase.from.mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({
-          data: [mockAtivoAcordo],
-          error: null
-        })
-      })
-    });
+    AgreementsService.getAgreementsForUser.mockResolvedValue([mockAtivoAcordoPassageiro]);
 
     render(
       <MemoryRouter>
@@ -331,56 +284,37 @@ describe('MyAgreements - Modal and Context Menu interactions', () => {
       </MemoryRouter>
     );
 
-    // Wait for agreement to render
-    const btnDetalhes = await screen.findByText(/Ver Detalhes/i);
+    // Ver nome dinâmico no card
+    const nameOnCard = await screen.findByText('Motorista Real');
+    expect(nameOnCard).toBeInTheDocument();
+
+    const btnDetalhes = screen.getByText(/Ver Detalhes/i);
     expect(btnDetalhes).toBeInTheDocument();
 
-    // Open modal
     fireEvent.click(btnDetalhes);
 
-    // Assert modal is open (should have Detalhes do Acordo text)
     expect(screen.getByText('Detalhes do Acordo')).toBeInTheDocument();
 
-    // Assert modal has vehicle info since user is passenger
+    // Verifica dados do veículo e da contraparte no Modal
     expect(screen.getByText('Veículo')).toBeInTheDocument();
+    expect(screen.getByText('Toyota Real')).toBeInTheDocument();
+    expect(screen.getByText('XYZ')).toBeInTheDocument();
+    expect(screen.getByText('+244999999999')).toBeInTheDocument();
 
-    // Close modal
     fireEvent.click(screen.getByText('Fechar'));
 
-    // Using a setTimeout because Modal closes immediately
     await waitFor(() => {
       expect(screen.queryByText('Detalhes do Acordo')).not.toBeInTheDocument();
     });
   });
 
-  it('Driver should see Kebab menu on Active Agreement', async () => {
+  it('Driver should see Kebab menu on Active Agreement and open Modal with dynamic data', async () => {
     supabase.auth.getUser.mockResolvedValue({
       data: { user: { id: 'driver-1', user_metadata: { tipo_perfil: 'Motorista' } } },
       error: null
     });
 
-    // Mock for routes query
-    const inMock = vi.fn().mockResolvedValue({
-      data: [mockAtivoAcordo],
-      error: null
-    });
-    const selectMock = vi.fn().mockReturnValue({ in: inMock });
-
-    supabase.from.mockImplementation((table) => {
-      if (table === 'routes') {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockResolvedValue({
-              data: [{ id: 1 }],
-              error: null
-            })
-          })
-        };
-      }
-      if (table === 'acordos') {
-        return { select: selectMock };
-      }
-    });
+    AgreementsService.getAgreementsForUser.mockResolvedValue([mockAtivoAcordoMotorista]);
 
     render(
       <MemoryRouter>
@@ -388,15 +322,28 @@ describe('MyAgreements - Modal and Context Menu interactions', () => {
       </MemoryRouter>
     );
 
-    // Wait for card to appear, then find menu button
-    const kebabButton = await screen.findByRole('button', { name: /Opções/i });
+    // Ver nome dinâmico no card
+    const nameOnCard = await screen.findByText('Passageiro Real');
+    expect(nameOnCard).toBeInTheDocument();
+
+    // Menu dropdown
+    const kebabButton = screen.getByRole('button', { name: /Opções/i });
     expect(kebabButton).toBeInTheDocument();
 
-    // Click kebab menu
     fireEvent.click(kebabButton);
 
-    // Assert options appear
     expect(screen.getByText(/Reportar Problema/i)).toBeInTheDocument();
     expect(screen.getByText(/Cancelar Acordo/i)).toBeInTheDocument();
+
+    // Abre Modal como motorista
+    const btnDetalhes = screen.getByText(/Ver Detalhes/i);
+    fireEvent.click(btnDetalhes);
+
+    expect(screen.getByText('Detalhes do Acordo')).toBeInTheDocument();
+    expect(screen.getAllByText('Passageiro Real').length).toBeGreaterThan(0);
+    expect(screen.getByText('+244888888888')).toBeInTheDocument();
+
+    // Motorista não vê veículo do passageiro
+    expect(screen.queryByText('Veículo')).not.toBeInTheDocument();
   });
 });

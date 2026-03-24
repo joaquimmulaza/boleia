@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Car, User, Plus } from 'lucide-react';
 
-import { approveAgreement, rejectAgreement } from '../services/AgreementsService';
+import { approveAgreement, rejectAgreement, getAgreementsForUser } from '../services/AgreementsService';
 import AcordoCardPassageiro from '../components/AcordoCardPassageiro';
 import AcordoCardMotorista from '../components/AcordoCardMotorista';
 import EmptyState from '../components/EmptyState';
@@ -37,39 +37,8 @@ const MyAgreements = () => {
     setIsLoading(true);
 
     try {
-      let query = supabase.from('acordos').select(`
-        *,
-        routes:route_id (
-          origin_name,
-          destination_name,
-          departure_time,
-          monthly_price_per_seat
-        )
-      `);
-
-      if (role === 'Motorista') {
-        // Busca as rotas do motorista
-        const { data: rotasMotorista } = await supabase
-          .from('routes')
-          .select('id')
-          .eq('driver_id', uid);
-        
-        const rotaIds = rotasMotorista?.map(r => r.id) || [];
-        
-        if (rotaIds.length > 0) {
-          query = query.in('route_id', rotaIds);
-        } else {
-          setAcordos([]);
-          setIsLoading(false);
-          return;
-        }
-      } else {
-        query = query.eq('passenger_id', uid);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      setAcordos(data || []);
+      const acordosData = await getAgreementsForUser(uid, role);
+      setAcordos(acordosData || []);
     } catch (err) {
       console.error('Erro ao carregar acordos:', err);
     } finally {
