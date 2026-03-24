@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import LandingPage from './pages/LandingPage';
 import Auth from './pages/Auth';
-import TestUI from './pages/TestUI';
 import Layout from './layouts/Layout';
 import PassengerDashboard from './pages/PassengerDashboard';
 import DriverDashboard from './pages/DriverDashboard';
@@ -51,7 +50,6 @@ function App() {
           {/* Rotas públicas */}
           <Route path="/" element={<RootRoute />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/test-ui" element={<TestUI />} />
 
           {/* Rotas protegidas envolvidas pelo Layout global (com BottomBar) */}
           <Route element={<Layout />}>
