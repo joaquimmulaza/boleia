@@ -49,14 +49,16 @@ A aplicação usa um componente `<Layout>` global que envolve todas as páginas 
 ```
 <App>
   <BrowserRouter>
-    ├── /login          → <Auth />          (pública)
-    └── <Layout>        (global, contém <BottomBar>)
-        ├── /           → <Home />          (redireciona por perfil)
-        ├── /passageiro → <PassengerDashboard />
-        ├── /motorista  → <DriverDashboard />
-        ├── /acordos    → <MyAgreements />  ← PADRÃO (único componente de acordos)
-        ├── /faltas     → <AbsenceTracker />
-        └── /perfil     → <Profile />
+    ├── /                 → <LandingPage />   (redireciona por perfil se autenticado)
+    ├── /auth             → <Auth />          (pública)
+    └── <Layout>          (global, contém <BottomBar>)
+        ├── /passageiro   → <PassengerDashboard />
+        ├── /motorista    → <DriverDashboard />
+        ├── /veiculo      → <VehicleSetup />
+        ├── /publicar-trajeto → <PublishRoute />
+        ├── /acordos      → <MyAgreements />  ← PADRÃO (único componente de acordos)
+        ├── /faltas       → <AbsenceTracker /> (inclui /faltas/:acordoId)
+        └── /perfil       → <Profile />
 ```
 
 **BottomBar** liga as 4 secções principais: **Início**, **Acordos/Rotas**, **Faltas** e **Perfil**.
