@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { Home, Search, CarFront, User, HandshakeIcon, CalendarX2, LogOut } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import ThemeToggle from '../components/ThemeToggle';
+import NotificationBell from '../components/NotificationBell';
 
 /**
  * Layout global que envolve todas as páginas autenticadas.
@@ -42,7 +43,10 @@ const Layout = () => {
     <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900 transition-colors">
       {/* Barra de topo com botão de Logout */}
       <header className="flex items-center justify-between px-4 pt-3 pb-1 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 max-w-md mx-auto w-full transition-colors">
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <ThemeToggle />
+        </div>
         <button
           onClick={handleLogout}
           aria-label="Terminar sessão"
