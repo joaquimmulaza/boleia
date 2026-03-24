@@ -291,3 +291,112 @@ describe('MyAgreements Component', () => {
     });
   });
 });
+
+// --- Adicionando testes para o Modal e Kebab Menu ---
+describe('MyAgreements - Modal and Context Menu interactions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const mockAtivoAcordo = {
+    id: 99,
+    estado: 'ativo',
+    passenger_id: 'pass-1',
+    route_id: 1,
+    routes: {
+      origin_name: 'Luanda',
+      destination_name: 'Talatona',
+      departure_time: '08:00',
+      monthly_price_per_seat: 15000
+    }
+  };
+
+  it('Passenger should see Ver Detalhes and open Modal for Active Agreement', async () => {
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'pass-1', user_metadata: { tipo_perfil: 'Passageiro' } } },
+      error: null
+    });
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({
+          data: [mockAtivoAcordo],
+          error: null
+        })
+      })
+    });
+
+    render(
+      <MemoryRouter>
+        <MyAgreements />
+      </MemoryRouter>
+    );
+
+    // Wait for agreement to render
+    const btnDetalhes = await screen.findByText(/Ver Detalhes/i);
+    expect(btnDetalhes).toBeInTheDocument();
+
+    // Open modal
+    fireEvent.click(btnDetalhes);
+
+    // Assert modal is open (should have Detalhes do Acordo text)
+    expect(screen.getByText('Detalhes do Acordo')).toBeInTheDocument();
+
+    // Assert modal has vehicle info since user is passenger
+    expect(screen.getByText('Veículo')).toBeInTheDocument();
+
+    // Close modal
+    fireEvent.click(screen.getByText('Fechar'));
+
+    // Using a setTimeout because Modal closes immediately
+    await waitFor(() => {
+      expect(screen.queryByText('Detalhes do Acordo')).not.toBeInTheDocument();
+    });
+  });
+
+  it('Driver should see Kebab menu on Active Agreement', async () => {
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'driver-1', user_metadata: { tipo_perfil: 'Motorista' } } },
+      error: null
+    });
+
+    // Mock for routes query
+    const inMock = vi.fn().mockResolvedValue({
+      data: [mockAtivoAcordo],
+      error: null
+    });
+    const selectMock = vi.fn().mockReturnValue({ in: inMock });
+
+    supabase.from.mockImplementation((table) => {
+      if (table === 'routes') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({
+              data: [{ id: 1 }],
+              error: null
+            })
+          })
+        };
+      }
+      if (table === 'acordos') {
+        return { select: selectMock };
+      }
+    });
+
+    render(
+      <MemoryRouter>
+        <MyAgreements />
+      </MemoryRouter>
+    );
+
+    // Wait for card to appear, then find menu button
+    const kebabButton = await screen.findByRole('button', { name: /Opções/i });
+    expect(kebabButton).toBeInTheDocument();
+
+    // Click kebab menu
+    fireEvent.click(kebabButton);
+
+    // Assert options appear
+    expect(screen.getByText(/Reportar Problema/i)).toBeInTheDocument();
+    expect(screen.getByText(/Cancelar Acordo/i)).toBeInTheDocument();
+  });
+});
