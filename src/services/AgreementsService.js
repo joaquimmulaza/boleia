@@ -148,3 +148,21 @@ export const getAgreementsForUser = async (userId, userRole) => {
     throw error;
   }
 };
+
+
+export const cancelAgreement = async (agreementId, routeId) => {
+  const { error: updateError } = await supabase
+    .from('acordos')
+    .update({ estado: 'Cancelado' })
+    .eq('id', agreementId);
+
+  if (updateError) throw updateError;
+
+  const { error: rpcError } = await supabase.rpc('increment_available_seats', {
+    route_id_param: routeId,
+  });
+
+  if (rpcError) throw rpcError;
+
+  return true;
+};

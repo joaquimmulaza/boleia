@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { requestSeat, approveAgreement, rejectAgreement } from './AgreementsService.js';
+import { requestSeat, approveAgreement, rejectAgreement, cancelAgreement } from './AgreementsService.js';
 import { supabase } from '../lib/supabase';
 
 vi.mock('../lib/supabase', () => ({
@@ -78,5 +78,37 @@ describe('AgreementsService', () => {
     expect(supabase.from).toHaveBeenCalledWith('acordos');
     expect(mockUpdate).toHaveBeenCalledWith({ estado: 'Cancelado' });
     expect(mockEq).toHaveBeenCalledWith('id', 'agreement-1');
+  });
+
+  it('cancelAgreement altera o estado do acordo para Cancelado e chama a RPC increment_available_seats', async () => {
+    // Mock the update call for acordos
+    const mockEq = vi.fn().mockResolvedValue({ error: null });
+    const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
+
+    supabase.from.mockImplementation((table) => {
+      if (table === 'acordos') {
+        return {
+          update: mockUpdate
+        };
+      }
+      return {};
+    });
+
+    // Mock the rpc call
+    supabase.rpc.mockResolvedValue({ error: null });
+
+    const result = await cancelAgreement('agreement-1', 'route-1');
+
+    // Verification for 'acordos' update
+    expect(supabase.from).toHaveBeenCalledWith('acordos');
+    expect(mockUpdate).toHaveBeenCalledWith({ estado: 'Cancelado' });
+    expect(mockEq).toHaveBeenCalledWith('id', 'agreement-1');
+
+    // Verification for atomic decremental RPC call
+    expect(supabase.rpc).toHaveBeenCalledWith('increment_available_seats', {
+      route_id_param: 'route-1'
+    });
+
+    expect(result).toBe(true);
   });
 });

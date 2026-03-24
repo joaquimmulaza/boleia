@@ -7,6 +7,13 @@ import * as AgreementsService from '../services/AgreementsService';
 import MyAgreements from './MyAgreements';
 
 // Mocks globais
+
+vi.mock('../hooks/useNotifications', () => ({
+  default: () => ({
+    addNotification: vi.fn(),
+  })
+}));
+
 vi.mock('../lib/supabase', () => ({
   supabase: {
     auth: {
