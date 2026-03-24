@@ -13,16 +13,12 @@ vi.mock('react-router-dom', () => ({
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mock do módulo Supabase
-// Simula supabase.auth.getUser() e as operações de base de dados
-// com uma cadeia fluente: .from().select().eq() e .from().insert()
 // ─────────────────────────────────────────────────────────────────────────────
 const { mockInsert, mockFrom, mockGetUser } = vi.hoisted(() => {
   const mockInsert = vi.fn();
-  // mockEq é o nó final da cadeia select().eq() — devolve dados vazios por defeito
   const mockEq = vi.fn();
   const mockSelect = vi.fn(() => ({ eq: mockEq }));
   const mockFrom = vi.fn(() => ({ insert: mockInsert, select: mockSelect }));
-  // auth.getUser devolve um utilizador fictício por defeito
   const mockGetUser = vi.fn();
   return { mockInsert, mockFrom, mockGetUser, mockEq, mockSelect };
 });
@@ -35,8 +31,6 @@ vi.mock('../lib/supabase', () => ({
     },
   },
 }));
-
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Suite principal
@@ -53,7 +47,6 @@ describe('DriverDashboard Component', () => {
     });
 
     // Por defeito: sem veículo nem rota existentes (arrays vazios)
-    // A cadeia .from().select().eq() devolve dados vazios
     const mockEqFn = vi.fn().mockResolvedValue({ data: [], error: null });
     const mockSelectFn = vi.fn(() => ({ eq: mockEqFn }));
     mockFrom.mockImplementation(() => ({
@@ -61,34 +54,53 @@ describe('DriverDashboard Component', () => {
       select: mockSelectFn,
     }));
 
-    // Por defeito as operações de insert devolvem sucesso sem erro
     mockInsert.mockResolvedValue({ data: [{}], error: null });
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  // 1. FORMULÁRIO DE VEÍCULO
+  // 1. CALL TO ACTION - VEÍCULO
   // ───────────────────────────────────────────────────────────────────────────
-  describe('Formulário de Veículo', () => {
-    it('renderiza um campo "Marca/Modelo"', () => {
+  describe('Call To Action de Veículo', () => {
+    it('renderiza o CTA se o utilizador não tiver veículo', async () => {
       render(<DriverDashboard />);
-      expect(screen.getByLabelText(/Marca\/Modelo/i)).toBeInTheDocument();
+
+      await waitFor(() => {
+        expect(screen.getByText(/Veículo não registado/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Registar Veículo Agora/i })).toBeInTheDocument();
+      });
     });
 
-    it('renderiza um campo "Matrícula"', () => {
+    it('navega para /vehicle-setup ao clicar no botão do CTA', async () => {
       render(<DriverDashboard />);
-      expect(screen.getByLabelText(/Matrícula/i)).toBeInTheDocument();
+
+      let ctaButton;
+      await waitFor(() => {
+        ctaButton = screen.getByRole('button', { name: /Registar Veículo Agora/i });
+      });
+
+      fireEvent.click(ctaButton);
+      expect(mockNavigate).toHaveBeenCalledWith('/vehicle-setup');
     });
 
-    it('renderiza um campo "Lugares Disponíveis"', () => {
-      render(<DriverDashboard />);
-      expect(screen.getByLabelText(/Lugares Disponíveis/i)).toBeInTheDocument();
-    });
+    it('não renderiza o CTA se o utilizador já tiver veículo', async () => {
+      // Mock para retornar que o veículo existe
+      const mockEqFn = vi.fn().mockImplementation((col) => {
+        if (col === 'id_motorista') {
+          return Promise.resolve({ data: [{ id: 'veh-1' }], error: null });
+        }
+        return Promise.resolve({ data: [], error: null });
+      });
+      const mockSelectFn = vi.fn(() => ({ eq: mockEqFn }));
+      mockFrom.mockImplementation(() => ({
+        select: mockSelectFn,
+      }));
 
-    it('renderiza um botão para guardar o veículo', () => {
       render(<DriverDashboard />);
-      expect(
-        screen.getByRole('button', { name: /Guardar Veículo/i })
-      ).toBeInTheDocument();
+
+      await waitFor(() => {
+        // CTA text should not be visible
+        expect(screen.queryByText(/Veículo não registado/i)).not.toBeInTheDocument();
+      });
     });
   });
 
@@ -105,16 +117,19 @@ describe('DriverDashboard Component', () => {
         monthly_price_per_seat: 25000,
       };
 
-      const mockEqFn = vi.fn().mockResolvedValue({ data: [rotaMock], error: null });
+      const mockEqFn = vi.fn().mockImplementation((col) => {
+        if (col === 'driver_id') {
+          return Promise.resolve({ data: [rotaMock], error: null });
+        }
+        return Promise.resolve({ data: [], error: null });
+      });
       const mockSelectFn = vi.fn(() => ({ eq: mockEqFn }));
       mockFrom.mockImplementation(() => ({
-        insert: mockInsert,
         select: mockSelectFn,
       }));
 
       render(<DriverDashboard />);
 
-      // Apenas devemos ver os dados (textos) rendered, e não formulários com estes labels
       await waitFor(() => {
         expect(screen.getByText(/Talatona/i)).toBeInTheDocument();
         expect(screen.getByText(/Maianga/i)).toBeInTheDocument();
@@ -122,34 +137,36 @@ describe('DriverDashboard Component', () => {
         expect(screen.getByText(/25000/i)).toBeInTheDocument();
       });
 
-      // O botão de guardar rota não deve existir
-      expect(screen.queryByRole('button', { name: /Guardar Rota/i })).not.toBeInTheDocument();
-      // O input de Ponto de Partida não deve existir
-      expect(screen.queryByLabelText(/Ponto de Partida/i)).not.toBeInTheDocument();
+      // Se a rota existir, deve mostrar o FAB "Nova Rota" e não o texto vazio
+      expect(screen.queryByText(/Ainda não publicaste nenhuma rota diária/i)).not.toBeInTheDocument();
     });
 
-    it('exibe mensagem de rota não definida quando não há rota', async () => {
-      // Mock já configurado no beforeEach para devolver array vazio []
-
+    it('exibe mensagem e botão na área da rota quando não há rota', async () => {
       render(<DriverDashboard />);
 
       await waitFor(() => {
         expect(screen.getByText(/Ainda não publicaste nenhuma rota diária/i)).toBeInTheDocument();
+        // The button "Publicar Trajeto" should be rendered
+        const buttons = screen.getAllByRole('button', { name: /Publicar Trajeto/i });
+        expect(buttons.length).toBeGreaterThan(0);
       });
     });
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  // 3. NAVEGAÇÃO / FAB
+  // 3. NAVEGAÇÃO
   // ───────────────────────────────────────────────────────────────────────────
-  describe('Navegação (Floating Action Button)', () => {
-    it('renderiza o botão "Publicar Trajeto" e navega corretamente', () => {
+  describe('Navegação', () => {
+    it('navega para /publicar-trajeto ao clicar em Publicar Trajeto', async () => {
       render(<DriverDashboard />);
 
-      const fabButton = screen.getByRole('button', { name: /Publicar Trajeto/i });
-      expect(fabButton).toBeInTheDocument();
+      let publishButton;
+      await waitFor(() => {
+        const buttons = screen.getAllByRole('button', { name: /Publicar Trajeto/i });
+        publishButton = buttons[0];
+      });
 
-      fireEvent.click(fabButton);
+      fireEvent.click(publishButton);
       expect(mockNavigate).toHaveBeenCalledWith('/publicar-trajeto');
     });
   });
