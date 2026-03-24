@@ -3,9 +3,16 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import MyAgreements from './MyAgreements';
 import { supabase } from '../lib/supabase';
-import { approveAgreement, getAgreementsForUser } from '../services/AgreementsService';
+import { approveAgreement, getAgreementsForUser, cancelAgreement } from '../services/AgreementsService';
 
 // Mock dependencies
+
+vi.mock('../hooks/useNotifications', () => ({
+  default: () => ({
+    addNotification: vi.fn(),
+  })
+}));
+
 vi.mock('../lib/supabase', () => ({
   supabase: {
     auth: {
@@ -19,6 +26,7 @@ vi.mock('../services/AgreementsService', () => ({
   approveAgreement: vi.fn(),
   rejectAgreement: vi.fn(),
   getAgreementsForUser: vi.fn(),
+  cancelAgreement: vi.fn(),
 }));
 
 describe('Acordos E2E - Driver Flow', () => {

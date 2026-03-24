@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Car, User, Plus } from 'lucide-react';
 
-import { approveAgreement, rejectAgreement, getAgreementsForUser } from '../services/AgreementsService';
+import { approveAgreement, rejectAgreement, cancelAgreement, getAgreementsForUser } from '../services/AgreementsService';
 import AcordoCardPassageiro from '../components/AcordoCardPassageiro';
 import AcordoCardMotorista from '../components/AcordoCardMotorista';
 import EmptyState from '../components/EmptyState';
 import AcordoDetailsModal from '../components/AcordoDetailsModal';
+import ConfirmationModal from '../components/ConfirmationModal';
+import useNotifications from '../hooks/useNotifications';
 
 // ─── Componentes Auxiliares ───────────────────────────────────────────────────
 
@@ -23,6 +25,9 @@ const LoadingSkeleton = () => (
 
 const MyAgreements = () => {
   const navigate = useNavigate();
+  const { addNotification } = useNotifications();
+  const success = (msg) => addNotification(msg, 'success');
+  const showError = (msg) => addNotification(msg, 'error');
   const [acordos, setAcordos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
@@ -31,6 +36,8 @@ const MyAgreements = () => {
   // Modal state
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedAcordo, setSelectedAcordo] = useState(null);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [acordoToCancel, setAcordoToCancel] = useState(null);
 
   const carregarAcordos = useCallback(async (uid, role) => {
     if (!uid) return;
@@ -80,13 +87,29 @@ const MyAgreements = () => {
   };
 
   const handleReport = (acordo) => {
-    console.log('Reportar problema para o acordo:', acordo.id);
-    // Aqui implementarias a lógica para reportar
+    window.location.href = `mailto:joaquimmulazadev@gmail.com?subject=Reportar Problema - Acordo ${acordo.id}`;
   };
 
   const handleCancel = (acordo) => {
-    console.log('Cancelar acordo:', acordo.id);
-    // Aqui implementarias a lógica para cancelar
+    setAcordoToCancel(acordo);
+    setIsCancelModalOpen(true);
+  };
+
+  const confirmCancel = async () => {
+    if (!acordoToCancel) return;
+    try {
+      await cancelAgreement(acordoToCancel.id, acordoToCancel.route_id);
+      setAcordos((prev) =>
+        prev.map((a) => (a.id === acordoToCancel.id ? { ...a, estado: 'Cancelado' } : a))
+      );
+      success('Boleia cancelada com sucesso.');
+    } catch (err) {
+      console.error('Erro ao cancelar acordo:', err);
+      showError('Não foi possível cancelar a boleia.');
+    } finally {
+      setIsCancelModalOpen(false);
+      setAcordoToCancel(null);
+    }
   };
 
   const isMotorista = userRole === 'Motorista';
@@ -164,11 +187,23 @@ const MyAgreements = () => {
       )}
 
       {/* Modal de Detalhes */}
-      <AcordoDetailsModal
+            <AcordoDetailsModal
         isOpen={isDetailsOpen}
         onClose={() => setIsDetailsOpen(false)}
         acordo={selectedAcordo}
         userRole={userRole}
+      />
+
+      <ConfirmationModal
+        isOpen={isCancelModalOpen}
+        title="Cancelar Boleia"
+        message="Tens a certeza que pretendes cancelar esta boleia? Esta ação não pode ser desfeita."
+        onConfirm={confirmCancel}
+        onCancel={() => {
+          setIsCancelModalOpen(false);
+          setAcordoToCancel(null);
+        }}
+        confirmText="Sim, Cancelar"
       />
     </div>
   );
