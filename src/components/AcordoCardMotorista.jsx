@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Clock, CreditCard, User, Route, MoreVertical, CheckCircle, XCircle } from 'lucide-react';
+import { Clock, CreditCard, User, Route, CheckCircle, XCircle } from 'lucide-react';
 import EstadoBadge from './EstadoBadge';
+import AcordoKebabMenu from './AcordoKebabMenu';
 
 const formatKz = (value) => {
   const num = Number(value);
@@ -8,7 +9,7 @@ const formatKz = (value) => {
   return `${num.toLocaleString('pt-PT')} Kz/mês`;
 };
 
-const AcordoCardMotorista = ({ acordo, onAccept, onReject }) => {
+const AcordoCardMotorista = ({ acordo, onAccept, onReject, onShowDetails, onReport, onCancel }) => {
   const isPendente = acordo.estado?.toLowerCase() === 'pendente';
   const isAtivo = acordo.estado?.toLowerCase() === 'ativo';
   const [isLoading, setIsLoading] = useState(false);
@@ -37,9 +38,12 @@ const AcordoCardMotorista = ({ acordo, onAccept, onReject }) => {
             <EstadoBadge estado={acordo.estado} />
           </div>
         </div>
-        <button className="text-slate-400">
-          <MoreVertical size={20} className="shrink-0" />
-        </button>
+        {isAtivo && (
+          <AcordoKebabMenu
+            onReportar={() => onReport?.(acordo)}
+            onCancelar={() => onCancel?.(acordo)}
+          />
+        )}
       </div>
       <div className="space-y-3 mb-4">
         <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
@@ -75,6 +79,14 @@ const AcordoCardMotorista = ({ acordo, onAccept, onReject }) => {
              <XCircle size={16} /> Rejeitar
            </button>
         </div>
+      )}
+      {isAtivo && (
+        <button
+          onClick={() => onShowDetails?.(acordo)}
+          className="w-full py-2.5 bg-primary text-white rounded-lg font-semibold text-sm transition-colors active:scale-95 hover:bg-primary/90"
+        >
+          Ver Detalhes
+        </button>
       )}
     </div>
   );

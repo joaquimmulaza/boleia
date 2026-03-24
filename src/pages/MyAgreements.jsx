@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Car, User, Plus, CheckCircle, XCircle, X } from 'lucide-react';
+import { Car, User, Plus } from 'lucide-react';
 
 import { approveAgreement, rejectAgreement } from '../services/AgreementsService';
 import AcordoCardPassageiro from '../components/AcordoCardPassageiro';
 import AcordoCardMotorista from '../components/AcordoCardMotorista';
 import EmptyState from '../components/EmptyState';
+import AcordoDetailsModal from '../components/AcordoDetailsModal';
 
 // ─── Componentes Auxiliares ───────────────────────────────────────────────────
 
@@ -26,6 +27,10 @@ const MyAgreements = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
   const [userId, setUserId] = useState(null);
+
+  // Modal state
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [selectedAcordo, setSelectedAcordo] = useState(null);
 
   const carregarAcordos = useCallback(async (uid, role) => {
     if (!uid) return;
@@ -100,6 +105,21 @@ const MyAgreements = () => {
     setAcordos((prev) => prev.filter((a) => a.id !== acordoId));
   };
 
+  const handleShowDetails = (acordo) => {
+    setSelectedAcordo(acordo);
+    setIsDetailsOpen(true);
+  };
+
+  const handleReport = (acordo) => {
+    console.log('Reportar problema para o acordo:', acordo.id);
+    // Aqui implementarias a lógica para reportar
+  };
+
+  const handleCancel = (acordo) => {
+    console.log('Cancelar acordo:', acordo.id);
+    // Aqui implementarias a lógica para cancelar
+  };
+
   const isMotorista = userRole === 'Motorista';
   const titulo = isMotorista ? 'Pedidos de Passageiros' : 'Meus Acordos';
   const subtitulo = isMotorista ? 'Gere os pedidos das tuas rotas' : 'As tuas boleias do mês';
@@ -147,9 +167,18 @@ const MyAgreements = () => {
                     acordo={acordo}
                     onAccept={handleAccept}
                     onReject={handleReject}
+                    onShowDetails={handleShowDetails}
+                    onReport={handleReport}
+                    onCancel={handleCancel}
                   />
                 ) : (
-                  <AcordoCardPassageiro key={acordo.id} acordo={acordo} />
+                  <AcordoCardPassageiro
+                    key={acordo.id}
+                    acordo={acordo}
+                    onShowDetails={handleShowDetails}
+                    onReport={handleReport}
+                    onCancel={handleCancel}
+                  />
                 )
               )}
             </section>
@@ -165,6 +194,13 @@ const MyAgreements = () => {
         </button>
       )}
 
+      {/* Modal de Detalhes */}
+      <AcordoDetailsModal
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        acordo={selectedAcordo}
+        userRole={userRole}
+      />
     </div>
   );
 };
