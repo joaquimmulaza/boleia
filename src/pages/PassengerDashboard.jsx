@@ -9,59 +9,76 @@ const formatKwanza = (value) => {
   return Number(value).toLocaleString('pt-PT');
 };
 
-const RouteCard = ({ rota, isProcessing, isRequested, onSolicitar }) => (
-  <div data-testid="route-card" className={`bg-white dark:bg-slate-900 rounded-xl ${rota.available_seats > 1 ? 'border-l-4 border-primary' : 'border-l-4 border-primary/40'} shadow-sm overflow-hidden flex flex-col`}>
-    <div className="p-4">
-      <div className="flex justify-between items-start mb-2">
-        <div className="space-y-1">
-          <p className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            {rota.origin_name} <span className="material-symbols-outlined text-xs text-slate-400">trending_flat</span> {rota.destination_name}
-          </p>
-          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-            <span className="material-symbols-outlined text-sm">schedule</span>
-            <span className="text-xs font-medium">{rota.departure_time} - Saída diária</span>
+const RouteCard = ({ rota, isProcessing, isRequested, estadoAcordo, onSolicitar }) => {
+  const isDisabled = isProcessing || isRequested || estadoAcordo === 'Pendente' || estadoAcordo === 'Ativo';
+
+  let buttonText = 'Solicitar Vaga';
+  let buttonClasses = 'text-primary hover:underline';
+
+  if (estadoAcordo === 'Ativo') {
+    buttonText = 'Boleia Ativa';
+    buttonClasses = 'text-green-700 bg-green-100 px-2 py-1 rounded';
+  } else if (estadoAcordo === 'Pendente' || isRequested) {
+    buttonText = 'Vaga já solicitada';
+    buttonClasses = 'text-yellow-700 bg-yellow-100 px-2 py-1 rounded';
+  } else if (isProcessing) {
+    buttonText = 'A processar...';
+  }
+
+  return (
+    <div data-testid="route-card" className={`bg-white dark:bg-slate-900 rounded-xl ${rota.available_seats > 1 ? 'border-l-4 border-primary' : 'border-l-4 border-primary/40'} shadow-sm overflow-hidden flex flex-col`}>
+      <div className="p-4">
+        <div className="flex justify-between items-start mb-2">
+          <div className="space-y-1">
+            <p className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              {rota.origin_name} <span className="material-symbols-outlined text-xs text-slate-400">trending_flat</span> {rota.destination_name}
+            </p>
+            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+              <span className="material-symbols-outlined text-sm">schedule</span>
+              <span className="text-xs font-medium">{rota.departure_time} - Saída diária</span>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-primary font-bold text-lg leading-tight">{formatKwanza(rota.monthly_price_per_seat)} Kz</p>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">por mês</p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-primary font-bold text-lg leading-tight">{formatKwanza(rota.monthly_price_per_seat)} Kz</p>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">por mês</p>
-        </div>
-      </div>
-      <div className="pt-3 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {rota.available_seats > 1 ? (
-            <div className="flex items-center gap-2">
-              <div className="flex -space-x-2">
-                <div className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 overflow-hidden flex items-center justify-center">
-                  <span className="material-symbols-outlined text-slate-400 text-sm">person</span>
+        <div className="pt-3 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {rota.available_seats > 1 ? (
+              <div className="flex items-center gap-2">
+                <div className="flex -space-x-2">
+                  <div className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 overflow-hidden flex items-center justify-center">
+                    <span className="material-symbols-outlined text-slate-400 text-sm">person</span>
+                  </div>
+                  <div className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 bg-slate-100 flex items-center justify-center">
+                    <span className="text-[8px] font-bold text-slate-400">+{rota.available_seats - 1}</span>
+                  </div>
                 </div>
-                <div className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 bg-slate-100 flex items-center justify-center">
-                  <span className="text-[8px] font-bold text-slate-400">+{rota.available_seats - 1}</span>
-                </div>
+                <span className="text-[10px] font-medium text-slate-500">divisão de custos entre passageiros</span>
               </div>
-              <span className="text-[10px] font-medium text-slate-500">divisão de custos entre passageiros</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-               <div className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 overflow-hidden flex items-center justify-center">
-                  <span className="material-symbols-outlined text-slate-400 text-sm">directions_car</span>
-                </div>
-              <span className="text-[10px] font-medium text-slate-500">boleia direta (1 vaga)</span>
-            </div>
-          )}
+            ) : (
+              <div className="flex items-center gap-2">
+                 <div className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 overflow-hidden flex items-center justify-center">
+                    <span className="material-symbols-outlined text-slate-400 text-sm">directions_car</span>
+                  </div>
+                <span className="text-[10px] font-medium text-slate-500">boleia direta (1 vaga)</span>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => onSolicitar(rota.id)}
+            disabled={isDisabled}
+            className={`text-xs font-bold flex items-center gap-1 ${buttonClasses}`}
+          >
+            {buttonText} {(!estadoAcordo && !isRequested && !isProcessing) && <span className="material-symbols-outlined text-sm">chevron_right</span>}
+          </button>
         </div>
-        
-        <button
-          onClick={() => onSolicitar(rota.id)}
-          disabled={isProcessing || isRequested}
-          className={`text-xs font-bold flex items-center gap-1 ${isRequested ? 'text-yellow-700 bg-yellow-100 px-2 py-1 rounded' : 'text-primary hover:underline'}`}
-        >
-          {isRequested ? 'Aguardando Confirmação' : isProcessing ? 'A processar...' : 'Solicitar Vaga'} <span className="material-symbols-outlined text-sm">chevron_right</span>
-        </button>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const PassengerDashboard = () => {
   const [rotas, setRotas] = useState([]);
@@ -73,6 +90,7 @@ const PassengerDashboard = () => {
 
   const [processingRouteId, setProcessingRouteId] = useState(null);
   const [solicitadas, setSolicitadas] = useState(new Set());
+  const [acordosMap, setAcordosMap] = useState({});
   const [solicitacaoFeedback, setSolicitacaoFeedback] = useState({ show: false, message: '', type: '' });
 
   const mapContainer = useRef(null);
@@ -105,9 +123,32 @@ const PassengerDashboard = () => {
     }
   }, []);
 
+  const carregarAcordos = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('acordos')
+        .select('route_id, estado')
+        .eq('passenger_id', user.id);
+
+      if (error) throw error;
+
+      const map = {};
+      data.forEach(acordo => {
+        map[acordo.route_id] = acordo.estado;
+      });
+      setAcordosMap(map);
+    } catch (err) {
+      console.error('Erro ao carregar acordos:', err);
+    }
+  }, []);
+
   useEffect(() => {
     carregarRotas();
-  }, [carregarRotas]);
+    carregarAcordos();
+  }, [carregarRotas, carregarAcordos]);
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -254,11 +295,14 @@ const PassengerDashboard = () => {
         await requestSeat(rotaId, user?.id || 'passenger-123'); // passed for test matching
 
         setSolicitadas(prev => new Set(prev).add(rotaId));
+        setAcordosMap(prev => ({ ...prev, [rotaId]: 'Pendente' }));
         setSolicitacaoFeedback({ show: true, message: 'Solicitação enviada com sucesso! Aguarde a aprovação do motorista.', type: 'success' });
         setTimeout(() => setSolicitacaoFeedback({ show: false, message: '', type: '' }), 5000);
     } catch (error) {
        console.error("Erro ao solicitar vaga:", error);
-       const errorMessage = error.message?.includes('violates check constraint') 
+       const errorMessage = error.message === 'Já solicitou uma vaga para esta rota.'
+          ? error.message
+          : error.message?.includes('violates check constraint') || error.message?.includes('Já solicitou')
           ? 'Não foi possível enviar a solicitação devido a um erro de validação. Por favor, tente novamente.'
           : 'Ocorreu um erro ao solicitar a sua vaga. Verifique a sua ligação e tente novamente.';
        
@@ -378,6 +422,7 @@ const PassengerDashboard = () => {
                                 rota={rota}
                                 isProcessing={processingRouteId === rota.id}
                                 isRequested={solicitadas.has(rota.id)}
+                                estadoAcordo={acordosMap[rota.id]}
                                 onSolicitar={handleSolicitar}
                             />
                         ))

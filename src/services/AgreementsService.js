@@ -7,7 +7,12 @@ export const requestSeat = async (routeId, passengerId) => {
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === '23505') {
+      throw new Error('Já solicitou uma vaga para esta rota.');
+    }
+    throw error;
+  }
   return data;
 };
 
