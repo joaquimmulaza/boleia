@@ -25,6 +25,7 @@ vi.mock('maplibre-gl', () => {
   }
   const Popup = vi.fn(function() {
     this.setHTML = vi.fn().mockReturnThis();
+    this.setDOMContent = vi.fn().mockReturnThis();
     this.addTo = vi.fn().mockReturnThis();
   });
   const Marker = vi.fn(function() {
@@ -289,6 +290,12 @@ describe('PassengerDashboard Component', () => {
       fireEvent.click(screen.getByRole('button', { name: /Procurar Boleia/i }));
 
       await new Promise(r => setTimeout(r, 500));
+
+      const popupInstances = maplibregl.default.Popup.mock.results;
+      if (popupInstances.length > 0) {
+        const firstPopupSetDOMContent = popupInstances[0].value.setDOMContent;
+        expect(firstPopupSetDOMContent).toHaveBeenCalled();
+      }
     });
   });
 
