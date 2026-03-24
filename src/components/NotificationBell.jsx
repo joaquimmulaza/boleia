@@ -68,7 +68,7 @@ export default function NotificationBell() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 origin-top-right rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 overflow-hidden flex flex-col max-h-[80vh]">
+        <div className="absolute left-0 mt-2 w-80 sm:w-96 origin-top-left rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 overflow-hidden flex flex-col max-h-[80vh]">
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 font-[Plus_Jakarta_Sans]">Notificações</h3>
             {unreadCount > 0 && (
@@ -90,8 +90,7 @@ export default function NotificationBell() {
               <ul className="divide-y divide-gray-100 dark:divide-gray-700">
                 {notifications.map((notif) => (
                   <li
-                    key={notif.id}
-                    className={`flex items-start gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer ${
+                    key={notif.id} className={`flex items-start gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer ${
                       !notif.lida ? 'bg-primary/5 dark:bg-primary/10' : ''
                     }`}
                     onClick={() => {
