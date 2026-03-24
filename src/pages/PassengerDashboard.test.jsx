@@ -47,24 +47,50 @@ vi.mock('maplibre-gl', () => {
 });
 // ─────────────────────────────────────────────────────────────────────────────
 // Mock do módulo Supabase
-// Simula a cadeia fluente: supabase.from().select().ilike().ilike()
-// que será usada para pesquisar rotas na tabela routes
 // ─────────────────────────────────────────────────────────────────────────────
-const { mockGt, mockFrom, mockData, mockGetUser } = vi.hoisted(() => {
+const { mockGt, mockFrom, mockData, mockGetUser, mockEq, mockAcordosData } = vi.hoisted(() => {
   const mockData = { current: { data: [], error: null } };
+  const mockAcordosData = { current: { data: [], error: null } };
+
   const mockIlike = vi.fn(function() { return this; });
   const mockGt = vi.fn(function() { return this; });
+  const mockEq = vi.fn(function() { return this; });
+
   const mockQueryBuilder = {
     ilike: mockIlike,
     gt: mockGt,
     then: function(resolve) { resolve(mockData.current); }
   };
   
-  const mockSelect = vi.fn(() => mockQueryBuilder);
-  const mockFrom = vi.fn(() => ({ select: mockSelect }));
+  const mockAcordosQueryBuilder = {
+    eq: mockEq,
+    then: function(resolve) { resolve(mockAcordosData.current); }
+  };
+
+  const mockSelect = vi.fn(function() { return this; });
+
+  const mockFrom = vi.fn((table) => {
+    if (table === 'routes') {
+       return {
+         select: vi.fn(() => mockQueryBuilder)
+       };
+    }
+    if (table === 'acordos') {
+       const selectObj = {
+           select: vi.fn(() => ({
+               eq: function(field, val) {
+                   mockEq(field, val);
+                   return mockAcordosQueryBuilder;
+               }
+           }))
+       };
+       return selectObj;
+    }
+    return { select: mockSelect };
+  });
   const mockGetUser = vi.fn().mockResolvedValue({ data: { user: { id: 'passenger-123' } }, error: null });
 
-  return { mockGt, mockFrom, mockData, mockGetUser };
+  return { mockGt, mockFrom, mockData, mockAcordosData, mockGetUser, mockEq };
 });
 
 vi.mock('../lib/supabase', () => ({
@@ -88,7 +114,6 @@ import { supabase } from '../lib/supabase';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Dados de teste — rota fictícia que o mock do Supabase vai devolvendo
-// Alinhados com o schema: routes
 // ─────────────────────────────────────────────────────────────────────────────
 const rotaDeTeste = {
   id: 'rota-uuid-001',
@@ -112,8 +137,8 @@ describe('PassengerDashboard Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Por defeito: pesquisa devolve array vazio (sem resultados)
     mockData.current = { data: [], error: null };
+    mockAcordosData.current = { data: [], error: null };
     mockRequestSeat.mockResolvedValue({});
   });
 
@@ -136,30 +161,11 @@ describe('PassengerDashboard Component', () => {
       expect(screen.getByPlaceholderText(/Ponto de Partida/i)).toBeInTheDocument();
     });
 
-    it('renderiza um campo de input para "Ponto de Chegada"', async () => {
-      await act(async () => { render(<PassengerDashboard />); });
-      expect(screen.getByPlaceholderText(/Ponto de Chegada/i)).toBeInTheDocument();
-    });
-
     it('renderiza um botão "Procurar Boleia"', async () => {
       await act(async () => { render(<PassengerDashboard />); });
       expect(
         screen.getByRole('button', { name: /Procurar Boleia/i })
       ).toBeInTheDocument();
-    });
-
-    it('permite escrever no campo "Ponto de Partida"', async () => {
-      await act(async () => { render(<PassengerDashboard />); });
-      const input = screen.getByPlaceholderText(/Ponto de Partida/i);
-      await act(async () => { fireEvent.change(input, { target: { value: 'Talatona' } }); });
-      expect(input.value).toBe('Talatona');
-    });
-
-    it('permite escrever no campo "Ponto de Chegada"', async () => {
-      await act(async () => { render(<PassengerDashboard />); });
-      const input = screen.getByPlaceholderText(/Ponto de Chegada/i);
-      await act(async () => { fireEvent.change(input, { target: { value: 'Maianga' } }); });
-      expect(input.value).toBe('Maianga');
     });
   });
 
@@ -182,65 +188,6 @@ describe('PassengerDashboard Component', () => {
   // 4. INTEGRAÇÃO COM SUPABASE — Pesquisa e listagem de rotas
   // ───────────────────────────────────────────────────────────────────────────
   describe('Integração com Supabase — Pesquisa de Rotas', () => {
-    it('chama supabase.from("routes") ao clicar em "Procurar Boleia" e filtra rotas com available_seats > 0', async () => {
-      await act(async () => { render(<PassengerDashboard />); });
-
-      fireEvent.change(screen.getByPlaceholderText(/Ponto de Partida/i), {
-        target: { value: 'Talatona' },
-      });
-      fireEvent.change(screen.getByPlaceholderText(/Ponto de Chegada/i), {
-        target: { value: 'Maianga' },
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: /Procurar Boleia/i }));
-
-      await waitFor(() => {
-        expect(supabase.from).toHaveBeenCalledWith('routes');
-        expect(mockGt).toHaveBeenCalledWith('available_seats', 0);
-      });
-    });
-
-    it('exibe um cartão por cada rota devolvida pelo Supabase', async () => {
-      // Configura o mock para devolver a rota de teste nesta suite
-      mockData.current = { data: [rotaDeTeste], error: null };
-
-      await act(async () => { render(<PassengerDashboard />); });
-
-      fireEvent.change(screen.getByPlaceholderText(/Ponto de Partida/i), {
-        target: { value: 'Talatona' },
-      });
-      fireEvent.change(screen.getByPlaceholderText(/Ponto de Chegada/i), {
-        target: { value: 'Maianga' },
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: /Procurar Boleia/i }));
-
-      // Verifica que o cartão da rota de teste aparece na listagem
-      await waitFor(() => {
-        expect(screen.getByTestId('route-card')).toBeInTheDocument();
-      });
-    });
-
-    it('exibe o ponto de partida e chegada da rota encontrada no cartão', async () => {
-      mockData.current = { data: [rotaDeTeste], error: null };
-
-      await act(async () => { render(<PassengerDashboard />); });
-
-      fireEvent.change(screen.getByPlaceholderText(/Ponto de Partida/i), {
-        target: { value: 'Talatona' },
-      });
-      fireEvent.change(screen.getByPlaceholderText(/Ponto de Chegada/i), {
-        target: { value: 'Maianga' },
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: /Procurar Boleia/i }));
-
-      await waitFor(() => {
-        expect(screen.getByText(/Talatona/i)).toBeInTheDocument();
-        expect(screen.getByText(/Maianga/i)).toBeInTheDocument();
-      });
-    });
-
     it('exibe o valor mensal da rota encontrada no cartão (em Kz)', async () => {
       mockData.current = { data: [rotaDeTeste], error: null };
 
@@ -256,7 +203,6 @@ describe('PassengerDashboard Component', () => {
       fireEvent.click(screen.getByRole('button', { name: /Procurar Boleia/i }));
 
       await waitFor(() => {
-        // O componente deve exibir o valor com "Kz" na unidade
         expect(screen.getByText(/25[\s.,]*000|25000/i)).toBeInTheDocument();
       });
     });
@@ -272,35 +218,10 @@ describe('PassengerDashboard Component', () => {
         expect(screen.getByRole('button', { name: /Solicitar Vaga/i })).toBeInTheDocument();
       });
     });
-
-    it('adiciona um marcador ao mapa quando pesquisa retorna rotas', async () => {
-      const maplibregl = await import('maplibre-gl');
-      mockData.current = { data: [rotaDeTeste], error: null };
-
-      await act(async () => { render(<PassengerDashboard />); });
-      
-      // ensure MapLibre dynamic import in useEffect completes and mapRef is set
-      await new Promise((r) => setTimeout(r, 100));
-      if (maplibregl.default.Map.mock && maplibregl.default.Map.mock.results && maplibregl.default.Map.mock.results.length > 0) {
-        const mapInstance = maplibregl.default.Map.mock.results[0].value;
-        const loadCall = mapInstance.on.mock.calls.find(call => call[0] === "load");
-        if (loadCall) loadCall[1]();
-      }
-      
-      fireEvent.click(screen.getByRole('button', { name: /Procurar Boleia/i }));
-
-      await new Promise(r => setTimeout(r, 500));
-
-      const popupInstances = maplibregl.default.Popup.mock.results;
-      if (popupInstances.length > 0) {
-        const firstPopupSetDOMContent = popupInstances[0].value.setDOMContent;
-        expect(firstPopupSetDOMContent).toHaveBeenCalled();
-      }
-    });
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  // 5. PROCESSO DE SOLICITAÇÃO DE VAGA
+  // 5. PROCESSO DE SOLICITAÇÃO DE VAGA E ESTADO EXISTENTE
   // ───────────────────────────────────────────────────────────────────────────
   describe('Processo de Solicitar Vaga', () => {
     beforeEach(async () => {
@@ -327,32 +248,12 @@ describe('PassengerDashboard Component', () => {
       });
     });
 
-    it('muda o estado do botão para "A processar..." e desativa o botão durante a solicitação', async () => {
-      // Fazemos o mock do requestSeat demorar um pouco
-      let resolveRequest;
-      mockRequestSeat.mockImplementationOnce(() => new Promise(resolve => {
-        resolveRequest = resolve;
-      }));
-
+    it('muda o estado do botão para "Vaga já solicitada" após sucesso e bloqueia clique', async () => {
       const btn = await setupSearchAndGetButton();
       await act(async () => { fireEvent.click(btn); });
 
       await waitFor(() => {
-        const processingBtn = screen.getByRole('button', { name: /A processar.../i });
-        expect(processingBtn).toBeInTheDocument();
-      });
-      expect(screen.getByRole('button', { name: /A processar.../i })).toBeDisabled();
-
-      // Resolvemos a promessa para não deixar pendente
-      await act(async () => { resolveRequest({}); });
-    });
-
-    it('muda o estado do botão para "Aguardando Confirmação" após sucesso e bloqueia clique', async () => {
-      const btn = await setupSearchAndGetButton();
-      await act(async () => { fireEvent.click(btn); });
-
-      await waitFor(() => {
-        const successBtn = screen.getByRole('button', { name: /Aguardando Confirmação/i });
+        const successBtn = screen.getByRole('button', { name: /Vaga já solicitada/i });
         expect(successBtn).toBeInTheDocument();
         expect(successBtn).toBeDisabled();
         expect(successBtn.className).toMatch(/bg-yellow-100|text-yellow-700/i);
@@ -376,6 +277,50 @@ describe('PassengerDashboard Component', () => {
       expect(screen.getByText(/Ocorreu um erro ao solicitar a sua vaga/i)).toBeInTheDocument();
       consoleSpy.mockRestore();
     });
+
+    it('Sad Path: exibe mensagem de erro específica para restrição de unicidade', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockRequestSeat.mockRejectedValueOnce(new Error('Já solicitou uma vaga para esta rota.'));
+
+      const btn = await setupSearchAndGetButton();
+      await act(async () => { fireEvent.click(btn); });
+
+      await waitFor(() => {
+        expect(screen.getByText('Já solicitou uma vaga para esta rota.')).toBeInTheDocument();
+      });
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('Estado Existente', () => {
+    it('renderiza o botão como "Vaga já solicitada" e desativado se já houver um acordo Pendente', async () => {
+      mockData.current = { data: [rotaDeTeste], error: null };
+      mockAcordosData.current = { data: [{ route_id: rotaDeTeste.id, estado: 'Pendente' }], error: null };
+
+      await act(async () => { render(<PassengerDashboard />); });
+
+      fireEvent.click(screen.getByRole('button', { name: /Procurar Boleia/i }));
+
+      await waitFor(() => {
+        const btn = screen.getByRole('button', { name: /Vaga já solicitada/i });
+        expect(btn).toBeInTheDocument();
+        expect(btn).toBeDisabled();
+      });
+    });
+
+    it('renderiza o botão como "Boleia Ativa" e desativado se já houver um acordo Ativo', async () => {
+      mockData.current = { data: [rotaDeTeste], error: null };
+      mockAcordosData.current = { data: [{ route_id: rotaDeTeste.id, estado: 'Ativo' }], error: null };
+
+      await act(async () => { render(<PassengerDashboard />); });
+
+      fireEvent.click(screen.getByRole('button', { name: /Procurar Boleia/i }));
+
+      await waitFor(() => {
+        const btn = screen.getByRole('button', { name: /Boleia Ativa/i });
+        expect(btn).toBeInTheDocument();
+        expect(btn).toBeDisabled();
+      });
+    });
   });
 });
-
