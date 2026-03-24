@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Car, MapPin, Truck } from 'lucide-react';
+import { Car, MapPin, Truck, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
@@ -11,11 +11,8 @@ import { useNavigate } from 'react-router-dom';
 const DriverDashboard = () => {
   const navigate = useNavigate();
   // ─── Veículo state ─────────────────────────────────────────────────────────
-  const [marcaModelo, setMarcaModelo] = useState('');
-  const [matricula, setMatricula] = useState('');
-  const [lugaresDisponiveis, setLugaresDisponiveis] = useState('');
-  const [feedbackVeiculo, setFeedbackVeiculo] = useState({ type: '', message: '' });
-  const [isLoadingVeiculo, setIsLoadingVeiculo] = useState(false);
+  const [hasVehicle, setHasVehicle] = useState(true); // Assume true initially to avoid flicker, or false and handle loading state
+  const [isLoading, setIsLoading] = useState(true);
 
   // ─── Rota state ────────────────────────────────────────────────────────────
   const [pontoPartida, setPontoPartida] = useState('');
@@ -23,27 +20,29 @@ const DriverDashboard = () => {
   const [horaRecolha, setHoraRecolha] = useState('');
   const [valorMensal, setValorMensal] = useState('');
 
-
   // ─── Carrega dados existentes ao montar o componente ───────────────────────
   useEffect(() => {
     const carregarDados = async () => {
+      setIsLoading(true);
       // 1. Verifica o utilizador autenticado
       const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) return;
+      if (authError || !user) {
+        setIsLoading(false);
+        return;
+      }
 
       const idMotorista = user.id;
 
       // 2. Carrega veículo existente (se houver)
       const { data: veiculosData } = await supabase
         .from('veiculos')
-        .select('marca_modelo, matricula, lugares_disponiveis')
+        .select('id')
         .eq('id_motorista', idMotorista);
 
       if (veiculosData && veiculosData.length > 0) {
-        const v = veiculosData[0];
-        setMarcaModelo(v.marca_modelo ?? '');
-        setMatricula(v.matricula ?? '');
-        setLugaresDisponiveis(String(v.lugares_disponiveis ?? ''));
+        setHasVehicle(true);
+      } else {
+        setHasVehicle(false);
       }
 
       // 3. Carrega rota existente (se houver)
@@ -59,35 +58,11 @@ const DriverDashboard = () => {
         setHoraRecolha(r.departure_time ?? '');
         setValorMensal(String(r.monthly_price_per_seat ?? ''));
       }
+      setIsLoading(false);
     };
 
     carregarDados();
   }, []);
-
-  // ─── Handlers ──────────────────────────────────────────────────────────────
-  const handleGuardarVeiculo = async (e) => {
-    e.preventDefault();
-    setFeedbackVeiculo({ type: '', message: '' });
-    setIsLoadingVeiculo(true);
-
-    const { error } = await supabase.from('veiculos').insert([
-      {
-        marca_modelo: marcaModelo,
-        matricula,
-        lugares_disponiveis: parseInt(lugaresDisponiveis, 10),
-      },
-    ]);
-
-    setIsLoadingVeiculo(false);
-
-    if (error) {
-      setFeedbackVeiculo({ type: 'error', message: error.message });
-    } else {
-      setFeedbackVeiculo({ type: 'success', message: 'Veículo guardado com sucesso!' });
-    }
-  };
-
-  // A rota é agora read-only (os dados de criação estão no ecrã Publish Route)
 
   return (
     <div className="font-[Plus_Jakarta_Sans,sans-serif] min-h-screen bg-[#F2F4F7] text-gray-800 antialiased">
@@ -109,100 +84,28 @@ const DriverDashboard = () => {
       {/* ── Main Content ── */}
       <main className="flex-1 px-4 py-6 space-y-6 pb-24">
 
-        {/* ── Card 1: O Meu Veículo ── */}
-        <section className="space-y-3">
-          <div className="flex items-center gap-2 px-1">
-            <Truck size={20} className="text-emerald-500" />
-            <h2 className="text-[#1A202C] text-lg font-bold">O Meu Veículo</h2>
-          </div>
-
-          <form
-            onSubmit={handleGuardarVeiculo}
-            className="bg-white rounded-xl p-5 space-y-4 border border-emerald-500/5"
-            style={{ boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)' }}
-          >
-            {/* Marca/Modelo */}
-            <div className="space-y-1">
-              <label
-                htmlFor="marcaModelo"
-                className="text-[#1A202C] text-sm font-semibold px-1"
-              >
-                Marca/Modelo
-              </label>
-              <input
-                id="marcaModelo"
-                type="text"
-                className="w-full bg-[#F7F8FA] border-none rounded-lg h-12 px-4 text-[#1A202C] focus:ring-2 focus:ring-emerald-500/50 transition-all outline-none placeholder-[#718096]"
-                placeholder="ex: Toyota Corolla"
-                value={marcaModelo}
-                onChange={(e) => setMarcaModelo(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* Matrícula */}
-            <div className="space-y-1">
-              <label
-                htmlFor="matricula"
-                className="text-[#1A202C] text-sm font-semibold px-1"
-              >
-                Matrícula
-              </label>
-              <input
-                id="matricula"
-                type="text"
-                className="w-full bg-[#F7F8FA] border-none rounded-lg h-12 px-4 text-[#1A202C] focus:ring-2 focus:ring-emerald-500/50 transition-all outline-none placeholder-[#718096]"
-                placeholder="ex: LD-00-00-AA"
-                value={matricula}
-                onChange={(e) => setMatricula(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* Lugares Disponíveis */}
-            <div className="space-y-1">
-              <label
-                htmlFor="lugaresDisponiveis"
-                className="text-[#1A202C] text-sm font-semibold px-1"
-              >
-                Lugares Disponíveis
-              </label>
-              <input
-                id="lugaresDisponiveis"
-                type="number"
-                min="1"
-                max="9"
-                className="w-full bg-[#F7F8FA] border-none rounded-lg h-12 px-4 text-[#1A202C] focus:ring-2 focus:ring-emerald-500/50 transition-all outline-none placeholder-[#718096]"
-                placeholder="ex: 3"
-                value={lugaresDisponiveis}
-                onChange={(e) => setLugaresDisponiveis(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* Feedback Veículo */}
-            {feedbackVeiculo.message && (
-              <div
-                role="alert"
-                className={`rounded-lg px-4 py-3 text-sm font-medium text-center ${
-                  feedbackVeiculo.type === 'error'
-                    ? 'bg-red-50 text-red-600 border border-red-200'
-                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                }`}
-              >
-                {feedbackVeiculo.message}
+        {/* ── Card 1: Veículo Call To Action ── */}
+        {!isLoading && !hasVehicle && (
+          <section className="space-y-3">
+            <div className="bg-amber-50 rounded-xl p-5 border border-amber-200 shadow-sm">
+              <div className="flex items-start gap-3">
+                <AlertCircle size={24} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                <div className="space-y-2">
+                  <h3 className="text-amber-800 font-bold text-base">Veículo não registado</h3>
+                  <p className="text-amber-700 text-sm">
+                    Para começares a publicar rotas e aceitar passageiros, precisas de registar o teu veículo.
+                  </p>
+                  <button
+                    onClick={() => navigate('/vehicle-setup')}
+                    className="mt-3 bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white text-sm font-bold py-2.5 px-4 rounded-lg transition-all shadow-md shadow-amber-500/20"
+                  >
+                    Registar Veículo Agora
+                  </button>
+                </div>
               </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={isLoadingVeiculo}
-              className="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white font-bold py-4 rounded-lg transition-all mt-2 shadow-lg shadow-emerald-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isLoadingVeiculo ? 'A guardar...' : 'Guardar Veículo'}
-            </button>
-          </form>
-        </section>
+            </div>
+          </section>
+        )}
 
         {/* ── Card 2: A Minha Rota Diária ── */}
         <section className="space-y-3">
@@ -240,8 +143,16 @@ const DriverDashboard = () => {
                 </div>
               </div>
             ) : (
-              <div className="text-center py-6 text-gray-500 text-sm">
-                Ainda não publicaste nenhuma rota diária.
+              <div className="text-center py-6 flex flex-col items-center gap-3">
+                <p className="text-gray-500 text-sm">
+                  Ainda não publicaste nenhuma rota diária.
+                </p>
+                <button
+                  onClick={() => navigate('/publicar-trajeto')}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold py-2 px-4 rounded-lg transition-all"
+                >
+                  Publicar Trajeto
+                </button>
               </div>
             )}
           </div>
@@ -249,15 +160,18 @@ const DriverDashboard = () => {
       </main>
 
       {/* Floating Action Button (FAB) para Publicar Trajeto */}
-      <div className="fixed bottom-24 right-4 z-20">
-        <button
-           onClick={() => navigate('/publicar-trajeto')}
-           className="bg-primary hover:bg-primary/90 text-white flex items-center gap-2 px-5 py-3.5 rounded-full shadow-lg shadow-primary/30 font-bold transition-all active:scale-95"
-        >
-          <span className="material-symbols-outlined">add</span>
-          <span>Publicar Trajeto</span>
-        </button>
-      </div>
+      {pontoPartida && (
+        <div className="fixed bottom-24 right-4 z-20">
+          <button
+             onClick={() => navigate('/publicar-trajeto')}
+             className="bg-emerald-500 hover:bg-emerald-600 text-white flex items-center gap-2 px-5 py-3.5 rounded-full shadow-lg shadow-emerald-500/30 font-bold transition-all active:scale-95"
+          >
+            {/* fallback since material-symbols-outlined may not exist, maybe lucide MapPin */}
+            <MapPin size={20} />
+            <span>Nova Rota</span>
+          </button>
+        </div>
+      )}
 
       {/* Safe Area bottom space for navigation (nav is normally in Layout, keeping space here) */}
       <div className="h-24"></div>

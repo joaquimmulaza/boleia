@@ -27,20 +27,12 @@ export const approveAgreement = async (agreementId) => {
 
   if (selectError) throw selectError;
 
-  const { data: routeData, error: routeError } = await supabase
-    .from('routes')
-    .select('available_seats')
-    .eq('id', agreementData.route_id)
-    .single();
+  // Use the atomic RPC call instead of vulnerable SELECT + UPDATE
+  const { error: rpcError } = await supabase.rpc('decrement_available_seats', {
+    route_id_param: agreementData.route_id,
+  });
 
-  if (routeError) throw routeError;
-
-  const { error: updateRouteError } = await supabase
-    .from('routes')
-    .update({ available_seats: routeData.available_seats - 1 })
-    .eq('id', agreementData.route_id);
-
-  if (updateRouteError) throw updateRouteError;
+  if (rpcError) throw rpcError;
 
   return true;
 };

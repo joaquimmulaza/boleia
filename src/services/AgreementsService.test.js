@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 vi.mock('../lib/supabase', () => ({
   supabase: {
     from: vi.fn(),
+    rpc: vi.fn(),
   },
 }));
 
@@ -28,18 +29,16 @@ describe('AgreementsService', () => {
     expect(result.estado).toEqual('Pendente');
   });
 
-  it('approveAgreement altera o estado do acordo para Ativo e diminui available_seats em 1', async () => {
+  it('approveAgreement altera o estado do acordo para Ativo e chama a RPC decrement_available_seats', async () => {
+    // Mock the update call for acordos
     const mockEq = vi.fn().mockResolvedValue({ error: null });
     const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
     
+    // Mock the select call for acordos to get route_id
     const mockSingleSelect = vi.fn().mockResolvedValue({ data: { route_id: 'route-1' }, error: null });
     const mockEqSelect = vi.fn().mockReturnValue({ single: mockSingleSelect });
     const mockSelect = vi.fn().mockReturnValue({ eq: mockEqSelect, select: vi.fn().mockReturnThis() });
     
-    const mockSingleRouteSelect = vi.fn().mockResolvedValue({ data: { available_seats: 4 }, error: null });
-    const mockEqRouteSelect = vi.fn().mockReturnValue({ single: mockSingleRouteSelect });
-    const mockRouteSelect = vi.fn().mockReturnValue({ eq: mockEqRouteSelect, select: vi.fn().mockReturnThis() });
-
     supabase.from.mockImplementation((table) => {
       if (table === 'acordos') {
         return {
@@ -47,24 +46,25 @@ describe('AgreementsService', () => {
           select: mockSelect
         };
       }
-      if (table === 'routes') {
-        return {
-          select: mockRouteSelect,
-          update: mockUpdate
-        };
-      }
       return {};
     });
 
-    await approveAgreement('agreement-1');
+    // Mock the rpc call
+    supabase.rpc.mockResolvedValue({ error: null });
 
+    const result = await approveAgreement('agreement-1');
+
+    // Verification for 'acordos' update
     expect(supabase.from).toHaveBeenCalledWith('acordos');
     expect(mockUpdate).toHaveBeenCalledWith({ estado: 'Ativo' });
     expect(mockEq).toHaveBeenCalledWith('id', 'agreement-1');
     
-    expect(supabase.from).toHaveBeenCalledWith('routes');
-    expect(mockUpdate).toHaveBeenCalledWith({ available_seats: 3 });
-    expect(mockEq).toHaveBeenCalledWith('id', 'route-1');
+    // Verification for atomic decremental RPC call
+    expect(supabase.rpc).toHaveBeenCalledWith('decrement_available_seats', {
+      route_id_param: 'route-1'
+    });
+
+    expect(result).toBe(true);
   });
 
   it('rejectAgreement altera o estado para Cancelado', async () => {

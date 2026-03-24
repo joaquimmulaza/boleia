@@ -10,6 +10,7 @@ vi.mock('../lib/supabase', () => ({
       getUser: vi.fn(),
     },
     from: vi.fn(),
+    rpc: vi.fn(),
   },
 }));
 
@@ -73,7 +74,9 @@ describe('Mental E2E - Agreement Lifecycle', () => {
 
     supabase.from.mockImplementation((table) => {
       if (table === 'acordos') {
-        return { insert: vi.fn().mockReturnValue(mockInsertAgreement) };
+        return {
+          insert: vi.fn().mockReturnValue(mockInsertAgreement),
+        };
       }
       return {};
     });
@@ -82,31 +85,18 @@ describe('Mental E2E - Agreement Lifecycle', () => {
     expect(requestResult.estado).toBe('Pendente');
 
 
-    // ---- FASE 3: Motorista aceita → estado muda para Ativo & available_seats decresce ----
+    // ---- FASE 3: Motorista aceita → estado muda para Ativo & available_seats decresce atomicamente via RPC ----
     const agreementId = 'acordo-1';
 
-    // Mock das chamadas sequenciais no approveAgreement:
-    // 1. update acordos
     const mockUpdateAcordos = vi.fn().mockResolvedValue({ error: null });
 
-    // 2. select acordos
+    // Mock the select call for acordos to get route_id
     const mockSelectAcordosSingle = vi.fn().mockResolvedValue({
         data: { route_id: routeId },
         error: null,
     });
     const mockSelectAcordosEq = vi.fn().mockReturnValue({ single: mockSelectAcordosSingle });
 
-    // 3. select routes
-    const mockSelectRoutesSingle = vi.fn().mockResolvedValue({
-        data: { available_seats: 4 }, // vagas actuais
-        error: null,
-    });
-    const mockSelectRoutesEq = vi.fn().mockReturnValue({ single: mockSelectRoutesSingle });
-
-    // 4. update routes
-    const mockUpdateRoutes = vi.fn().mockResolvedValue({ error: null });
-
-    // Configuração do mock dinâmico complexo
     supabase.from.mockImplementation((table) => {
       if (table === 'acordos') {
         return {
@@ -119,19 +109,10 @@ describe('Mental E2E - Agreement Lifecycle', () => {
           select: () => ({ eq: mockSelectAcordosEq }),
         };
       }
-      if (table === 'routes') {
-        return {
-          select: () => ({ eq: mockSelectRoutesEq }),
-          update: (payload) => ({
-             eq: (field, value) => {
-                mockUpdateRoutes(payload, field, value);
-                return Promise.resolve({ error: null });
-             }
-          }),
-        };
-      }
       return {};
     });
+
+    supabase.rpc.mockResolvedValue({ error: null });
 
     const approveResult = await approveAgreement(agreementId);
 
@@ -140,7 +121,7 @@ describe('Mental E2E - Agreement Lifecycle', () => {
     // Verifica mudança de estado para 'Ativo'
     expect(mockUpdateAcordos).toHaveBeenCalledWith({ estado: 'Ativo' }, 'id', agreementId);
 
-    // Verifica se os available_seats decresceram (-1 de 4)
-    expect(mockUpdateRoutes).toHaveBeenCalledWith({ available_seats: 3 }, 'id', routeId);
+    // Verifica se a RPC para decremento atómico foi chamada corretamente
+    expect(supabase.rpc).toHaveBeenCalledWith('decrement_available_seats', { route_id_param: routeId });
   });
 });
