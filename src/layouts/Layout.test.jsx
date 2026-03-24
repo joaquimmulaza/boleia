@@ -10,6 +10,7 @@ vi.mock('../lib/supabase', () => ({
   supabase: {
     auth: {
       getSession: vi.fn(),
+      getUser: vi.fn(),
       signOut: vi.fn(),
     },
   },
@@ -54,6 +55,8 @@ describe('Layout Component', () => {
 
   it('renderiza o conteúdo filho (Outlet) e o botão de Logout', async () => {
     supabase.auth.getSession.mockResolvedValue({ data: { session: null } });
+    supabase.auth.getUser.mockResolvedValue({ data: { user: null } });
+    supabase.auth.getUser.mockResolvedValue({ data: { user: null } });
 
     await act(async () => {
       renderWithRouterAndTheme(<Layout />);
@@ -73,6 +76,7 @@ describe('Layout Component', () => {
         }
       }
     });
+    supabase.auth.getUser.mockResolvedValue({ data: { user: null } });
 
     await act(async () => {
       renderWithRouterAndTheme(<Layout />);
@@ -95,6 +99,7 @@ describe('Layout Component', () => {
         }
       }
     });
+    supabase.auth.getUser.mockResolvedValue({ data: { user: null } });
 
     await act(async () => {
       renderWithRouterAndTheme(<Layout />);
@@ -109,6 +114,8 @@ describe('Layout Component', () => {
 
   it('mostra a navegação de Passageiro por defeito quando não há sessão', async () => {
     supabase.auth.getSession.mockResolvedValue({ data: { session: null } });
+    supabase.auth.getUser.mockResolvedValue({ data: { user: null } });
+    supabase.auth.getUser.mockResolvedValue({ data: { user: null } });
 
     await act(async () => {
       renderWithRouterAndTheme(<Layout />);

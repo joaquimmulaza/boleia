@@ -7,7 +7,6 @@ import { approveAgreement, rejectAgreement } from '../services/AgreementsService
 import AcordoCardPassageiro from '../components/AcordoCardPassageiro';
 import AcordoCardMotorista from '../components/AcordoCardMotorista';
 import EmptyState from '../components/EmptyState';
-import { useAgreementNotifications } from '../hooks/useAgreementNotifications';
 
 // ─── Componentes Auxiliares ───────────────────────────────────────────────────
 
@@ -27,8 +26,6 @@ const MyAgreements = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
   const [userId, setUserId] = useState(null);
-
-  const { notification, clearNotification } = useAgreementNotifications(userId);
 
   const carregarAcordos = useCallback(async (uid, role) => {
     if (!uid) return;
@@ -129,22 +126,6 @@ const MyAgreements = () => {
 
       {/* ── Conteúdo principal ── */}
       <main role="main" className="flex-1 max-w-md mx-auto w-full pb-32">
-        {notification && (
-          <div className={`mx-4 mt-4 p-4 rounded-lg flex items-center justify-between shadow-sm ${notification.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-            <div className="flex items-center gap-3">
-              {notification.type === 'success' ? (
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              ) : (
-                <XCircle className="w-5 h-5 text-red-600" />
-              )}
-              <span className="font-medium">{notification.message}</span>
-            </div>
-            <button onClick={clearNotification} className="text-current opacity-70 hover:opacity-100 transition-opacity">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        )}
-
         {/* Título */}
         <div className="px-5 pt-8 pb-6">
           <h2 className="text-charcoal dark:text-slate-100 text-3xl font-bold tracking-tight">{titulo}</h2>
