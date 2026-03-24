@@ -3,7 +3,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import MyAgreements from './MyAgreements';
 import { supabase } from '../lib/supabase';
-import { approveAgreement } from '../services/AgreementsService';
+import { approveAgreement, getAgreementsForUser } from '../services/AgreementsService';
 
 // Mock dependencies
 vi.mock('../lib/supabase', () => ({
@@ -18,9 +18,8 @@ vi.mock('../lib/supabase', () => ({
 vi.mock('../services/AgreementsService', () => ({
   approveAgreement: vi.fn(),
   rejectAgreement: vi.fn(),
+  getAgreementsForUser: vi.fn(),
 }));
-
-
 
 describe('Acordos E2E - Driver Flow', () => {
   beforeEach(() => {
@@ -35,13 +34,7 @@ describe('Acordos E2E - Driver Flow', () => {
       error: null,
     });
 
-    // Mock driver routes query
-    const mockRoutesSelect = {
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockResolvedValue({ data: [{ id: 'route-1' }], error: null }),
-    };
-
-    // Mock agreements query
+    // Mock agreements query from the new service structure
     const mockAgreementsData = [
       {
         id: 'agreement-1',
@@ -54,20 +47,14 @@ describe('Acordos E2E - Driver Flow', () => {
           departure_time: '08:00',
           monthly_price_per_seat: 5000,
         },
+        contraparte: {
+          nome_completo: 'Passageiro Real',
+          telefone: '999999999'
+        }
       },
     ];
 
-    const mockAgreementsSelect = {
-      select: vi.fn().mockReturnThis(),
-      in: vi.fn().mockResolvedValue({ data: mockAgreementsData, error: null }),
-    };
-
-    supabase.from.mockImplementation((table) => {
-      if (table === 'routes') return mockRoutesSelect;
-      if (table === 'acordos') return mockAgreementsSelect;
-      return { select: vi.fn() };
-    });
-
+    getAgreementsForUser.mockResolvedValue(mockAgreementsData);
     approveAgreement.mockResolvedValue(true);
 
     // 2. Render the component
@@ -83,7 +70,7 @@ describe('Acordos E2E - Driver Flow', () => {
     });
 
     // 4. Verify agreement is displayed
-    const acceptBtn = screen.getByRole('button', { name: /Aceitar/i });
+    const acceptBtn = await screen.findByRole('button', { name: /Aceitar/i });
     expect(acceptBtn).toBeInTheDocument();
 
     // 5. Driver clicks Accept

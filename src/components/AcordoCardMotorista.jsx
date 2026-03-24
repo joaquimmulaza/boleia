@@ -26,6 +26,8 @@ const AcordoCardMotorista = ({ acordo, onAccept, onReject, onShowDetails, onRepo
     setIsLoading(false);
   };
 
+  const passageiroName = acordo.contraparte?.nome_completo || 'Passageiro';
+
   return (
     <div data-testid="agreement-card" className="bg-white dark:bg-slate-800/50 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
       <div className="flex justify-between items-start mb-4">
@@ -34,7 +36,7 @@ const AcordoCardMotorista = ({ acordo, onAccept, onReject, onShowDetails, onRepo
             <User size={24} className="shrink-0" />
           </div>
           <div>
-            <p className="font-bold text-charcoal dark:text-slate-100">Passageiro</p>
+            <p className="font-bold text-charcoal dark:text-slate-100">{passageiroName}</p>
             <EstadoBadge estado={acordo.estado} />
           </div>
         </div>

@@ -14,6 +14,8 @@ const AcordoCardPassageiro = ({ acordo, onShowDetails, onReport, onCancel }) => 
   const isCancelado = acordo.estado?.toLowerCase() === 'cancelado';
   const isAtivo = acordo.estado?.toLowerCase() === 'ativo';
 
+  const motoristaName = acordo.contraparte?.nome_completo || 'Motorista';
+
   if (isCancelado) {
     return (
       <div data-testid="agreement-card" className="bg-white/60 dark:bg-slate-800/30 rounded-xl p-4 shadow-sm border border-slate-100/50 dark:border-slate-700/50 opacity-60">
@@ -23,7 +25,7 @@ const AcordoCardPassageiro = ({ acordo, onShowDetails, onReport, onCancel }) => 
                <User size={24} className="shrink-0" />
             </div>
             <div>
-              <p className="font-bold text-charcoal dark:text-slate-100">Desconhecido</p>
+              <p className="font-bold text-charcoal dark:text-slate-100">{motoristaName}</p>
               <EstadoBadge estado={acordo.estado} />
             </div>
           </div>
@@ -46,7 +48,7 @@ const AcordoCardPassageiro = ({ acordo, onShowDetails, onReport, onCancel }) => 
             <User size={24} className="shrink-0" />
           </div>
           <div>
-            <p className="font-bold text-charcoal dark:text-slate-100">Motorista</p>
+            <p className="font-bold text-charcoal dark:text-slate-100">{motoristaName}</p>
             <EstadoBadge estado={acordo.estado} />
           </div>
         </div>

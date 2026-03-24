@@ -11,8 +11,14 @@ const AcordoDetailsModal = ({ isOpen, onClose, acordo, userRole }) => {
   if (!isOpen || !acordo) return null;
 
   const isMotorista = userRole === 'Motorista';
-  const personName = isMotorista ? 'Passageiro' : 'Motorista';
-  const phoneNumber = '+244 923 456 789'; // Mock para agora, idealmente vem da base de dados
+
+  // Pegar os dados da contraparte dinamicamente
+  const personName = acordo.contraparte?.nome_completo || (isMotorista ? 'Passageiro' : 'Motorista');
+  const phoneNumber = acordo.contraparte?.telefone || 'N/A';
+  const initial = personName.charAt(0).toUpperCase();
+
+  // Veículo (só relevante se for passageiro a ver detalhes do motorista)
+  const veiculo = acordo.veiculo;
 
   // Evita propagação de cliques do modal para o overlay
   const handleModalClick = (e) => e.stopPropagation();
@@ -35,16 +41,18 @@ const AcordoDetailsModal = ({ isOpen, onClose, acordo, userRole }) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                <span className="text-xl font-bold">{personName.charAt(0)}</span>
+                <span className="text-xl font-bold">{initial}</span>
               </div>
               <div>
                 <p className="font-bold text-charcoal dark:text-slate-100 text-lg">{personName}</p>
                 <p className="text-slate-500 dark:text-slate-400 text-sm">{phoneNumber}</p>
               </div>
             </div>
-            <a href={`tel:${phoneNumber}`} className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 transition-colors">
-              <Phone size={20} />
-            </a>
+            {phoneNumber !== 'N/A' && (
+              <a href={`tel:${phoneNumber}`} className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 transition-colors">
+                <Phone size={20} />
+              </a>
+            )}
           </div>
 
           <hr className="border-slate-100 dark:border-slate-800" />
@@ -85,7 +93,7 @@ const AcordoDetailsModal = ({ isOpen, onClose, acordo, userRole }) => {
           </div>
 
           {/* Veículo (apenas para passageiro) */}
-          {!isMotorista && (
+          {!isMotorista && veiculo && (
             <>
               <hr className="border-slate-100 dark:border-slate-800" />
               <div className="space-y-3">
@@ -95,8 +103,8 @@ const AcordoDetailsModal = ({ isOpen, onClose, acordo, userRole }) => {
                     <Car size={18} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-charcoal dark:text-slate-100">Toyota Hilux 2022</p>
-                    <p className="text-xs text-slate-500">LD-12-34-AB</p>
+                    <p className="text-sm font-medium text-charcoal dark:text-slate-100">{veiculo.marca_modelo || 'Não informado'}</p>
+                    <p className="text-xs text-slate-500">{veiculo.matricula || 'N/A'}</p>
                   </div>
                 </div>
               </div>

@@ -51,3 +51,100 @@ export const rejectAgreement = async (agreementId) => {
   if (error) throw error;
   return true;
 };
+
+export const getAgreementsForUser = async (userId, userRole) => {
+  try {
+    let query = supabase.from('acordos').select(`
+      id,
+      estado,
+      route_id,
+      passenger_id,
+      routes:route_id (
+        id,
+        origin_name,
+        destination_name,
+        departure_time,
+        monthly_price_per_seat,
+        driver_id
+      ),
+      passenger:passenger_id (
+        id,
+        nome_completo,
+        telefone
+      )
+    `);
+
+    let acordosData = [];
+
+    if (userRole === 'Motorista') {
+      // 1. Fetch routes owned by the driver
+      const { data: rotasMotorista, error: rotasError } = await supabase
+        .from('routes')
+        .select('id')
+        .eq('driver_id', userId);
+
+      if (rotasError) throw rotasError;
+
+      const rotaIds = rotasMotorista?.map(r => r.id) || [];
+
+      if (rotaIds.length > 0) {
+        // 2. Fetch agreements for those routes
+        const { data, error } = await query.in('route_id', rotaIds);
+        if (error) throw error;
+        acordosData = data || [];
+
+        return acordosData.map(acordo => ({
+          ...acordo,
+          contraparte: acordo.passenger || { nome_completo: 'Passageiro (Sem nome)', telefone: 'N/A' }
+        }));
+      } else {
+        return [];
+      }
+    } else {
+      // Passageiro
+      const { data, error } = await query.eq('passenger_id', userId);
+      if (error) throw error;
+      acordosData = data || [];
+
+      const driverIds = [...new Set(acordosData.map(a => a.routes?.driver_id).filter(Boolean))];
+
+      let driversMap = {};
+      let vehiclesMap = {};
+
+      if (driverIds.length > 0) {
+         const { data: driversData, error: driversError } = await supabase
+           .from('perfis')
+           .select('id, nome_completo, telefone')
+           .in('id', driverIds);
+
+         if (!driversError && driversData) {
+           driversData.forEach(d => driversMap[d.id] = d);
+         }
+
+         const { data: vehiclesData, error: vehiclesError } = await supabase
+           .from('veiculos')
+           .select('id, marca_modelo, matricula, id_motorista')
+           .in('id_motorista', driverIds);
+
+         if (!vehiclesError && vehiclesData) {
+           vehiclesData.forEach(v => vehiclesMap[v.id_motorista] = v);
+         }
+      }
+
+      return acordosData.map(acordo => {
+         const driverId = acordo.routes?.driver_id;
+         const driverData = driverId ? driversMap[driverId] : null;
+         const vehicleData = driverId ? vehiclesMap[driverId] : null;
+
+         return {
+           ...acordo,
+           contraparte: driverData || { nome_completo: 'Motorista (Sem nome)', telefone: 'N/A' },
+           veiculo: vehicleData || null
+         };
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching agreements:', error);
+    throw error;
+  }
+};
