@@ -9,7 +9,7 @@ export default defineConfig({
     react(),
   ],
   test: {
-    environment: 'jsdom',
+    environment: 'happy-dom',
     globals: true,
     setupFiles: './src/setupTests.js',
   }

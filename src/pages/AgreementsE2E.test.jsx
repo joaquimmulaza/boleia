@@ -4,7 +4,6 @@ import { BrowserRouter } from 'react-router-dom';
 import MyAgreements from './MyAgreements';
 import { supabase } from '../lib/supabase';
 import { approveAgreement } from '../services/AgreementsService';
-import { useAgreementNotifications } from '../hooks/useAgreementNotifications';
 
 // Mock dependencies
 vi.mock('../lib/supabase', () => ({
@@ -21,17 +20,11 @@ vi.mock('../services/AgreementsService', () => ({
   rejectAgreement: vi.fn(),
 }));
 
-vi.mock('../hooks/useAgreementNotifications', () => ({
-  useAgreementNotifications: vi.fn(),
-}));
+
 
 describe('Acordos E2E - Driver Flow', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useAgreementNotifications.mockReturnValue({
-      notification: null,
-      clearNotification: vi.fn(),
-    });
   });
 
   it('completes the agreement acceptance flow for a driver', async () => {
