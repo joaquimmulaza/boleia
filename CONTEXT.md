@@ -17,7 +17,7 @@ Stack: React + Vite, Tailwind CSS, Lucide React (Frontend); Supabase (Backend/Au
 ## 3. Como a IA deve atuar
 Lê este documento antes de iniciares qualquer nova funcionalidade. Se eu te pedir para criar um componente X, a tua primeira resposta DEVE ser o código do teste para esse componente X.
 ## 4. Integração com Google Stitch (Workflow de Alta Precisão)
-* Temos o MCP do Google Stitch e as `stitch-skills` instaladas.
+* Temos o MCP do Google Stitch (https://github.com/google-labs-code/stitch-skills) e as `stitch-skills` instaladas.
 * **Contexto Visual Imutável:** A aplicação é estritamente sobre mobilidade urbana, transporte partilhado e boleias diárias (casa-trabalho) em Luanda, Angola. A moeda a utilizar é SEMPRE o Kwanza (Kz). O tom visual deve ser urbano, utilitário, de confiança e focado na rotina, NUNCA focado em turismo ou viagens de férias.
 * **Fluxo de Trabalho Obrigatório com Stitch (Secção a Secção):**
   1. **TDD:** Escreves e corres os testes unitários da funcionalidade.
