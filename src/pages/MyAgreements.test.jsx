@@ -32,6 +32,7 @@ vi.mock('../services/AgreementsService', () => ({
   getAgreementsForUser: vi.fn(),
   approveAgreement: vi.fn(),
   rejectAgreement: vi.fn(),
+hideAgreement: vi.fn(),
 }));
 
 describe('Página MyAgreements', () => {
@@ -150,6 +151,16 @@ describe('Página MyAgreements', () => {
         await waitFor(() => {
             expect(screen.getByText('Ainda não tens acordos. Pede a tua primeira boleia!')).toBeInTheDocument();
         });
+    });
+
+
+    it('filtra e não exibe acordos com is_hidden_by_user true', async () => {
+      const hiddenAcordo = { ...acordoPendentePassageiro, id: 999, is_hidden_by_user: true };
+      setupMocksForRole('Passageiro', [acordoPendentePassageiro, hiddenAcordo]);
+      await renderComponent();
+      await waitFor(() => {
+        expect(screen.getAllByTestId('agreement-card').length).toBe(1);
+      });
     });
 
     it('exibe cartão com data-testid="agreement-card" por cada acordo', async () => {

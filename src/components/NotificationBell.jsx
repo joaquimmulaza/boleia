@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, CheckCircle, Info, AlertCircle, X, BellRing, BellOff } from 'lucide-react';
+import { Bell, CheckCircle, Info, AlertCircle, X, BellRing, BellOff, Trash2 } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
 import { supabase } from '../lib/supabase';
 import { usePushNotifications } from '../hooks/usePushNotifications';
@@ -33,7 +33,7 @@ const formatTimeAgo = (dateString) => {
 
 export default function NotificationBell() {
   const [userId, setUserId] = useState(null);
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(userId);
+  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications(userId);
   const { isSupported, permission, isSubscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -138,6 +138,17 @@ export default function NotificationBell() {
                     {!notif.lida && (
                       <div className="w-2 h-2 rounded-full bg-primary shrink-0 mt-1.5 shadow-sm" />
                     )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteNotification(notif.id);
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors shrink-0 ml-2"
+                      aria-label="Apagar notificação"
+                      title="Apagar notificação"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </li>
                 ))}
               </ul>
