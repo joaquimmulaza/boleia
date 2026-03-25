@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, CheckCircle, Info, AlertCircle, X } from 'lucide-react';
+import { Bell, CheckCircle, Info, AlertCircle, X, BellRing, BellOff } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
 import { supabase } from '../lib/supabase';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 const NotificationIcon = ({ type }) => {
   switch (type) {
@@ -33,6 +34,7 @@ const formatTimeAgo = (dateString) => {
 export default function NotificationBell() {
   const [userId, setUserId] = useState(null);
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(userId);
+  const { isSupported, permission, isSubscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -51,6 +53,15 @@ export default function NotificationBell() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handlePushToggle = async () => {
+    if (!userId) return;
+    if (isSubscribed) {
+      await unsubscribe(userId);
+    } else {
+      await subscribe(userId);
+    }
+  };
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -71,14 +82,30 @@ export default function NotificationBell() {
         <div className="absolute left-0 mt-2 w-80 sm:w-96 origin-top-left rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 overflow-hidden flex flex-col max-h-[80vh]">
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 font-[Plus_Jakarta_Sans]">Notificações</h3>
-            {unreadCount > 0 && (
-              <button
-                onClick={markAllAsRead}
-                className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
-              >
-                Marcar todas como lidas
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {isSupported && permission !== 'denied' && (
+                <button
+                  onClick={handlePushToggle}
+                  disabled={pushLoading}
+                  className={`p-1.5 rounded-full transition-colors ${
+                    isSubscribed
+                      ? 'bg-primary/10 text-primary hover:bg-primary/20'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
+                  }`}
+                  title={isSubscribed ? 'Desativar notificações push' : 'Ativar notificações push'}
+                >
+                  {isSubscribed ? <BellRing size={14} /> : <BellOff size={14} />}
+                </button>
+              )}
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                >
+                  Marcar todas lidas
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto">
