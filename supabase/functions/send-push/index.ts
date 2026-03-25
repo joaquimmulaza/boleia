@@ -63,11 +63,11 @@ serve(async (req) => {
     }
 
     // Configurar Web Push
-    const vapidPublicKey = Deno.env.get("VITE_VAPID_PUBLIC_KEY") ?? "BOzMjyrOLnHI3tFdO9UOoDLjeoQhtQDqa15kFjFh3PAYxvRNdBsxTFITxW8Wxu4m8ESJOwwqYEPbk1qjm43IAWY"; // Fallback para dev, devia ler de Deno.env
+    const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
     const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");
 
-    if (!vapidPrivateKey) {
-      console.error("Missing VAPID_PRIVATE_KEY secret");
+    if (!vapidPublicKey || !vapidPrivateKey) {
+      console.error("Missing VAPID_PUBLIC_KEY or VAPID_PRIVATE_KEY secret");
       return new Response(JSON.stringify({ error: "Missing VAPID configuration" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -75,7 +75,7 @@ serve(async (req) => {
     }
 
     webpush.setVapidDetails(
-      "mailto:suporte@boleiacerta.co.ao",
+      "mailto:joaquimmulazadev@gmail.com",
       vapidPublicKey,
       vapidPrivateKey
     );
