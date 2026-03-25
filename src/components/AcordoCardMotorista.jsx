@@ -9,7 +9,7 @@ const formatKz = (value) => {
   return `${num.toLocaleString('pt-PT')} Kz/mês`;
 };
 
-const AcordoCardMotorista = ({ acordo, onAccept, onReject, onShowDetails, onReport, onCancel }) => {
+const AcordoCardMotorista = ({ acordo, onAccept, onReject, onShowDetails, onReport, onCancel, onRemover }) => {
   const isPendente = acordo.estado?.toLowerCase() === 'pendente';
   const isAtivo = acordo.estado?.toLowerCase() === 'ativo';
   const [isLoading, setIsLoading] = useState(false);
@@ -26,7 +26,35 @@ const AcordoCardMotorista = ({ acordo, onAccept, onReject, onShowDetails, onRepo
     setIsLoading(false);
   };
 
+  const isCancelado = acordo.estado?.toLowerCase() === 'cancelado';
+
   const passageiroName = acordo.contraparte?.nome_completo || 'Passageiro';
+
+
+  if (isCancelado) {
+    return (
+      <div data-testid="agreement-card" className="bg-white/60 dark:bg-slate-800/30 rounded-xl p-4 shadow-sm border border-slate-100/50 dark:border-slate-700/50 opacity-60">
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-400">
+               <User size={24} className="shrink-0" />
+            </div>
+            <div>
+              <p className="font-bold text-charcoal dark:text-slate-100">{passageiroName}</p>
+              <EstadoBadge estado={acordo.estado} />
+            </div>
+          </div>
+          <AcordoKebabMenu onRemover={() => onRemover?.(acordo)} />
+        </div>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-slate-400">
+            <XCircle size={18} />
+            <p className="text-sm font-medium italic">Acordo cancelado</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div data-testid="agreement-card" className="bg-white dark:bg-slate-800/50 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
@@ -44,6 +72,7 @@ const AcordoCardMotorista = ({ acordo, onAccept, onReject, onShowDetails, onRepo
           <AcordoKebabMenu
             onReportar={() => onReport?.(acordo)}
             onCancelar={() => onCancel?.(acordo)}
+            onRemover={() => onRemover?.(acordo)}
           />
         )}
       </div>

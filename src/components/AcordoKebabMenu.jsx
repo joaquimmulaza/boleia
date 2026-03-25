@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MoreVertical, Flag, Trash2 } from 'lucide-react';
 
-const AcordoKebabMenu = ({ onReportar, onCancelar }) => {
+import { EyeOff } from "lucide-react";
+
+const AcordoKebabMenu = ({ onReportar, onCancelar, onRemover }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -45,16 +47,30 @@ const AcordoKebabMenu = ({ onReportar, onCancelar }) => {
               </button>
             </li>
             <li>
-              <button
-                onClick={() => {
-                  setIsOpen(false);
-                  onCancelar && onCancelar();
-                }}
-                className="w-full flex items-center px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors gap-3"
-              >
-                <Trash2 size={16} />
-                <span>Cancelar Acordo</span>
-              </button>
+              {onCancelar && (
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    onCancelar();
+                  }}
+                  className="w-full flex items-center px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors gap-3"
+                >
+                  <Trash2 size={16} />
+                  <span>Cancelar Acordo</span>
+                </button>
+              )}
+              {onRemover && (
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    onRemover();
+                  }}
+                  className="w-full flex items-center px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors gap-3"
+                >
+                  <EyeOff size={16} />
+                  <span>Remover da Lista</span>
+                </button>
+              )}
             </li>
           </ul>
         </div>

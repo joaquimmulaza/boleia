@@ -9,7 +9,7 @@ const formatKz = (value) => {
   return `${num.toLocaleString('pt-PT')} Kz/mês`;
 };
 
-const AcordoCardPassageiro = ({ acordo, onShowDetails, onReport, onCancel }) => {
+const AcordoCardPassageiro = ({ acordo, onShowDetails, onReport, onCancel, onRemover }) => {
   const isPendente = acordo.estado?.toLowerCase() === 'pendente';
   const isCancelado = acordo.estado?.toLowerCase() === 'cancelado';
   const isAtivo = acordo.estado?.toLowerCase() === 'ativo';
@@ -29,6 +29,7 @@ const AcordoCardPassageiro = ({ acordo, onShowDetails, onReport, onCancel }) => 
               <EstadoBadge estado={acordo.estado} />
             </div>
           </div>
+          <AcordoKebabMenu onRemover={() => onRemover?.(acordo)} />
         </div>
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-slate-400">

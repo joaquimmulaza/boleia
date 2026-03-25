@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { requestSeat, approveAgreement, rejectAgreement, cancelAgreement } from './AgreementsService.js';
+import { requestSeat, approveAgreement, rejectAgreement, cancelAgreement, hideAgreement } from './AgreementsService.js';
 import { supabase } from '../lib/supabase';
 
 vi.mock('../lib/supabase', () => ({
@@ -30,11 +30,9 @@ describe('AgreementsService', () => {
   });
 
   it('approveAgreement altera o estado do acordo para Ativo e chama a RPC decrement_available_seats', async () => {
-    // Mock the update call for acordos
     const mockEq = vi.fn().mockResolvedValue({ error: null });
     const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
     
-    // Mock the select call for acordos to get route_id
     const mockSingleSelect = vi.fn().mockResolvedValue({ data: { route_id: 'route-1' }, error: null });
     const mockEqSelect = vi.fn().mockReturnValue({ single: mockSingleSelect });
     const mockSelect = vi.fn().mockReturnValue({ eq: mockEqSelect, select: vi.fn().mockReturnThis() });
@@ -49,17 +47,14 @@ describe('AgreementsService', () => {
       return {};
     });
 
-    // Mock the rpc call
     supabase.rpc.mockResolvedValue({ error: null });
 
     const result = await approveAgreement('agreement-1');
 
-    // Verification for 'acordos' update
     expect(supabase.from).toHaveBeenCalledWith('acordos');
     expect(mockUpdate).toHaveBeenCalledWith({ estado: 'Ativo' });
     expect(mockEq).toHaveBeenCalledWith('id', 'agreement-1');
     
-    // Verification for atomic decremental RPC call
     expect(supabase.rpc).toHaveBeenCalledWith('decrement_available_seats', {
       route_id_param: 'route-1'
     });
@@ -81,7 +76,6 @@ describe('AgreementsService', () => {
   });
 
   it('cancelAgreement altera o estado do acordo para Cancelado e chama a RPC increment_available_seats', async () => {
-    // Mock the update call for acordos
     const mockEq = vi.fn().mockResolvedValue({ error: null });
     const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
 
@@ -94,21 +88,32 @@ describe('AgreementsService', () => {
       return {};
     });
 
-    // Mock the rpc call
     supabase.rpc.mockResolvedValue({ error: null });
 
     const result = await cancelAgreement('agreement-1', 'route-1');
 
-    // Verification for 'acordos' update
     expect(supabase.from).toHaveBeenCalledWith('acordos');
     expect(mockUpdate).toHaveBeenCalledWith({ estado: 'Cancelado' });
     expect(mockEq).toHaveBeenCalledWith('id', 'agreement-1');
 
-    // Verification for atomic decremental RPC call
     expect(supabase.rpc).toHaveBeenCalledWith('increment_available_seats', {
       route_id_param: 'route-1'
     });
 
+    expect(result).toBe(true);
+  });
+
+  it('hideAgreement updates is_hidden_by_user to true', async () => {
+    const mockEq = vi.fn().mockResolvedValue({ error: null });
+    const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
+
+    supabase.from.mockReturnValue({ update: mockUpdate });
+
+    const result = await hideAgreement('agreement-1');
+
+    expect(supabase.from).toHaveBeenCalledWith('acordos');
+    expect(mockUpdate).toHaveBeenCalledWith({ is_hidden_by_user: true });
+    expect(mockEq).toHaveBeenCalledWith('id', 'agreement-1');
     expect(result).toBe(true);
   });
 });

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Car, User, Plus } from 'lucide-react';
 
-import { approveAgreement, rejectAgreement, cancelAgreement, getAgreementsForUser } from '../services/AgreementsService';
+import { approveAgreement, rejectAgreement, cancelAgreement, getAgreementsForUser, hideAgreement } from '../services/AgreementsService';
 import AcordoCardPassageiro from '../components/AcordoCardPassageiro';
 import AcordoCardMotorista from '../components/AcordoCardMotorista';
 import EmptyState from '../components/EmptyState';
@@ -45,7 +45,7 @@ const MyAgreements = () => {
 
     try {
       const acordosData = await getAgreementsForUser(uid, role);
-      setAcordos(acordosData || []);
+      setAcordos((acordosData || []).filter(a => !a.is_hidden_by_user));
     } catch (err) {
       console.error('Erro ao carregar acordos:', err);
     } finally {
@@ -93,6 +93,18 @@ const MyAgreements = () => {
   const handleCancel = (acordo) => {
     setAcordoToCancel(acordo);
     setIsCancelModalOpen(true);
+  };
+
+
+  const handleRemover = async (acordo) => {
+    try {
+      await hideAgreement(acordo.id);
+      setAcordos((prev) => prev.filter((a) => a.id !== acordo.id));
+      success('Acordo removido da lista.');
+    } catch (err) {
+      console.error('Erro ao remover acordo:', err);
+      showError('Não foi possível remover o acordo.');
+    }
   };
 
   const confirmCancel = async () => {
@@ -162,6 +174,7 @@ const MyAgreements = () => {
                     onShowDetails={handleShowDetails}
                     onReport={handleReport}
                     onCancel={handleCancel}
+                    onRemover={handleRemover}
                   />
                 ) : (
                   <AcordoCardPassageiro
@@ -170,6 +183,7 @@ const MyAgreements = () => {
                     onShowDetails={handleShowDetails}
                     onReport={handleReport}
                     onCancel={handleCancel}
+                    onRemover={handleRemover}
                   />
                 )
               )}

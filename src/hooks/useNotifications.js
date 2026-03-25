@@ -5,6 +5,25 @@ export function useNotifications(userId) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  const deleteNotification = useCallback(async (notificationId) => {
+    try {
+      const { error } = await supabase
+        .from("notificacoes")
+        .delete()
+        .eq("id", notificationId);
+
+      if (error) throw error;
+
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      setUnreadCount(prev => {
+        const wasUnread = notifications.find(n => n.id === notificationId)?.lida === false;
+        return wasUnread ? Math.max(0, prev - 1) : prev;
+      });
+    } catch (err) {
+      console.error("Erro ao apagar notificação:", err);
+    }
+  }, [notifications]);
+
   const fetchNotifications = useCallback(async () => {
     if (!userId) return;
     try {
@@ -108,5 +127,5 @@ export function useNotifications(userId) {
     };
   }, [userId, fetchNotifications]);
 
-  return { notifications, unreadCount, markAsRead, markAllAsRead, fetchNotifications };
+  return { notifications, unreadCount, markAsRead, markAllAsRead, fetchNotifications, deleteNotification };
 }
