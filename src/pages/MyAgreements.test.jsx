@@ -9,8 +9,13 @@ import MyAgreements from './MyAgreements';
 // Mocks globais
 
 vi.mock('../hooks/useNotifications', () => ({
-  default: () => ({
+  useNotifications: () => ({
     addNotification: vi.fn(),
+    notifications: [],
+    unreadCount: 0,
+    markAsRead: vi.fn(),
+    markAllAsRead: vi.fn(),
+    fetchNotifications: vi.fn()
   })
 }));
 

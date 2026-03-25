@@ -9,7 +9,7 @@ import AcordoCardMotorista from '../components/AcordoCardMotorista';
 import EmptyState from '../components/EmptyState';
 import AcordoDetailsModal from '../components/AcordoDetailsModal';
 import ConfirmationModal from '../components/ConfirmationModal';
-import useNotifications from '../hooks/useNotifications';
+import { useNotifications } from '../hooks/useNotifications';
 
 // ─── Componentes Auxiliares ───────────────────────────────────────────────────
 
