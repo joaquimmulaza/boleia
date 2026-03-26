@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Car, User, Plus } from 'lucide-react';
 
@@ -25,6 +25,7 @@ const LoadingSkeleton = () => (
 
 const MyAgreements = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { addNotification } = useNotifications();
   const success = (msg) => addNotification(msg, 'success');
   const showError = (msg) => addNotification(msg, 'error');
@@ -68,6 +69,24 @@ const MyAgreements = () => {
     };
     init();
   }, [carregarAcordos]);
+
+  // Deep Linking: Auto-open the details modal based on URL query parameter or Router State
+  useEffect(() => {
+    if (!isLoading && acordos.length > 0) {
+      const params = new URLSearchParams(location.search);
+      const openAcordoId = params.get('openAcordoId') || location.state?.openAcordoId;
+
+      if (openAcordoId) {
+        const acordoToOpen = acordos.find(a => a.id === openAcordoId);
+        if (acordoToOpen) {
+          handleShowDetails(acordoToOpen);
+
+          // Optional: Clean up the URL to avoid re-triggering on refresh
+          navigate(location.pathname, { replace: true, state: {} });
+        }
+      }
+    }
+  }, [isLoading, acordos, location.search, location.state, navigate, location.pathname]);
 
   const handleAccept = async (acordoId) => {
     await approveAgreement(acordoId);

@@ -4,6 +4,8 @@ import { Bell, CheckCircle, Info, AlertCircle, X, BellRing, BellOff, Trash2 } fr
 import { useNotifications } from '../hooks/useNotifications';
 import { supabase } from '../lib/supabase';
 import { usePushNotifications } from '../hooks/usePushNotifications';
+import { resolveNotificationRoute } from '../utils/notificationRouter';
+
 
 const NotificationIcon = ({ type }) => {
   switch (type) {
@@ -63,18 +65,9 @@ export default function NotificationBell() {
     }
     setIsOpen(false);
 
-    // Bónus UX: Tentar usar link ou deduzir baseado no tipo/mensagem se não houver
-    if (notif.link) {
-      navigate(notif.link);
-    } else if (notif.mensagem && notif.mensagem.toLowerCase().includes('motorista')) {
-      navigate('/driver-dashboard');
-    } else if (notif.mensagem && notif.mensagem.toLowerCase().includes('passageiro')) {
-      navigate('/passenger-dashboard');
-    } else if (notif.mensagem && (notif.mensagem.toLowerCase().includes('rota') || notif.mensagem.toLowerCase().includes('viagem'))) {
-      navigate('/my-routes');
-    } else {
-      navigate('/my-agreements');
-    }
+    // Utiliza o Strategy Padrão de Roteamento (Escalabilidade de UX)
+    const targetUrl = resolveNotificationRoute(notif);
+    navigate(targetUrl);
   };
 
   const handlePushToggle = async () => {

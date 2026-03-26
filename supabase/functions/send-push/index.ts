@@ -26,7 +26,7 @@ serve(async (req) => {
     }
 
     const { record } = payload;
-    const { user_id, mensagem, tipo } = record;
+    const { user_id, mensagem, tipo, metadata } = record;
 
     if (!user_id || !mensagem) {
       return new Response(JSON.stringify({ error: "Missing user_id or mensagem in record" }), {
@@ -87,7 +87,8 @@ serve(async (req) => {
       badge: "/favicon.svg",
       data: {
         url: "/dashboard", // Fallback URL
-        notificationId: record.id
+        notificationId: record.id,
+        metadata: metadata || {}
       }
     });
 
