@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCircle, Info, AlertCircle, X, BellRing, BellOff, Trash2 } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
 import { supabase } from '../lib/supabase';
@@ -37,6 +38,7 @@ export default function NotificationBell() {
   const { isSupported, permission, isSubscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -53,6 +55,27 @@ export default function NotificationBell() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+
+  const handleNotificationClick = (notif) => {
+    if (!notif.lida) {
+      markAsRead(notif.id);
+    }
+    setIsOpen(false);
+
+    // Bónus UX: Tentar usar link ou deduzir baseado no tipo/mensagem se não houver
+    if (notif.link) {
+      navigate(notif.link);
+    } else if (notif.mensagem && notif.mensagem.toLowerCase().includes('motorista')) {
+      navigate('/driver-dashboard');
+    } else if (notif.mensagem && notif.mensagem.toLowerCase().includes('passageiro')) {
+      navigate('/passenger-dashboard');
+    } else if (notif.mensagem && (notif.mensagem.toLowerCase().includes('rota') || notif.mensagem.toLowerCase().includes('viagem'))) {
+      navigate('/my-routes');
+    } else {
+      navigate('/my-agreements');
+    }
+  };
 
   const handlePushToggle = async () => {
     if (!userId) return;
@@ -120,9 +143,7 @@ export default function NotificationBell() {
                     key={notif.id} className={`flex items-start gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer ${
                       !notif.lida ? 'bg-primary/5 dark:bg-primary/10' : ''
                     }`}
-                    onClick={() => {
-                      if (!notif.lida) markAsRead(notif.id);
-                    }}
+                    onClick={() => handleNotificationClick(notif)}
                   >
                     <div className="mt-0.5 shrink-0">
                       <NotificationIcon type={notif.tipo} />
