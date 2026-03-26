@@ -66,10 +66,8 @@ export const getAgreementsForUser = async (userId, userRole) => {
       estado,
       route_id,
       passenger_id,
-      is_hidden_by_user,
       routes:route_id (
         id,
-      is_hidden_by_user,
         origin_name,
         destination_name,
         departure_time,
@@ -78,7 +76,6 @@ export const getAgreementsForUser = async (userId, userRole) => {
       ),
       passenger:passenger_id (
         id,
-      is_hidden_by_user,
         nome_completo,
         telefone
       )
