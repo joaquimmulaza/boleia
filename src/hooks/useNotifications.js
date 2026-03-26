@@ -99,25 +99,27 @@ export function useNotifications(userId) {
             setUnreadCount(prev => prev + 1);
           }
         } else if (payload.eventType === 'UPDATE') {
-          setNotifications(prev =>
-            prev.map(n => n.id === payload.new.id ? payload.new : n)
-          );
-          // Recalculate unread count
-          setUnreadCount(prev => {
-             // We can't easily derive from prev without full array,
-             // but since we only update 'lida', if it went from false to true:
-             if (payload.old && payload.old.lida === false && payload.new.lida === true) {
-                 return Math.max(0, prev - 1);
-             }
-             // For safety, just refetch count or map it out. A full fetch is safer but costly.
-             // We'll rely on our manual state updates for now, or just refetch.
-             return prev;
+          setNotifications(prev => {
+            const existing = prev.find(n => n.id === payload.new.id);
+            if (existing) {
+              // Recalculate unread count manually based on state change in current state vs payload
+              if (existing.lida === false && payload.new.lida === true) {
+                setUnreadCount(c => Math.max(0, c - 1));
+              } else if (existing.lida === true && payload.new.lida === false) {
+                setUnreadCount(c => c + 1);
+              }
+              return prev.map(n => n.id === payload.new.id ? payload.new : n);
+            }
+            return prev;
           });
-          // Better yet, just fetch all to be safe and accurate or handle it manually
-          fetchNotifications();
         } else if (payload.eventType === 'DELETE') {
-           setNotifications(prev => prev.filter(n => n.id !== payload.old.id));
-           fetchNotifications(); // Recalculate count
+          setNotifications(prev => {
+            const notificationToDelete = prev.find(n => n.id === payload.old.id);
+            if (notificationToDelete && !notificationToDelete.lida) {
+              setUnreadCount(c => Math.max(0, c - 1));
+            }
+            return prev.filter(n => n.id !== payload.old.id);
+          });
         }
       }
     ).subscribe();
