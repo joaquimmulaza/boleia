@@ -5,14 +5,15 @@ Plataforma de *matchmaking* para rotas de transporte diário e acordos de pagame
 Stack: React + Vite, Tailwind CSS, Lucide React (Frontend); Supabase (Backend/Auth/DB). Tudo alojado de forma 100% gratuita.
 
 ## 2. Princípios de "Vibe Coding" com Disciplina (O Método Akita)
-* **TDD Obrigatório (Test-Driven Development):** NUNCA escrevas código de produção (features, componentes, rotas) sem antes escrevermos os testes correspondentes. O fluxo é: 1. Escrever Testes (e mockar o necessário) -> 2. Executar (vão falhar) -> 3. Escrever Código -> 4. Passar nos Testes.
+* **TDD Obrigatório (Test-Driven Development):** Todo o código funcional deve ser precedido por testes no Vitest. É estritamente proibido escrever a implementação antes dos testes. O fluxo é: 1. Escrever Testes (e mockar o necessário) -> 2. Executar (vão falhar) -> 3. Escrever Código -> 4. Passar nos Testes.
+* **Supabase MCP Exclusivo:** Para quaisquer alterações na base de dados (DDL ou migrações), utilizar exclusivamente o Supabase MCP. Nada de escrever SQL manual solto ou executar lógicas de alteração fora do MCP.
 * **Modularidade:** Mantém os ficheiros pequenos e o código altamente modular. Se um ficheiro crescer demasiado, para e sugere uma refatoração.
 * **Um Passo de Cada Vez:** Resolve apenas o problema que foi pedido no prompt. Não tentes prever e construir funcionalidades futuras não solicitadas.
 * **Segurança Primeiro:** Nunca coloques passwords, chaves de API (como a do Supabase) ou tokens hardcoded no código. Usa sempre variáveis de ambiente (`.env`).
 * **Sem Confirmações Cegas:** Se te deparares com uma ambiguidade arquitetónica, para e pergunta. Não tomes o caminho de menor resistência se isso comprometer a qualidade.
 * **Refatoração Contínua:** Constantemente procura código morto, duplicações ou lógicas pesadas e sugere melhorias.
 * **Integração de Rotas Contínua:** Sempre que criares uma nova página (`.jsx`), tens OBRIGATORIAMENTE de ir ao ficheiro `src/App.jsx` e registar a nova rota correspondente dentro do `react-router-dom`. Além disso, deves verificar se os links de navegação (como os do `MainLayout.jsx`) precisam de ser atualizados para apontar para a nova página.
-* **REGRA DE OURO UI:** Todas as interfaces devem ser implementadas usando a skill `react-components` lendo diretamente os designs do Google Stitch via MCP. É estritamente proibido inventar ou adivinhar estilos Tailwind. O design do Stitch é a única fonte de verdade.
+* **REGRA DE OURO UI:** Todas as interfaces devem ser implementadas usando a skill `react-components` lendo diretamente os designs do Google Stitch via MCP. É estritamente proibido inventar ou adivinhar estilos Tailwind. O design do Stitch é a única fonte de verdade. Para criação de novas telas, utilizar obrigatoriamente o Stitch MCP (`generate_screen_from_text` ou `edit_screens`) focando no mobile-first e utilizando Tailwind CSS.
 
 ## 3. Como a IA deve atuar
 Lê este documento antes de iniciares qualquer nova funcionalidade. Se eu te pedir para criar um componente X, a tua primeira resposta DEVE ser o código do teste para esse componente X.
