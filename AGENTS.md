@@ -70,18 +70,23 @@ REGRA ABSOLUTA DE DESIGN E INTERFACE (STITCH-FIRST):
 O Google Stitch é o nosso Design System e a Única Fonte de Verdade. Tudo o que estiver relacionado com a interface de utilizador (UI) tem de passar obrigatoriamente primeiro pelo Stitch via MCP antes de ir para o código.
 Fluxo de Trabalho Obrigatório: A interface é primeiro desenhada no Stitch, e só depois é implementada no código. É estritamente proibido inventar designs, estilos Tailwind ou fluxos de UX diretamente no código.
 
-🏛️ Relatório de Estado da Arquitetura: Boleia Certa (Atualizar relatorio sempre quando necessario após novas implementações para contexto da aplicação)
-Data: 26 de Março de 2026 Fase Atual: MVP Funcional, Infraestrutura Assíncrona e UX Escalável.
+## 9. Manutenção do Contexto (DRY)
+**REGRA ABSOLUTA:** Esta secção do documento (`CONTEXT.md` e `AGENTS.md`) tem de ser **obrigatoriamente atualizada** sempre que uma nova funcionalidade for implementada, refatorada ou corrigida. O objetivo central é garantir que qualquer Agente de IA que leia este ficheiro saiba com exatidão o ponto de situação do projeto, evitando redundâncias, reinvenção da roda ou duplicação de lógicas já existentes (DRY - Don't Repeat Yourself). Antes de iniciar qualquer tarefa, o agente deve assumir este relatório como a única fonte de verdade arquitetónica.
 
-1. Infraestrutura e Backend (Supabase)
-Notificações Push (Edge Functions): A função send-push está totalmente funcional e segura. Removemos as chaves expostas no código (hardcoded) e configurámos a biblioteca web-push para ler rigorosamente as variáveis de ambiente seguras (VAPID_PUBLIC_KEY e VAPID_PRIVATE_KEY), incluindo um endereço mailto: válido de administrador para cumprir as políticas de anti-spam da Apple e Google.
-Regras de Negócio e Máquina de Estados: Implementámos um Índice Único Parcial (Partial Unique Index) na tabela acordos no PostgreSQL. Isto impede que um passageiro peça a mesma rota duas vezes se o estado for 'Ativo' ou 'Pendente', mas permite novos pedidos se o acordo anterior estiver 'Cancelado'.
-Preservação de Dados (Soft Delete): Adicionámos a coluna is_hidden_by_user (booleano) à tabela acordos. Isto permite ocultar acordos cancelados da interface do utilizador sem os apagar fisicamente, preservando o histórico e a auditoria transacional.
-Preparação para Deep Linking: Adicionámos uma coluna metadata (tipo JSONB) à tabela notificacoes para permitir a injeção de IDs dinâmicos (como o acordo_id) diretamente no payload enviado para os telemóveis.
-2. Frontend e Interface (React / Vite)
-Orquestração de Estado (Concorrência): Resolver um erro crítico em produção do Supabase Auth (AbortError: Lock broken by another request with the 'steal' option). A arquitetura deve ser refatorada para ter uma única fonte de verdade global para a sessão. Os componentes dependentes de dados só iniciam os seus fetches após a validação central da sessão, eliminando as condições de corrida (race conditions).
-Limpeza de Queries: A camada de serviços (AgreementsService.js) foi ajustada para fazer projeções de junções (joins) rigorosas entre as tabelas acordos, routes e perfis, evitando invocações a colunas inexistentes nos relacionamentos.
-Roteamento e Deep Linking Escalável:
-Eliminámos a dependência de cadeias if/else para navegação de notificações, implementando o Padrão Strategy através de um dicionário/mapa (notificationRouter.js).
-Ao clicar numa notificação (no ecrã do SO ou no sino da UI), o utilizador é redirecionado corretamente para a página de Acordos e o sistema lê os parâmetros embutidos para abrir automaticamente o componente/modal flutuante com os detalhes específicos da boleia acionada.
-Gestão de Notificações na UI: Implementado o sistema de exclusão nativa (hard-delete) para itens efémeros na central de notificações, mantendo a interface limpa e focada.
+🏛️ Relatório de Estado da Arquitetura: Boleia Certa
+**Última Atualização:** 27 de Março de 2026
+**Fase Atual:** MVP Funcional, Infraestrutura Assíncrona e UX Escalável.
+
+**O que já está implementado e validado:**
+1. **Infraestrutura e Backend (Supabase):**
+   * **Base de Dados & Rotas:** A tabela `routes` é a única fonte de verdade preenchida via Geocoding (Google Maps API) no momento da publicação.
+   * **Acordos (Agreements):** Têm estados (`pendente`, `ativo`, `cancelado`), sistema de *soft delete* (`is_hidden_by_user`) e estão protegidos por um Índice Único Parcial para evitar pedidos duplicados ao mesmo tempo.
+   * **Notificações Push (Edge Functions):** Função `send-push` a usar a biblioteca `web-push` configurada com variáveis de ambiente seguras (VAPID Keys) e um endereço *mailto* de administrador.
+   * **Concorrência (Auth):** Identificada necessidade de refatorar a arquitetura de sessão global para eliminar *race conditions* no Supabase Auth (`AbortError`).
+2. **Frontend e Interface (React / Vite):**
+   * **Layout Global & Navegação:** `<App>` envolve um `<Layout>` com `BottomBar` unindo `/` (Landing), `/passageiro`, `/motorista`, `/veiculo`, `/publicar-trajeto`, `/acordos` (único gestor padronizado), `/faltas` e `/perfil`.
+   * **Deep Linking & Roteamento Dinâmico:** Implementado padronização Strategy (`notificationRouter.js`) lendo o `metadata` associado às notificações injetadas via Push, abrindo listagens de boleias ou modais automaticamente.
+   * **Limpeza de UI (Notificações):** Hard-delete ativo na eliminação de itens da central de notificações front-end para manter a interface limpa.
+   * **Limpeza de Queries (Services):** `AgreementsService` otimizado para não focar colunas inexistentes nos *joins*.
+3. **Hooks e Contextos Reutilizáveis:**
+   * Utilização de `useAuthForm`, `useAutocomplete` (Geocoding), `useNotifications`, `usePushNotifications` e `ThemeContext`.
