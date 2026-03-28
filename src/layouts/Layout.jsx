@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { Home, Search, CarFront, User, HandshakeIcon, CalendarX2, LogOut } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import ThemeToggle from '../components/ThemeToggle';
 import NotificationBell from '../components/NotificationBell';
+import { useAuth } from '../contexts/AuthContext';
 
 /**
  * Layout global que envolve todas as páginas autenticadas.
@@ -12,19 +13,7 @@ import NotificationBell from '../components/NotificationBell';
  */
 const Layout = () => {
   const navigate = useNavigate();
-  const [tipoPerfil, setTipoPerfil] = useState(null);
-
-  useEffect(() => {
-    let isMounted = true;
-    const loadSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (isMounted && session) {
-        setTipoPerfil(session.user?.user_metadata?.tipo_perfil ?? null);
-      }
-    };
-    loadSession();
-    return () => { isMounted = false; };
-  }, []);
+  const { tipoPerfil } = useAuth();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

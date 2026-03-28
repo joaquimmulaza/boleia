@@ -70,7 +70,7 @@ describe('DriverDashboard Component', () => {
       });
     });
 
-    it('navega para /vehicle-setup ao clicar no botão do CTA', async () => {
+    it('navega para /veiculo ao clicar no botão do CTA', async () => {
       render(<DriverDashboard />);
 
       let ctaButton;
@@ -79,7 +79,7 @@ describe('DriverDashboard Component', () => {
       });
 
       fireEvent.click(ctaButton);
-      expect(mockNavigate).toHaveBeenCalledWith('/vehicle-setup');
+      expect(mockNavigate).toHaveBeenCalledWith('/veiculo');
     });
 
     it('não renderiza o CTA se o utilizador já tiver veículo', async () => {

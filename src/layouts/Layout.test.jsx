@@ -16,6 +16,13 @@ vi.mock('../lib/supabase', () => ({
   },
 }));
 
+import * as AuthContextModule from '../contexts/AuthContext';
+vi.mock('../contexts/AuthContext', () => ({
+  useAuth: vi.fn(),
+}));
+
+const { useAuth } = AuthContextModule;
+
 // Mock window.matchMedia
 const originalMatchMedia = window.matchMedia;
 
@@ -54,9 +61,7 @@ describe('Layout Component', () => {
   });
 
   it('renderiza o conteúdo filho (Outlet) e o botão de Logout', async () => {
-    supabase.auth.getSession.mockResolvedValue({ data: { session: null } });
-    supabase.auth.getUser.mockResolvedValue({ data: { user: null } });
-    supabase.auth.getUser.mockResolvedValue({ data: { user: null } });
+    useAuth.mockReturnValue({ tipoPerfil: null });
 
     await act(async () => {
       renderWithRouterAndTheme(<Layout />);
@@ -67,16 +72,7 @@ describe('Layout Component', () => {
   });
 
   it('mostra navegação de Passageiro (Início, Acordos, Faltas, Perfil) quando tipo_perfil é Passageiro', async () => {
-    supabase.auth.getSession.mockResolvedValue({
-      data: {
-        session: {
-          user: {
-            user_metadata: { tipo_perfil: 'Passageiro' }
-          }
-        }
-      }
-    });
-    supabase.auth.getUser.mockResolvedValue({ data: { user: null } });
+    useAuth.mockReturnValue({ tipoPerfil: 'Passageiro' });
 
     await act(async () => {
       renderWithRouterAndTheme(<Layout />);
@@ -90,16 +86,7 @@ describe('Layout Component', () => {
   });
 
   it('mostra navegação de Motorista (Início, Veículo, Acordos, Faltas, Perfil) quando tipo_perfil é Motorista', async () => {
-    supabase.auth.getSession.mockResolvedValue({
-      data: {
-        session: {
-          user: {
-            user_metadata: { tipo_perfil: 'Motorista' }
-          }
-        }
-      }
-    });
-    supabase.auth.getUser.mockResolvedValue({ data: { user: null } });
+    useAuth.mockReturnValue({ tipoPerfil: 'Motorista' });
 
     await act(async () => {
       renderWithRouterAndTheme(<Layout />);
@@ -113,9 +100,7 @@ describe('Layout Component', () => {
   });
 
   it('mostra a navegação de Passageiro por defeito quando não há sessão', async () => {
-    supabase.auth.getSession.mockResolvedValue({ data: { session: null } });
-    supabase.auth.getUser.mockResolvedValue({ data: { user: null } });
-    supabase.auth.getUser.mockResolvedValue({ data: { user: null } });
+    useAuth.mockReturnValue({ tipoPerfil: null });
 
     await act(async () => {
       renderWithRouterAndTheme(<Layout />);

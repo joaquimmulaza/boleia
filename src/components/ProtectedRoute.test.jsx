@@ -3,16 +3,13 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 
-// Mock Supabase
-vi.mock('../lib/supabase', () => ({
-  supabase: {
-    auth: {
-      getSession: vi.fn(),
-    },
-  },
+// Mock useAuth
+import * as AuthContextModule from '../contexts/AuthContext';
+vi.mock('../contexts/AuthContext', () => ({
+  useAuth: vi.fn(),
 }));
 
-import { supabase } from '../lib/supabase';
+const { useAuth } = AuthContextModule;
 
 // Helper to render within a router context
 const renderWithRouter = (ui, { initialEntries = ['/'] } = {}) => {
@@ -39,7 +36,7 @@ describe('ProtectedRoute', () => {
   });
 
   it('deve redirecionar para /auth quando não há sessão ativa', async () => {
-    supabase.auth.getSession.mockResolvedValue({ data: { session: null } });
+    useAuth.mockReturnValue({ session: null, loading: false });
 
     renderWithRouter(<></>, { initialEntries: ['/protegido'] });
 
@@ -49,14 +46,12 @@ describe('ProtectedRoute', () => {
   });
 
   it('deve redirecionar para /motorista quando um Motorista tenta aceder a uma rota de Passageiro', async () => {
-    supabase.auth.getSession.mockResolvedValue({
-      data: {
-        session: {
-          user: { user_metadata: { tipo_perfil: 'Motorista' } },
-        },
-      },
+    useAuth.mockReturnValue({
+      session: { user: { id: '123' } },
+      loading: false,
+      tipoPerfil: 'Motorista'
     });
-    // Route with allowedRole="Passageiro", but user is "Motorista"
+
     render(
       <MemoryRouter initialEntries={['/protegido']}>
         <Routes>
@@ -79,13 +74,12 @@ describe('ProtectedRoute', () => {
   });
 
   it('deve redirecionar para /passageiro quando um Passageiro tenta aceder a uma rota de Motorista', async () => {
-    supabase.auth.getSession.mockResolvedValue({
-      data: {
-        session: {
-          user: { user_metadata: { tipo_perfil: 'Passageiro' } },
-        },
-      },
+    useAuth.mockReturnValue({
+      session: { user: { id: '123' } },
+      loading: false,
+      tipoPerfil: 'Passageiro'
     });
+
     render(
       <MemoryRouter initialEntries={['/protegido-motorista']}>
         <Routes>
@@ -108,12 +102,10 @@ describe('ProtectedRoute', () => {
   });
 
   it('deve renderizar o conteúdo quando o utilizador tem o role correto', async () => {
-    supabase.auth.getSession.mockResolvedValue({
-      data: {
-        session: {
-          user: { user_metadata: { tipo_perfil: 'Passageiro' } },
-        },
-      },
+    useAuth.mockReturnValue({
+      session: { user: { id: '123' } },
+      loading: false,
+      tipoPerfil: 'Passageiro'
     });
 
     renderWithRouter(<></>, { initialEntries: ['/protegido'] });
@@ -124,12 +116,10 @@ describe('ProtectedRoute', () => {
   });
 
   it('deve renderizar o conteúdo quando não há allowedRole definida (rota genérica protegida)', async () => {
-    supabase.auth.getSession.mockResolvedValue({
-      data: {
-        session: {
-          user: { user_metadata: { tipo_perfil: 'Passageiro' } },
-        },
-      },
+    useAuth.mockReturnValue({
+      session: { user: { id: '123' } },
+      loading: false,
+      tipoPerfil: 'Passageiro'
     });
 
     render(

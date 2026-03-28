@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 /**
  * ProtectedRoute – Auth Guard com suporte a RBAC.
@@ -10,44 +10,9 @@ import { supabase } from '../lib/supabase';
  *     Se omitido, qualquer utilizador autenticado pode aceder.
  */
 const ProtectedRoute = ({ allowedRole }) => {
-  const [status, setStatus] = useState('loading'); // 'loading' | 'auth' | 'wrong-role' | 'ok'
-  const [redirectPath, setRedirectPath] = useState(null);
+  const { session, loading, tipoPerfil } = useAuth();
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const checkAccess = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!isMounted) return;
-
-      // 1. Sem sessão → redireciona para login
-      if (!session) {
-        setRedirectPath('/auth');
-        setStatus('redirect');
-        return;
-      }
-
-      // 2. Com sessão mas role inválido → redireciona para o dashboard correto
-      if (allowedRole) {
-        const tipoPerfil = session.user?.user_metadata?.tipo_perfil;
-        if (tipoPerfil !== allowedRole) {
-          const correctPath = tipoPerfil === 'Motorista' ? '/motorista' : '/passageiro';
-          setRedirectPath(correctPath);
-          setStatus('redirect');
-          return;
-        }
-      }
-
-      // 3. Tudo correto → renderiza o conteúdo protegido
-      setStatus('ok');
-    };
-
-    checkAccess();
-    return () => { isMounted = false; };
-  }, [allowedRole]);
-
-  if (status === 'loading') {
+  if (loading) {
     return (
       <div className="flex h-screen items-center justify-center text-gray-500">
         A verificar sessão...
@@ -55,10 +20,18 @@ const ProtectedRoute = ({ allowedRole }) => {
     );
   }
 
-  if (status === 'redirect') {
-    return <Navigate to={redirectPath} replace />;
+  // 1. Sem sessão → redireciona para login
+  if (!session) {
+    return <Navigate to="/auth" replace />;
   }
 
+  // 2. Com sessão mas role inválido → redireciona para o dashboard correto
+  if (allowedRole && tipoPerfil !== allowedRole) {
+    const correctPath = tipoPerfil === 'Motorista' ? '/motorista' : '/passageiro';
+    return <Navigate to={correctPath} replace />;
+  }
+
+  // 3. Tudo correto → renderiza o conteúdo protegido
   return <Outlet />;
 };
 

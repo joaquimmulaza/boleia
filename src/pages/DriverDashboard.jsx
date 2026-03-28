@@ -96,7 +96,7 @@ const DriverDashboard = () => {
                     Para começares a publicar rotas e aceitar passageiros, precisas de registar o teu veículo.
                   </p>
                   <button
-                    onClick={() => navigate('/vehicle-setup')}
+                    onClick={() => navigate('/veiculo')}
                     className="mt-3 bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white text-sm font-bold py-2.5 px-4 rounded-lg transition-all shadow-md shadow-amber-500/20"
                   >
                     Registar Veículo Agora

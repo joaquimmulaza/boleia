@@ -5,7 +5,7 @@ import { useNotifications } from '../hooks/useNotifications';
 import { supabase } from '../lib/supabase';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { resolveNotificationRoute } from '../utils/notificationRouter';
-
+import { useAuth } from '../contexts/AuthContext';
 
 const NotificationIcon = ({ type }) => {
   switch (type) {
@@ -35,18 +35,13 @@ const formatTimeAgo = (dateString) => {
 };
 
 export default function NotificationBell() {
-  const [userId, setUserId] = useState(null);
+  const { user } = useAuth();
+  const userId = user?.id || null;
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications(userId);
   const { isSupported, permission, isSubscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) setUserId(user.id);
-    });
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
