@@ -9,7 +9,7 @@
 export const notificationRouteMap = {
   agreement_update: (metadata) => {
     // metadata.acordo_id deve estar presente
-    return metadata?.acordo_id ? `/my-agreements?openAcordoId=${metadata.acordo_id}` : '/my-agreements';
+    return metadata?.acordo_id ? `/acordos?openAcordoId=${metadata.acordo_id}` : '/acordos';
   },
   // Facilmente expansível no futuro:
   // new_message: (metadata) => `/chat/${metadata.chat_id}`,
@@ -42,11 +42,11 @@ export const resolveNotificationRoute = (notif) => {
   // 3. Fallback: Deduzir pelo texto (Retrocompatibilidade)
   if (notif?.mensagem) {
     const msg = notif.mensagem.toLowerCase();
-    if (msg.includes('motorista')) return '/driver-dashboard';
-    if (msg.includes('passageiro')) return '/passenger-dashboard';
-    if (msg.includes('rota') || msg.includes('viagem')) return '/my-routes';
+    if (msg.includes('motorista')) return '/motorista';
+    if (msg.includes('passageiro')) return '/passageiro';
+    if (msg.includes('rota') || msg.includes('viagem')) return '/';
   }
 
   // 4. Fallback default
-  return '/my-agreements';
+  return '/acordos';
 };

@@ -12,7 +12,7 @@ describe('notificationRouter', () => {
       };
 
       const route = resolveNotificationRoute(notif);
-      expect(route).toBe('/my-agreements?openAcordoId=123');
+      expect(route).toBe('/acordos?openAcordoId=123');
     });
 
     it('deve cair no fallback do strategy de metadata se faltar parametros esperados pelo strategy', () => {
@@ -24,7 +24,7 @@ describe('notificationRouter', () => {
       };
 
       const route = resolveNotificationRoute(notif);
-      expect(route).toBe('/my-agreements');
+      expect(route).toBe('/acordos');
     });
 
     it('deve usar notif.link como primeiro fallback se strategy falhar (nao achar o tipo)', () => {
@@ -54,7 +54,7 @@ describe('notificationRouter', () => {
       };
 
       const route = resolveNotificationRoute(notif);
-      expect(route).toBe('/driver-dashboard');
+      expect(route).toBe('/motorista');
     });
 
     it('deve deduzir a rota baseada na mensagem: passageiro', () => {
@@ -63,15 +63,15 @@ describe('notificationRouter', () => {
       };
 
       const route = resolveNotificationRoute(notif);
-      expect(route).toBe('/passenger-dashboard');
+      expect(route).toBe('/passageiro');
     });
 
     it('deve deduzir a rota baseada na mensagem: rota/viagem', () => {
       const notif1 = { mensagem: 'Sua rota foi atualizada.' };
       const notif2 = { mensagem: 'Sua viagem comecou.' };
 
-      expect(resolveNotificationRoute(notif1)).toBe('/my-routes');
-      expect(resolveNotificationRoute(notif2)).toBe('/my-routes');
+      expect(resolveNotificationRoute(notif1)).toBe('/');
+      expect(resolveNotificationRoute(notif2)).toBe('/');
     });
 
     it('deve cair no fallback padrao /my-agreements se nenhuma condicao for atingida', () => {
@@ -80,7 +80,7 @@ describe('notificationRouter', () => {
       };
 
       const route = resolveNotificationRoute(notif);
-      expect(route).toBe('/my-agreements');
+      expect(route).toBe('/acordos');
     });
   });
 });
