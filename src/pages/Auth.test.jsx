@@ -110,6 +110,36 @@ describe('Auth Component', () => {
     expect(driverRadio).toBeChecked();
   });
 
+  it('NÃO chama signUp se a palavra-passe for muito curta e mostra mensagem de erro', async () => {
+    render(<Auth />);
+
+    // Mudar para modo "Criar Conta"
+    fireEvent.click(screen.getByRole('button', { name: /Criar Conta/i }));
+
+    // Preencher o formulário com password curta
+    fireEvent.change(screen.getByLabelText(/Email/i), {
+      target: { value: 'teste@boleia.co.ao' },
+    });
+    fireEvent.change(screen.getByLabelText(/Password/i), {
+      target: { value: 'curta' },
+    });
+    fireEvent.change(screen.getByLabelText(/Nome Completo/i), {
+      target: { value: 'Nome Teste' },
+    });
+    fireEvent.change(screen.getByLabelText(/Telefone/i), {
+      target: { value: '999999999' },
+    });
+
+    // Submeter o formulário
+    fireEvent.click(screen.getByRole('button', { name: /Registar/i }));
+
+    // Verificar que signUp não foi chamado
+    expect(supabase.auth.signUp).not.toHaveBeenCalled();
+
+    // Verificar que a mensagem de erro é exibida
+    expect(screen.getByText('A palavra-passe deve ter pelo menos 8 caracteres.')).toBeInTheDocument();
+  });
+
   it('chama signUp com o payload correto (tipo_perfil, nome_completo, telefone) ao submeter em modo Criar Conta', async () => {
     render(<Auth />);
 
