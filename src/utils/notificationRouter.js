@@ -35,7 +35,9 @@ export const resolveNotificationRoute = (notif) => {
   }
 
   // 2. Fallback: Se a notificação já tem um link direto no payload
-  if (notif?.link) {
+  // Ignoramos '/dashboard' e '/' para não dar override na dedução por texto,
+  // dado que a Edge Function os injeta como fallbacks hardcoded.
+  if (notif?.link && notif.link !== '/dashboard' && notif.link !== '/') {
     return notif.link;
   }
 

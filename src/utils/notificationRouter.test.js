@@ -39,13 +39,14 @@ describe('notificationRouter', () => {
       expect(route).toBe('/custom-link');
     });
 
-    it('deve usar notif.link se nao tiver metadata', () => {
+    it('deve ignorar notif.link se for /dashboard ou / e deduzir pela mensagem', () => {
       const notif = {
-        link: '/custom-link'
+        link: '/dashboard',
+        mensagem: 'O motorista aceitou sua viagem.'
       };
 
       const route = resolveNotificationRoute(notif);
-      expect(route).toBe('/custom-link');
+      expect(route).toBe('/motorista');
     });
 
     it('deve deduzir a rota baseada na mensagem: motorista', () => {

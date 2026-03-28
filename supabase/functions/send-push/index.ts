@@ -86,7 +86,7 @@ serve(async (req) => {
       icon: "/pwa-192x192.png", // Ícone PWA
       badge: "/favicon.svg",
       data: {
-        url: "/dashboard", // Fallback URL
+        url: "/", // Fallback URL
         notificationId: record.id,
         metadata: metadata || {}
       }
