@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { getFriendlyErrorMessage } from '../utils/errorHandler';
 
 const VehicleSetup = () => {
   const [marcaModelo, setMarcaModelo] = useState('');
@@ -48,7 +49,7 @@ const VehicleSetup = () => {
     setIsLoadingVeiculo(false);
 
     if (error) {
-      setFeedbackVeiculo({ type: 'error', message: error.message });
+      setFeedbackVeiculo({ type: 'error', message: getFriendlyErrorMessage(error) });
     } else {
       setFeedbackVeiculo({ type: 'success', message: 'Veículo guardado com sucesso!' });
     }

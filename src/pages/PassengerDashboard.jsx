@@ -3,6 +3,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { supabase } from '../lib/supabase';
 import { requestSeat } from '../services/AgreementsService';
 import SearchAddressInput from '../components/SearchAddressInput';
+import { getFriendlyErrorMessage } from '../utils/errorHandler';
 
 
 const formatKwanza = (value) => {
@@ -312,7 +313,7 @@ const PassengerDashboard = () => {
           ? error.message
           : error.message?.includes('violates check constraint') || error.message?.includes('Já solicitou')
           ? 'Não foi possível enviar a solicitação devido a um erro de validação. Por favor, tente novamente.'
-          : 'Ocorreu um erro ao solicitar a sua vaga. Verifique a sua ligação e tente novamente.';
+          : getFriendlyErrorMessage(error);
        
        setSolicitacaoFeedback({ 
           show: true, 

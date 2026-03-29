@@ -6,6 +6,7 @@ import PublishRoute from './PublishRoute';
 import { supabase } from '../lib/supabase';
 
 vi.mock('../services/GoogleMapsService', () => ({
+  loadGoogleMapsScript: vi.fn(),
   getPlacePredictions: vi.fn().mockResolvedValue([]),
   getPlaceDetails: vi.fn().mockResolvedValue({ lat: -8.839, lng: 13.289 }),
 }));
@@ -137,7 +138,7 @@ describe('PublishRoute Component', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Publicar Trajeto/i })); });
 
     await waitFor(() => {
-      expect(screen.getByText(/Erro ao publicar trajeto. Tente novamente./i)).toBeInTheDocument();
+      expect(screen.getByText(/Ocorreu um erro inesperado. Tente novamente./i)).toBeInTheDocument();
     });
   });
 

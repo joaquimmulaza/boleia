@@ -316,7 +316,7 @@ describe('MyAgreements - Modal and Context Menu interactions', () => {
 
     fireEvent.click(btnDetalhes);
 
-    expect(screen.getByText('Detalhes do Acordo')).toBeInTheDocument();
+    expect(screen.getByText('Detalhes da Boleia')).toBeInTheDocument();
 
     // Verifica dados do veículo e da contraparte no Modal
     expect(screen.getByText('Veículo')).toBeInTheDocument();
@@ -324,10 +324,10 @@ describe('MyAgreements - Modal and Context Menu interactions', () => {
     expect(screen.getByText('XYZ')).toBeInTheDocument();
     expect(screen.getByText('+244999999999')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('Fechar'));
+    fireEvent.click(screen.getByText('Fechar Detalhes'));
 
     await waitFor(() => {
-      expect(screen.queryByText('Detalhes do Acordo')).not.toBeInTheDocument();
+      expect(screen.queryByText('Detalhes da Boleia')).not.toBeInTheDocument();
     });
   });
 
@@ -362,7 +362,7 @@ describe('MyAgreements - Modal and Context Menu interactions', () => {
     const btnDetalhes = screen.getByText(/Ver Detalhes/i);
     fireEvent.click(btnDetalhes);
 
-    expect(screen.getByText('Detalhes do Acordo')).toBeInTheDocument();
+    expect(screen.getByText('Detalhes da Boleia')).toBeInTheDocument();
     expect(screen.getAllByText('Passageiro Real').length).toBeGreaterThan(0);
     expect(screen.getByText('+244888888888')).toBeInTheDocument();
 

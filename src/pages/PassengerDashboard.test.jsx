@@ -274,7 +274,7 @@ describe('PassengerDashboard Component', () => {
       });
 
       // E exibe a notificação de erro algures no ecrã
-      expect(screen.getByText(/Ocorreu um erro ao solicitar a sua vaga/i)).toBeInTheDocument();
+      expect(screen.getByText(/Ocorreu um erro inesperado. Tente novamente./i)).toBeInTheDocument();
       consoleSpy.mockRestore();
     });
 

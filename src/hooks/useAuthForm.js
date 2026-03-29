@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { validateTelefone } from '../utils/validation';
+import { getFriendlyErrorMessage } from '../utils/errorHandler';
 
 export const useAuthForm = () => {
   const location = useLocation();
@@ -62,7 +63,7 @@ export const useAuthForm = () => {
     setIsLoading(false);
 
     if (error) {
-      setFeedback({ type: 'error', message: error.message });
+      setFeedback({ type: 'error', message: getFriendlyErrorMessage(error) });
     } else if (!isLogin) {
       setFeedback({ type: 'success', message: 'Registo efetuado! Verifique o seu email para confirmar a conta.' });
 

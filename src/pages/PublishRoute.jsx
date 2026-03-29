@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { publishRoute } from '../services/RouteService';
 import AddressInput from '../components/AddressInput';
+import { getFriendlyErrorMessage } from '../utils/errorHandler';
 
 const PublishRoute = () => {
   const navigate = useNavigate();
@@ -58,7 +59,7 @@ const PublishRoute = () => {
         setMessage({ type: 'error', text: 'Você precisa estar logado para publicar uma rota.' });
       } else {
         console.error('Erro ao publicar trajeto:', error);
-        setMessage({ type: 'error', text: 'Erro ao publicar trajeto. Tente novamente.' });
+        setMessage({ type: 'error', text: getFriendlyErrorMessage(error) });
       }
     } finally {
       setLoading(false);
