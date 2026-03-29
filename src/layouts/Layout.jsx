@@ -62,7 +62,7 @@ const Layout = () => {
       {/* ── Bottom Navigation ─────────────────────────────────────────── */}
       <nav
         aria-label="Navegação principal"
-        className="fixed bottom-0 w-full bg-gray-50 dark:bg-gray-800 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] border-t border-gray-100 dark:border-gray-700 pb-safe z-50 transition-colors"
+        className="fixed bottom-0 w-full bg-gray-50 dark:bg-gray-800 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] border-t border-gray-100 dark:border-gray-700 pb-safe z-[130] transition-colors"
       >
         <div className="flex justify-around items-center h-16 sm:h-20 max-w-md mx-auto px-2">
           {isMotorista ? (

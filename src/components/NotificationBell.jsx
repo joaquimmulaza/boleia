@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCircle, Info, AlertCircle, X, BellRing, BellOff, Trash2 } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
@@ -53,6 +54,18 @@ export default function NotificationBell() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Scroll locking for mobile and portal
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
 
   const handleNotificationClick = (notif) => {
     if (!notif.lida) {
@@ -89,81 +102,102 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {isOpen && (
-        <div className="absolute left-0 mt-2 w-80 sm:w-96 origin-top-left rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 overflow-hidden flex flex-col max-h-[80vh]">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 font-[Plus_Jakarta_Sans]">Notificações</h3>
-            <div className="flex items-center gap-2">
-              {isSupported && permission !== 'denied' && (
-                <button
-                  onClick={handlePushToggle}
-                  disabled={pushLoading}
-                  className={`p-1.5 rounded-full transition-colors ${
-                    isSubscribed
-                      ? 'bg-primary/10 text-primary hover:bg-primary/20'
-                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
-                  }`}
-                  title={isSubscribed ? 'Desativar notificações push' : 'Ativar notificações push'}
+      {/* Backdrop & Panel inside React Portal to escape stacking context */}
+      {createPortal(
+        <>
+          <div 
+            className={`fixed inset-0 z-[110] bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            onClick={() => setIsOpen(false)}
+          />
+
+          <div 
+            className={`fixed top-0 right-0 h-[100dvh] w-full max-w-md bg-white dark:bg-slate-900 shadow-2xl z-[120] transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-slate-900 shrink-0">
+              <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100 font-[Plus_Jakarta_Sans]">Notificações</h2>
+              <div className="flex items-center gap-3">
+                {isSupported && permission !== 'denied' && (
+                  <button
+                    onClick={handlePushToggle}
+                    disabled={pushLoading}
+                    className={`p-2 rounded-full transition-colors ${
+                      isSubscribed
+                        ? 'bg-primary/10 text-primary hover:bg-primary/20'
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
+                    }`}
+                    title={isSubscribed ? 'Desativar notificações push' : 'Ativar notificações push'}
+                  >
+                    {isSubscribed ? <BellRing size={16} /> : <BellOff size={16} />}
+                  </button>
+                )}
+                <button 
+                  onClick={() => setIsOpen(false)}
+                  className="p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors"
                 >
-                  {isSubscribed ? <BellRing size={14} /> : <BellOff size={14} />}
+                  <X size={20} />
                 </button>
-              )}
-              {unreadCount > 0 && (
+              </div>
+            </div>
+
+            {unreadCount > 0 && (
+              <div className="px-5 py-3 bg-gray-50 dark:bg-slate-800/50 flex justify-end shrink-0">
                 <button
                   onClick={markAllAsRead}
-                  className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                  className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors pointer-events-auto"
                 >
                   Marcar todas lidas
                 </button>
+              </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto overscroll-none pb-24 sm:pb-28">
+              {notifications.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-40 text-gray-500 dark:text-gray-400">
+                  <Bell size={48} className="mb-4 opacity-20" />
+                  <p className="text-sm">Sem notificações no momento.</p>
+                </div>
+              ) : (
+                <ul className="divide-y divide-gray-100 dark:divide-gray-800/50">
+                  {notifications.map((notif) => (
+                    <li
+                      key={notif.id} className={`flex items-start gap-4 px-5 py-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer ${
+                        !notif.lida ? 'bg-primary/5 dark:bg-primary/10' : ''
+                      }`}
+                      onClick={() => handleNotificationClick(notif)}
+                    >
+                      <div className="mt-1 shrink-0">
+                        <NotificationIcon type={notif.tipo} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm ${!notif.lida ? 'font-semibold text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300'} font-[Plus_Jakarta_Sans] leading-relaxed`}>
+                          {notif.mensagem}
+                        </p>
+                        <p className="mt-2 text-xs font-medium text-gray-400 dark:text-gray-500">
+                          {formatTimeAgo(notif.created_at)}
+                        </p>
+                      </div>
+                      {!notif.lida && (
+                        <div className="w-2.5 h-2.5 rounded-full bg-primary shrink-0 mt-1.5 shadow-sm" />
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteNotification(notif.id);
+                        }}
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors shrink-0 ml-1"
+                        aria-label="Apagar notificação"
+                        title="Apagar notificação"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           </div>
-
-          <div className="flex-1 overflow-y-auto">
-            {notifications.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                Sem notificações no momento.
-              </div>
-            ) : (
-              <ul className="divide-y divide-gray-100 dark:divide-gray-700">
-                {notifications.map((notif) => (
-                  <li
-                    key={notif.id} className={`flex items-start gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer ${
-                      !notif.lida ? 'bg-primary/5 dark:bg-primary/10' : ''
-                    }`}
-                    onClick={() => handleNotificationClick(notif)}
-                  >
-                    <div className="mt-0.5 shrink-0">
-                      <NotificationIcon type={notif.tipo} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm ${!notif.lida ? 'font-semibold text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300'} font-[Plus_Jakarta_Sans]`}>
-                        {notif.mensagem}
-                      </p>
-                      <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                        {formatTimeAgo(notif.created_at)}
-                      </p>
-                    </div>
-                    {!notif.lida && (
-                      <div className="w-2 h-2 rounded-full bg-primary shrink-0 mt-1.5 shadow-sm" />
-                    )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteNotification(notif.id);
-                      }}
-                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors shrink-0 ml-2"
-                      aria-label="Apagar notificação"
-                      title="Apagar notificação"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
+        </>,
+        document.body
       )}
     </div>
   );
