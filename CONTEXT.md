@@ -75,7 +75,7 @@ Fluxo de Trabalho Obrigatório: A interface é primeiro desenhada no Stitch, e s
 **REGRA ABSOLUTA:** Esta secção do documento (`CONTEXT.md` e `AGENTS.md`) tem de ser **obrigatoriamente atualizada** sempre que uma nova funcionalidade for implementada, refatorada ou corrigida. O objetivo central é garantir que qualquer Agente de IA que leia este ficheiro saiba com exatidão o ponto de situação do projeto, evitando redundâncias, reinvenção da roda ou duplicação de lógicas já existentes (DRY - Don't Repeat Yourself). Antes de iniciar qualquer tarefa, o agente deve assumir este relatório como a única fonte de verdade arquitetónica.
 
 🏛️ Relatório de Estado da Arquitetura: Boleia Certa
-**Última Atualização:** 28 de Março de 2026
+**Última Atualização:** 29 de Março de 2026
 **Fase Atual:** MVP Funcional, Infraestrutura Assíncrona e UX Escalável.
 
 **O que já está implementado e validado:**
@@ -91,3 +91,5 @@ Fluxo de Trabalho Obrigatório: A interface é primeiro desenhada no Stitch, e s
    * **AuthContext global implementado:** session inicializada uma única vez via `onAuthStateChange`, propagada a `ProtectedRoute`, `Layout` e `NotificationBell` via `useAuth()`.
 3. **Hooks e Contextos Reutilizáveis:**
    * **useAuth() (AuthContext):** fonte única de verdade para sessão global, elimina *race conditions*, expõe `{ session, user, loading, tipoPerfil }`. Utilização de `useAuthForm`, `useAutocomplete` (Geocoding), `useNotifications`, `usePushNotifications` e `ThemeContext`.
+4. **Correções de UI & Tratamento de Estados (Trabalho Recente):**
+   * Correção no `PassengerDashboard` para garantir que o estado do acordo ('pendente' ou 'ativo') é avaliado corretamente (case-insensitive com o banco) e que antigas solicitações 'canceladas' não sobrescrevam um estado 'pendente'/'ativo' na interface. Isso previne que o utilizador consiga contornar a constraint de unicidade no frontend.

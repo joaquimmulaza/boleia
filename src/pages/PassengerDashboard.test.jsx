@@ -295,7 +295,7 @@ describe('PassengerDashboard Component', () => {
   describe('Estado Existente', () => {
     it('renderiza o botão como "Vaga já solicitada" e desativado se já houver um acordo Pendente', async () => {
       mockData.current = { data: [rotaDeTeste], error: null };
-      mockAcordosData.current = { data: [{ route_id: rotaDeTeste.id, estado: 'Pendente' }], error: null };
+      mockAcordosData.current = { data: [{ route_id: rotaDeTeste.id, estado: 'pendente' }], error: null };
 
       await act(async () => { render(<PassengerDashboard />); });
 
@@ -310,7 +310,7 @@ describe('PassengerDashboard Component', () => {
 
     it('renderiza o botão como "Boleia Ativa" e desativado se já houver um acordo Ativo', async () => {
       mockData.current = { data: [rotaDeTeste], error: null };
-      mockAcordosData.current = { data: [{ route_id: rotaDeTeste.id, estado: 'Ativo' }], error: null };
+      mockAcordosData.current = { data: [{ route_id: rotaDeTeste.id, estado: 'ativo' }], error: null };
 
       await act(async () => { render(<PassengerDashboard />); });
 
@@ -318,6 +318,29 @@ describe('PassengerDashboard Component', () => {
 
       await waitFor(() => {
         const btn = screen.getByRole('button', { name: /Boleia Ativa/i });
+        expect(btn).toBeInTheDocument();
+        expect(btn).toBeDisabled();
+      });
+    });
+
+    it('prioritiza estado "pendente" ou "ativo" caso existam múltiplos acordos (ex: um cancelado anterior)', async () => {
+      mockData.current = { data: [rotaDeTeste], error: null };
+      // Array com um 'pendente' e depois um 'cancelado' simulando ordenação incorreta ou histórico
+      mockAcordosData.current = { 
+        data: [
+          { route_id: rotaDeTeste.id, estado: 'pendente' },
+          { route_id: rotaDeTeste.id, estado: 'cancelado' }
+        ], 
+        error: null 
+      };
+
+      await act(async () => { render(<PassengerDashboard />); });
+
+      fireEvent.click(screen.getByRole('button', { name: /Procurar Boleia/i }));
+
+      // Button must still be disabled and show "Vaga já solicitada"
+      await waitFor(() => {
+        const btn = screen.getByRole('button', { name: /Vaga já solicitada/i });
         expect(btn).toBeInTheDocument();
         expect(btn).toBeDisabled();
       });

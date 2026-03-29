@@ -10,15 +10,16 @@ const formatKwanza = (value) => {
 };
 
 const RouteCard = ({ rota, isProcessing, isRequested, estadoAcordo, onSolicitar }) => {
-  const isDisabled = isProcessing || isRequested || estadoAcordo === 'Pendente' || estadoAcordo === 'Ativo';
+  const estadoNormalized = estadoAcordo?.toLowerCase();
+  const isDisabled = isProcessing || isRequested || estadoNormalized === 'pendente' || estadoNormalized === 'ativo';
 
   let buttonText = 'Solicitar Vaga';
   let buttonClasses = 'text-primary hover:underline';
 
-  if (estadoAcordo === 'Ativo') {
+  if (estadoNormalized === 'ativo') {
     buttonText = 'Boleia Ativa';
     buttonClasses = 'text-green-700 bg-green-100 px-2 py-1 rounded';
-  } else if (estadoAcordo === 'Pendente' || isRequested) {
+  } else if (estadoNormalized === 'pendente' || isRequested) {
     buttonText = 'Vaga já solicitada';
     buttonClasses = 'text-yellow-700 bg-yellow-100 px-2 py-1 rounded';
   } else if (isProcessing) {
@@ -137,6 +138,13 @@ const PassengerDashboard = () => {
 
       const map = {};
       data.forEach(acordo => {
+        const estadoAtual = map[acordo.route_id]?.toLowerCase();
+        const novoEstado = acordo.estado?.toLowerCase();
+        
+        if (estadoAtual === 'ativo' || estadoAtual === 'pendente') {
+            return; // Prioriza manter estados válidos caso existam múltiplos registros (ex: antigos cancelados)
+        }
+        
         map[acordo.route_id] = acordo.estado;
       });
       setAcordosMap(map);
@@ -295,7 +303,7 @@ const PassengerDashboard = () => {
         await requestSeat(rotaId, user?.id || 'passenger-123'); // passed for test matching
 
         setSolicitadas(prev => new Set(prev).add(rotaId));
-        setAcordosMap(prev => ({ ...prev, [rotaId]: 'Pendente' }));
+        setAcordosMap(prev => ({ ...prev, [rotaId]: 'pendente' }));
         setSolicitacaoFeedback({ show: true, message: 'Solicitação enviada com sucesso! Aguarde a aprovação do motorista.', type: 'success' });
         setTimeout(() => setSolicitacaoFeedback({ show: false, message: '', type: '' }), 5000);
     } catch (error) {
