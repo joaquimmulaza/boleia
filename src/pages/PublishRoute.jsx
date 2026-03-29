@@ -67,21 +67,19 @@ const PublishRoute = () => {
 
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark font-sans text-slate-900 dark:text-slate-100 overflow-x-hidden antialiased">
-      {/* Top App Bar */}
-      <div className="sticky top-0 z-10 flex items-center bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md p-4 pb-4 justify-between border-b border-primary/10">
-        <div 
-          onClick={() => navigate(-1)}
-          className="text-near-black dark:text-slate-100 flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 transition-colors cursor-pointer"
-        >
-          <span className="material-symbols-outlined">arrow_back</span>
-        </div>
-        <h2 className="text-near-black dark:text-slate-100 text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-10">
-          Publicar Trajeto
-        </h2>
-      </div>
-
       {/* Main Content */}
-      <div className="flex flex-col gap-6 p-4 pb-32 max-w-[480px] mx-auto w-full">
+      <div className="flex flex-col gap-6 p-4 pt-6 pb-32 max-w-[480px] mx-auto w-full">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => navigate(-1)}
+            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors bg-white shadow-sm border border-slate-200 dark:bg-slate-900 dark:border-slate-800"
+            aria-label="Voltar"
+          >
+            <span className="material-symbols-outlined text-slate-900 dark:text-slate-100">arrow_back</span>
+          </button>
+          <h1 className="text-2xl font-bold tracking-tight">Publicar Trajeto</h1>
+        </div>
+
         {message.text && (
           <div className={`p-4 mb-2 rounded-xl text-sm font-medium ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
             {message.text}

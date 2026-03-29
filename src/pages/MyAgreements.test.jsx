@@ -89,7 +89,7 @@ describe('Página MyAgreements', () => {
     it('renderiza o componente sem erros', async () => {
       setupMocksForRole('Passageiro');
       await renderComponent();
-      await waitFor(() => expect(screen.getByText('Boleia Certa')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByText('Meus Acordos')).toBeInTheDocument());
     });
 
     it('exibe título "Meus Acordos" quando Passageiro', async () => {

@@ -153,10 +153,10 @@ describe('PublishRoute Component', () => {
     // Fill form (minimum required)
     fireEvent.change(screen.getByLabelText(/Local de Partida/i), { target: { value: 'Luanda' } });
     fireEvent.change(screen.getByLabelText(/Local de Chegada/i), { target: { value: 'Benguela' } });
-    fireEvent.change(screen.getByLabelText(/^Ida/i), { target: { value: '08:00' } });
-    fireEvent.change(screen.getByLabelText(/Volta/i), { target: { value: '18:00' } });
-    fireEvent.change(screen.getByLabelText(/Nº Vagas/i), { target: { value: '3' } });
-    fireEvent.change(screen.getByLabelText(/Valor Mensal/i), { target: { value: '15000' } });
+    fireEvent.change(document.querySelector('input[name="departure_time"]'), { target: { value: '08:00' } });
+    fireEvent.change(document.querySelector('input[name="return_time"]'), { target: { value: '18:00' } });
+    fireEvent.change(document.querySelector('input[name="available_seats"]'), { target: { value: '3' } });
+    fireEvent.change(document.querySelector('input[name="monthly_price_per_seat"]'), { target: { value: '15000' } });
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Publicar Trajeto/i }));

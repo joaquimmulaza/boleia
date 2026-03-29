@@ -320,20 +320,12 @@ const PassengerDashboard = () => {
   return (
     <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen font-['Plus_Jakarta_Sans',_sans-serif] antialiased">
         <div className="relative mx-auto w-full min-h-screen flex flex-col pb-24 pointer-events-none">
-            <header className="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between pointer-events-auto">
-                <div className="flex items-center gap-2">
-                    <div className="bg-primary p-1.5 rounded-lg flex items-center justify-center">
-                        <span className="material-symbols-outlined text-white text-xl">directions_car</span>
-                    </div>
-                    <h1 className="text-slate-900 dark:text-white font-bold text-lg tracking-tight">Boleia Certa</h1>
-                </div>
-                <div className="flex items-center gap-1 bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">
+
+            <section className="relative h-[35vh] w-full flex items-center justify-center overflow-hidden bg-[#e2e8f0] dark:bg-slate-800">
+                <div className="absolute top-4 right-4 z-10 flex items-center gap-1 bg-white/80 dark:bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm pointer-events-auto">
                     <span className="material-symbols-outlined text-primary text-sm">location_on</span>
                     <span className="text-primary text-xs font-bold uppercase tracking-wider">Luanda, AO</span>
                 </div>
-            </header>
-
-            <section className="relative h-[35vh] w-full flex items-center justify-center overflow-hidden bg-[#e2e8f0] dark:bg-slate-800">
                 <div data-testid="map-container" ref={mapContainer} className="absolute inset-0 w-full h-full z-0 touch-none pointer-events-auto"></div>
                 <div className="absolute inset-0 bg-gradient-to-t from-background-light dark:from-background-dark via-transparent to-transparent z-0 pointer-events-none"></div>
             </section>

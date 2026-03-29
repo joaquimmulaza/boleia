@@ -57,21 +57,7 @@ const VehicleSetup = () => {
   return (
     <div className="bg-background-light dark:bg-background-dark font-display text-dark-charcoal min-h-screen antialiased">
       <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">
-        <header className="sticky top-0 z-50 flex items-center bg-white/80 dark:bg-background-dark/80 backdrop-blur-md px-4 py-4 justify-between border-b border-primary/10">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary/10 p-2 rounded-lg">
-              <span className="material-symbols-outlined text-primary text-2xl">directions_car</span>
-            </div>
-            <div>
-              <h1 className="text-dark-charcoal dark:text-slate-100 text-lg font-bold tracking-tight">Configuração</h1>
-              <p className="text-cool-gray dark:text-slate-400 text-xs font-medium">Boleia Certa</p>
-            </div>
-          </div>
-          <div className="flex flex-col items-end">
-            <p className="text-cool-gray dark:text-slate-400 text-xs font-medium">Motorista</p>
-            <p className="text-dark-charcoal dark:text-slate-200 text-sm font-bold">Luanda, AO</p>
-          </div>
-        </header>
+
 
         <main className="flex-1 px-4 py-8 max-w-md mx-auto w-full">
           <section className="space-y-6">

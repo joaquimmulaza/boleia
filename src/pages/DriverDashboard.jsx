@@ -59,23 +59,12 @@ const DriverDashboard = () => {
 
   return (
     <div className="font-[Plus_Jakarta_Sans,sans-serif] min-h-screen bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased">
-
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-50 flex items-center justify-between bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-4 py-3 border-b border-primary/10 dark:border-slate-800">
-        <div className="flex items-center gap-2">
-          <div className="bg-primary/10 p-2 rounded-lg">
-            <Car size={22} className="text-primary" />
-          </div>
-          <h1 className="text-slate-900 dark:text-white text-lg font-bold tracking-tight">Boleia Certa</h1>
-        </div>
-        <div className="flex flex-col items-end">
-          <p className="text-slate-500 dark:text-slate-400 text-xs font-medium">Bom dia, Motorista</p>
-          <p className="text-slate-900 dark:text-white text-sm font-bold">Luanda, AO</p>
-        </div>
-      </header>
-
       {/* ── Main Content ── */}
       <main className="flex-1 px-4 py-6 space-y-6 pb-24">
+        <div className="flex flex-col mb-2">
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Bom dia, Motorista</p>
+          <p className="text-slate-900 dark:text-white text-lg font-bold">Luanda, AO</p>
+        </div>
 
         {/* ── Card 1: Veículo Call To Action ── */}
         {!isLoading && !hasVehicle && (

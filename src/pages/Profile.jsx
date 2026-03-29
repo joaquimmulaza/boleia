@@ -108,14 +108,8 @@ const Profile = () => {
 
   return (
     <div className="font-['Plus_Jakarta_Sans',_sans-serif] bg-background-light dark:bg-slate-900 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col antialiased pb-24 relative">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-primary/10 px-4 py-3">
-        <div className="flex items-center justify-center max-w-md mx-auto relative">
-          <h1 className="text-lg font-bold tracking-tight">Meu Perfil</h1>
-        </div>
-      </header>
-
       <main className="flex-1 max-w-md mx-auto w-full pt-8 px-5">
+        <h2 className="text-3xl font-bold tracking-tight text-center mb-8">Meu Perfil</h2>
         <form onSubmit={handleSubmit} className="space-y-8 pb-32">
 
           {/* Avatar Section */}

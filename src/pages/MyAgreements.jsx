@@ -152,21 +152,6 @@ const MyAgreements = () => {
 
   return (
     <div className="font-[Plus_Jakarta_Sans,sans-serif] bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col antialiased">
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-30 flex items-center justify-between bg-white/80 dark:bg-background-dark/80 backdrop-blur-md px-4 py-3 border-b border-primary/10">
-        <div className="flex items-center justify-between max-w-md mx-auto w-full">
-          <div className="flex items-center gap-2">
-            <Car size={24} className="text-primary" aria-hidden="true" />
-            <h1 className="text-charcoal dark:text-slate-100 text-lg font-bold tracking-tight">
-              Boleia Certa
-            </h1>
-          </div>
-          <button className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary transition-colors hover:bg-primary/20">
-            <User size={20} />
-          </button>
-        </div>
-      </header>
-
       {/* ── Conteúdo principal ── */}
       <main role="main" className="flex-1 max-w-md mx-auto w-full pb-32">
         {/* Título */}

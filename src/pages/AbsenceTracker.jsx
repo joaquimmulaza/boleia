@@ -41,18 +41,18 @@ const AbsenceTracker = () => {
 
   return (
     <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col font-['Plus_Jakarta_Sans',_sans-serif] antialiased">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md px-4 py-4 flex items-center gap-4">
-        <button 
-          onClick={() => navigate(-1)}
-          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors"
-        >
-          <span className="material-symbols-outlined text-slate-900 dark:text-slate-100">arrow_back</span>
-        </button>
-        <h1 className="text-xl font-bold tracking-tight">Registo de Faltas</h1>
-      </header>
-      
-      <main className="flex-1 px-4 pb-32 max-w-md mx-auto w-full">
+      <main className="flex-1 px-4 pt-4 pb-32 max-w-md mx-auto w-full">
+        {/* Title & Back Button */}
+        <div className="flex items-center gap-3 mb-6">
+          <button 
+            onClick={() => navigate(-1)}
+            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors bg-white shadow-sm border border-slate-200 dark:bg-slate-900 dark:border-slate-800"
+            aria-label="Voltar"
+          >
+            <span className="material-symbols-outlined text-slate-900 dark:text-slate-100">arrow_back</span>
+          </button>
+          <h1 className="text-2xl font-bold tracking-tight">Registo de Faltas</h1>
+        </div>
         {/* Summary Card */}
         <div className="mt-4 p-6 bg-primary/10 dark:bg-primary/20 rounded-xl border border-primary/20">
           <p className="text-primary font-semibold text-sm uppercase tracking-wider">Total a Descontar</p>
