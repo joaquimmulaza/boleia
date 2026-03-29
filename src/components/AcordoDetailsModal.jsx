@@ -129,7 +129,7 @@ const AcordoDetailsModal = ({ isOpen, onClose, acordo, userRole }) => {
               </div>
               
               {/* Vehicle Info */}
-              {veiculo && (
+              {!isMotorista && veiculo && (
                 <div className="col-span-12 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl flex items-center gap-4">
                   <div className="w-14 h-14 bg-white dark:bg-slate-700 rounded-xl flex items-center justify-center shadow-sm shrink-0">
                     <Car size={28} className="text-slate-400 dark:text-slate-300" />
