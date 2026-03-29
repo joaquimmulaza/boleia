@@ -100,9 +100,16 @@ export const getAgreementsForUser = async (userId, userRole) => {
         if (error) throw error;
         acordosData = data || [];
 
+        const { data: vehicleData } = await supabase
+          .from('veiculos')
+          .select('marca_modelo, matricula')
+          .eq('id_motorista', userId)
+          .maybeSingle();
+
         return acordosData.map(acordo => ({
           ...acordo,
-          contraparte: acordo.passenger || { nome_completo: 'Passageiro (Sem nome)', telefone: 'N/A' }
+          contraparte: acordo.passenger || { nome_completo: 'Passageiro (Sem nome)', telefone: 'N/A' },
+          veiculo: vehicleData || null
         }));
       } else {
         return [];
