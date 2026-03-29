@@ -13,9 +13,12 @@ const mockAcordo = {
     marca_modelo: 'Toyota Hilux 2022',
     matricula: 'LD-12-34-AB'
   },
+  estado: 'Pendente',
   routes: {
     origin_name: 'Talatona',
     destination_name: 'Maianga',
+    departure_time: '07:30',
+    return_time: '18:00',
     monthly_price_per_seat: 25000
   }
 };
@@ -47,12 +50,48 @@ describe('AcordoDetailsModal', () => {
 
   it('deve chamar onClose ao clicar no botão fechar ou fora do modal', () => {
     const handleClose = vi.fn();
-    render(<AcordoDetailsModal isOpen={true} acordo={mockAcordo} userRole="Passageiro" onClose={handleClose} />);
+    render(<AcordoDetailsModal isOpen={true} acordo={mockAcordo} userRole="Passageiro" onClose={handleClose} onAccept={vi.fn()} onReject={vi.fn()} />);
     
     // Either a generic button or close icon
     const closeButtons = screen.getAllByRole('button');
     // Click the first one which is usually the X icon
     fireEvent.click(closeButtons[0]);
     expect(handleClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('deve exibir badge de estado e horários corretamente', () => {
+    render(<AcordoDetailsModal isOpen={true} acordo={{...mockAcordo, estado: 'Pendente'}} userRole="Passageiro" onClose={vi.fn()} />);
+    
+    expect(screen.getByText(/Pendente/i)).toBeInTheDocument();
+    expect(screen.getByText(/07:30/i)).toBeInTheDocument();
+    expect(screen.getByText(/18:00/i)).toBeInTheDocument();
+  });
+
+  it('se Motorista e Pendente, deve exibir botões de Aceitar e Recusar', () => {
+    const handleAccept = vi.fn();
+    const handleReject = vi.fn();
+    
+    render(
+      <AcordoDetailsModal 
+        isOpen={true} 
+        acordo={{...mockAcordo, estado: 'Pendente'}} 
+        userRole="Motorista" 
+        onClose={vi.fn()} 
+        onAccept={handleAccept} 
+        onReject={handleReject} 
+      />
+    );
+    
+    const btnAccept = screen.getByText(/Aceitar Pedido/i);
+    const btnReject = screen.getByText(/Recusar Pedido|Recusar/i);
+    
+    expect(btnAccept).toBeInTheDocument();
+    expect(btnReject).toBeInTheDocument();
+    
+    fireEvent.click(btnAccept);
+    expect(handleAccept).toHaveBeenCalledWith('acordo-1');
+    
+    fireEvent.click(btnReject);
+    expect(handleReject).toHaveBeenCalledWith('acordo-1');
   });
 });

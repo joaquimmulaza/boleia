@@ -210,6 +210,8 @@ const MyAgreements = () => {
         onClose={() => setIsDetailsOpen(false)}
         acordo={selectedAcordo}
         userRole={userRole}
+        onAccept={handleAccept}
+        onReject={handleReject}
       />
 
       <ConfirmationModal
