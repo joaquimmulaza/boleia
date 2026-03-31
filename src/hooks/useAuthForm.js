@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { validateTelefone } from '../utils/validation';
+import { validateTelefone, validatePassword } from '../utils/validation';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 
 export const useAuthForm = () => {
@@ -28,13 +28,25 @@ export const useAuthForm = () => {
     setErrors({});
     setIsLoading(true);
 
-    if (!isLogin && !validateTelefone(telefone)) {
-      setErrors((prev) => ({
-        ...prev,
-        telefone: 'Número de telefone inválido. Use o formato: +244 9XXXXXXXX'
-      }));
-      setIsLoading(false);
-      return;
+    if (!isLogin) {
+      let hasError = false;
+      const newErrors = {};
+
+      if (!validateTelefone(telefone)) {
+        newErrors.telefone = 'Número de telefone inválido. Use o formato: +244 9XXXXXXXX';
+        hasError = true;
+      }
+
+      if (!validatePassword(password)) {
+        newErrors.password = 'A palavra-passe deve ter pelo menos 8 caracteres';
+        hasError = true;
+      }
+
+      if (hasError) {
+        setErrors((prev) => ({ ...prev, ...newErrors }));
+        setIsLoading(false);
+        return;
+      }
     }
 
     let error;
