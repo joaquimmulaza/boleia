@@ -8,3 +8,8 @@
 **Vulnerability:** Hardcoding VAPID keys directly in the Edge Function code.
 **Learning:** Hardcoding API keys or secrets in source code is a major security risk as they can be exposed in version control.
 **Prevention:** Always use environment variables (e.g., `Deno.env.get`) configured securely in Supabase Secrets for sensitive keys like VAPID keys.
+
+## 2024-04-01 - Prevent Mailto/Tel Injection
+**Vulnerability:** Constructing `mailto:` or `tel:` URLs with unencoded user input can allow attackers to inject arbitrary email headers or alter query parameters.
+**Learning:** Even though HTML tags are safely escaped by React by default, URL payloads are not automatically sanitized.
+**Prevention:** Use `encodeURIComponent()` to wrap dynamic strings injected into URLs.
