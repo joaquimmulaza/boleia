@@ -106,7 +106,8 @@ const MyAgreements = () => {
   };
 
   const handleReport = (acordo) => {
-    window.location.href = `mailto:joaquimmulazadev@gmail.com?subject=Reportar Problema - Acordo ${acordo.id}`;
+    // SECURITY: Use encodeURIComponent to prevent email header injection
+    window.location.href = `mailto:joaquimmulazadev@gmail.com?subject=${encodeURIComponent(`Reportar Problema - Acordo ${acordo.id}`)}`;
   };
 
   const handleCancel = (acordo) => {
