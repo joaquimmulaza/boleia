@@ -96,7 +96,7 @@ const AcordoDetailsModal = ({ isOpen, onClose, acordo, userRole, onAccept, onRej
               </div>
               {phoneNumber !== 'N/A' && (
                 <a 
-                  href={`tel:${phoneNumber}`} 
+                  href={`tel:${encodeURIComponent(phoneNumber)}`}
                   className="w-12 h-12 flex items-center justify-center bg-primary text-white rounded-full shadow-lg shadow-primary/20 active:scale-90 transition-all hover:bg-primary/90"
                 >
                   <Phone size={20} className="fill-current" />
