@@ -13,3 +13,14 @@ export const validateTelefone = (tel) => {
   const angolaRegex = /^(\+244)?9\d{8}$/;
   return angolaRegex.test(cleanTel);
 };
+
+/**
+ * Valida a senha para o registo (mínimo de 8 caracteres).
+ *
+ * @param {string} password - A senha a validar.
+ * @returns {boolean} - True se a senha for válida, false caso contrário.
+ */
+export const validatePassword = (password) => {
+  if (!password) return false;
+  return password.length >= 8;
+};
