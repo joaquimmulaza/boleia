@@ -106,7 +106,8 @@ const MyAgreements = () => {
   };
 
   const handleReport = (acordo) => {
-    window.location.href = `mailto:joaquimmulazadev@gmail.com?subject=Reportar Problema - Acordo ${acordo.id}`;
+    const subject = encodeURIComponent(`Reportar Problema - Acordo ${acordo.id}`);
+    window.location.href = `mailto:joaquimmulazadev@gmail.com?subject=${subject}`;
   };
 
   const handleCancel = (acordo) => {
