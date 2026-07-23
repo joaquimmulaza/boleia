@@ -5,8 +5,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import PublishRoute from './PublishRoute';
 import { supabase } from '../lib/supabase';
 
-vi.mock('../services/GoogleMapsService', () => ({
-  loadGoogleMapsScript: vi.fn(),
+vi.mock('../services/LocationService', () => ({
   getPlacePredictions: vi.fn().mockResolvedValue([]),
   getPlaceDetails: vi.fn().mockResolvedValue({ lat: -8.839, lng: 13.289 }),
 }));

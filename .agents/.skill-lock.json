@@ -1,0 +1,125 @@
+{
+  "version": 2,
+  "skills": {
+    "best-practices": {
+      "name": "best-practices",
+      "source": "local",
+      "contentHash": "2abba650ba22a819e67f8c2fb09d0f5f33a24d66d945ee2ef824751bc97151ce",
+      "installedAt": "2026-03-29T12:53:56.174Z",
+      "updatedAt": "2026-03-29T12:54:21.776Z",
+      "agents": [
+        "trae"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "docs-writer": {
+      "name": "docs-writer",
+      "source": "local",
+      "contentHash": "c49827c59d2e27d313731dfd36314cfde0e8dbf15be0e8f813d2f8b751546b0c",
+      "installedAt": "2026-03-29T12:53:56.464Z",
+      "updatedAt": "2026-03-29T12:54:21.920Z",
+      "agents": [
+        "trae"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "frontend-design": {
+      "name": "frontend-design",
+      "source": "local",
+      "contentHash": "b20162c8d6bcdd9137c4afceaeb4f9dce2c1ba3ccb57a96a3228b8cb33104ec4",
+      "installedAt": "2026-03-29T12:53:56.810Z",
+      "updatedAt": "2026-03-29T12:54:22.096Z",
+      "agents": [
+        "trae"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "playwright-skill": {
+      "name": "playwright-skill",
+      "source": "local",
+      "contentHash": "9c45020d33af9ac2d44c89721f154c94bd73b9d8590117597b9a26920ff9cecc",
+      "installedAt": "2026-03-29T12:53:57.180Z",
+      "updatedAt": "2026-03-29T12:54:22.273Z",
+      "agents": [
+        "trae"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "react-best-practices": {
+      "name": "react-best-practices",
+      "source": "local",
+      "contentHash": "e96f99e13dc2acc75efc1793aee08fe244802a97a4e190af38bd5a871a5c9636",
+      "installedAt": "2026-03-29T12:53:59.697Z",
+      "updatedAt": "2026-03-29T12:54:24.072Z",
+      "agents": [
+        "trae"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "security-best-practices": {
+      "name": "security-best-practices",
+      "source": "local",
+      "contentHash": "6fec09f7e43bb297ad6097e13469e85aa5b5d671a839b4f7e7871ef8eaa76c4e",
+      "installedAt": "2026-03-29T12:53:59.958Z",
+      "updatedAt": "2026-03-29T12:54:24.360Z",
+      "agents": [
+        "trae"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "subagent-creator": {
+      "name": "subagent-creator",
+      "source": "local",
+      "contentHash": "bef6b5a9f23b3186af259c1041c2561e9af15fa94810009d72d775bb217aa3ca",
+      "installedAt": "2026-03-29T12:54:00.167Z",
+      "updatedAt": "2026-03-29T12:54:24.504Z",
+      "agents": [
+        "trae"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "technical-design-doc-creator": {
+      "name": "technical-design-doc-creator",
+      "source": "local",
+      "contentHash": "d05974df076f695f96b4e4c263ad19f2aaffe8ee6248c1b07a634dd9ed0ea51e",
+      "installedAt": "2026-03-29T12:54:00.276Z",
+      "updatedAt": "2026-03-29T12:54:24.608Z",
+      "agents": [
+        "trae"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "tlc-spec-driven": {
+      "name": "tlc-spec-driven",
+      "source": "local",
+      "contentHash": "79d0e1b750dfc70820ac0152d9ca78927c398f669397e9cdb8bb812ceca2fbc6",
+      "installedAt": "2026-03-29T12:54:00.770Z",
+      "updatedAt": "2026-03-29T12:54:25.087Z",
+      "agents": [
+        "trae"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "web-design-guidelines": {
+      "name": "web-design-guidelines",
+      "source": "local",
+      "contentHash": "213a23fff251b12ddfec648bda148bf10704ef6617e162eb9329cc83963dd138",
+      "installedAt": "2026-03-29T12:54:01.020Z",
+      "updatedAt": "2026-03-29T12:54:25.236Z",
+      "agents": [
+        "trae"
+      ],
+      "method": "copy",
+      "global": false
+    }
+  }
+}

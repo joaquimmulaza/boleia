@@ -38,7 +38,7 @@ Lê este documento antes de iniciares qualquer nova funcionalidade. Se eu te ped
 
 ## 6. Débito Técnico / Próximos Passos
 * A tabela `routes` é agora a única fonte de verdade para os trajetos dos motoristas. A antiga tabela `rotas_diarias` foi descontinuada e removida.
-* O sistema de Geocoding já foi implementado com sucesso. As coordenadas de latitude e longitude (`origin_lat`, `origin_lng`, `destination_lat`, `destination_lng`) são geradas via Google Maps API no momento da publicação do trajeto e salvas na tabela `routes`.
+* **Geocoding migrado para OpenStreetMap (Photon API):** O serviço `LocationService.js` substituiu `GoogleMapsService.js`. As coordenadas (`origin_lat`, `origin_lng`, `destination_lat`, `destination_lng`) são geradas via Photon API (sem API key, 100% gratuita) e salvas na tabela `routes`. A chave `VITE_GOOGLE_MAPS_API_KEY` foi removida do projeto.
 * Testar fluxo de sessão em produção após deploy no Vercel.
 
 ## 7. Acordos (Agreements)
@@ -75,12 +75,12 @@ Fluxo de Trabalho Obrigatório: A interface é primeiro desenhada no Stitch, e s
 **REGRA ABSOLUTA:** Esta secção do documento (`CONTEXT.md` e `AGENTS.md`) tem de ser **obrigatoriamente atualizada** sempre que uma nova funcionalidade for implementada, refatorada ou corrigida. O objetivo central é garantir que qualquer Agente de IA que leia este ficheiro saiba com exatidão o ponto de situação do projeto, evitando redundâncias, reinvenção da roda ou duplicação de lógicas já existentes (DRY - Don't Repeat Yourself). Antes de iniciar qualquer tarefa, o agente deve assumir este relatório como a única fonte de verdade arquitetónica.
 
 🏛️ Relatório de Estado da Arquitetura: Boleia Certa
-**Última Atualização:** 29 de Março de 2026
-**Fase Atual:** MVP Funcional, Infraestrutura Assíncrona e UX Escalável.
+**Última Atualização:** 23 de Julho de 2026
+**Fase Atual:** MVP Funcional, Geocoding OSM Migrado, Infraestrutura Assíncrona e UX Escalável.
 
 **O que já está implementado e validado:**
 1. **Infraestrutura e Backend (Supabase):**
-   * **Base de Dados & Rotas:** A tabela `routes` é a única fonte de verdade preenchida via Geocoding (Google Maps API) no momento da publicação.
+   * **Base de Dados & Rotas:** A tabela `routes` é a única fonte de verdade. As coordenadas (`origin_lat/lng`, `destination_lat/lng`) são geradas via **Photon API (OpenStreetMap / Komoot)** no momento da publicação — sem custos de API.
    * **Acordos (Agreements):** Têm estados (`pendente`, `ativo`, `cancelado`), sistema de *soft delete* (`is_hidden_by_user`) e estão protegidos por um Índice Único Parcial para evitar pedidos duplicados ao mesmo tempo.
    * **Notificações Push (Edge Functions):** Função `send-push` a usar a biblioteca `web-push` configurada com variáveis de ambiente seguras (VAPID Keys) e um endereço *mailto* de administrador.
 2. **Frontend e Interface (React / Vite):**
@@ -93,3 +93,10 @@ Fluxo de Trabalho Obrigatório: A interface é primeiro desenhada no Stitch, e s
    * **useAuth() (AuthContext):** fonte única de verdade para sessão global, elimina *race conditions*, expõe `{ session, user, loading, tipoPerfil }`. Utilização de `useAuthForm`, `useAutocomplete` (Geocoding), `useNotifications`, `usePushNotifications` e `ThemeContext`.
 4. **Correções de UI & Tratamento de Estados (Trabalho Recente):**
    * Correção no `PassengerDashboard` para garantir que o estado do acordo ('pendente' ou 'ativo') é avaliado corretamente (case-insensitive com o banco) e que antigas solicitações 'canceladas' não sobrescrevam um estado 'pendente'/'ativo' na interface. Isso previne que o utilizador consiga contornar a constraint de unicidade no frontend.
+5. **Migração de Geocoding para OpenStreetMap (23 Jul 2026):**
+   * `GoogleMapsService.js` e `GoogleMapsService.test.js` eliminados do projeto.
+   * Novo `LocationService.js` (`getPlacePredictions`, `getPlaceDetails`) usa **Photon API** (`photon.komoot.io`) filtrado para Angola (`countrycode=ao`). Zero chaves de API.
+   * `useAutocomplete.js` refatorado: removida dependência de `loadGoogleMapsScript` e `AutocompleteSessionToken`.
+   * `AutocompleteDropdown.jsx` atualizado: rodapé exibe "Powered by OpenStreetMap" (req. GEO-03).
+   * `VITE_GOOGLE_MAPS_API_KEY` removida de `.env.local` e README.
+   * 163 testes passam a verde. Suite completa validada.

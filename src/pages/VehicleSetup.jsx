@@ -12,6 +12,7 @@ const VehicleSetup = () => {
 
   const navigate = useNavigate();
 
+  // Carrega dados existentes para pré-preencher o formulário
   useEffect(() => {
     const carregarDados = async () => {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -38,13 +39,21 @@ const VehicleSetup = () => {
     setFeedbackVeiculo({ type: '', message: '' });
     setIsLoadingVeiculo(true);
 
-    const { error } = await supabase.from('veiculos').insert([
-      {
-        marca_modelo: marcaModelo,
-        matricula,
-        lugares_disponiveis: parseInt(lugaresDisponiveis, 10),
-      },
-    ]);
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const payload = {
+      id_motorista: user.id,
+      marca_modelo: marcaModelo,
+      matricula,
+      lugares_disponiveis: parseInt(lugaresDisponiveis, 10),
+    };
+
+    // A BD possui UNIQUE constraint em id_motorista (veiculos_id_motorista_key).
+    // O upsert é idempotente: insere na 1ª vez, atualiza nas seguintes.
+    // A integridade de dados é garantida pela BD, não pelo frontend.
+    const { error } = await supabase
+      .from('veiculos')
+      .upsert(payload, { onConflict: 'id_motorista' });
 
     setIsLoadingVeiculo(false);
 
@@ -59,7 +68,6 @@ const VehicleSetup = () => {
     <div className="bg-background-light dark:bg-background-dark font-display text-dark-charcoal min-h-screen antialiased">
       <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">
 
-
         <main className="flex-1 px-4 py-8 max-w-md mx-auto w-full">
           <section className="space-y-6">
             <div className="text-center space-y-2 mb-2">
@@ -68,10 +76,10 @@ const VehicleSetup = () => {
             </div>
 
             <form onSubmit={handleGuardarVeiculo} className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-1px_rgba(0,0,0,0.03)] space-y-5 border border-primary/5">
-              
+
               <div className="space-y-1.5">
                 <label htmlFor="marcaModelo" className="text-dark-charcoal dark:text-slate-300 text-sm font-semibold px-1">Marca/Modelo</label>
-                <input 
+                <input
                   id="marcaModelo"
                   type="text"
                   value={marcaModelo}
@@ -84,7 +92,7 @@ const VehicleSetup = () => {
 
               <div className="space-y-1.5">
                 <label htmlFor="matricula" className="text-dark-charcoal dark:text-slate-300 text-sm font-semibold px-1">Matrícula</label>
-                <input 
+                <input
                   id="matricula"
                   type="text"
                   value={matricula}
@@ -98,7 +106,7 @@ const VehicleSetup = () => {
               <div className="space-y-1.5">
                 <label htmlFor="lugaresDisponiveis" className="text-dark-charcoal dark:text-slate-300 text-sm font-semibold px-1">Lugares Disponíveis</label>
                 <div className="relative">
-                  <input 
+                  <input
                     id="lugaresDisponiveis"
                     type="number"
                     min="1"
@@ -125,7 +133,7 @@ const VehicleSetup = () => {
                 </div>
               )}
 
-              <button 
+              <button
                 type="submit"
                 disabled={isLoadingVeiculo}
                 className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-lg transition-all active:scale-[0.98] mt-4 shadow-lg shadow-primary/20 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
@@ -140,8 +148,7 @@ const VehicleSetup = () => {
             </div>
           </section>
         </main>
-        
-        {/* Safe Area bottom space for navigation (nav is normally in Layout, keeping space here) */}
+
         <div className="h-24"></div>
       </div>
     </div>

@@ -38,7 +38,7 @@ const AutocompleteDropdown = ({ suggestions, loading, error, onSelect }) => {
         ))}
       </ul>
       <div className="bg-slate-50 dark:bg-slate-800/80 p-2 text-center border-t border-slate-100 dark:border-slate-700">
-        <span className="text-[10px] text-slate-400 font-medium">Powered by Google</span>
+        <span className="text-[10px] text-slate-400 font-medium">Powered by OpenStreetMap</span>
       </div>
     </div>
   );

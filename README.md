@@ -72,8 +72,7 @@ Preenche o ficheiro `.env.local` com as tuas credenciais:
 VITE_SUPABASE_URL=https://your-project-id.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key-here
 
-# Google Maps — APIs & Services > Credentials
-VITE_GOOGLE_MAPS_API_KEY=your-google-maps-api-key-here
+
 
 # Sentry — Settings > Projects > Client Keys (DSN)
 VITE_SENTRY_DSN=your-sentry-dsn-here
@@ -212,7 +211,6 @@ boleia-certa/
 |---|---|---|
 | `VITE_SUPABASE_URL` | ✅ | URL do projeto Supabase |
 | `VITE_SUPABASE_ANON_KEY` | ✅ | Chave pública anónima do Supabase |
-| `VITE_GOOGLE_MAPS_API_KEY` | ✅ | Chave da Google Maps API (Geocoding) |
 | `VITE_VAPID_PUBLIC_KEY` | ✅ | Chave pública VAPID para Web Push |
 | `VITE_SENTRY_DSN` | ⚠️ Opcional | DSN do Sentry para monitorização de erros |
 

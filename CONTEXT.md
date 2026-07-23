@@ -41,6 +41,15 @@ Lê este documento antes de iniciares qualquer nova funcionalidade. Se eu te ped
 * O sistema de Geocoding já foi implementado com sucesso. As coordenadas de latitude e longitude (`origin_lat`, `origin_lng`, `destination_lat`, `destination_lng`) são geradas via Google Maps API no momento da publicação do trajeto e salvas na tabela `routes`.
 * Testar fluxo de sessão em produção após deploy no Vercel.
 
+## 6.1. Regras de Ouro da Tabela `veiculos` (IMUTÁVEL)
+> **REGRA ABSOLUTA:** A tabela `veiculos` possui uma `UNIQUE constraint` na coluna `id_motorista` (`veiculos_id_motorista_key`). Esta constraint é a Fonte da Verdade para garantir que cada motorista tem apenas um veículo registado.
+> **É ESTRITAMENTE PROIBIDO** validar duplicações ou decidir entre INSERT/UPDATE através de lógica `if/else` no frontend.
+> **TODAS as gravações** na tabela `veiculos` DEVEM usar exclusivamente:
+> ```js
+> supabase.from('veiculos').upsert(payload, { onConflict: 'id_motorista' })
+> ```
+> O payload DEVE incluir sempre `id_motorista: user.id`.
+
 ## 7. Acordos (Agreements)
 Um Acordo na tabela `acordos` tem os seguintes estados (`estado`): 'pendente', 'ativo', e 'cancelado'.
 A página de gestão de acordos é **exclusivamente** `MyAgreements.jsx` (rota `/acordos`). A antiga `AgreementsPage` foi descontinuada e removida.
@@ -75,7 +84,7 @@ Fluxo de Trabalho Obrigatório: A interface é primeiro desenhada no Stitch, e s
 **REGRA ABSOLUTA:** Esta secção do documento (`CONTEXT.md` e `AGENTS.md`) tem de ser **obrigatoriamente atualizada** sempre que uma nova funcionalidade for implementada, refatorada ou corrigida. O objetivo central é garantir que qualquer Agente de IA que leia este ficheiro saiba com exatidão o ponto de situação do projeto, evitando redundâncias, reinvenção da roda ou duplicação de lógicas já existentes (DRY - Don't Repeat Yourself). Antes de iniciar qualquer tarefa, o agente deve assumir este relatório como a única fonte de verdade arquitetónica.
 
 🏛️ Relatório de Estado da Arquitetura: Boleia Certa
-**Última Atualização:** 29 de Março de 2026
+**Última Atualização:** 29 de Março de 2026 (refactorização VehicleSetup — Opção B)
 **Fase Atual:** MVP Funcional, Infraestrutura Assíncrona e UX Escalável.
 
 **O que já está implementado e validado:**
@@ -93,3 +102,4 @@ Fluxo de Trabalho Obrigatório: A interface é primeiro desenhada no Stitch, e s
    * **useAuth() (AuthContext):** fonte única de verdade para sessão global, elimina *race conditions*, expõe `{ session, user, loading, tipoPerfil }`. Utilização de `useAuthForm`, `useAutocomplete` (Geocoding), `useNotifications`, `usePushNotifications` e `ThemeContext`.
 4. **Correções de UI & Tratamento de Estados (Trabalho Recente):**
    * Correção no `PassengerDashboard` para garantir que o estado do acordo ('pendente' ou 'ativo') é avaliado corretamente (case-insensitive com o banco) e que antigas solicitações 'canceladas' não sobrescrevam um estado 'pendente'/'ativo' na interface. Isso previne que o utilizador consiga contornar a constraint de unicidade no frontend.
+   * **`VehicleSetup.jsx` refatorado (Opção B):** Eliminada a lógica `if/else` (insert vs update) do frontend. Gravação agora usa `.upsert({ onConflict: 'id_motorista' })`, delegando a integridade de duplicados à `UNIQUE constraint` da BD (`veiculos_id_motorista_key`). Testes atualizados para validar o fluxo de upsert.

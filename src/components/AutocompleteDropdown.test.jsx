@@ -30,7 +30,7 @@ describe('AutocompleteDropdown', () => {
     mockSuggestions.forEach((suggestion) => {
       expect(screen.getByText(suggestion.description)).toBeInTheDocument();
     });
-    expect(screen.getByText('Powered by Google')).toBeInTheDocument();
+    expect(screen.getByText('Powered by OpenStreetMap')).toBeInTheDocument();
   });
 
   it('calls onSelect when a suggestion is clicked', () => {
