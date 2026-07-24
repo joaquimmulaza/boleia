@@ -132,7 +132,7 @@ const DriverDashboard = () => {
             ) : (
               <div className="bg-white dark:bg-slate-900 rounded-xl p-5 text-center py-6 flex flex-col items-center gap-3 border border-primary/5 dark:border-slate-800" style={{ boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
                 <p className="text-gray-500 dark:text-slate-400 text-sm">
-                  Aindaa não publicaste nenhuma rota diária.
+                  Aindaa nnão publicaste nenhuma rota diária.
                 </p>
                 <button
                   onClick={() => navigate('/publicar-trajeto')}

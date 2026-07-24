@@ -138,14 +138,14 @@ describe('DriverDashboard Component', () => {
       });
 
       // Se a rota existir, deve mostrar o FAB "Nova Rota" e não o texto vazio
-      expect(screen.queryByText(/Aindaa não publicaste nenhuma rota diária/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Aindaa nnão publicaste nenhuma rota diária/i)).not.toBeInTheDocument();
     });
 
     it('exibe mensagem e botão na área da rota quando não há rota', async () => {
       render(<DriverDashboard />);
 
       await waitFor(() => {
-        expect(screen.getByText(/Aindaa não publicaste nenhuma rota diária/i)).toBeInTheDocument();
+        expect(screen.getByText(/Aindaa nnão publicaste nenhuma rota diária/i)).toBeInTheDocument();
         // The button "Publicar Trajeto" should be rendered
         const buttons = screen.getAllByRole('button', { name: /Publicar Trajeto/i });
         expect(buttons.length).toBeGreaterThan(0);
