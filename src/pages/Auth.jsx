@@ -1,5 +1,5 @@
 import React from 'react';
-import { Car, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useAuthForm } from '../hooks/useAuthForm';
 
 /**
@@ -36,9 +36,7 @@ const Auth = () => {
         
         {/* Header Section */}
         <div className="flex flex-col items-center pt-16 pb-8 px-8 text-center">
-          <div className="text-emerald-500 mb-6 bg-emerald-50 p-4 rounded-full">
-            <Car size={40} className="text-emerald-500" />
-          </div>
+          <img src="/boleia-logo.png" alt="Boleia Certa" className="h-16 w-auto mb-4 object-contain" />
           <h1 className="text-gray-800 text-3xl font-bold tracking-tight mb-2">Boleia Certa</h1>
           <p className="text-gray-500 text-[15px] leading-relaxed max-w-[260px]">
             Mobilidade urbana limpa e partilhada.

@@ -109,4 +109,16 @@ describe('Layout Component', () => {
     expect(screen.queryByText('Veículo')).not.toBeInTheDocument();
     expect(screen.getByText('Início')).toBeInTheDocument();
   });
+
+  it('renderiza o logótipo oficial boleia-logo.png', async () => {
+    useAuth.mockReturnValue({ tipoPerfil: null });
+
+    await act(async () => {
+      renderWithRouterAndTheme(<Layout />);
+    });
+
+    const logo = screen.getByAltText(/Boleia Certa/i);
+    expect(logo).toBeInTheDocument();
+    expect(logo).toHaveAttribute('src', '/boleia-logo.png');
+  });
 });

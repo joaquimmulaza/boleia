@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Car, Menu, Search, Handshake, PiggyBank, Bus, Clock } from 'lucide-react';
+import { Menu, Search, Handshake, PiggyBank, Bus, Clock } from 'lucide-react';
 import ThemeToggle from '../components/ThemeToggle';
 
 export default function LandingPage() {
@@ -9,9 +9,7 @@ export default function LandingPage() {
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
       <header className="flex items-center bg-background-light dark:bg-background-dark p-4 md:px-8 justify-between border-b border-primary/10">
         <div className="flex items-center gap-2">
-          <div className="text-primary flex size-10 items-center justify-center bg-primary/10 rounded-lg">
-            <Car size={24} />
-          </div>
+          <img src="/boleia-logo.png" alt="Boleia Certa" className="h-10 w-auto object-contain" />
           <h2 className="text-slate-900 dark:text-slate-100 text-xl font-bold leading-tight tracking-tight">
             Boleia Certa
           </h2>
@@ -169,9 +167,7 @@ export default function LandingPage() {
       <footer className="bg-background-light dark:bg-background-dark border-t border-primary/10 py-12 px-4">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-2">
-            <div className="text-primary flex size-8 items-center justify-center bg-primary/10 rounded-lg">
-              <Car size={18} />
-            </div>
+            <img src="/boleia-logo.png" alt="Boleia Certa" className="h-8 w-auto object-contain" />
             <span className="text-slate-900 dark:text-slate-100 font-bold">Boleia Certa</span>
           </div>
           <div className="flex gap-8 text-slate-500 text-sm">

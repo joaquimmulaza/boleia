@@ -13,7 +13,7 @@ self.addEventListener('push', function (event) {
       const options = {
         body: data.body || 'Nova notificação recebida.',
         icon: data.icon || '/pwa-192x192.png',
-        badge: data.badge || '/favicon.svg',
+        badge: data.badge || '/pwa-512x512.png',
         data: data.data || { url: '/' },
         vibrate: [100, 50, 100],
       };

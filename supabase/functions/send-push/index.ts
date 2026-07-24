@@ -84,7 +84,7 @@ serve(async (req) => {
       title: "Nova Notificação",
       body: mensagem,
       icon: "/pwa-192x192.png", // Ícone PWA
-      badge: "/favicon.svg",
+      badge: "/pwa-512x512.png",
       data: {
         url: "/", // Fallback URL
         notificationId: record.id,

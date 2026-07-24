@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => {
         injectManifest: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg}']
         },
-        includeAssets: ['favicon.svg'],
+        includeAssets: ['pwa-512x512.png'],
         manifest: {
           name: 'Boleia Certa',
           short_name: 'Boleia',

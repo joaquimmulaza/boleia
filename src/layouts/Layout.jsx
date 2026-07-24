@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { Home, Search, CarFront, Car, User, HandshakeIcon, CalendarX2, LogOut } from 'lucide-react';
+import { Home, Search, CarFront, User, HandshakeIcon, CalendarX2, LogOut } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import ThemeToggle from '../components/ThemeToggle';
 import NotificationBell from '../components/NotificationBell';
@@ -33,9 +33,7 @@ const Layout = () => {
       {/* Barra de topo Global com Z-Index elevado (z-[100]) */}
       <header className="sticky top-0 z-[100] flex items-center justify-between px-4 py-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 max-w-md mx-auto w-full transition-colors shadow-sm">
         <div className="flex items-center gap-2">
-          <div className="bg-emerald-500/10 dark:bg-emerald-500/20 p-1.5 rounded-lg flex items-center justify-center">
-            <Car size={18} className="text-emerald-600 dark:text-emerald-400" />
-          </div>
+          <img src="/boleia-logo.png" alt="Boleia Certa" className="h-8 w-auto object-contain" />
           <h1 className="text-slate-900 dark:text-white text-lg font-bold tracking-tight">Boleia Certa</h1>
         </div>
         <div className="flex items-center gap-1 sm:gap-2">

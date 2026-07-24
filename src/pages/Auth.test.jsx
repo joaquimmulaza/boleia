@@ -37,6 +37,7 @@ describe('Auth Component', () => {
 
     // Check main elements
     expect(screen.getByRole('heading', { name: /Boleia Certa/i })).toBeInTheDocument();
+    expect(screen.getByAltText(/Boleia Certa/i)).toHaveAttribute('src', '/boleia-logo.png');
     expect(screen.getByLabelText(/Email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Password/i)).toBeInTheDocument();
 

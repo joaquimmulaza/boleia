@@ -14,7 +14,6 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation(query => ({
@@ -76,5 +75,21 @@ describe('LandingPage Component', () => {
     fireEvent.click(driverButton);
 
     expect(mockNavigate).toHaveBeenCalledWith('/auth?mode=register&role=driver');
+  });
+
+  it('renders official boleia-logo.png images in header and footer', () => {
+    render(
+      <ThemeProvider>
+        <BrowserRouter>
+          <LandingPage />
+        </BrowserRouter>
+      </ThemeProvider>
+    );
+
+    const logos = screen.getAllByAltText(/Boleia Certa/i);
+    expect(logos.length).toBeGreaterThanOrEqual(1);
+    logos.forEach(logo => {
+      expect(logo).toHaveAttribute('src', '/boleia-logo.png');
+    });
   });
 });
