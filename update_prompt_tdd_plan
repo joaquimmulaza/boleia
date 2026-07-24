@@ -1,0 +1,48 @@
+# Implementação do UpdatePrompt (Fase Verde - TDD)
+
+## Contexto
+A fase "Red" do TDD foi concluída com sucesso para o componente `UpdatePrompt` (PWA).
+O nosso objetivo é implementar um prompt de atualização controlada, em que o componente reage ao estado do hook `useRegisterSW` proveniente de `virtual:pwa-register/react`.
+
+### Estado Atual:
+- **Testes Unitários:** Foram criados e encontram-se em `src/components/UpdatePrompt.test.jsx`.
+- **Componente Dummy:** Foi criado um componente vazio (shell) em `src/components/UpdatePrompt.jsx`.
+- **Resultado dos Testes:** 3 de 4 testes estão a falhar (Vermelho), conforme esperado.
+
+## Log da Execução dos Testes (Fase Red)
+```text
+ RUN  v4.1.1 C:/boleia-certa
+
+ ❯ src/components/UpdatePrompt.test.jsx (4 tests | 3 failed) 112ms
+     ✓ Estado 1: não deve renderizar o prompt se needRefresh for false 42ms
+     × Estado 2: deve renderizar o prompt com as mensagens e botões se needRefresh for true 40ms
+     × Interação: deve chamar updateServiceWorker(true) ao clicar em "Atualizar agora" 11ms
+     × Interação: deve fechar localmente sem disparar a atualização ao clicar em "Mais tarde" 12ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/UpdatePrompt.test.jsx > UpdatePrompt Component (PWA) > Estado 2: deve renderizar o prompt com as mensagens e botões se needRefresh for true
+TestingLibraryElementError: Unable to find an element with the text: /Atualização disponível/i.
+
+ FAIL  src/components/UpdatePrompt.test.jsx > UpdatePrompt Component (PWA) > Interação: deve chamar updateServiceWorker(true) ao clicar em "Atualizar agora"
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name `/Atualizar agora/i`
+
+ FAIL  src/components/UpdatePrompt.test.jsx > UpdatePrompt Component (PWA) > Interação: deve fechar localmente sem disparar a atualização ao clicar em "Mais tarde"
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name `/Mais tarde/i`
+```
+
+## Tarefa para o Próximo Agente (Fase Green e Refactor)
+O teu objetivo é passar os testes acima para verde (Green). Para isso:
+
+1. **Implementar o Componente `UpdatePrompt.jsx`**:
+   - Utiliza as diretrizes de UI (Material Design 3/Google Stitch) e o Tailwind CSS.
+   - Lê os estados `needRefresh` a partir do `useRegisterSW()`.
+   - Se `needRefresh` for true, apresenta as mensagens "Atualização disponível" e dois botões:
+     - **"Atualizar agora"**: Chama `updateServiceWorker(true)`.
+     - **"Mais tarde"**: Chama `setNeedRefresh(false)` para fechar o modal.
+
+2. **Garantir a Passagem dos Testes**:
+   - Corre `npx vitest run src/components/UpdatePrompt.test.jsx` para confirmar que todos os 4 testes passam a verde.
+
+3. **Submeter (Commit)**:
+   - Uma vez que os testes passem, aplica a regra de commit (Master Version Control) registada no `CONTEXT.md`.

@@ -111,4 +111,8 @@ Fluxo de Trabalho Obrigatório: A interface é primeiro desenhada no Stitch, e s
    * "Agora Não" → fecha imediatamente (otimista) + persiste `onboarding_completed: true` em `perfis`.
    * Resiliência Luanda-proof: erro de BD é capturado silenciosamente; o componente já fechou localmente.
    * Integrado no `Layout.jsx` global (monta em todas as rotas autenticadas).
-   * 5 testes de integração passam a verde (Cenários A, A-parte2, B, C, D).
+   * 5 testes de integração passam a verde (Cenários A, A-parte2, B, C, D).
+6. **Atualização PWA (UpdatePrompt) (24 Jul 2026):**
+   * Implementado componente de prompt manual (`UpdatePrompt.jsx`) para gerir o Service Worker via `virtual:pwa-register/react`.
+   * Estratégia "manual prompt" adotada para evitar quebras abruptas na sessão ativa do utilizador em Luanda, permitindo a ele decidir se atualiza "Agora" ou "Mais tarde".
+   * Testes na suite de integração (`UpdatePrompt.test.jsx`) passando 100% verde (Fase Green do TDD).
