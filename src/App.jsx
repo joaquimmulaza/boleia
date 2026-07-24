@@ -13,6 +13,7 @@ import VehicleSetup from './pages/VehicleSetup';
 import Profile from './pages/Profile';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import UpdatePrompt from './components/UpdatePrompt';
 
 const RootRoute = () => {
   const { session, loading, tipoPerfil } = useAuth();
@@ -62,6 +63,7 @@ function App() {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          <UpdatePrompt />
         </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>
