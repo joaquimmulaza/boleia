@@ -8,12 +8,9 @@ export default function LandingPage() {
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
       <header className="flex items-center bg-background-light dark:bg-background-dark p-4 md:px-8 justify-between border-b border-primary/10">
-        <div className="flex items-center gap-2">
+        <h2 className="flex items-center">
           <img src="/boleia-logo.png" alt="Boleia Certa" className="h-10 w-auto object-contain" />
-          <h2 className="text-slate-900 dark:text-slate-100 text-xl font-bold leading-tight tracking-tight">
-            Boleia Certa
-          </h2>
-        </div>
+        </h2>
         <nav className="hidden md:flex gap-6 items-center">
           <a className="text-sm font-medium hover:text-primary transition-colors" href="#">Como funciona</a>
           <a className="text-sm font-medium hover:text-primary transition-colors" href="#">Vantagens</a>
@@ -166,9 +163,8 @@ export default function LandingPage() {
 
       <footer className="bg-background-light dark:bg-background-dark border-t border-primary/10 py-12 px-4">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             <img src="/boleia-logo.png" alt="Boleia Certa" className="h-8 w-auto object-contain" />
-            <span className="text-slate-900 dark:text-slate-100 font-bold">Boleia Certa</span>
           </div>
           <div className="flex gap-8 text-slate-500 text-sm">
             <a className="hover:text-primary" href="#">Termos</a>

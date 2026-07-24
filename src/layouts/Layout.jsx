@@ -32,10 +32,9 @@ const Layout = () => {
     <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900 transition-colors">
       {/* Barra de topo Global com Z-Index elevado (z-[100]) */}
       <header className="sticky top-0 z-[100] flex items-center justify-between px-4 py-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 max-w-md mx-auto w-full transition-colors shadow-sm">
-        <div className="flex items-center gap-2">
-          <img src="/boleia-logo.png" alt="Boleia Certa" className="h-8 w-auto object-contain" />
-          <h1 className="text-slate-900 dark:text-white text-lg font-bold tracking-tight">Boleia Certa</h1>
-        </div>
+        <h1 className="flex items-center">
+          <img src="/boleia-logo.png" alt="Boleia Certa" className="h-9 w-auto object-contain" />
+        </h1>
         <div className="flex items-center gap-1 sm:gap-2">
           <NotificationBell />
           <ThemeToggle />

@@ -36,8 +36,9 @@ const Auth = () => {
         
         {/* Header Section */}
         <div className="flex flex-col items-center pt-16 pb-8 px-8 text-center">
-          <img src="/boleia-logo.png" alt="Boleia Certa" className="h-16 w-auto mb-4 object-contain" />
-          <h1 className="text-gray-800 text-3xl font-bold tracking-tight mb-2">Boleia Certa</h1>
+          <h1 className="flex items-center justify-center mb-4">
+            <img src="/boleia-logo.png" alt="Boleia Certa" className="h-20 w-auto object-contain" />
+          </h1>
           <p className="text-gray-500 text-[15px] leading-relaxed max-w-[260px]">
             Mobilidade urbana limpa e partilhada.
           </p>
