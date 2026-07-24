@@ -5,7 +5,16 @@ const UpdatePrompt = () => {
   const {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
-  } = useRegisterSW();
+  } = useRegisterSW({
+    onRegisteredSW(swUrl, r) {
+      if (r) {
+        // Verificar periodicamente a cada 1 hora se há nova versão no Vercel
+        setInterval(() => {
+          r.update();
+        }, 60 * 60 * 1000);
+      }
+    },
+  });
 
   if (!needRefresh) {
     return null;
