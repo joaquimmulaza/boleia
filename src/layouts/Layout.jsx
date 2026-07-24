@@ -4,6 +4,7 @@ import { Home, Search, CarFront, User, HandshakeIcon, CalendarX2, LogOut } from 
 import { supabase } from '../lib/supabase';
 import ThemeToggle from '../components/ThemeToggle';
 import NotificationBell from '../components/NotificationBell';
+import OnboardingPermissions from '../components/OnboardingPermissions';
 import { useAuth } from '../contexts/AuthContext';
 
 /**
@@ -55,6 +56,9 @@ const Layout = () => {
           <Outlet />
         </div>
       </main>
+
+      {/* Soft Permission Prompt — monta apenas se as permissões ainda não foram configuradas */}
+      <OnboardingPermissions />
 
       {/* ── Bottom Navigation ─────────────────────────────────────────── */}
       <nav

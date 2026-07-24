@@ -103,3 +103,12 @@ Fluxo de Trabalho Obrigatório: A interface é primeiro desenhada no Stitch, e s
 4. **Correções de UI & Tratamento de Estados (Trabalho Recente):**
    * Correção no `PassengerDashboard` para garantir que o estado do acordo ('pendente' ou 'ativo') é avaliado corretamente (case-insensitive com o banco) e que antigas solicitações 'canceladas' não sobrescrevam um estado 'pendente'/'ativo' na interface. Isso previne que o utilizador consiga contornar a constraint de unicidade no frontend.
    * **`VehicleSetup.jsx` refatorado (Opção B):** Eliminada a lógica `if/else` (insert vs update) do frontend. Gravação agora usa `.upsert({ onConflict: 'id_motorista' })`, delegando a integridade de duplicados à `UNIQUE constraint` da BD (`veiculos_id_motorista_key`). Testes atualizados para validar o fluxo de upsert.
+5. **Onboarding de Permissões (24 Jul 2026):**
+   * Componente `OnboardingPermissions.jsx` implementado em `src/components/` — M3 Bottom Sheet com backdrop translúcido, FilledButton verde (#16a34a) e TextButton low-emphasis.
+   * Design gerado via Stitch MCP (projeto #16509963580370012988, screen #34536da98a764be0a8909bfac3fcc776, Design System "Boleia Certa").
+   * Lógica de visibilidade: Não renderiza se `Notification.permission === 'granted'` OU `profile.onboarding_completed === true`.
+   * "Ativar Recursos" → dispara `Notification.requestPermission()` + `navigator.geolocation.getCurrentPosition()`.
+   * "Agora Não" → fecha imediatamente (otimista) + persiste `onboarding_completed: true` em `perfis`.
+   * Resiliência Luanda-proof: erro de BD é capturado silenciosamente; o componente já fechou localmente.
+   * Integrado no `Layout.jsx` global (monta em todas as rotas autenticadas).
+   * 5 testes de integração passam a verde (Cenários A, A-parte2, B, C, D).
