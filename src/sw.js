@@ -3,6 +3,13 @@ import { precacheAndRoute } from 'workbox-precaching';
 // Precaching injetado pelo VitePWA
 precacheAndRoute(self.__WB_MANIFEST || []);
 
+// Permite acionar a atualização imediata quando o utilizador clica em "Atualizar agora"
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 // Lidar com notificações push recebidas
 self.addEventListener('push', function (event) {
   if (event.data) {

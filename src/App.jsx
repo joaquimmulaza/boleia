@@ -39,7 +39,7 @@ function App() {
 
             {/* Rotas protegidas envolvidas pelo Layout global (com BottomBar) */}
             <Route element={<Layout />}>
-              {/* Rotas exclusivas do Passageiro */}
+              {/* Rotas exclusivas do Passageiros */}
               <Route element={<ProtectedRoute allowedRole="Passageiro" />}>
                 <Route path="/passageiro" element={<PassengerDashboard />} />
               </Route>
