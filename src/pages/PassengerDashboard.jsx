@@ -1,437 +1,338 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import 'maplibre-gl/dist/maplibre-gl.css';
-import { supabase } from '../lib/supabase';
-import { requestSeat } from '../services/AgreementsService';
-import SearchAddressInput from '../components/SearchAddressInput';
+import React, { useState, useEffect, useCallback } from 'react';
+import { ArrowRight, Clock, Users, MapPin } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import AddressInput from '../components/AddressInput';
+import PageHeader from '../components/PageHeader';
+import PageShell from '../components/PageShell';
+import EmptyState from '../components/EmptyState';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import { createProcura, listProcurasByOwner } from '../services/ProcuraService';
+import { findCompatibleOfertas } from '../services/MatchingService';
+import { createProposta } from '../services/PropostaService';
+import { enqueueWaitlist } from '../services/WaitlistService';
+import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 
-
-const formatKwanza = (value) => {
-  return Number(value).toLocaleString('pt-PT');
-};
-
-const RouteCard = ({ rota, isProcessing, isRequested, estadoAcordo, onSolicitar }) => {
-  const estadoNormalized = estadoAcordo?.toLowerCase();
-  const isDisabled = isProcessing || isRequested || estadoNormalized === 'pendente' || estadoNormalized === 'ativo';
-
-  let buttonText = 'Solicitar Vaga';
-  let buttonClasses = 'text-primary hover:underline';
-
-  if (estadoNormalized === 'ativo') {
-    buttonText = 'Boleia Ativa';
-    buttonClasses = 'text-green-700 bg-green-100 px-2 py-1 rounded';
-  } else if (estadoNormalized === 'pendente' || isRequested) {
-    buttonText = 'Vaga já solicitada';
-    buttonClasses = 'text-yellow-700 bg-yellow-100 px-2 py-1 rounded';
-  } else if (isProcessing) {
-    buttonText = 'A processar...';
-  }
-
-  return (
-    <div data-testid="route-card" className={`bg-white dark:bg-slate-900 rounded-xl ${rota.available_seats > 1 ? 'border-l-4 border-primary' : 'border-l-4 border-primary/40'} shadow-sm overflow-hidden flex flex-col`}>
-      <div className="p-4">
-        <div className="flex justify-between items-start mb-2">
-          <div className="space-y-1">
-            <p className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              {rota.origin_name} <span className="material-symbols-outlined text-xs text-slate-400">trending_flat</span> {rota.destination_name}
-            </p>
-            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-              <span className="material-symbols-outlined text-sm">schedule</span>
-              <span className="text-xs font-medium">{rota.departure_time} - Saída diária</span>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-primary font-bold text-lg leading-tight">{formatKwanza(rota.monthly_price_per_seat)} Kz</p>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">por mês</p>
-          </div>
-        </div>
-        <div className="pt-3 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {rota.available_seats > 1 ? (
-              <div className="flex items-center gap-2">
-                <div className="flex -space-x-2">
-                  <div className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 overflow-hidden flex items-center justify-center">
-                    <span className="material-symbols-outlined text-slate-400 text-sm">person</span>
-                  </div>
-                  <div className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 bg-slate-100 flex items-center justify-center">
-                    <span className="text-[8px] font-bold text-slate-400">+{rota.available_seats - 1}</span>
-                  </div>
-                </div>
-                <span className="text-[10px] font-medium text-slate-500">divisão de custos entre passageiros</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                 <div className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 overflow-hidden flex items-center justify-center">
-                    <span className="material-symbols-outlined text-slate-400 text-sm">directions_car</span>
-                  </div>
-                <span className="text-[10px] font-medium text-slate-500">boleia direta (1 vaga)</span>
-              </div>
-            )}
-          </div>
-
-          <button
-            onClick={() => onSolicitar(rota.id)}
-            disabled={isDisabled}
-            className={`text-xs font-bold flex items-center gap-1 ${buttonClasses}`}
-          >
-            {buttonText} {(!estadoAcordo && !isRequested && !isProcessing) && <span className="material-symbols-outlined text-sm">chevron_right</span>}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
+/**
+ * Hub passageiro — procura, matches e lista de espera.
+ */
 const PassengerDashboard = () => {
-  const [rotas, setRotas] = useState([]);
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [origem, setOrigem] = useState('');
-  const [destino, setDestino] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
+  const [procura, setProcura] = useState(null);
+  const [matches, setMatches] = useState({ direct: [], waitlist: [] });
+  const [view, setView] = useState('hub'); // hub | form | matches
+  const [feedback, setFeedback] = useState({ type: '', text: '' });
+  const [busyId, setBusyId] = useState(null);
+  const [form, setForm] = useState({
+    preferred_time: '07:15',
+    origin_name: '',
+    origin_lat: null,
+    origin_lng: null,
+    destination_name: '',
+    destination_lat: null,
+    destination_lng: null,
+  });
 
-  const [processingRouteId, setProcessingRouteId] = useState(null);
-  const [solicitadas, setSolicitadas] = useState(new Set());
-  const [acordosMap, setAcordosMap] = useState({});
-  const [solicitacaoFeedback, setSolicitacaoFeedback] = useState({ show: false, message: '', type: '' });
-
-  const mapContainer = useRef(null);
-  const [mapInstance, setMapInstance] = useState(null);
-
-  const markersRef = useRef([]);
-
-  const carregarRotas = useCallback(async (filtroOrigem = '', filtroDestino = '') => {
-    setIsSearching(true);
+  const carregar = useCallback(async () => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     try {
-      let query = supabase.from('routes').select('*').gt('available_seats', 0); // changed to routes for test matching
-
-      if (filtroOrigem) {
-        query = query.ilike('origin_name', `%${filtroOrigem}%`);
+      const lista = await listProcurasByOwner(user.id);
+      const activa = lista.find((p) => p.estado === 'activa' || p.estado === 'em_negociacao') || null;
+      setProcura(activa);
+      if (activa) {
+        const result = await findCompatibleOfertas({
+          preferred_time: String(activa.preferred_time).slice(0, 5),
+          origin_lat: Number(activa.origin_lat),
+          origin_lng: Number(activa.origin_lng),
+          destination_lat: Number(activa.destination_lat),
+          destination_lng: Number(activa.destination_lng),
+          n_candidato: activa.n_candidato,
+        });
+        setMatches({ direct: result.direct, waitlist: result.waitlist });
       }
-      if (filtroDestino) {
-        query = query.ilike('destination_name', `%${filtroDestino}%`);
-      }
-
-      const { data, error: err } = await query;
-      if (err) throw err;
-      setRotas(data || []);
-
     } catch (err) {
-      console.error('Erro ao buscar rotas:', err);
-      setError('Não foi possível carregar as rotas. Tente novamente.');
+      console.error(err);
+      setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
     } finally {
       setLoading(false);
-      setIsSearching(false);
     }
-  }, []);
-
-  const carregarAcordos = useCallback(async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('acordos')
-        .select('route_id, estado')
-        .eq('passenger_id', user.id);
-
-      if (error) throw error;
-
-      const map = {};
-      data.forEach(acordo => {
-        const estadoAtual = map[acordo.route_id]?.toLowerCase();
-        const novoEstado = acordo.estado?.toLowerCase();
-        
-        if (estadoAtual === 'ativo' || estadoAtual === 'pendente') {
-            return; // Prioriza manter estados válidos caso existam múltiplos registros (ex: antigos cancelados)
-        }
-        
-        map[acordo.route_id] = acordo.estado;
-      });
-      setAcordosMap(map);
-    } catch (err) {
-      console.error('Erro ao carregar acordos:', err);
-    }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
-    carregarRotas();
-    carregarAcordos();
-  }, [carregarRotas, carregarAcordos]);
+    carregar();
+  }, [carregar]);
 
-  useEffect(() => {
-    if (!mapContainer.current) return;
-    
-    let isMounted = true;
+  const handleChange = (e) => {
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
 
-    import('maplibre-gl').then((maplibregl) => {
-        if(!isMounted) return;
-        
-        const map = new maplibregl.default.Map({
-          container: mapContainer.current,
-          style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
-          center: [13.2343, -8.8368],
-          zoom: 11
-        });
-
-        map.addControl(new maplibregl.default.GeolocateControl({
-            positionOptions: { enableHighAccuracy: true },
-            trackUserLocation: true
-        }));
-
-        setMapInstance(map);
-
-    });
-
-    return () => {
-        isMounted = false;
-        if (mapInstance) {
-            if (mapInstance) { mapInstance.remove(); }
-        }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!mapInstance) return;
-    
-    import('maplibre-gl').then((maplibregl) => {
-      // Cleanup existing markers
-      markersRef.current.forEach(m => m.remove());
-      markersRef.current = [];
-
-      const drawRouteLines = () => {
-        rotas.forEach(rota => {
-          // Render markers
-          if (rota.origin_lat && rota.origin_lng) {
-            const originPopupContent = document.createElement('div');
-            originPopupContent.className = 'text-slate-900 font-bold text-xs';
-            originPopupContent.textContent = `Partida: ${rota.origin_name}`;
-
-            const marker = new maplibregl.default.Marker({ color: '#3b82f6' }) // Blue for origin
-                .setLngLat([rota.origin_lng, rota.origin_lat])
-                .setPopup(new maplibregl.default.Popup({ offset: 25 })
-                    .setDOMContent(originPopupContent))
-                .addTo(mapInstance);
-
-            markersRef.current.push(marker);
-          }
-
-          if (rota.destination_lat && rota.destination_lng) {
-            const destPopupContent = document.createElement('div');
-            const destTitle = document.createElement('div');
-            destTitle.className = 'text-slate-900 font-bold text-xs';
-            destTitle.textContent = `Destino: ${rota.destination_name}`;
-            const destPrice = document.createElement('div');
-            destPrice.className = 'text-primary font-bold text-sm';
-            destPrice.textContent = `${formatKwanza(rota.monthly_price_per_seat)} Kz`;
-            destPopupContent.appendChild(destTitle);
-            destPopupContent.appendChild(destPrice);
-
-            const marker = new maplibregl.default.Marker({ color: '#ef4444' }) // Red for destination
-                .setLngLat([rota.destination_lng, rota.destination_lat])
-                .setPopup(new maplibregl.default.Popup({ offset: 25 })
-                    .setDOMContent(destPopupContent))
-                .addTo(mapInstance);
-
-            markersRef.current.push(marker);
-          }
-
-          // Draw route line
-          if (rota.origin_lat && rota.origin_lng && rota.destination_lat && rota.destination_lng) {
-            const sourceId = `route-source-${rota.id}`;
-            const layerId = `route-layer-${rota.id}`;
-
-            // Cleanup previous source/layer if they exist
-            if (mapInstance.getLayer(layerId)) {
-                mapInstance.removeLayer(layerId);
-            }
-            if (mapInstance.getSource(sourceId)) {
-                mapInstance.removeSource(sourceId);
-            }
-
-            mapInstance.addSource(sourceId, {
-                type: 'geojson',
-                data: {
-                    type: 'Feature',
-                    properties: {},
-                    geometry: {
-                        type: 'LineString',
-                        coordinates: [
-                            [rota.origin_lng, rota.origin_lat],
-                            [rota.destination_lng, rota.destination_lat]
-                        ]
-                    }
-                }
-            });
-
-            mapInstance.addLayer({
-                id: layerId,
-                type: 'line',
-                source: sourceId,
-                layout: {
-                    'line-join': 'round',
-                    'line-cap': 'round'
-                },
-                paint: {
-                    'line-color': '#3b82f6', // primary blue
-                    'line-width': 4,
-                    'line-opacity': 0.6
-                }
-            });
-          }
-        });
-      };
-
-      if (mapInstance.isStyleLoaded()) {
-        drawRouteLines();
-      } else {
-        mapInstance.once('load', drawRouteLines);
-      }
-    });
-  }, [rotas, mapInstance]);
-
-  const handleSearch = (e) => {
+  const handleCriarProcura = async (e) => {
     e.preventDefault();
-    carregarRotas(origem, destino);
-  };
-
-  const handleSolicitar = async (rotaId) => {
-    setProcessingRouteId(rotaId);
-    setSolicitacaoFeedback({ show: false, message: '', type: '' });
-
+    setFeedback({ type: '', text: '' });
+    if (form.origin_lat == null || form.destination_lat == null) {
+      setFeedback({
+        type: 'error',
+        text: 'Seleccione origem e destino na lista de sugestões.',
+      });
+      return;
+    }
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        await requestSeat(rotaId, user?.id || 'passenger-123'); // passed for test matching
-
-        setSolicitadas(prev => new Set(prev).add(rotaId));
-        setAcordosMap(prev => ({ ...prev, [rotaId]: 'pendente' }));
-        setSolicitacaoFeedback({ show: true, message: 'Solicitação enviada com sucesso! Aguarde a aprovação do motorista.', type: 'success' });
-        setTimeout(() => setSolicitacaoFeedback({ show: false, message: '', type: '' }), 5000);
-    } catch (error) {
-       console.error("Erro ao solicitar vaga:", error);
-       const errorMessage = error.message === 'Já solicitou uma vaga para esta rota.'
-          ? error.message
-          : error.message?.includes('violates check constraint') || error.message?.includes('Já solicitou')
-          ? 'Não foi possível enviar a solicitação devido a um erro de validação. Por favor, tente novamente.'
-          : getFriendlyErrorMessage(error);
-       
-       setSolicitacaoFeedback({ 
-          show: true, 
-          message: errorMessage, 
-          type: 'error' 
-       });
-       setTimeout(() => setSolicitacaoFeedback({ show: false, message: '', type: '' }), 6000);
-    } finally {
-        setProcessingRouteId(null);
+      const criada = await createProcura(form);
+      setProcura(criada);
+      setView('matches');
+      await carregar();
+      setFeedback({ type: 'success', text: 'Procura criada.' });
+    } catch (err) {
+      setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
     }
   };
+
+  const handlePropor = async (oferta) => {
+    if (!procura) return;
+    setBusyId(oferta.id);
+    setFeedback({ type: '', text: '' });
+    try {
+      await createProposta({
+        oferta_id: oferta.id,
+        procura_id: procura.id,
+        modo_preco: oferta.modo_preco,
+        valor_mensal_ask_kz: oferta.valor_mensal_ask_kz,
+        n_passageiros_propostos: procura.n_candidato,
+      });
+      setFeedback({ type: 'success', text: 'Proposta enviada ao motorista.' });
+    } catch (err) {
+      setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleWaitlist = async (oferta) => {
+    if (!procura) return;
+    setBusyId(oferta.id);
+    try {
+      await enqueueWaitlist({
+        oferta_id: oferta.id,
+        procura_id: procura.id,
+      });
+      setFeedback({ type: 'success', text: 'Entraste na lista de espera.' });
+    } catch (err) {
+      setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const labelModo = (modo) =>
+    modo === 'TOTAL_ACORDO' ? 'Total do acordo' : 'Por passageiro';
 
   return (
-    <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen font-['Plus_Jakarta_Sans',_sans-serif] antialiased">
-        <div className="relative mx-auto w-full min-h-screen flex flex-col pb-24 pointer-events-none">
+    <PageShell>
+      <PageHeader
+        title={view === 'form' ? 'Nova procura' : 'A minha procura'}
+        subtitle={
+          view === 'form'
+            ? 'Define a tua rota diária casa–trabalho.'
+            : 'Encontra ofertas compatíveis com o teu horário.'
+        }
+        {...(view !== 'hub'
+          ? { onBack: () => setView(procura ? 'matches' : 'hub') }
+          : {})}
+      />
 
-            <section className="relative h-[35vh] w-full flex items-center justify-center overflow-hidden bg-[#e2e8f0] dark:bg-slate-800">
-                <div className="absolute top-4 right-4 z-10 flex items-center gap-1 bg-white/80 dark:bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm pointer-events-auto">
-                    <span className="material-symbols-outlined text-primary text-sm">location_on</span>
-                    <span className="text-primary text-xs font-bold uppercase tracking-wider">Luanda, AO</span>
-                </div>
-                <div data-testid="map-container" ref={mapContainer} className="absolute inset-0 w-full h-full z-0 touch-none pointer-events-auto"></div>
-                <div className="absolute inset-0 bg-gradient-to-t from-background-light dark:from-background-dark via-transparent to-transparent z-0 pointer-events-none"></div>
-            </section>
-
-            <section className="relative px-4 -mt-16 z-20">
-                <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 p-5 space-y-4 pointer-events-auto">
-                    <form onSubmit={handleSearch} className="space-y-4">
-                        <div className="space-y-3">
-                            <div className="relative flex items-center">
-                                <div className="absolute left-3 flex flex-col items-center gap-1">
-                                    <span className="material-symbols-outlined text-primary text-lg">radio_button_checked</span>
-                                    <div className="w-0.5 h-6 bg-slate-200 dark:bg-slate-700"></div>
-                                    <span className="material-symbols-outlined text-slate-400 text-lg">location_on</span>
-                                </div>
-                                <div className="flex-1 space-y-2 ml-10">
-                                    <div className="relative">
-                                        <SearchAddressInput
-                                            id="origem"
-                                            name="origem"
-                                            placeholder="Ponto de Partida"
-                                            value={origem}
-                                            onChange={setOrigem}
-                                        />
-                                    </div>
-                                    <div className="relative">
-                                        <SearchAddressInput
-                                            id="destino"
-                                            name="destino"
-                                            placeholder="Ponto de Chegada"
-                                            value={destino}
-                                            onChange={setDestino}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <button
-                            type="submit"
-                            disabled={isSearching}
-                            className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-                            aria-label="Procurar Boleia"
-                        >
-                            <span className="material-symbols-outlined">search</span>
-                            {isSearching ? 'A procurar...' : 'Procurar Boleia'}
-                        </button>
-                    </form>
-                </div>
-            </section>
-
-            <section className="mt-8 px-4 flex-1">
-                {solicitacaoFeedback.show && (
-                    <div className={`mb-4 p-4 rounded-xl border ${solicitacaoFeedback.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-400' : 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400'} text-sm font-medium shadow-sm transition-all duration-300`}>
-                        {solicitacaoFeedback.message}
-                    </div>
-                )}
-
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-slate-900 dark:text-white font-bold text-lg">Rotas Disponíveis</h3>
-                    {!loading && <span className="text-primary text-xs font-bold bg-primary/10 px-2 py-1 rounded">{rotas.length} Encontradas</span>}
-                </div>
-
-                <div data-testid="route-results-list" className="space-y-4 pointer-events-auto">
-                    {loading ? (
-                         <div className="flex flex-col gap-4">
-                           <div className="h-32 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-xl"></div>
-                           <div className="h-32 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-xl"></div>
-                         </div>
-                    ) : error ? (
-                        <div className="text-center py-10 px-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-900/50">
-                            <span className="material-symbols-outlined text-red-400 text-4xl mb-2">error</span>
-                            <p className="text-red-600 dark:text-red-400 font-medium">{error}</p>
-                            <button onClick={() => carregarRotas(origem, destino)} className="mt-4 text-sm font-bold text-red-700 dark:text-red-300 underline underline-offset-2">Tentar Novamente</button>
-                        </div>
-                    ) : rotas.length === 0 ? (
-                        <div className="text-center py-12 px-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
-                             <div className="bg-slate-100 dark:bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <span className="material-symbols-outlined text-slate-400 text-3xl">route</span>
-                             </div>
-                             <p className="text-slate-600 dark:text-slate-300 font-medium mb-1">Nenhuma rota encontrada</p>
-                             <p className="text-slate-400 text-sm">Tente ajustar os locais de partida e chegada.</p>
-                        </div>
-                    ) : (
-                        rotas.map((rota) => (
-                            <RouteCard
-                                key={rota.id}
-                                rota={rota}
-                                isProcessing={processingRouteId === rota.id}
-                                isRequested={solicitadas.has(rota.id)}
-                                estadoAcordo={acordosMap[rota.id]}
-                                onSolicitar={handleSolicitar}
-                            />
-                        ))
-                    )}
-                </div>
-            </section>
+      {feedback.text && (
+        <div
+          role="alert"
+          className={`mb-4 rounded-xl px-4 py-3 text-sm font-medium ${
+            feedback.type === 'success'
+              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+              : 'bg-red-50 text-red-700 border border-red-200'
+          }`}
+        >
+          {feedback.text}
         </div>
-    </div>
+      )}
+
+      {loading && <LoadingSkeleton />}
+
+      {!loading && view === 'hub' && !procura && (
+        <EmptyState
+          icon={MapPin}
+          title="Sem procura activa"
+          message="Cria uma procura para ver ofertas compatíveis."
+          actionLabel="Criar procura"
+          onAction={() => setView('form')}
+        />
+      )}
+
+      {!loading && view === 'form' && (
+        <form onSubmit={handleCriarProcura} className="space-y-4 bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 shadow-sm">
+          <AddressInput
+            name="origin_name"
+            label="Origem"
+            value={form.origin_name}
+            onChange={handleChange}
+            onSelectCoordinates={(c) =>
+              setForm((prev) => ({ ...prev, origin_lat: c.lat, origin_lng: c.lng }))
+            }
+          />
+          <AddressInput
+            name="destination_name"
+            label="Destino"
+            value={form.destination_name}
+            onChange={handleChange}
+            onSelectCoordinates={(c) =>
+              setForm((prev) => ({ ...prev, destination_lat: c.lat, destination_lng: c.lng }))
+            }
+          />
+          <label className="flex flex-col gap-1.5 text-sm font-semibold">
+            Hora preferida
+            <input
+              type="time"
+              name="preferred_time"
+              value={form.preferred_time}
+              onChange={handleChange}
+              required
+              className="h-12 rounded-lg bg-light-gray dark:bg-slate-800 px-3"
+            />
+          </label>
+          <button
+            type="submit"
+            className="w-full bg-primary text-white font-bold py-4 rounded-xl"
+          >
+            Guardar procura
+          </button>
+        </form>
+      )}
+
+      {!loading && procura && (view === 'hub' || view === 'matches') && (
+        <div className="space-y-4">
+          <section className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 shadow-sm space-y-2">
+            <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+              <span>{procura.origin_name}</span>
+              <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
+              <span>{procura.destination_name}</span>
+            </div>
+            <div className="flex gap-3 text-sm text-slate-500">
+              <span className="flex items-center gap-1">
+                <Clock size={14} aria-hidden="true" />
+                {String(procura.preferred_time).slice(0, 5)}
+              </span>
+              <span className="flex items-center gap-1">
+                <Users size={14} aria-hidden="true" />
+                {procura.n_candidato === 1
+                  ? 'Individual'
+                  : `Grupo · ${procura.n_candidato} pessoas`}
+              </span>
+            </div>
+            <button
+              type="button"
+              className="text-sm font-bold text-primary"
+              onClick={() => setView('matches')}
+            >
+              Ver ofertas compatíveis
+            </button>
+          </section>
+
+          {(view === 'matches' || view === 'hub') && (
+            <>
+              <p className="text-sm font-semibold text-slate-500">
+                {(() => {
+                  const n = matches.direct.length + matches.waitlist.length;
+                  return n === 1 ? '1 oferta compatível' : `${n} ofertas compatíveis`;
+                })()}
+              </p>
+
+              {matches.direct.map((oferta) => (
+                <section
+                  key={oferta.id}
+                  className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 shadow-sm space-y-3"
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="font-bold flex items-center gap-2">
+                      {oferta.origin_name}
+                      <ArrowRight size={14} className="text-slate-400" aria-hidden="true" />
+                      {oferta.destination_name}
+                    </div>
+                    <span className="text-xs font-bold px-2 py-1 rounded-full bg-emerald-100 text-emerald-800">
+                      Disponível
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm text-slate-500">
+                    <span className="flex items-center gap-1">
+                      <Clock size={14} aria-hidden="true" />
+                      {String(oferta.departure_time).slice(0, 5)}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Users size={14} aria-hidden="true" />
+                      {oferta.vagas_disponiveis} lugares
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <strong className="text-primary tabular-nums">
+                        {formatKwanza(oferta.valor_mensal_ask_kz)} Kz
+                      </strong>
+                      <p className="text-xs text-slate-400">{labelModo(oferta.modo_preco)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={busyId === oferta.id}
+                      onClick={() => handlePropor(oferta)}
+                      className="bg-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl disabled:opacity-60"
+                    >
+                      Propor acordo
+                    </button>
+                  </div>
+                </section>
+              ))}
+
+              {matches.waitlist.length > 0 && (
+                <>
+                  <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide">
+                    Lista de espera
+                  </h3>
+                  {matches.waitlist.map((oferta) => (
+                    <section
+                      key={oferta.id}
+                      className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-5 border border-slate-100 space-y-3"
+                    >
+                      <div className="font-bold flex items-center gap-2">
+                        {oferta.origin_name}
+                        <ArrowRight size={14} className="text-slate-400" aria-hidden="true" />
+                        {oferta.destination_name}
+                      </div>
+                      <p className="text-sm text-slate-500">
+                        Sem lugares suficientes agora ({oferta.vagas_disponiveis} disponíveis).
+                      </p>
+                      <button
+                        type="button"
+                        disabled={busyId === oferta.id}
+                        onClick={() => handleWaitlist(oferta)}
+                        className="text-sm font-bold text-primary"
+                      >
+                        Entrar na lista de espera
+                      </button>
+                    </section>
+                  ))}
+                </>
+              )}
+
+              {matches.direct.length === 0 && matches.waitlist.length === 0 && (
+                <p className="text-sm text-slate-500 text-pretty">
+                  Ainda não há ofertas compatíveis com o teu horário e zona.
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </PageShell>
   );
 };
 

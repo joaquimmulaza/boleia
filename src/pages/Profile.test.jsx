@@ -50,7 +50,7 @@ describe('Profile Component', () => {
     it('renderiza título do perfil e campos de formulário pré-preenchidos', async () => {
       await renderComponent();
       await waitFor(() => {
-         expect(screen.getByText('Meu Perfil')).toBeInTheDocument();
+         expect(screen.getByText('O Meu Perfil')).toBeInTheDocument();
       });
       expect(screen.getByDisplayValue('Manuel Pedro')).toBeInTheDocument();
       expect(screen.getByDisplayValue('923123456')).toBeInTheDocument();
@@ -79,7 +79,8 @@ describe('Profile Component', () => {
             id: 'veh-1',
             marca_modelo: 'Toyota Hiace',
             matricula: 'LD-12-34-AO',
-            lugares_disponiveis: 14
+            capacidade_total: 5,
+            vagas_passageiros: 4,
         });
       });
 
@@ -88,7 +89,7 @@ describe('Profile Component', () => {
         await waitFor(() => {
             expect(screen.getByDisplayValue('Toyota Hiace')).toBeInTheDocument();
             expect(screen.getByDisplayValue('LD-12-34-AO')).toBeInTheDocument();
-            expect(screen.getByDisplayValue('14')).toBeInTheDocument();
+            expect(screen.getByDisplayValue('5')).toBeInTheDocument();
         });
       });
 
@@ -117,7 +118,7 @@ describe('Profile Component', () => {
         }));
 
         await waitFor(() => {
-            expect(screen.getByText('Perfil atualizado com sucesso!')).toBeInTheDocument();
+            expect(screen.getByText('Perfil actualizado com sucesso!')).toBeInTheDocument();
         });
       });
   });

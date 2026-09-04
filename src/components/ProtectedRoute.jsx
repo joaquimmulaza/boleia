@@ -14,7 +14,7 @@ const ProtectedRoute = ({ allowedRole }) => {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center text-gray-500">
+      <div className="flex h-dvh items-center justify-center text-gray-500">
         A verificar sessão...
       </div>
     );

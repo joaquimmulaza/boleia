@@ -1,4 +1,5 @@
 import React from 'react';
+import { MapPin } from 'lucide-react';
 
 const AutocompleteDropdown = ({ suggestions, loading, error, onSelect }) => {
   if (loading) {
@@ -30,7 +31,7 @@ const AutocompleteDropdown = ({ suggestions, loading, error, onSelect }) => {
             onClick={() => onSelect(suggestion)}
             className="flex items-center gap-3 p-3 cursor-pointer hover:bg-primary/10 transition-colors border-b border-slate-100 dark:border-slate-700/50 last:border-0"
           >
-            <span className="material-symbols-outlined text-slate-400 text-xl">location_on</span>
+            <MapPin className="text-slate-400 shrink-0" size={20} aria-hidden="true" />
             <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
               {suggestion.description}
             </span>

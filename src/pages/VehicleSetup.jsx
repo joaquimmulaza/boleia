@@ -1,33 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { Armchair, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
+import PageHeader from '../components/PageHeader';
+import PageShell from '../components/PageShell';
 
+/**
+ * Capacidade do veículo: total inclui motorista; vagas passageiros = total − 1.
+ * Nunca usado como divisor de preço.
+ */
 const VehicleSetup = () => {
   const [marcaModelo, setMarcaModelo] = useState('');
   const [matricula, setMatricula] = useState('');
-  const [lugaresDisponiveis, setLugaresDisponiveis] = useState('');
+  const [capacidadeTotal, setCapacidadeTotal] = useState('');
   const [feedbackVeiculo, setFeedbackVeiculo] = useState({ type: '', message: '' });
   const [isLoadingVeiculo, setIsLoadingVeiculo] = useState(false);
-
   const navigate = useNavigate();
 
-  // Carrega dados existentes para pré-preencher o formulário
+  const vagasPassageiros =
+    capacidadeTotal !== '' && Number.isInteger(Number(capacidadeTotal))
+      ? Math.max(0, Number(capacidadeTotal) - 1)
+      : null;
+
   useEffect(() => {
     const carregarDados = async () => {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
       if (authError || !user) return;
 
       const { data: veiculosData } = await supabase
         .from('veiculos')
-        .select('marca_modelo, matricula, lugares_disponiveis')
+        .select('marca_modelo, matricula, capacidade_total, vagas_passageiros')
         .eq('id_motorista', user.id);
 
       if (veiculosData && veiculosData.length > 0) {
         const v = veiculosData[0];
         setMarcaModelo(v.marca_modelo ?? '');
         setMatricula(v.matricula ?? '');
-        setLugaresDisponiveis(String(v.lugares_disponiveis ?? ''));
+        setCapacidadeTotal(String(v.capacidade_total ?? ''));
       }
     };
 
@@ -39,18 +52,28 @@ const VehicleSetup = () => {
     setFeedbackVeiculo({ type: '', message: '' });
     setIsLoadingVeiculo(true);
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const capacidade = parseInt(capacidadeTotal, 10);
+    if (!Number.isInteger(capacidade) || capacidade < 2) {
+      setFeedbackVeiculo({
+        type: 'error',
+        message: 'A capacidade total deve ser pelo menos 2 (motorista + 1 passageiro).',
+      });
+      setIsLoadingVeiculo(false);
+      return;
+    }
 
     const payload = {
       id_motorista: user.id,
       marca_modelo: marcaModelo,
       matricula,
-      lugares_disponiveis: parseInt(lugaresDisponiveis, 10),
+      capacidade_total: capacidade,
+      vagas_passageiros: capacidade - 1,
     };
 
-    // A BD possui UNIQUE constraint em id_motorista (veiculos_id_motorista_key).
-    // O upsert é idempotente: insere na 1ª vez, atualiza nas seguintes.
-    // A integridade de dados é garantida pela BD, não pelo frontend.
     const { error } = await supabase
       .from('veiculos')
       .upsert(payload, { onConflict: 'id_motorista' });
@@ -65,93 +88,101 @@ const VehicleSetup = () => {
   };
 
   return (
-    <div className="bg-background-light dark:bg-background-dark font-display text-dark-charcoal min-h-screen antialiased">
-      <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+    <PageShell>
+      <PageHeader
+        title="O Meu Veículo"
+        subtitle="Mantém os dados do teu veículo actualizados para as tuas boleias."
+        onBack={() => navigate('/motorista')}
+      />
 
-        <main className="flex-1 px-4 py-8 max-w-md mx-auto w-full">
-          <section className="space-y-6">
-            <div className="text-center space-y-2 mb-2">
-              <h2 className="text-dark-charcoal dark:text-slate-100 text-2xl font-bold">O Meu Veículo</h2>
-              <p className="text-cool-gray dark:text-slate-400 text-sm">Mantenha os dados do seu veículo atualizados para as suas boleias.</p>
-            </div>
+      <form
+        onSubmit={handleGuardarVeiculo}
+        className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm space-y-5 border border-primary/5"
+      >
+        <div className="space-y-1.5">
+          <label htmlFor="marcaModelo" className="text-charcoal dark:text-slate-300 text-sm font-semibold px-1">
+            Marca/Modelo
+          </label>
+          <input
+            id="marcaModelo"
+            type="text"
+            value={marcaModelo}
+            onChange={(e) => setMarcaModelo(e.target.value)}
+            className="w-full bg-light-gray dark:bg-slate-800 border-none rounded-lg h-12 px-4 text-charcoal dark:text-slate-100 focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-cool-gray outline-none"
+            placeholder="Ex: Toyota Fortuner"
+            required
+          />
+        </div>
 
-            <form onSubmit={handleGuardarVeiculo} className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-1px_rgba(0,0,0,0.03)] space-y-5 border border-primary/5">
+        <div className="space-y-1.5">
+          <label htmlFor="matricula" className="text-charcoal dark:text-slate-300 text-sm font-semibold px-1">
+            Matrícula
+          </label>
+          <input
+            id="matricula"
+            type="text"
+            value={matricula}
+            onChange={(e) => setMatricula(e.target.value)}
+            className="w-full bg-light-gray dark:bg-slate-800 border-none rounded-lg h-12 px-4 text-charcoal dark:text-slate-100 focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-cool-gray outline-none uppercase"
+            placeholder="Ex: LD-00-00-AA"
+            required
+          />
+        </div>
 
-              <div className="space-y-1.5">
-                <label htmlFor="marcaModelo" className="text-dark-charcoal dark:text-slate-300 text-sm font-semibold px-1">Marca/Modelo</label>
-                <input
-                  id="marcaModelo"
-                  type="text"
-                  value={marcaModelo}
-                  onChange={(e) => setMarcaModelo(e.target.value)}
-                  className="w-full bg-[#F7F8FA] dark:bg-slate-800 border-none rounded-lg h-12 px-4 text-dark-charcoal dark:text-slate-100 focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-cool-gray outline-none"
-                  placeholder="Ex: Toyota Fortuner"
-                  required
-                />
-              </div>
+        <div className="space-y-1.5">
+          <label htmlFor="capacidadeTotal" className="text-charcoal dark:text-slate-300 text-sm font-semibold px-1">
+            Capacidade do veículo
+          </label>
+          <div className="relative">
+            <input
+              id="capacidadeTotal"
+              type="number"
+              min="2"
+              value={capacidadeTotal}
+              onChange={(e) => setCapacidadeTotal(e.target.value)}
+              className="w-full bg-light-gray dark:bg-slate-800 border-none rounded-lg h-12 px-4 pr-10 text-charcoal dark:text-slate-100 focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-cool-gray outline-none tabular-nums"
+              placeholder="5"
+              required
+            />
+            <Armchair
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-cool-gray pointer-events-none size-5"
+              aria-hidden="true"
+            />
+          </div>
+          <p className="text-xs text-cool-gray dark:text-slate-500 px-1 text-pretty">
+            Inclui o teu lugar. {vagasPassageiros != null
+              ? `${vagasPassageiros} ${vagasPassageiros === 1 ? 'lugar disponível' : 'lugares disponíveis'} para passageiros.`
+              : 'Os lugares para passageiros são capacidade − 1.'}
+          </p>
+        </div>
 
-              <div className="space-y-1.5">
-                <label htmlFor="matricula" className="text-dark-charcoal dark:text-slate-300 text-sm font-semibold px-1">Matrícula</label>
-                <input
-                  id="matricula"
-                  type="text"
-                  value={matricula}
-                  onChange={(e) => setMatricula(e.target.value)}
-                  className="w-full bg-[#F7F8FA] dark:bg-slate-800 border-none rounded-lg h-12 px-4 text-dark-charcoal dark:text-slate-100 focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-cool-gray outline-none"
-                  placeholder="Ex: LD-00-00-AA"
-                  required
-                />
-              </div>
+        {feedbackVeiculo.message && (
+          <div
+            role="alert"
+            className={`rounded-lg px-4 py-3 text-sm font-medium text-center ${
+              feedbackVeiculo.type === 'error'
+                ? 'bg-red-50 text-red-600 border border-red-200 dark:bg-red-900/20 dark:text-red-400'
+                : 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400'
+            }`}
+          >
+            {feedbackVeiculo.message}
+          </div>
+        )}
 
-              <div className="space-y-1.5">
-                <label htmlFor="lugaresDisponiveis" className="text-dark-charcoal dark:text-slate-300 text-sm font-semibold px-1">Lugares Disponíveis</label>
-                <div className="relative">
-                  <input
-                    id="lugaresDisponiveis"
-                    type="number"
-                    min="1"
-                    value={lugaresDisponiveis}
-                    onChange={(e) => setLugaresDisponiveis(e.target.value)}
-                    className="w-full bg-[#F7F8FA] dark:bg-slate-800 border-none rounded-lg h-12 px-4 pr-10 text-dark-charcoal dark:text-slate-100 focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-cool-gray outline-none"
-                    placeholder="4"
-                    required
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-cool-gray pointer-events-none">event_seat</span>
-                </div>
-              </div>
+        <button
+          type="submit"
+          disabled={isLoadingVeiculo}
+          className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-lg transition-all active:scale-[0.98] mt-4 shadow-lg shadow-primary/20 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {isLoadingVeiculo ? 'A guardar...' : 'Guardar Veículo'}
+        </button>
+      </form>
 
-              {feedbackVeiculo.message && (
-                <div
-                  role="alert"
-                  className={`rounded-lg px-4 py-3 text-sm font-medium text-center ${
-                    feedbackVeiculo.type === 'error'
-                      ? 'bg-red-50 text-red-600 border border-red-200'
-                      : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                  }`}
-                >
-                  {feedbackVeiculo.message}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isLoadingVeiculo}
-                className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-lg transition-all active:scale-[0.98] mt-4 shadow-lg shadow-primary/20 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isLoadingVeiculo ? 'A guardar...' : 'Guardar Veículo'}
-              </button>
-            </form>
-
-            <div className="flex items-center justify-center gap-2 text-cool-gray dark:text-slate-500 py-4">
-              <span className="material-symbols-outlined text-sm">verified_user</span>
-              <p className="text-[11px] font-medium uppercase tracking-wider">Dados seguros em Luanda</p>
-            </div>
-          </section>
-        </main>
-
-        <div className="h-24"></div>
+      <div className="flex items-center justify-center gap-2 text-cool-gray dark:text-slate-500 py-4">
+        <ShieldCheck className="size-4" aria-hidden="true" />
+        <p className="text-[11px] font-medium uppercase">Dados seguros em Luanda</p>
       </div>
-    </div>
+    </PageShell>
   );
 };
 

@@ -41,12 +41,12 @@ describe('VehicleSetup Integration (Supabase Local - TDD)', () => {
     // Preenchemos os dados iniciais.
     const marcaInput = screen.getByLabelText(/marca\/modelo/i);
     const matriculaInput = screen.getByLabelText(/matrícula/i);
-    const lugaresInput = screen.getByLabelText(/lugares disponíveis/i);
+    const lugaresInput = screen.getByLabelText(/capacidade do veículo/i);
     const btn = screen.getByRole('button', { name: /guardar veículo/i });
 
     fireEvent.change(marcaInput, { target: { value: 'Toyota Yaris' } });
     fireEvent.change(matriculaInput, { target: { value: 'LD-11-22-BB' } });
-    fireEvent.change(lugaresInput, { target: { value: '4' } });
+    fireEvent.change(lugaresInput, { target: { value: '5' } });
 
     // Ao clicar em guardar
     fireEvent.click(btn);

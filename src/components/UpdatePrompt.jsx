@@ -21,7 +21,7 @@ const UpdatePrompt = () => {
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-[200] md:p-6 pb-safe">
+    <div className="fixed inset-x-0 bottom-0 z-overlay md:p-6 pb-safe">
       <div className="bg-white dark:bg-zinc-900 rounded-t-[24px] md:rounded-b-[24px] shadow-2xl border border-gray-200 dark:border-zinc-800 animate-slide-up w-full max-w-md mx-auto">
         {/* Handle visual */}
         <div className="w-full flex justify-center pt-3 pb-2 md:hidden">

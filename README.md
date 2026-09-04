@@ -144,19 +144,27 @@ boleia-certa/
 │   │   ├── Auth.jsx                 # Registo e Login
 │   │   ├── PassengerDashboard.jsx   # Dashboard do Passageiro
 │   │   ├── DriverDashboard.jsx      # Dashboard do Motorista
-│   │   ├── PublishRoute.jsx         # Publicar novo trajeto
-│   │   ├── VehicleSetup.jsx         # Registar/editar veículo
-│   │   ├── MyAgreements.jsx         # Gestão de acordos de boleia
+│   │   ├── PublishRoute.jsx         # Publicar oferta de capacidade
+│   │   ├── VehicleSetup.jsx         # Registar/editar veículo (capacidade_total)
+│   │   ├── MyAgreements.jsx         # Acordos 1:N (motorista ↔ passageiros)
 │   │   ├── AbsenceTracker.jsx       # Registo de faltas por acordo
 │   │   └── Profile.jsx              # Perfil do utilizador
 │   ├── services/              # Camada de acesso a dados (Supabase)
-│   │   ├── AgreementsService.js     # CRUD e ciclo de vida dos acordos
-│   │   ├── RouteService.js          # Consulta de trajetos publicados
-│   │   ├── GoogleMapsService.js     # Geocoding de origem/destino
+│   │   ├── OfertaService.js         # Ofertas de capacidade (motorista)
+│   │   ├── ProcuraService.js        # Procuras (passageiro)
+│   │   ├── GrupoService.js          # Grupos de procura
+│   │   ├── PropostaService.js       # Propostas oferta→procura
+│   │   ├── AgreementService.js      # Acordos 1:N (RPC accept_proposal)
+│   │   ├── MatchingService.js       # Matching ±15min / 2500m
+│   │   ├── WaitlistService.js       # Lista de espera
 │   │   ├── AbsenceService.js        # Registo de faltas
+│   │   ├── LocationService.js       # Geocoding Photon (OSM)
 │   │   └── ProfileService.js        # Dados do perfil do utilizador
 │   ├── utils/                 # Funções utilitárias puras
 │   │   ├── notificationRouter.js    # Estratégia de deep linking por notificação
+│   │   ├── matchingFilters.js       # Filtros de matching
+│   │   ├── pricing.js               # Quotas POR_PASSAGEIRO / TOTAL_ACORDO
+│   │   ├── geo.js                   # Haversine / raio OD
 │   │   ├── formatters.js            # Formatação de datas e valores (Kz)
 │   │   ├── validation.js            # Regras de validação de formulários
 │   │   └── errorHandler.js          # Tratamento centralizado de erros
@@ -196,12 +204,15 @@ boleia-certa/
 | Tabela | Descrição |
 |---|---|
 | `perfis` | Dados do utilizador e tipo de perfil (`Passageiro` / `Motorista`) |
-| `routes` | Trajetos publicados por motoristas, com coordenadas de Geocoding |
-| `acordos` | Acordos de boleia com estados: `pendente`, `ativo`, `cancelado` |
-| `veiculos` | Veículo do motorista — relação 1:1 via `UNIQUE constraint` em `id_motorista` |
+| `ofertas_capacidade` | Ofertas do motorista (OD, horário, modo preço, vagas) |
+| `procuras` / `grupos` | Procura individual ou em grupo (passageiro) |
+| `propostas` / `lista_espera` | Propostas 1:M e waitlist quando N > vagas |
+| `acordos` / `acordos_passageiros` | Acordo 1 motorista : N passageiros (preços congelados) |
+| `veiculos` | Veículo — `capacidade_total` / `vagas_passageiros` |
+| `faltas` | Faltas com desconto por dia útil (quota congelada) |
 | `notificacoes` | Notificações in-app com metadata para deep linking |
 
-> **Nota:** A tabela `routes` é a única fonte de verdade para trajetos. As coluna `origin_lat`, `origin_lng`, `destination_lat` e `destination_lng` são preenchidas automaticamente via Google Maps Geocoding no momento da publicação.
+> **Nota:** Fonte de verdade do domínio = marketplace oferta/procura (não existe tabela `routes`). Geocoding via Photon (OpenStreetMap), filtrado a Angola.
 
 ---
 

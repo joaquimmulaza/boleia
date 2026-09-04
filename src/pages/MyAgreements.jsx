@@ -1,231 +1,253 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
-import { Car, User, Plus } from 'lucide-react';
-
-import { approveAgreement, rejectAgreement, cancelAgreement, getAgreementsForUser, hideAgreement } from '../services/AgreementsService';
-import AcordoCardPassageiro from '../components/AcordoCardPassageiro';
-import AcordoCardMotorista from '../components/AcordoCardMotorista';
+import { ArrowRight, Clock, Users, ChevronRight } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import {
+  getAgreementsForDriver,
+  getAgreementsForPassenger,
+  leavePassenger,
+} from '../services/AgreementService';
 import EmptyState from '../components/EmptyState';
-import AcordoDetailsModal from '../components/AcordoDetailsModal';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import PageHeader from '../components/PageHeader';
+import PageShell from '../components/PageShell';
 import ConfirmationModal from '../components/ConfirmationModal';
-import { useNotifications } from '../hooks/useNotifications';
+import { formatKwanza } from '../utils/formatKwanza';
+import { getFriendlyErrorMessage } from '../utils/errorHandler';
 
-// ─── Componentes Auxiliares ───────────────────────────────────────────────────
-
-const LoadingSkeleton = () => (
-  <div className="space-y-4 animate-pulse pt-2">
-    {[1, 2, 3].map((i) => (
-      <div key={i} className="h-40 bg-slate-200 dark:bg-slate-800/50 rounded-2xl w-full" />
-    ))}
-  </div>
-);
-
-// ─── Página principal ─────────────────────────────────────────────────────────
-
+/**
+ * Gestão de acordos 1 motorista : N passageiros.
+ */
 const MyAgreements = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { addNotification } = useNotifications();
-  const success = (msg) => addNotification(msg, 'success');
-  const showError = (msg) => addNotification(msg, 'error');
+  const { user, tipoPerfil } = useAuth();
+  const [message, setMessage] = useState({ type: '', text: '' });
   const [acordos, setAcordos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [userRole, setUserRole] = useState(null);
-  const [userId, setUserId] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [leaveModalOpen, setLeaveModalOpen] = useState(false);
 
-  // Modal state
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [selectedAcordo, setSelectedAcordo] = useState(null);
-  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
-  const [acordoToCancel, setAcordoToCancel] = useState(null);
-
-  const carregarAcordos = useCallback(async (uid, role) => {
-    if (!uid) return;
+  const carregar = useCallback(async () => {
+    if (!user?.id) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
-
     try {
-      const acordosData = await getAgreementsForUser(uid, role);
-      setAcordos((acordosData || []).filter(a => !a.is_hidden_by_user));
+      const data =
+        tipoPerfil === 'Motorista'
+          ? await getAgreementsForDriver(user.id)
+          : await getAgreementsForPassenger(user.id);
+      setAcordos((data || []).filter((a) => !a.is_hidden_by_user));
     } catch (err) {
-      console.error('Erro ao carregar acordos:', err);
+      console.error(err);
+      setMessage({ type: 'error', text: getFriendlyErrorMessage(err) });
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user?.id, tipoPerfil]);
 
   useEffect(() => {
-    const init = async () => {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error || !user) {
-        setIsLoading(false);
-        return;
-      }
-      
-      const role = user.user_metadata?.tipo_perfil || 'Passageiro';
-      setUserRole(role);
-      setUserId(user.id);
-      await carregarAcordos(user.id, role);
-    };
-    init();
-  }, [carregarAcordos]);
+    carregar();
+  }, [carregar]);
 
-  // Deep Linking: Auto-open the details modal based on URL query parameter or Router State
   useEffect(() => {
-    if (!isLoading && acordos.length > 0) {
-      const params = new URLSearchParams(location.search);
-      const openAcordoId = params.get('openAcordoId') || location.state?.openAcordoId;
-
-      if (openAcordoId) {
-        const acordoToOpen = acordos.find(a => a.id === openAcordoId);
-        if (acordoToOpen) {
-          handleShowDetails(acordoToOpen);
-
-          // Optional: Clean up the URL to avoid re-triggering on refresh
-          navigate(location.pathname, { replace: true, state: {} });
-        }
+    if (isLoading || acordos.length === 0) return;
+    const params = new URLSearchParams(location.search);
+    const openAcordoId = params.get('openAcordoId') || location.state?.openAcordoId;
+    if (openAcordoId) {
+      const found = acordos.find((a) => a.id === openAcordoId);
+      if (found) {
+        setSelected(found);
+        navigate(location.pathname, { replace: true, state: {} });
       }
     }
   }, [isLoading, acordos, location.search, location.state, navigate, location.pathname]);
 
-  const handleAccept = async (acordoId) => {
-    await approveAgreement(acordoId);
-    setAcordos((prev) =>
-      prev.map((a) => (a.id === acordoId ? { ...a, estado: 'ativo' } : a))
+  const activos = acordos.filter((a) => a.estado === 'activo');
+  const outros = acordos.filter((a) => a.estado !== 'activo');
+
+  const handleLeave = async () => {
+    if (!selected || !user?.id) return;
+    try {
+      await leavePassenger(selected.id, user.id);
+      setMessage({ type: 'success', text: 'Saíste do acordo. A quota do mês mantém-se.' });
+      setLeaveModalOpen(false);
+      setSelected(null);
+      await carregar();
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+    }
+  };
+
+  const renderCard = (acordo) => {
+    const nPax =
+      acordo.n_passageiros_contrato ||
+      acordo.acordos_passageiros?.filter((p) => p.estado === 'activo').length ||
+      0;
+    const oferta = acordo.ofertas_capacidade;
+    const origem = oferta?.origin_name || 'Origem';
+    const destino = oferta?.destination_name || 'Destino';
+    return (
+      <button
+        type="button"
+        key={acordo.id}
+        onClick={() => setSelected(acordo)}
+        className="w-full text-left bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-2"
+      >
+        <div className="flex justify-between items-center">
+          <span
+            className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+              acordo.estado === 'activo'
+                ? 'bg-emerald-100 text-emerald-800'
+                : 'bg-slate-100 text-slate-600'
+            }`}
+          >
+            {acordo.estado === 'activo' ? 'Activo' : acordo.estado}
+          </span>
+          <ChevronRight size={18} className="text-slate-400" aria-hidden="true" />
+        </div>
+        <div className="flex items-center gap-2 font-bold">
+          <span>{origem}</span>
+          <ArrowRight size={16} className="text-slate-400 shrink-0" aria-hidden="true" />
+          <span>{destino}</span>
+        </div>
+        <div className="flex justify-between text-sm text-slate-500">
+          <span className="flex items-center gap-1">
+            <Users size={14} aria-hidden="true" />
+            {nPax === 1 ? 'Individual' : `Grupo · ${nPax} pessoas`}
+          </span>
+          <strong className="text-primary tabular-nums">
+            {formatKwanza(acordo.valor_mensal_por_passageiro_kz)} Kz / pessoa
+          </strong>
+        </div>
+      </button>
     );
   };
 
-  const handleReject = async (acordoId) => {
-    await rejectAgreement(acordoId);
-    setAcordos((prev) => prev.filter((a) => a.id !== acordoId));
-  };
-
-  const handleShowDetails = (acordo) => {
-    setSelectedAcordo(acordo);
-    setIsDetailsOpen(true);
-  };
-
-  const handleReport = (acordo) => {
-    window.location.href = `mailto:joaquimmulazadev@gmail.com?subject=Reportar Problema - Acordo ${acordo.id}`;
-  };
-
-  const handleCancel = (acordo) => {
-    setAcordoToCancel(acordo);
-    setIsCancelModalOpen(true);
-  };
-
-
-  const handleRemover = async (acordo) => {
-    try {
-      await hideAgreement(acordo.id);
-      setAcordos((prev) => prev.filter((a) => a.id !== acordo.id));
-      success('Acordo removido da lista.');
-    } catch (err) {
-      console.error('Erro ao remover acordo:', err);
-      showError('Não foi possível remover o acordo.');
-    }
-  };
-
-  const confirmCancel = async () => {
-    if (!acordoToCancel) return;
-    try {
-      await cancelAgreement(acordoToCancel.id, acordoToCancel.route_id);
-      setAcordos((prev) =>
-        prev.map((a) => (a.id === acordoToCancel.id ? { ...a, estado: 'Cancelado' } : a))
-      );
-      success('Boleia cancelada com sucesso.');
-    } catch (err) {
-      console.error('Erro ao cancelar acordo:', err);
-      showError('Não foi possível cancelar a boleia.');
-    } finally {
-      setIsCancelModalOpen(false);
-      setAcordoToCancel(null);
-    }
-  };
-
-  const isMotorista = userRole === 'Motorista';
-  const titulo = isMotorista ? 'Pedidos de Passageiros' : 'Meus Acordos';
-  const subtitulo = isMotorista ? 'Gere os pedidos das tuas rotas' : 'As tuas boleias do mês';
-  const emptyMessage = isMotorista
-    ? 'Ainda não tens pedidos de passageiros nas tuas rotas.'
-    : 'Ainda não tens acordos. Pede a tua primeira boleia!';
-
   return (
-    <div className="font-[Plus_Jakarta_Sans,sans-serif] bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col antialiased">
-      {/* ── Conteúdo principal ── */}
-      <main role="main" className="flex-1 max-w-md mx-auto w-full pb-32">
-        {/* Título */}
-        <div className="px-5 pt-8 pb-6">
-          <h2 className="text-charcoal dark:text-slate-100 text-3xl font-bold tracking-tight">{titulo}</h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">{subtitulo}</p>
-        </div>
+    <PageShell>
+      <PageHeader title="Acordos" subtitle="As tuas viagens combinadas num só lugar." />
 
-        {/* Loading / Lista / Estado Vazio */}
-        <div className="px-4 space-y-4">
-          {isLoading ? (
-            <LoadingSkeleton />
-          ) : acordos.length === 0 ? (
-            <EmptyState message={emptyMessage} />
-          ) : (
-            <section className="space-y-4" aria-label="Lista de acordos">
-              {acordos.map((acordo) =>
-                isMotorista ? (
-                  <AcordoCardMotorista
-                    key={acordo.id}
-                    acordo={acordo}
-                    onAccept={handleAccept}
-                    onReject={handleReject}
-                    onShowDetails={handleShowDetails}
-                    onReport={handleReport}
-                    onCancel={handleCancel}
-                    onRemover={handleRemover}
-                  />
-                ) : (
-                  <AcordoCardPassageiro
-                    key={acordo.id}
-                    acordo={acordo}
-                    onShowDetails={handleShowDetails}
-                    onReport={handleReport}
-                    onCancel={handleCancel}
-                    onRemover={handleRemover}
-                  />
-                )
-              )}
-            </section>
-          )}
+      {message.text && (
+        <div
+          role="alert"
+          className={`mb-4 rounded-xl px-4 py-3 text-sm font-medium ${
+            message.type === 'success'
+              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+              : 'bg-red-50 text-red-700 border border-red-200'
+          }`}
+        >
+          {message.text}
         </div>
-      </main>
-
-      {/* Floating Action Button - APENAS para Passageiros */}
-      {!isMotorista && (
-        <button onClick={() => navigate('/passageiro')} className="fixed bottom-24 right-6 bg-primary hover:bg-primary/90 text-white flex items-center gap-2 px-5 py-3.5 rounded-full shadow-lg shadow-primary/30 z-40 transition-all active:scale-95">
-          <Plus size={20} className="shrink-0" />
-          <span className="font-bold text-sm tracking-wide">Pedir Boleia</span>
-        </button>
       )}
 
-      {/* Modal de Detalhes */}
-            <AcordoDetailsModal
-        isOpen={isDetailsOpen}
-        onClose={() => setIsDetailsOpen(false)}
-        acordo={selectedAcordo}
-        userRole={userRole}
-        onAccept={handleAccept}
-        onReject={handleReject}
-      />
+      {isLoading && <LoadingSkeleton />}
+
+      {!isLoading && acordos.length === 0 && (
+        <EmptyState
+          title="Sem acordos"
+          message="Quando aceitares uma proposta, o acordo aparece aqui."
+        />
+      )}
+
+      {!isLoading && activos.length > 0 && (
+        <div className="space-y-3 mb-6">
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+            Activos · {activos.length}
+          </p>
+          {activos.map(renderCard)}
+        </div>
+      )}
+
+      {!isLoading && outros.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Outros</p>
+          {outros.map(renderCard)}
+        </div>
+      )}
+
+      {selected && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl p-6 space-y-4 shadow-xl"
+          >
+            <h2 className="text-lg font-bold text-balance">Detalhe do acordo</h2>
+            <div className="space-y-2 text-sm">
+              <p>
+                <span className="text-slate-500">Estado:</span>{' '}
+                <strong>{selected.estado}</strong>
+              </p>
+              <p>
+                <span className="text-slate-500">Passageiros no contrato:</span>{' '}
+                <strong>{selected.n_passageiros_contrato}</strong>
+              </p>
+              <p>
+                <span className="text-slate-500">Por pessoa:</span>{' '}
+                <strong className="tabular-nums">
+                  {formatKwanza(selected.valor_mensal_por_passageiro_kz)} Kz
+                </strong>
+              </p>
+              <p>
+                <span className="text-slate-500">Total do acordo:</span>{' '}
+                <strong className="tabular-nums">
+                  {formatKwanza(selected.valor_mensal_total_kz)} Kz
+                </strong>
+              </p>
+              {selected.acordos_passageiros?.length > 0 && (
+                <ul className="mt-2 space-y-1 border-t border-slate-100 pt-2">
+                  {selected.acordos_passageiros.map((p) => (
+                    <li key={p.id} className="flex justify-between text-xs">
+                      <span>{p.passenger_id.slice(0, 8)}…</span>
+                      <span>
+                        {formatKwanza(p.quota_mensal_kz)} Kz · {p.estado}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => navigate(`/faltas/${selected.id}`)}
+                className="w-full bg-slate-100 dark:bg-slate-800 font-bold py-3 rounded-xl flex items-center justify-center gap-2"
+              >
+                <Clock size={16} aria-hidden="true" /> Registar faltas
+              </button>
+              {tipoPerfil === 'Passageiro' && selected.estado === 'activo' && (
+                <button
+                  type="button"
+                  onClick={() => setLeaveModalOpen(true)}
+                  className="w-full text-red-600 font-bold py-3 rounded-xl border border-red-200"
+                >
+                  Sair do acordo
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setSelected(null)}
+                className="w-full font-bold py-3 text-slate-500"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmationModal
-        isOpen={isCancelModalOpen}
-        title="Cancelar Boleia"
-        message="Tens a certeza que pretendes cancelar esta boleia? Esta ação não pode ser desfeita."
-        onConfirm={confirmCancel}
-        onCancel={() => {
-          setIsCancelModalOpen(false);
-          setAcordoToCancel(null);
-        }}
-        confirmText="Sim, Cancelar"
+        isOpen={leaveModalOpen}
+        title="Sair do acordo?"
+        message="A tua quota deste mês não é reembolsada. Os preços dos restantes passageiros mantêm-se."
+        confirmText="Sair"
+        onConfirm={handleLeave}
+        onCancel={() => setLeaveModalOpen(false)}
       />
-    </div>
+    </PageShell>
   );
 };
 

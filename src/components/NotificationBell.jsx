@@ -66,7 +66,6 @@ export default function NotificationBell() {
     };
   }, [isOpen]);
 
-
   const handleNotificationClick = (notif) => {
     if (!notif.lida) {
       markAsRead(notif.id);
@@ -106,12 +105,12 @@ export default function NotificationBell() {
       {createPortal(
         <>
           <div 
-            className={`fixed inset-0 z-[110] bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            className={`fixed inset-0 z-overlay bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             onClick={() => setIsOpen(false)}
           />
 
           <div 
-            className={`fixed top-0 right-0 h-[100dvh] w-full max-w-md bg-white dark:bg-slate-900 shadow-2xl z-[120] transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+            className={`fixed top-0 right-0 h-dvh w-full max-w-md bg-white dark:bg-slate-900 shadow-2xl z-drawer transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-slate-900 shrink-0">
               <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100 font-[Plus_Jakarta_Sans]">Notificações</h2>

@@ -1,0 +1,240 @@
+# Boleia Certa — Cursor Rules
+
+Regras obrigatórias para agentes e editores neste repositório.
+Complementam `AGENTS.md` (arquitetura, Penpot/UX, TDD, commits). Em conflito de estilo de código, prevalece este ficheiro + o código em `src/`.
+
+---
+
+## 1. Stack e linguagem
+
+- Stack: React 19 + Vite 8 + Tailwind CSS 4 (`@tailwindcss/vite`) + Lucide React + Supabase + Vitest + react-router-dom 7 + Sentry.
+- Módulos ESM (`"type": "module"` no `package.json`).
+- Linguagem da UI e das mensagens de teste: **português (PT-PT)**.
+- Domínio: mobilidade urbana / boleias diárias (casa–trabalho) em Luanda, Angola. Moeda: **sempre Kz (Kwanza)**.
+- Tom visual: urbano, utilitário, de confiança — nunca turismo ou férias.
+
+### Proibido sem pedido explícito do utilizador
+
+- Introduzir TypeScript (`.ts` / `.tsx`, `tsconfig.json`, `jsconfig.json`).
+- Introduzir Prettier, Next.js, ou bibliotecas de toast.
+- Seguir `.agents/rules/frontend.md` (genérico Next/TS; **não** descreve este repo).
+
+---
+
+## 2. Tipagem (JavaScript + JSDoc — não TypeScript)
+
+O projeto é **100% JavaScript**. Extensões permitidas em `src/`: só `.js` e `.jsx`.
+
+- Tipar APIs públicas com **JSDoc** (`@param`, `@returns`, `@typedef`).
+- Sem PropTypes.
+- `@types/react` / `@types/react-dom` no `package.json` são apenas tooling — não implicam ficheiros TS.
+
+```js
+/**
+ * @param {{ allowedRole?: 'Passageiro' | 'Motorista' }} props
+ */
+```
+
+```js
+/**
+ * @typedef {Readonly<{}>} AuthProps
+ * Page component — accepts no external props.
+ */
+```
+
+Não criar `src/types/`, não migrar para TS por iniciativa própria.
+
+---
+
+## 3. Linting
+
+Fonte de verdade: `eslint.config.js` (flat config ESLint 9).
+
+- Alvo: `**/*.{js,jsx}`.
+- Extends: `js.configs.recommended`, `react-hooks` (recommended), `react-refresh` (Vite).
+- Regra extra: `no-unused-vars` com `varsIgnorePattern: '^[A-Z_]'` (componentes React / constantes `UPPER`).
+- Ignore: `dist`.
+- Comando: `npm run lint`.
+- Sem Prettier. O repo usa **ponto-e-vírgula**; não remover `;` nem inventar estilo de formatação.
+
+---
+
+## 4. Organização de pastas e naming
+
+```
+src/
+  pages/          → páginas de rota
+  components/     → UI reutilizável
+  layouts/        → shell autenticado (Layout.jsx)
+  hooks/          → hooks custom
+  services/       → Supabase / API
+  contexts/       → providers
+  utils/          → helpers
+  lib/            → clientes (supabase.js)
+  test/           → helpers de teste partilhados
+  App.jsx, main.jsx, index.css, sw.js, setupTests.js
+```
+
+| Local | Naming | Export |
+|-------|--------|--------|
+| `src/pages/` | PascalCase `.jsx` | `export default` |
+| `src/components/` | PascalCase `.jsx` | `export default` |
+| `src/layouts/` | `Layout.jsx` (não inventar `MainLayout`) | `export default` |
+| `src/hooks/` | `useX.js` (camelCase + prefixo `use`) | named (`export function` / `export const`) |
+| `src/services/` | `XService.js` | named |
+| `src/contexts/` | PascalCase `.jsx` | named (`AuthProvider`, `useAuth`, `ThemeProvider`, `useTheme`) |
+| `src/utils/`, `src/lib/` | camelCase `.js` | named |
+
+### Testes (colocados ao lado do código)
+
+- `Foo.test.js` — lógica / serviços.
+- `Foo.test.jsx` — componentes UI.
+- Também: `*.integration.test.jsx`, `*E2E.test.jsx` quando aplicável.
+- **Não** criar pastas `__tests__/`.
+
+Manter ficheiros pequenos e modulares. Se um ficheiro crescer demasiado, parar e sugerir refatoração.
+
+---
+
+## 5. Composição de componentes
+
+### Árvore de providers e rotas (`src/App.jsx`)
+
+```
+ThemeProvider → AuthProvider → BrowserRouter
+  ├── / → RootRoute (Landing ou redirect por tipoPerfil)
+  ├── /auth → Auth (pública)
+  └── <Route element={<Layout />}>   ← BottomBar + Outlet
+        ├── ProtectedRoute(allowedRole="Passageiro") → /passageiro
+        ├── ProtectedRoute(allowedRole="Motorista")
+        │     → /motorista, /veiculo, /publicar-trajeto
+        └── ProtectedRoute() → /acordos, /faltas, /faltas/:acordoId, /perfil
+```
+
+### Regras obrigatórias
+
+1. Sessão global só via `useAuth()` **dentro** de `AuthProvider`. API: `{ session, user, loading, tipoPerfil }`.
+2. Nova página `.jsx` → registar obrigatoriamente em `src/App.jsx`. Se for secção principal de navegação, atualizar a BottomBar em `src/layouts/Layout.jsx`.
+3. Gestão de acordos: **apenas** `src/pages/MyAgreements.jsx` na rota `/acordos`. Não recriar `AgreementsPage`.
+4. Shell mobile-first: `max-w-md` / `max-w-[480px]`. Tokens e tema em `src/index.css` (`primary`, `background-light`/`dark`, emerald/amber/coral). Preferir classes do design system; dark mode com `dark:`.
+5. Forms: estado local controlado; handlers `handleSubmit` / `handleChange`.
+6. Modais: props `isOpen` + callbacks (`onConfirm` / `onCancel`), padrão `ConfirmationModal`.
+7. Ícones: `import { Home, Car } from 'lucide-react'`. Material Symbols (`material-symbols-outlined`) só quando o design Penpot o exigir.
+8. **Penpot-first (UI):** Penpot = fonte de verdade. Antes de criar/alterar UI, consultar no Penpot componentes, estilos e tokens existentes e privilegiar reutilização. Não inventar layouts nem estilos Tailwind. Fluxo: análise UX → [opcional Superdesign] → consolidar Penpot → gate “design pronto” (user flow + estados principais + componentes identificados + telas no Penpot) → TDD → implementar no `src/` → Visual QA. Skills Stitch descontinuadas. Ver `AGENTS.md` §4.
+
+### Imports
+
+- Páginas / componentes / Layout: default import.
+- Hooks / services / utils / contexts: named imports.
+- Manter consistência com ficheiros vizinhos; não introduzir barrel files desnecessários.
+
+---
+
+## 6. Error handling
+
+### Serviços Supabase (padrão dominante)
+
+```js
+export const requestSeat = async (routeId, passengerId) => {
+  const { data, error } = await supabase
+    .from('acordos')
+    .insert([{ route_id: routeId, passenger_id: passengerId, estado: 'Pendente' }])
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === '23505') {
+      throw new Error('Já solicitou uma vaga para esta rota.');
+    }
+    throw error;
+  }
+  return data;
+};
+```
+
+- Destructuring `{ data, error }` → se `error`, **`throw`** → retornar `data`.
+- Mensagens de negócio: `throw new Error('...')` em português.
+
+### UI
+
+```js
+try {
+  await publishRoute(formData);
+  setMessage({ type: 'success', text: 'Trajeto publicado com sucesso!' });
+} catch (error) {
+  console.error('Erro ao publicar trajeto:', error);
+  setMessage({ type: 'error', text: getFriendlyErrorMessage(error) });
+} finally {
+  setLoading(false);
+}
+```
+
+- Usar `getFriendlyErrorMessage` de `src/utils/errorHandler.js` para erros genéricos (RLS, login, email registado, offline).
+- Feedback: estado local (`setMessage` / `setFeedback`) **ou** `useNotifications().addNotification(msg, 'error'|'success')`.
+- **Sem** biblioteca de toast.
+- Sentry já inicializado em `src/main.jsx` via `VITE_SENTRY_DSN`.
+
+### Exceções documentadas
+
+- `LocationService`: pode engolir erros, `console.warn`, e devolver `[]` / `null` (UX de autocomplete).
+- Alguns hooks (ex.: push): podem devolver `{ success: true }` / `{ error: message }` em vez de throw — seguir o padrão do ficheiro existente.
+
+---
+
+## 7. Dados, auth e segurança
+
+- Cliente: `src/lib/supabase.js`.
+- Variáveis de ambiente (nunca hardcode): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SENTRY_DSN`, `VITE_VAPID_PUBLIC_KEY`.
+- DDL / migrações de BD: **exclusivamente** via Supabase MCP — sem SQL solto fora desse fluxo.
+- Domínio marketplace: `ofertas_capacidade` / `procuras` / `grupos` / `propostas` / `acordos` 1:N. **Não** recriar tabela `routes`, `rotas_diarias`, nem `requestSeat`.
+- Geocoding: `LocationService.js` (Photon API / OpenStreetMap, `countrycode=ao`). Não recriar `GoogleMapsService` nem `VITE_GOOGLE_MAPS_API_KEY`.
+- Acordos: 1 motorista : N passageiros (`acordos_passageiros`); preços congelados na aceitação. Soft delete: `is_hidden_by_user`. UI: comparar estados de forma **case-insensitive**.
+- Roles de perfil: `'Passageiro' | 'Motorista'` (usar nestes valores exactos em `ProtectedRoute` / `tipoPerfil`).
+- Copy UI humana («Por passageiro», «Total do acordo») — nunca jargon (`N_candidato`, `POR_PASSAGEIRO`) na interface.
+
+---
+
+## 8. Testes e TDD
+
+- Runner: Vitest (`environment: 'happy-dom'`, `globals: true`, setup `src/setupTests.js` + `@testing-library/jest-dom`).
+- Scripts: `npm test` / `npm run test:run`.
+- **TDD obrigatório** para código funcional:
+  1. Escrever teste (mockar o necessário).
+  2. Correr — deve falhar.
+  3. Implementar.
+  4. Passar a verde.
+- Se pedirem um componente X, a **primeira entrega** é o ficheiro de teste de X.
+- Mock padrão: `vi.mock('../lib/supabase')` (ou caminho relativo correcto); mockar serviços externos (ex.: Photon) quando necessário.
+- Mensagens de `describe`/`it` em português, alinhadas aos testes existentes.
+- Não fazer commit de código com testes a vermelho. Commit / push só quando o utilizador pedir (e testes verdes).
+
+---
+
+## 9. Anti-padrões (não fazer)
+
+| Não | Em vez disso |
+|-----|----------------|
+| TypeScript / `.tsx` / `tsconfig` | JS + JSDoc |
+| Prettier / “sem ponto-e-vírgula” | Seguir `eslint.config.js` e estilo actual do repo |
+| `MainLayout.jsx` | `src/layouts/Layout.jsx` |
+| `AgreementsPage` / `requestSeat` / `RouteService` | `MyAgreements` + `AgreementService` / `OfertaService` |
+| `GoogleMapsService` / Google Maps key | `LocationService` (Photon) |
+| Tabela `routes` / `rotas_diarias` | `ofertas_capacidade` (+ procuras/propostas) |
+| Toast library | `setMessage` / `useNotifications` |
+| Pasta `__tests__/` ou `src/types/` | Testes colocados; JSDoc inline |
+| Inventar Tailwind / UX | Penpot (SoT) + consulta a componentes/tokens; Superdesign só exploração |
+| Hardcode secrets | `.env` / `VITE_*` |
+| Seguir `.agents/rules/frontend.md` | Este ficheiro + `AGENTS.md` + código em `src/` |
+
+---
+
+## Checklist rápido antes de entregar código
+
+- [ ] Teste escrito primeiro (TDD) e a verde
+- [ ] Extensão `.js`/`.jsx` correcta; naming e export correctos
+- [ ] Página nova registada em `App.jsx` (+ BottomBar se necessário)
+- [ ] Serviço: `if (error) throw`; UI: `try/catch` + `getFriendlyErrorMessage`
+- [ ] Sem secrets hardcoded; sem TS/Prettier/toast inventados
+- [ ] UI: design pronto no Penpot (flow + estados + componentes + telas) e alinhada ao SoT (se for interface nova)
+- [ ] `npm run lint` e `npm run test:run` limpos quando aplicável
+`)

@@ -26,13 +26,12 @@ const Layout = () => {
   /** Classe CSS partilhada para cada item de nav */
   const navItemClass = ({ isActive }) =>
     `flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
-      isActive ? 'text-emerald-500' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
+      isActive ? 'text-primary' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
     }`;
 
   return (
-    <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900 transition-colors">
-      {/* Barra de topo Global com Z-Index elevado (z-[100]) */}
-      <header className="sticky top-0 z-[100] flex items-center justify-between px-4 py-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 max-w-md mx-auto w-full transition-colors shadow-sm">
+    <div className="flex flex-col min-h-dvh bg-background-light dark:bg-background-dark transition-colors">
+      <header className="sticky top-0 z-header flex items-center justify-between px-4 py-3 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 max-w-md mx-auto w-full transition-colors shadow-sm">
         <h1 className="flex items-center">
           <img src="/boleia-logo.png" alt="Boleia Certa" className="h-9 w-auto object-contain" />
         </h1>
@@ -51,7 +50,7 @@ const Layout = () => {
       </header>
 
       {/* Área de Conteúdo */}
-      <main className="flex-1 overflow-y-auto pb-16 bg-white dark:bg-gray-900 sm:pb-20 transition-colors">
+      <main className="flex-1 overflow-y-auto pb-16 bg-background-light dark:bg-background-dark sm:pb-20 transition-colors">
         <div className="w-full h-full min-h-full max-w-md mx-auto relative flex flex-col">
           <Outlet />
         </div>
@@ -63,7 +62,7 @@ const Layout = () => {
       {/* ── Bottom Navigation ─────────────────────────────────────────── */}
       <nav
         aria-label="Navegação principal"
-        className="fixed bottom-0 w-full bg-gray-50 dark:bg-gray-800 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] border-t border-gray-100 dark:border-gray-700 pb-safe z-[130] transition-colors"
+        className="fixed bottom-0 w-full bg-background-light dark:bg-background-dark shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] border-t border-gray-100 dark:border-gray-700 pb-safe z-bottom-nav transition-colors"
       >
         <div className="flex justify-around items-center h-16 sm:h-20 max-w-md mx-auto px-2">
           {isMotorista ? (

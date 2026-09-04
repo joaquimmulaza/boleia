@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ChevronDown, Info } from 'lucide-react';
 
 const LogAbsenceModal = ({ isOpen, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
@@ -15,7 +16,7 @@ const LogAbsenceModal = ({ isOpen, onClose, onSubmit }) => {
   };
 
   return (
-    <div data-testid="modal-registar-falta" className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 flex flex-col justify-end z-[9999] font-display antialiased">
+    <div data-testid="modal-registar-falta" className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 flex flex-col justify-end z-modal font-display antialiased">
       <div className="bg-white dark:bg-slate-900 rounded-t-xl overflow-hidden shadow-2xl max-w-md mx-auto w-full">
         
         {/* Handle */}
@@ -58,7 +59,7 @@ const LogAbsenceModal = ({ isOpen, onClose, onSubmit }) => {
                   <option value="Motorista">Motorista</option>
                   <option value="Passageiro">Passageiro</option>
                 </select>
-                <span className="material-symbols-outlined absolute right-4 top-4 pointer-events-none text-slate-400">expand_more</span>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 size-5" aria-hidden="true" />
               </div>
             </div>
 
@@ -76,9 +77,9 @@ const LogAbsenceModal = ({ isOpen, onClose, onSubmit }) => {
 
             {/* Summary Info */}
             <div className="p-4 bg-primary/5 border border-primary/10 rounded-xl flex items-center gap-3">
-              <span className="material-symbols-outlined text-primary shrink-0">info</span>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                O desconto será calculado automaticamente com base no seu percurso habitual em <span className="font-bold">Luanda</span>.
+              <Info className="text-primary shrink-0 size-5" aria-hidden="true" />
+              <p className="text-xs text-pretty text-slate-600 dark:text-slate-400 leading-relaxed">
+                O desconto será calculado automaticamente com base no teu percurso habitual em <span className="font-bold">Luanda</span>.
               </p>
             </div>
 

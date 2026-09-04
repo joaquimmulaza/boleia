@@ -18,7 +18,7 @@ import UpdatePrompt from './components/UpdatePrompt';
 const RootRoute = () => {
   const { session, loading, tipoPerfil } = useAuth();
 
-  if (loading) return <div className="flex h-screen items-center justify-center text-gray-500">A carregar...</div>;
+  if (loading) return <div className="flex h-dvh items-center justify-center text-gray-500">A carregar...</div>;
   if (session) {
     if (tipoPerfil === 'Motorista') return <Navigate to="/motorista" replace />;
     return <Navigate to="/passageiro" replace />;

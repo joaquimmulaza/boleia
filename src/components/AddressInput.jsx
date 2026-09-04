@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { MapPin, Flag } from 'lucide-react';
 import { useAutocomplete } from '../hooks/useAutocomplete';
 import AutocompleteDropdown from './AutocompleteDropdown';
+
+const ICON_MAP = {
+  location_on: MapPin,
+  flag: Flag,
+};
 
 const AddressInput = ({
   id,
@@ -12,6 +18,8 @@ const AddressInput = ({
   onChange,
   onSelectCoordinates,
 }) => {
+  const IconComponent = icon ? ICON_MAP[icon] : null;
+
   const {
     suggestions,
     loading,
@@ -25,13 +33,11 @@ const AddressInput = ({
   const [showDropdown, setShowDropdown] = useState(false);
   const wrapperRef = useRef(null);
 
-  // Sync external value with internal input
   useEffect(() => {
     setInputValue(value || '');
   }, [value]);
 
   useEffect(() => {
-    // Close dropdown on click outside
     const handleClickOutside = (event) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
         setShowDropdown(false);
@@ -70,19 +76,17 @@ const AddressInput = ({
     <div className="flex flex-col w-full relative" ref={wrapperRef}>
       <label className="flex flex-col w-full" htmlFor={id}>
         {label && (
-          <span className="text-near-black dark:text-slate-200 text-sm font-semibold mb-2 ml-1">
+          <span className="text-slate-900 dark:text-slate-200 text-sm font-semibold mb-2 ml-1">
             {label}
           </span>
         )}
         <div className="relative flex items-center">
-          {icon && (
-            <span
-              className="material-symbols-outlined absolute left-4 text-primary"
+          {IconComponent ? (
+            <IconComponent
+              className="absolute left-4 text-primary size-5"
               aria-hidden="true"
-            >
-              {icon}
-            </span>
-          )}
+            />
+          ) : null}
           <input
             id={id}
             type="text"
@@ -94,14 +98,13 @@ const AddressInput = ({
               if (inputValue.length > 2) setShowDropdown(true);
             }}
             className={`form-input w-full ${
-              icon ? 'pl-12' : 'pl-4'
+              IconComponent ? 'pl-12' : 'pl-4'
             } pr-4 h-14 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:ring-primary/20 transition-all placeholder:text-slate-400 outline-none`}
             placeholder={placeholder}
           />
         </div>
       </label>
 
-      {/* Rich Modeless Feedback for Service Errors */}
       {error && !showDropdown && (
          <div className="mt-1 ml-1 text-xs text-red-500 font-medium">{error}</div>
       )}

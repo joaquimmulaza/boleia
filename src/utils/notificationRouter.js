@@ -8,12 +8,13 @@
 
 export const notificationRouteMap = {
   agreement_update: (metadata) => {
-    // metadata.acordo_id deve estar presente
     return metadata?.acordo_id ? `/acordos?openAcordoId=${metadata.acordo_id}` : '/acordos';
   },
-  // Facilmente expansível no futuro:
-  // new_message: (metadata) => `/chat/${metadata.chat_id}`,
-  // driver_arrived: (metadata) => `/route/${metadata.route_id}/tracking`,
+  proposal_received: (metadata) => {
+    return metadata?.oferta_id ? '/motorista' : '/motorista';
+  },
+  waitlist_promoted: () => '/passageiro',
+  match_available: () => '/passageiro',
 };
 
 /**

@@ -1,24 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import React from 'react';
 
-// The implementation does not exist yet, but we import it to test it.
 import { AuthProvider, useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
 
-// Mock do Supabase
+const mockSingle = vi.fn();
+const mockEq = vi.fn(() => ({ single: mockSingle }));
+const mockSelect = vi.fn(() => ({ eq: mockEq }));
+
 vi.mock('../lib/supabase', () => ({
   supabase: {
     auth: {
       getSession: vi.fn(),
       onAuthStateChange: vi.fn(),
-    }
+    },
+    from: vi.fn(() => ({
+      select: mockSelect,
+    })),
   }
 }));
 
-// Componente de teste para consumir o useAuth
 const TestComponent = () => {
-  const { session, user, loading, tipoPerfil } = useAuth();
+  const { user, loading, tipoPerfil, profile } = useAuth();
   
   if (loading) return <div data-testid="loading">A carregar...</div>;
   
@@ -26,6 +30,7 @@ const TestComponent = () => {
     <div>
       <div data-testid="user">{user ? user.id : 'no-user'}</div>
       <div data-testid="tipoPerfil">{tipoPerfil || 'no-perfil'}</div>
+      <div data-testid="onboarding">{profile?.onboarding_completed ? 'done' : 'pending'}</div>
     </div>
   );
 };
@@ -33,6 +38,10 @@ const TestComponent = () => {
 describe('AuthContext', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSingle.mockImplementation(() => Promise.resolve({
+      data: { id: 'user-123', tipo_perfil: 'Motorista', onboarding_completed: false },
+      error: null,
+    }));
   });
 
   it('Estado inicial loading=true antes da sessão ser resolvida', async () => {
@@ -50,7 +59,6 @@ describe('AuthContext', () => {
 
     expect(screen.getByTestId('loading')).toBeInTheDocument();
     
-    // Resolve promise para evitar pending handle
     resolveSession({ data: { session: null }, error: null });
   });
 
@@ -71,7 +79,7 @@ describe('AuthContext', () => {
     expect(screen.getByTestId('user')).toHaveTextContent('no-user');
   });
 
-  it('user e tipoPerfil correctos quando há sessão activa', async () => {
+  it('user, tipoPerfil normalizado e profile quando há sessão activa', async () => {
     const mockSession = {
       user: {
         id: 'user-123',
@@ -94,7 +102,8 @@ describe('AuthContext', () => {
     });
 
     expect(screen.getByTestId('user')).toHaveTextContent('user-123');
-    expect(screen.getByTestId('tipoPerfil')).toHaveTextContent('motorista');
+    expect(screen.getByTestId('tipoPerfil')).toHaveTextContent('Motorista');
+    expect(supabase.from).toHaveBeenCalledWith('perfis');
   });
 
   it('onAuthStateChange actualiza o user ao disparar SIGNED_IN', async () => {
@@ -116,7 +125,6 @@ describe('AuthContext', () => {
       expect(screen.getByTestId('user')).toHaveTextContent('no-user');
     });
 
-    // Simulando o SIGNED_IN
     const mockSession = {
       user: {
         id: 'user-456',
@@ -126,12 +134,19 @@ describe('AuthContext', () => {
       }
     };
     
-    authChangeListener('SIGNED_IN', mockSession);
+    mockSingle.mockResolvedValueOnce({
+      data: { id: 'user-456', tipo_perfil: 'Passageiro', onboarding_completed: false },
+      error: null,
+    });
+
+    await act(async () => {
+      await authChangeListener('SIGNED_IN', mockSession);
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId('user')).toHaveTextContent('user-456');
     });
-    expect(screen.getByTestId('tipoPerfil')).toHaveTextContent('passageiro');
+    expect(screen.getByTestId('tipoPerfil')).toHaveTextContent('Passageiro');
   });
 
   it('unsubscribe chamado ao desmontar o AuthProvider', async () => {

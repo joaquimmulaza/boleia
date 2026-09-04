@@ -43,8 +43,8 @@ describe('LandingPage Component', () => {
       </ThemeProvider>
     );
 
-    expect(screen.getByText('Sua rota diária, mais simples e barata.')).toBeInTheDocument();
-    expect(screen.getByText(/Conectamos você a motoristas para trajetos fixos e acordos mensais/i)).toBeInTheDocument();
+    expect(screen.getByText('A tua rota diária, mais simples e barata.')).toBeInTheDocument();
+    expect(screen.getByText(/Ligamos-te a motoristas para trajetos fixos e acordos mensais/i)).toBeInTheDocument();
   });
 
   it('navigates to /auth?role=passenger when clicking "Sou Passageiro"', () => {

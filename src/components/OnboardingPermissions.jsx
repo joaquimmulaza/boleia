@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Bell, MapPin, Navigation } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { usePushNotifications } from '../hooks/usePushNotifications'
 
 // --- Stitch Design System: Boleia Certa ---
 // Design source: Stitch project/16509963580370012988
@@ -36,8 +37,18 @@ const checkShouldSkip = async (profile) => {
   return false
 }
 
+const persistOnboardingCompleted = async (userId) => {
+  if (!userId) return
+  const { error } = await supabase
+    .from('perfis')
+    .update({ onboarding_completed: true })
+    .eq('id', userId)
+  if (error) throw error
+}
+
 const OnboardingPermissions = () => {
-  const { user, profile } = useAuth()
+  const { user, profile, refreshProfile } = useAuth()
+  const { subscribe, isSupported } = usePushNotifications()
   const [visible, setVisible] = useState(false)
   const [animating, setAnimating] = useState(false)
 
@@ -71,21 +82,32 @@ const OnboardingPermissions = () => {
 
   // ─── Cenário C: Ativar Recursos ──────────────────────────────────────────────
   const handleActivate = async () => {
-    // 1. Request Notification permission (native browser API)
     if (typeof Notification !== 'undefined' && Notification.requestPermission) {
       await Notification.requestPermission()
     }
 
-    // 2. Request Geolocation (native browser API)
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (_position) => {
-          // Coordinates available; in a real flow they'd be stored in app state
-        },
-        (_error) => {
-          // Silently handle geolocation denial — app continues to work
-        }
+        () => {},
+        () => {}
       )
+    }
+
+    if (isSupported && user?.id) {
+      try {
+        await subscribe(user.id)
+      } catch (err) {
+        console.warn('[OnboardingPermissions] Push subscription failed:', err)
+      }
+    }
+
+    if (user?.id) {
+      try {
+        await persistOnboardingCompleted(user.id)
+        await refreshProfile()
+      } catch (err) {
+        console.warn('[OnboardingPermissions] Failed to persist onboarding:', err)
+      }
     }
 
     handleClose()
@@ -99,10 +121,8 @@ const OnboardingPermissions = () => {
     // Persist decision in the background — if it fails, user still has access
     if (user?.id) {
       try {
-        await supabase
-          .from('perfis')
-          .update({ onboarding_completed: true })
-          .eq('id', user.id)
+        await persistOnboardingCompleted(user.id)
+        await refreshProfile()
       } catch (err) {
         // Resiliência local: swallow error, the component already closed
         console.warn('[OnboardingPermissions] Failed to persist dismiss:', err)

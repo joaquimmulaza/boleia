@@ -72,9 +72,9 @@ describe('VehicleSetup — Fluxo Upsert (Opção B — BD como Fonte da Verdade)
       expect(await screen.findByLabelText(/Matrícula/i)).toBeInTheDocument();
     });
 
-    it('renderiza o campo Lugares Disponíveis', async () => {
+    it('renderiza o campo Capacidade do veículo', async () => {
       renderComponent();
-      expect(await screen.findByLabelText(/Lugares Disponíveis/i)).toBeInTheDocument();
+      expect(await screen.findByLabelText(/Capacidade do veículo/i)).toBeInTheDocument();
     });
 
     it('renderiza o botão Guardar Veículo', async () => {
@@ -95,14 +95,14 @@ describe('VehicleSetup — Fluxo Upsert (Opção B — BD como Fonte da Verdade)
       fireEvent.change(screen.getByLabelText(/Matrícula/i), {
         target: { value: 'LD-12-34-AB' },
       });
-      fireEvent.change(screen.getByLabelText(/Lugares Disponíveis/i), {
-        target: { value: '7' },
+      fireEvent.change(screen.getByLabelText(/Capacidade do veículo/i), {
+        target: { value: '8' },
       });
 
       fireEvent.click(screen.getByRole('button', { name: /Guardar Veículo/i }));
     };
 
-    it('chama .from("veiculos").upsert() com o payload correto incluindo id_motorista', async () => {
+    it('chama .from("veiculos").upsert() com capacidade_total e vagas_passageiros', async () => {
       await fillAndSubmit();
 
       await waitFor(() => {
@@ -111,7 +111,8 @@ describe('VehicleSetup — Fluxo Upsert (Opção B — BD como Fonte da Verdade)
             id_motorista: 'user-motorista-uuid',
             marca_modelo: 'Toyota Hiace',
             matricula: 'LD-12-34-AB',
-            lugares_disponiveis: 7,
+            capacidade_total: 8,
+            vagas_passageiros: 7,
           }),
           { onConflict: 'id_motorista' }
         );

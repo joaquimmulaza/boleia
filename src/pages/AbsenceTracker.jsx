@@ -1,122 +1,255 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getAbsences } from '../services/AbsenceService';
+import { ChevronRight, Info, Plus } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { getAbsences, logAbsence } from '../services/AbsenceService';
+import {
+  getAgreementsForDriver,
+  getAgreementsForPassenger,
+} from '../services/AgreementService';
 import LogAbsenceModal from '../components/LogAbsenceModal';
-import { ArrowLeft, Info, Plus } from 'lucide-react';
+import PageHeader from '../components/PageHeader';
+import PageShell from '../components/PageShell';
+import EmptyState from '../components/EmptyState';
+import LoadingSkeleton from '../components/LoadingSkeleton';
 import { formatDate, formatCurrency } from '../utils/formatters';
+import { getFriendlyErrorMessage } from '../utils/errorHandler';
 
 const AbsenceTracker = () => {
   const { acordoId } = useParams();
   const navigate = useNavigate();
+  const { user, tipoPerfil } = useAuth();
 
   const [faltas, setFaltas] = useState([]);
+  const [acordosActivos, setAcordosActivos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
+  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchFaltas = async () => {
-      try {
-        const { data, error } = await getAbsences(acordoId);
-        if (error) throw error;
-        if (isMounted) {
-          setFaltas(data || []);
-        }
-      } catch (err) {
-        console.error('Erro ao buscar faltas:', err);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-    fetchFaltas();
-    return () => { isMounted = false; };
+  const carregarFaltas = useCallback(async () => {
+    if (!acordoId) return;
+    setLoading(true);
+    try {
+      const data = await getAbsences(acordoId);
+      setFaltas(data);
+    } catch (err) {
+      console.error('Erro ao buscar faltas:', err);
+      setMessage({ type: 'error', text: getFriendlyErrorMessage(err) });
+    } finally {
+      setLoading(false);
+    }
   }, [acordoId]);
 
-  const totalDesconto = faltas.reduce((acc, falta) => acc + (Number(falta.desconto_kz) || 0), 0);
+  const carregarAcordosActivos = useCallback(async () => {
+    setLoading(true);
+    try {
+      if (!user?.id) {
+        setAcordosActivos([]);
+        return;
+      }
+      const acordos =
+        tipoPerfil === 'Motorista'
+          ? await getAgreementsForDriver(user.id)
+          : await getAgreementsForPassenger(user.id);
+      const activos = (acordos || []).filter(
+        (a) => a.estado?.toLowerCase() === 'activo' && !a.is_hidden_by_user,
+      );
+      setAcordosActivos(activos);
+    } catch (err) {
+      console.error('Erro ao carregar acordos:', err);
+      setMessage({ type: 'error', text: getFriendlyErrorMessage(err) });
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, tipoPerfil]);
 
-  const handleLogAbsence = (formData) => {
-      // Logic handled in Modal parent component/service if needed, currently just closes
+  useEffect(() => {
+    if (acordoId) {
+      carregarFaltas();
+    } else {
+      carregarAcordosActivos();
+    }
+  }, [acordoId, carregarFaltas, carregarAcordosActivos]);
+
+  const totalDesconto = faltas.reduce(
+    (acc, falta) => acc + (Number(falta.desconto_kz) || 0),
+    0,
+  );
+
+  const handleLogAbsence = async (formData) => {
+    if (!acordoId) return;
+    setSubmitting(true);
+    setMessage({ type: '', text: '' });
+    try {
+      await logAbsence({
+        id_acordo: acordoId,
+        data_falta: formData.dataFalta,
+        tipo: formData.tipo,
+        observacao: formData.observacao || null,
+        passenger_id: formData.tipo === 'Passageiro' ? user?.id : null,
+        viagem: formData.viagem || 'ambas',
+      });
       setIsModalOpen(false);
+      setMessage({ type: 'success', text: 'Falta registada com sucesso.' });
+      await carregarFaltas();
+    } catch (err) {
+      console.error('Erro ao registar falta:', err);
+      setMessage({ type: 'error', text: getFriendlyErrorMessage(err) });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  return (
-    <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col font-['Plus_Jakarta_Sans',_sans-serif] antialiased">
-      <main className="flex-1 px-4 pt-4 pb-32 max-w-md mx-auto w-full">
-        {/* Title & Back Button */}
-        <div className="flex items-center gap-3 mb-6">
-          <button 
-            onClick={() => navigate(-1)}
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors bg-white shadow-sm border border-slate-200 dark:bg-slate-900 dark:border-slate-800"
-            aria-label="Voltar"
-          >
-            <span className="material-symbols-outlined text-slate-900 dark:text-slate-100">arrow_back</span>
-          </button>
-          <h1 className="text-2xl font-bold tracking-tight">Registo de Faltas</h1>
-        </div>
-        {/* Summary Card */}
-        <div className="mt-4 p-6 bg-primary/10 dark:bg-primary/20 rounded-xl border border-primary/20">
-          <p className="text-primary font-semibold text-sm uppercase tracking-wider">Total a Descontar</p>
-          <div className="flex items-baseline gap-1 mt-1">
-            <span className="text-3xl font-bold text-slate-900 dark:text-slate-50">{formatCurrency(totalDesconto)}</span>
-            <span className="text-lg font-semibold text-slate-600 dark:text-slate-400">Kz</span>
-          </div>
-          <div className="mt-4 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-            <span className="material-symbols-outlined text-sm">info</span>
-            <span>Calculado com base nos acordos ativos</span>
-          </div>
-        </div>
-
-        {/* Section Title */}
-        <div className="mt-8 mb-4 flex justify-between items-center">
-          <h2 className="text-lg font-bold">Histórico de Ausências</h2>
-          <span className="text-sm text-primary font-medium">Este mês</span>
-        </div>
-
-        {/* Absence List */}
-        <div className="space-y-3">
-          {loading ? (
-             <div className="text-center py-10 text-slate-500 flex flex-col items-center justify-center">A carregar...</div>
-          ) : faltas.length === 0 ? (
-             <div className="text-center py-12 flex flex-col items-center justify-center space-y-3">
-               <p className="text-slate-500 font-medium">Não há faltas</p>
-             </div>
-          ) : (
-            faltas.map((falta) => (
-              <div key={falta.id} data-testid="absence-card" className="bg-white dark:bg-slate-900/50 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base font-bold">{formatDate(falta.data_falta) || falta.data_falta}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${falta.tipo_falta?.toLowerCase() === 'motorista' ? 'bg-primary/10 text-primary' : 'bg-red-100 text-red-600'}`}>
-                      {falta.tipo_falta}
-                    </span>
-                  </div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{falta.observacao || '-'}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-base font-bold text-red-500">-{formatCurrency(falta.desconto_kz)} Kz</p>
-                </div>
+  const renderHub = () => (
+    <>
+      <PageHeader
+        title="Registo de Faltas"
+        subtitle="Selecciona um acordo para ver ou registar faltas"
+      />
+      <div className="space-y-3">
+        {loading ? (
+          <LoadingSkeleton variant="list" count={3} />
+        ) : acordosActivos.length === 0 ? (
+          <EmptyState
+            title="Sem acordos activos"
+            message="Não tens acordos activos. As faltas só podem ser registadas em boleias activas."
+            actionLabel="Ver acordos"
+            onAction={() => navigate('/acordos')}
+          />
+        ) : (
+          acordosActivos.map((acordo) => (
+            <button
+              key={acordo.id}
+              type="button"
+              data-testid="acordo-faltas-item"
+              onClick={() => navigate(`/faltas/${acordo.id}`)}
+              className="w-full bg-white dark:bg-slate-900/50 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex justify-between items-center text-left hover:border-primary/30 transition-colors"
+            >
+              <div>
+                <p className="font-bold text-slate-900 dark:text-slate-100">
+                  Acordo · {acordo.n_passageiros_contrato}{' '}
+                  {acordo.n_passageiros_contrato === 1 ? 'pessoa' : 'pessoas'}
+                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 tabular-nums">
+                  {Number(acordo.valor_mensal_por_passageiro_kz).toLocaleString('pt-PT')} Kz /
+                  pessoa
+                </p>
               </div>
-            ))
-          )}
-        </div>
-      </main>
+              <ChevronRight className="text-primary shrink-0" size={20} aria-hidden="true" />
+            </button>
+          ))
+        )}
+      </div>
+    </>
+  );
 
-      {/* Floating Action Button (FAB) */}
-      <div className="fixed bottom-24 right-4 z-20">
-        <button 
-           onClick={() => setIsModalOpen(true)}
-           className="bg-primary hover:bg-primary/90 text-white flex items-center gap-2 px-5 py-3.5 rounded-full shadow-lg shadow-primary/30 font-bold transition-all active:scale-95"
-        >
-          <span className="material-symbols-outlined">add</span>
-          <span>Registar Falta</span>
-        </button>
+  const renderDetalhe = () => (
+    <>
+      <PageHeader title="Registo de Faltas" onBack={() => navigate('/faltas')} />
+
+      <div className="mt-2 p-6 bg-primary/10 dark:bg-primary/20 rounded-xl border border-primary/20">
+        <p className="text-primary font-semibold text-sm uppercase">Total a descontar</p>
+        <div className="flex items-baseline gap-1 mt-1">
+          <span className="text-3xl font-bold text-slate-900 dark:text-slate-50 tabular-nums">
+            {formatCurrency(totalDesconto)}
+          </span>
+          <span className="text-lg font-semibold text-slate-600 dark:text-slate-400">Kz</span>
+        </div>
+        <div className="mt-4 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <Info size={14} aria-hidden="true" />
+          <span className="text-pretty">
+            Desconto com base na quota mensal do acordo (por pessoa), sem divisores fixos.
+          </span>
+        </div>
       </div>
 
-      <LogAbsenceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleLogAbsence} />
+      <div className="mt-8 mb-4 flex justify-between items-center">
+        <h2 className="text-lg font-bold text-balance">Histórico de Ausências</h2>
+        <span className="text-sm text-primary font-medium">Este mês</span>
+      </div>
 
-      {/* Safe Area bottom space for navigation (nav is normally in Layout, keeping space here) */}
-      <div className="h-24"></div>
-    </div>
+      <div className="space-y-3">
+        {loading ? (
+          <LoadingSkeleton variant="list" count={4} />
+        ) : faltas.length === 0 ? (
+          <EmptyState message="Não há faltas registadas neste acordo." />
+        ) : (
+          faltas.map((falta) => (
+            <div
+              key={falta.id}
+              data-testid="absence-card"
+              className="bg-white dark:bg-slate-900/50 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex justify-between items-center"
+            >
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-bold tabular-nums">
+                    {formatDate(falta.data_falta) || falta.data_falta}
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                      falta.tipo?.toLowerCase() === 'motorista'
+                        ? 'bg-primary/10 text-primary'
+                        : 'bg-red-100 text-red-600'
+                    }`}
+                  >
+                    {falta.tipo}
+                  </span>
+                </div>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  {falta.observacao || '-'}
+                  {falta.viagem ? ` · ${falta.viagem}` : ''}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-base font-bold text-red-500 tabular-nums">
+                  -{formatCurrency(falta.desconto_kz)} Kz
+                </p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </>
+  );
+
+  return (
+    <PageShell className="pb-32">
+      {message.text && (
+        <div
+          role="alert"
+          className={`mb-4 p-4 rounded-xl text-sm font-medium ${
+            message.type === 'success'
+              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400'
+              : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-400'
+          }`}
+        >
+          {message.text}
+        </div>
+      )}
+
+      {acordoId ? renderDetalhe() : renderHub()}
+
+      {acordoId && (
+        <div className="fixed bottom-24 right-4 z-header">
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            disabled={submitting}
+            className="bg-primary hover:bg-primary/90 text-white flex items-center gap-2 px-5 py-3.5 rounded-full shadow-lg shadow-primary/30 font-bold transition-all active:scale-95 disabled:opacity-60"
+          >
+            <Plus size={20} aria-hidden="true" />
+            <span>Registar Falta</span>
+          </button>
+        </div>
+      )}
+
+      <LogAbsenceModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleLogAbsence}
+      />
+    </PageShell>
   );
 };
 

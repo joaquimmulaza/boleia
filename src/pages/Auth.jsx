@@ -31,15 +31,15 @@ const Auth = () => {
   } = useAuthForm();
 
   return (
-    <div className="font-[Plus Jakarta Sans,sans-serif] min-h-screen bg-white text-gray-800 antialiased flex flex-col items-center justify-center p-0 sm:p-4">
-      <div className="relative flex min-h-screen sm:min-h-[812px] max-w-[400px] w-full flex-col bg-white overflow-hidden shadow-none sm:shadow-xl sm:rounded-3xl border-0 sm:border border-gray-100">
+    <div className="font-[Plus Jakarta Sans,sans-serif] min-h-dvh bg-background-light dark:bg-background-dark text-gray-800 dark:text-gray-100 antialiased flex flex-col items-center justify-center p-0 sm:p-4">
+      <div className="relative flex min-h-dvh sm:min-h-[812px] max-w-[400px] w-full flex-col bg-white dark:bg-slate-900 overflow-hidden shadow-none sm:shadow-xl sm:rounded-3xl border-0 sm:border border-gray-100 dark:border-slate-800">
         
         {/* Header Section */}
         <div className="flex flex-col items-center pt-16 pb-8 px-8 text-center">
           <h1 className="flex items-center justify-center mb-4">
             <img src="/boleia-logo.png" alt="Boleia Certa" className="h-20 w-auto object-contain" />
           </h1>
-          <p className="text-gray-500 text-[15px] leading-relaxed max-w-[260px]">
+          <p className="text-gray-500 dark:text-slate-400 text-[15px] leading-relaxed max-w-[260px] text-pretty">
             Mobilidade urbana limpa e partilhada.
           </p>
         </div>
@@ -47,8 +47,8 @@ const Auth = () => {
         {/* Profile Toggle — apenas em modo Criar Conta */}
         {!isLogin && (
           <div className="px-8 mb-6">
-            <div className="flex relative h-14 w-full items-center justify-center rounded-full bg-gray-50 p-1.5 border border-gray-200 shadow-inner">
-              <label className={`flex h-full grow cursor-pointer items-center justify-center rounded-full px-4 transition-all duration-300 ${profileType === 'Passageiro' ? 'bg-emerald-500 text-white shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>
+            <div className="flex relative h-14 w-full items-center justify-center rounded-full bg-gray-50 dark:bg-slate-800 p-1.5 border border-gray-200 dark:border-slate-700 shadow-inner">
+              <label className={`flex h-full grow cursor-pointer items-center justify-center rounded-full px-4 transition-all duration-300 ${profileType === 'Passageiro' ? 'bg-primary text-white shadow-md' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'}`}>
                 <span className="truncate text-sm font-semibold z-10">Sou Passageiro</span>
                 <input 
                   checked={profileType === 'Passageiro'} 
@@ -60,7 +60,7 @@ const Auth = () => {
                   aria-label="Sou Passageiro"
                 />
               </label>
-              <label className={`flex h-full grow cursor-pointer items-center justify-center rounded-full px-4 transition-all duration-300 ${profileType === 'Motorista' ? 'bg-emerald-500 text-white shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>
+              <label className={`flex h-full grow cursor-pointer items-center justify-center rounded-full px-4 transition-all duration-300 ${profileType === 'Motorista' ? 'bg-primary text-white shadow-md' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'}`}>
                 <span className="truncate text-sm font-semibold z-10">Sou Motorista</span>
                 <input 
                   checked={profileType === 'Motorista'} 
@@ -86,7 +86,7 @@ const Auth = () => {
                 <label htmlFor="nome" className="text-gray-500 text-sm font-medium ml-1">Nome Completo</label>
                 <input
                   id="nome"
-                  className={`flex w-full rounded-2xl border ${errors?.nome ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/10'} bg-gray-50 text-gray-800 focus:ring-4 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400`}
+                  className={`flex w-full rounded-2xl border ${errors?.nome ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 dark:border-slate-700 focus:border-primary focus:ring-primary/10'} bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-slate-100 focus:ring-4 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-slate-500`}
                   placeholder="O seu nome completo"
                   type="text"
                   value={nome}
@@ -99,7 +99,7 @@ const Auth = () => {
                 <label htmlFor="telefone" className="text-gray-500 text-sm font-medium ml-1">Telefone</label>
                 <input
                   id="telefone"
-                  className={`flex w-full rounded-2xl border ${errors?.telefone ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/10'} bg-gray-50 text-gray-800 focus:ring-4 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400`}
+                  className={`flex w-full rounded-2xl border ${errors?.telefone ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 dark:border-slate-700 focus:border-primary focus:ring-primary/10'} bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-slate-100 focus:ring-4 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400`}
                   placeholder="+244 9XX XXX XXX"
                   type="tel"
                   value={telefone}
@@ -115,7 +115,7 @@ const Auth = () => {
             <label htmlFor="email" className="text-gray-500 text-sm font-medium ml-1">Email</label>
             <input 
               id="email"
-              className={`flex w-full rounded-2xl border ${errors?.email ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/10'} bg-gray-50 text-gray-800 focus:ring-4 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400`}
+              className={`flex w-full rounded-2xl border ${errors?.email ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 dark:border-slate-700 focus:border-primary focus:ring-primary/10'} bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-slate-100 focus:ring-4 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400`}
               placeholder="nome@email.com" 
               type="email"
               value={email}
@@ -132,7 +132,7 @@ const Auth = () => {
             <div className="relative flex items-center">
               <input 
                 id="password"
-                className={`flex w-full rounded-2xl border ${errors?.password ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/10'} bg-gray-50 text-gray-800 focus:ring-4 h-14 p-4 pr-12 text-base outline-none transition-all placeholder:text-gray-400`}
+                className={`flex w-full rounded-2xl border ${errors?.password ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 dark:border-slate-700 focus:border-primary focus:ring-primary/10'} bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-slate-100 focus:ring-4 h-14 p-4 pr-12 text-base outline-none transition-all placeholder:text-gray-400`}
                 placeholder="••••••••" 
                 type={showPassword ? "text" : "password"}
                 value={password}
@@ -151,7 +151,7 @@ const Auth = () => {
             {errors?.password && <span className="text-red-500 text-xs font-medium ml-1">{errors.password}</span>}
             {isLogin && (
               <div className="flex justify-end mt-1">
-                <button type="button" className="text-xs text-emerald-600 font-semibold hover:text-emerald-700 transition-colors">
+                <button type="button" className="text-xs text-primary font-semibold hover:text-primary/80 transition-colors">
                   Esqueceu a palavra-passe?
                 </button>
               </div>
@@ -176,7 +176,7 @@ const Auth = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] active:bg-emerald-700 text-white font-bold py-4 rounded-2xl shadow-[0_4px_14px_0_rgba(16,185,129,0.39)] hover:shadow-[0_6px_20px_rgba(16,185,129,0.23)] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full bg-primary hover:bg-primary/90 active:scale-[0.98] text-white font-bold py-4 rounded-2xl shadow-lg shadow-primary/20 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isLoading ? 'A processar...' : isLogin ? 'Entrar' : 'Registar'}
             </button>
@@ -188,7 +188,7 @@ const Auth = () => {
           <div className="flex flex-col items-center gap-4">
             <button 
               onClick={handleToggleMode}
-              className="text-gray-500 font-medium text-sm hover:text-emerald-600 transition-colors"
+              className="text-gray-500 dark:text-slate-400 font-medium text-sm hover:text-primary transition-colors"
             >
               {isLogin ? 'Não tem conta? Criar Conta' : 'Já tem conta? Entrar na minha conta'}
             </button>
