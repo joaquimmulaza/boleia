@@ -4,7 +4,7 @@
 **Spec / Context**: `spec.md`, `context.md`  
 **UI visual**: `.specs/features/marketplace-oferta-procura/v0-reference/` (aprovado)  
 **SoT negócio**: planos marketplace + mapa impacto + `spec.md` / `context.md` / `design.md` — **prevalecem sobre o protótipo v0** se houver conflito  
-**Status**: Phase 1–5 Done · Phase 6: **T22–T24 Done** · **T25←** — completar bifurcação 1:N
+**Status**: Phase 1–5 Done · Phase 6: **T22–T28 Done** · **T31←** — grupo público / n_maximo
 **Checkpoint:** [CHECKPOINT.md](./CHECKPOINT.md)
 
 ---
@@ -53,7 +53,7 @@ T26, T27, T28 (após T24)
 T29 (P2), T30 (P3)
 ```
 
-**Status global:** Phase 1–5 **Done**. Phase 6: T22–T24 **Done** · **T25← AQUI**.
+**Status global:** Phase 1–5 **Done**. Phase 6: T22–T28 **Done** · **T31← AQUI**.
 ---
 
 ## Tools por fase
@@ -280,32 +280,35 @@ T29 (P2), T30 (P3)
 - **ID:** MKT-04, MKT-05, MKT-06  
 - **Do:** Testes (Vitest + smoke browser se possível): ask 120000 TOTAL_ACORDO N=3 → 40000; 100000/3 resto; `leavePassenger` não altera `valor_mensal_*` nem quotas restantes  
 - **Deps:** T24, T11  
-- **Status:** Pending  
-- **Verify:** Asserções verdes; grep sem recálculo por COUNT(activos)
+- **Status:** Done  
+- **Verify:** Asserções verdes; grep sem recálculo por COUNT(activos)  
+- **Ficheiros:** `AgreementsE2E.test.jsx`, `AgreementService.js` (+ `.test.js`) — leave valida quotas restantes
 
 ### T26: Waitlist — promoção ao libertar vaga
 
-- **ID:** MKT-08, MKT-12  
-- **Do:** Ao `leavePassenger` / cancelamento: notificar 1º da `lista_espera` (`waitlist_promoted`); serviço `promoteWaitlist` ou trigger/RPC; UI passageiro mostra estado na lista  
-- **Deps:** T12, T17  
-- **Status:** Pending  
+- **ID:** MKT-08, MKT-12
+- **Do:** Ao `leavePassenger` / cancelamento: notificar 1º da `lista_espera` (`waitlist_promoted`); serviço `promoteWaitlist` ou trigger/RPC; UI passageiro mostra estado na lista
+- **Deps:** T12, T17
+- **Status:** Done
 - **Verify:** Sair pax → notif waitlist; sem auto-aceitar
+- **Ficheiros:** `WaitlistService.js` (`promoteWaitlist` → RPC `promote_waitlist`); `AgreementService.leavePassenger` hook best-effort; UI `PassengerDashboard` estados `activa`/`notificada`; migração MCP `promote_waitlist_rpc`
 
 ### T27: Publicar oferta — dias_semana + flexibilidade (mínimo)
 
 - **ID:** MKT-01  
 - **Do:** UI `/publicar-trajeto`: selector Seg–Sex (default) + toggle «Rota flexível» → `flexibilidade_rota` / `dias_semana` (já no `OfertaService`)  
 - **Deps:** T15, T8  
-- **Status:** Pending  
+- **Status:** Done  
 - **Verify:** Oferta gravada com flags; copy humana
 
 ### T28: Detalhe acordo 1:N (lista passageiros + preço congelado)
 
-- **ID:** MKT-03  
-- **Do:** `/acordos` detalhe alinhado v0: lista pax, quota, CTA sair / registar falta; badge «Preço combinado / congelado»  
-- **Deps:** T18, T24  
-- **Status:** Pending  
-- **Verify:** Motorista vê N linhas; passageiro vê a sua quota
+- **ID:** MKT-03
+- **Do:** `/acordos` detalhe alinhado v0: lista pax, quota, CTA sair / registar falta; badge «Preço combinado / congelado»
+- **Deps:** T18, T24
+- **Status:** Done
+- **Verify:** Motorista vê N linhas; passageiro vê a sua quota; falta só se activo; modal `busy`
+- **Nota:** UI QA ciclo 2 + code-review APPROVE; `ConfirmationModal` prop `busy`
 
 ### T29 (P2): Adenda / renegotiateAgreementPricing
 

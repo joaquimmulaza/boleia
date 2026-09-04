@@ -8,6 +8,8 @@ import {
   createGrupo,
   addMembroGrupo,
   syncNCandidato,
+  getGrupoByProcura,
+  listMembrosGrupo,
 } from './GrupoService.js';
 import { supabase } from '../lib/supabase';
 
@@ -248,5 +250,72 @@ describe('GrupoService', () => {
 
     const n = await syncNCandidato('g-1');
     expect(n).toBe(3);
+  });
+
+  it('getGrupoByProcura devolve o grupo ligado à procura', async () => {
+    const mockMaybeSingle = vi.fn().mockResolvedValue({
+      data: { id: 'g-1', procura_id: 'pr-1', nome: 'Colegas' },
+      error: null,
+    });
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle }),
+      }),
+    });
+
+    const grupo = await getGrupoByProcura('pr-1');
+    expect(supabase.from).toHaveBeenCalledWith('grupos');
+    expect(grupo.id).toBe('g-1');
+  });
+
+  it('getGrupoByProcura devolve null quando não há grupo', async () => {
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        }),
+      }),
+    });
+
+    const grupo = await getGrupoByProcura('pr-1');
+    expect(grupo).toBeNull();
+  });
+
+  it('listMembrosGrupo lista membros activos com perfil', async () => {
+    const mockOrder = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: 'm-1',
+          passenger_id: 'pax-1',
+          estado: 'activo',
+          ordem_insercao: 0,
+          pickup_name: 'Talatona',
+          perfis: { nome_completo: 'Ana', telefone: '+244923000001' },
+        },
+        {
+          id: 'm-2',
+          passenger_id: 'pax-2',
+          estado: 'activo',
+          ordem_insercao: 1,
+          pickup_name: 'Benfica',
+          perfis: { nome_completo: 'Bruno', telefone: '+244923000002' },
+        },
+      ],
+      error: null,
+    });
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            order: mockOrder,
+          }),
+        }),
+      }),
+    });
+
+    const membros = await listMembrosGrupo('g-1');
+    expect(supabase.from).toHaveBeenCalledWith('membros_grupo');
+    expect(membros).toHaveLength(2);
+    expect(membros[1].perfis.nome_completo).toBe('Bruno');
   });
 });

@@ -58,3 +58,28 @@ export async function listWaitlistByProcura(procuraId) {
   if (error) throw error;
   return data || [];
 }
+
+/**
+ * Promove o 1º da lista de espera (FIFO) quando há vaga libertada.
+ * Marca `notificada` + cria notif `waitlist_promoted` — **não** auto-aceita.
+ * @param {string} ofertaId
+ * @returns {Promise<{ id: string, oferta_id: string, estado: 'notificada' } | null>}
+ */
+export async function promoteWaitlist(ofertaId) {
+  if (!ofertaId) {
+    throw new Error('oferta_id é obrigatório.');
+  }
+
+  const { data, error } = await supabase.rpc('promote_waitlist', {
+    p_oferta_id: ofertaId,
+  });
+
+  if (error) throw error;
+  if (!data) return null;
+
+  return {
+    id: data,
+    oferta_id: ofertaId,
+    estado: 'notificada',
+  };
+}

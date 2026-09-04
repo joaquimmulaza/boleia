@@ -2,6 +2,52 @@
 @import "tailwindcss";
 @custom-variant dark (&:is(.dark *));
 
+/* Boleia brand + shadcn semantic tokens (mapped) */
+:root {
+  --background: #f6f8f6;
+  --foreground: #1a202c;
+  --card: #ffffff;
+  --card-foreground: #1a202c;
+  --popover: #ffffff;
+  --popover-foreground: #1a202c;
+  --primary: #10b748;
+  --primary-foreground: #ffffff;
+  --secondary: #f7f8fa;
+  --secondary-foreground: #1a202c;
+  --muted: #f7f8fa;
+  --muted-foreground: #718096;
+  --accent: #e8f8ee;
+  --accent-foreground: #102216;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #10b748;
+  --radius: 0.625rem;
+}
+
+.dark {
+  --background: #102216;
+  --foreground: #f6f8f6;
+  --card: #16301f;
+  --card-foreground: #f6f8f6;
+  --popover: #16301f;
+  --popover-foreground: #f6f8f6;
+  --primary: #10b748;
+  --primary-foreground: #ffffff;
+  --secondary: #1a3022;
+  --secondary-foreground: #f6f8f6;
+  --muted: #1a3022;
+  --muted-foreground: #a0aec0;
+  --accent: #1a3022;
+  --accent-foreground: #f6f8f6;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #2d4a36;
+  --input: #2d4a36;
+  --ring: #10b748;
+}
+
 @theme {
   --color-primary: #10b748;
   --color-background-light: #f6f8f6;
@@ -12,6 +58,30 @@
   --color-coral: #EF4444;
   --color-cool-gray: #718096;
   --color-light-gray: #F7F8FA;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 
   --z-header: 40;
   --z-bottom-nav: 50;

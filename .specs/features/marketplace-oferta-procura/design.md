@@ -552,3 +552,181 @@ Hoje só `button` existe em `src/components/ui/` — reutilizar padrões Tailwin
 2. Estender `DriverDashboard` (ou extrair `PropostaReviewCard.jsx`) sem reinventar Accept RPC.  
 3. Copy humana only; mapear enums só no código.  
 4. Visual QA vs v0 `cYa4j7gxE0p` + chat T24 `tLT9dcf4coN`.
+
+---
+
+## T28 — Detalhe acordo 1:N (lista passageiros + preço congelado)
+
+**Task:** T28 (MKT-03) · **Gate design:** Ready for Implementer  
+**Path UI:** `/acordos` → `MyAgreements.jsx` (lista + painel/detalhe)  
+**Deps:** T18, T24 · **Não tocar:** `AgreementService` mutações novas / `PublishRoute` (outros agentes)
+
+### Gap actual (código)
+
+`MyAgreements` já tem lista activos/outros, deep link `?openAcordoId=`, sheet de detalhe, CTA «Registar faltas» e «Sair do acordo» + `ConfirmationModal`. **Falta alinhar ao v0 (vista 8):**
+
+| Gap | Hoje | Alvo T28 |
+|-----|------|----------|
+| Badge preço | Ausente | Bloco «Preço combinado» + texto «congelado» + valor Kz |
+| Lista pax | `passenger_id` truncado · todos os estados misturados | Avatar/iniciais · **nome** · estado humano · `quota_mensal_kz` |
+| Vista por papel | Mesma UI | Motorista: **N linhas** do contrato; Passageiro: destaque da **sua** quota (lista completa opcional só se dados já vierem) |
+| Hierarquia | Sheet mínimo (estado + contagens) | Cabeçalho rota + horário + bloco congelado + secção «Passageiros · N» + CTAs |
+| Copy | «Passageiros no contrato» (ok) mas IDs crus | Sem jargon (`N_contrato`, `POR_PASSAGEIRO`, etc.) |
+
+### User flow
+
+```mermaid
+flowchart TD
+  A["/acordos lista"] --> B{Acordos?}
+  B -->|Não| C[EmptyState]
+  B -->|Sim| D[Card Activo / Outros]
+  D --> E[Abrir detalhe / deep link]
+  E --> F{Papel}
+  F -->|Motorista| G[Vê N linhas pax + quotas congeladas]
+  F -->|Passageiro| H[Vê a sua quota em destaque]
+  G --> I[Bloco Preço combinado / congelado]
+  H --> I
+  I --> J{Acção}
+  J -->|Registar falta| K["navigate /faltas/:acordoId"]
+  J -->|Sair - só Passageiro activo| L[ConfirmationModal]
+  L --> M[leavePassenger - quotas restantes intactas]
+  J -->|Fechar / voltar| A
+```
+
+1. Utilizador abre `/acordos` (ou deep link `openAcordoId`).  
+2. Toca num card → detalhe (sheet actual ou painel alinhado v0 — **mesmo path**, sem rota nova).  
+3. **Motorista:** secção «Passageiros · N» com **uma linha por** `acordos_passageiros` do contrato (`n_passageiros_contrato` / linhas persistidas); cada linha mostra nome + estado («Confirmado/a» / «Saiu») + `quota_mensal_kz` em Kz.  
+4. **Passageiro:** bloco de preço mostra a **sua** `quota_mensal_kz`; na lista, a sua linha fica visualmente destacada (ex. borda/accent); linhas de outros pax só se o payload já as incluir — sem pedir dados extra fora do serviço actual.  
+5. Badge/bloco «Preço combinado»: explica que o valor **fica congelado** (invariante MKT-05 — saída **não** recalcula quotas).  
+6. CTAs: «Registar falta» → `/faltas/:acordoId`; «Sair do acordo» (só Passageiro + estado activo) → modal → sucesso «A quota do mês mantém-se.»
+
+### Estados UI
+
+| Estado | UI |
+|--------|-----|
+| **Loading** | `LoadingSkeleton` na lista; detalhe não abre até dados prontos (ou skeleton no sheet) |
+| **Vazio** (sem acordos) | `EmptyState`: «Sem acordos» / «Quando aceitares uma proposta, o acordo aparece aqui.» |
+| **Erro** | Banner `role="alert"` junto à lista ou ao CTA do detalhe (`getFriendlyErrorMessage` / mensagem PT de `leavePassenger`) |
+| **Activo** | Chip «Activo» (emerald); bloco congelado visível; CTAs falta + (pax) sair |
+| **Saiu** (linha pax `estado = saiu` ou acordo não activo) | Chip/linha «Saiu» (neutro/slate); quota **ainda visível** (histórico congelado); **sem** CTA «Sair»; falta só se regra de negócio permitir no acordo activo |
+| **Busy** (sair) | Modal confirm + botões disabled / sem double-submit |
+| **Success** (saiu) | «Saíste do acordo. A quota do mês mantém-se.» (emerald); fechar detalhe + refresh lista |
+
+Comparação de estados: **case-insensitive** (`activo` / `Activo`).
+
+### Composição do detalhe (ordem visual — v0 vista 8)
+
+1. **Cabeçalho:** Chip estado · título `Origem → Destino` (`text-balance`) · meta «Desde …» se disponível.  
+2. **Card rota:** Partida / Chegada (hora + local) — reutilizar dados de `ofertas_capacidade` quando existirem.  
+3. **Bloco «Preço combinado» (obrigatório T28):**  
+   - Ícone `ShieldCheck` (Lucide)  
+   - Título: **«Preço combinado»**  
+   - Body (`text-pretty`): **«O valor fica congelado durante este acordo.»**  
+   - Valor em destaque: quota de referência ou a do viewer (`formatKwanza` + `tabular-nums` + **Kz**)  
+   - Opcional secundário: «Total do acordo» = `valor_mensal_total_kz` (humano; nunca enum).  
+4. **Separator** (shadcn ou `border-t`).  
+5. **Secção** label: `PASSAGEIROS · {N}` (N = linhas do contrato / activos + saíram — **nunca** rótulo `N_contrato`).  
+6. **Lista:** avatar iniciais · nome · estado humano · quota `X Kz`.  
+7. **CTAs:**  
+   - Secondary / outline: «Registar falta» (Clock) → `/faltas/:id`  
+   - Destructive outline: «Sair do acordo» (só Passageiro + activo)  
+   - Ghost: «Fechar»
+
+### Regras de display (Quatro Ns → copy humana)
+
+| Conceito interno | UI |
+|------------------|-----|
+| `N_contrato` | «Grupo · N pessoas» / «Passageiros · N» / «Individual» se N=1 |
+| `N_activos` | Só lotação se necessário («2 activos»); **nunca** para recalcular preço |
+| `quota_mensal_kz` | «40.000 Kz» por linha — imutável após aceitação |
+| `modo_preco` | Labels «Por passageiro» / «Total do acordo» se mostrar modo; **proibido** `POR_PASSAGEIRO` / `TOTAL_ACORDO` |
+| Cabeçalho `valor_mensal_por_passageiro_kz` | «Por pessoa» / valor do bloco congelado (base) |
+
+**Invariante visual:** após «Sair», as quotas das linhas restantes **não mudam** na UI; copy do modal já o diz.
+
+### Copy samples (PT-PT)
+
+- «Detalhe do acordo»  
+- «Preço combinado» / «O valor fica congelado durante este acordo.»  
+- «Passageiros · 3»  
+- «Confirmado» / «Confirmada» / «Saiu»  
+- «40.000 Kz» · «120.000 Kz» (total)  
+- «Registar falta» / «Sair do acordo» / «Fechar»  
+- Modal: «A tua quota deste mês não é reembolsada. Os preços dos restantes passageiros mantêm-se.»  
+- Sucesso: «Saíste do acordo. A quota do mês mantém-se.»
+
+### Componentes
+
+| Peça | Fonte | Notas |
+|------|-------|-------|
+| Shell / header / empty / skeleton | `PageShell`, `PageHeader`, `EmptyState`, `LoadingSkeleton` | Já em `MyAgreements` |
+| Card lista / detalhe | Tailwind actual **ou** `@shadcn/card` | Preferir tokens `src/index.css` (`--color-primary` `#10b748`) |
+| Chip estado / badge congelado | Chip Tailwind **ou** `@shadcn/badge` | Badge «Preço combinado» = bloco com `ShieldCheck`, não só pill |
+| Separator | `@shadcn/separator` ou `border-t` | Entre preço e lista |
+| CTAs | `src/components/ui/button.jsx` (já) | `default` / `secondary` / destructive outline |
+| Confirmar saída | `ConfirmationModal` | Já wired — baseline-ui AlertDialog pattern |
+| Kz | `formatKwanza` | `tabular-nums` |
+| Ícones | Lucide `ShieldCheck`, `Clock`, `Users`, `ArrowRight`, `ChevronRight` | Sem Material Symbols |
+
+**shadcn add (se o Implementer instalar):**  
+`npx shadcn@latest add @shadcn/badge @shadcn/card @shadcn/separator @shadcn/button`  
+Hoje em `src/components/ui/`: só `button.jsx` — reutilizar chips/cards Tailwind do detalhe actual é OK se não quiserem expandir o registry nesta task.
+
+### Layout textual (degradação One refine — SoT imediato)
+
+Base: v0 canónico vista **8. Detalhe do acordo** + gap de `MyAgreements`:
+
+```
+[←] Detalhe do acordo
+Chip Activo                    Desde …
+Talatona → Mutual
+
+┌ Card rota ─────────────────┐
+│ Partida 07:15 · Talatona   │
+│ Chegada ~07:45 · Mutual    │
+│ ┌ Preço combinado ───────┐ │
+│ │ 🛡 O valor fica congelado│ │
+│ │              40.000 Kz │ │
+│ └────────────────────────┘ │
+└────────────────────────────┘
+
+PASSAGEIROS · 3
+┌────────────────────────────┐
+│ AC  Ana Costa   Confirmada │ 40.000 Kz
+│ JP  João Pedro  Confirmado │ 40.000 Kz
+│ MS  Maria …     Confirmada │ 40.000 Kz
+└────────────────────────────┘
+
+[ Registar falta ]
+[ Sair do acordo ]   ← só Passageiro + activo
+[ Fechar ]
+```
+
+Mobile-first `max-w-md`; um accent primary; sem purple/glow; `h-dvh` no shell existente.
+
+### Referências de design
+
+| Fonte | Resultado |
+|-------|-----------|
+| **UI Skills** | `ibelick/baseline-ui` — `text-balance`/`text-pretty`, skeletons, erro junto à acção, AlertDialog p/ sair, `tabular-nums`, accent único `#10b748`, sem glow/purple |
+| **Mobbin** | **Falhou** (plano free / paid required — «Upgrade at mobbin.com/pricing») — degradado; não bloqueia |
+| **v0 marketplace (canónico)** | Chat https://v0.app/chat/cYa4j7gxE0p · vista **8. Detalhe do acordo** · `.specs/.../v0-reference/app__page.tsx` (`AgreementDetail`) · preview https://boleia-certa-marketplace-mobile-ui.v0.build |
+| **One/v0 refine T28** | Integração v0 **disponível**; **não** se criou chat novo nem deploy Vercel — SoT suficiente = vista 8 + esta secção (padrão T24: refine opcional, SoT imediato = canónico) |
+| **shadcn** | Button (local) · Badge/Card/Separator (@shadcn registry, add command acima) |
+| **Tokens** | `src/index.css` — `--color-primary: #10b748`, backgrounds light/dark |
+
+### Implementer checklist (após este gate)
+
+1. TDD: detalhe com N linhas (motorista); destaque da quota do passageiro; badge «Preço combinado»; estados activo/saiu; CTA sair não recalcula quotas na UI.  
+2. Evoluir **só** UI de `MyAgreements` (e componentes de apresentação se extrair) — **sem** alterar `AgreementService` / RPC / `PublishRoute`.  
+3. Nomes reais (join perfil) se já no payload; senão placeholder humano curto — **nunca** UUID truncado como UX final.  
+4. Copy humana only; Visual QA vs v0 vista 8 `cYa4j7gxE0p`.
+
+### VERDICT design (T28)
+
+```text
+VERDICT: APPROVE
+ISSUES:
+- (nenhum bloqueante) Mobbin degradado; One refine não gerado — SoT = v0 vista 8 + layout textual acima
+NEXT: Implementer T28 (TDD → MyAgreements detalhe) → UI QA + Code Reviewer
+```

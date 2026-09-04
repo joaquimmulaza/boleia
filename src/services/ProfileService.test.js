@@ -1,5 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { getProfile, updateProfile, getVehicle, updateVehicle } from './ProfileService';
+import {
+  getProfile,
+  updateProfile,
+  findPassageiroByTelefone,
+} from './ProfileService';
 import { supabase } from '../lib/supabase';
 
 vi.mock('../lib/supabase', () => ({
@@ -40,5 +44,39 @@ describe('ProfileService', () => {
     expect(supabase.from).toHaveBeenCalledWith('perfis');
     expect(mockUpdate).toHaveBeenCalledWith({ nome_completo: 'Novo Nome' });
     expect(result.nome_completo).toBe('Novo Nome');
+  });
+
+  it('findPassageiroByTelefone encontra perfil pelo telefone normalizado', async () => {
+    const mockMaybeSingle = vi.fn().mockResolvedValue({
+      data: { id: 'pax-2', nome_completo: 'Bruno', telefone: '+244923456789' },
+      error: null,
+    });
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle }),
+      }),
+    });
+
+    const perfil = await findPassageiroByTelefone('923456789');
+    expect(supabase.from).toHaveBeenCalledWith('perfis');
+    expect(perfil.id).toBe('pax-2');
+  });
+
+  it('findPassageiroByTelefone lança erro se telefone inválido', async () => {
+    await expect(findPassageiroByTelefone('123')).rejects.toThrow(/telefone/i);
+  });
+
+  it('findPassageiroByTelefone lança erro se perfil não existir', async () => {
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        }),
+      }),
+    });
+
+    await expect(findPassageiroByTelefone('+244923456789')).rejects.toThrow(
+      /não encontrámos/i,
+    );
   });
 });

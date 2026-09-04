@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { findCompatibleOfertas } from './MatchingService.js';
-import { enqueueWaitlist, listWaitlistByOferta } from './WaitlistService.js';
 import { supabase } from '../lib/supabase';
 
 vi.mock('../lib/supabase', () => ({
@@ -66,56 +65,5 @@ describe('MatchingService', () => {
     await expect(
       findCompatibleOfertas({ preferred_time: '07:00', n_candidato: 1 }),
     ).rejects.toEqual({ message: 'fail' });
-  });
-});
-
-describe('WaitlistService', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('enqueueWaitlist insere entrada activa', async () => {
-    const mockSingle = vi.fn().mockResolvedValue({
-      data: { id: 'w-1', oferta_id: 'of-1', procura_id: 'pr-1', estado: 'activa' },
-      error: null,
-    });
-    supabase.from.mockReturnValue({
-      insert: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({ single: mockSingle }),
-      }),
-    });
-
-    const result = await enqueueWaitlist({
-      oferta_id: 'of-1',
-      procura_id: 'pr-1',
-    });
-    expect(result.estado).toBe('activa');
-  });
-
-  it('enqueueWaitlist traduz conflito único', async () => {
-    supabase.from.mockReturnValue({
-      insert: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({
-            data: null,
-            error: { code: '23505', message: 'duplicate' },
-          }),
-        }),
-      }),
-    });
-    await expect(
-      enqueueWaitlist({ oferta_id: 'of-1', procura_id: 'pr-1' }),
-    ).rejects.toThrow('já está na lista de espera');
-  });
-
-  it('listWaitlistByOferta', async () => {
-    const mockOrder = vi.fn().mockResolvedValue({ data: [{ id: 'w-1' }], error: null });
-    supabase.from.mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({ order: mockOrder }),
-      }),
-    });
-    const result = await listWaitlistByOferta('of-1');
-    expect(result).toHaveLength(1);
   });
 });

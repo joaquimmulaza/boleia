@@ -6,21 +6,28 @@ import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 import EmptyState from '../components/EmptyState';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import GrupoProcuraPanel from '../components/GrupoProcuraPanel';
 import { createProcura, listProcurasByOwner } from '../services/ProcuraService';
 import { findCompatibleOfertas } from '../services/MatchingService';
 import { createProposta } from '../services/PropostaService';
-import { enqueueWaitlist } from '../services/WaitlistService';
+import { enqueueWaitlist, listWaitlistByProcura } from '../services/WaitlistService';
+import { getGrupoByProcura, listMembrosGrupo } from '../services/GrupoService';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 
 /**
  * Hub passageiro — procura, matches e lista de espera.
+ * Grupo = procura colectiva viva: N_proposto = N_actual no instante da proposta
+ * (não exige «grupo completo» vs capacidade pretendida).
  */
 const PassengerDashboard = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [procura, setProcura] = useState(null);
+  const [grupo, setGrupo] = useState(null);
+  const [membrosCount, setMembrosCount] = useState(0);
   const [matches, setMatches] = useState({ direct: [], waitlist: [] });
+  const [waitlistEntries, setWaitlistEntries] = useState([]);
   const [view, setView] = useState('hub'); // hub | form | matches
   const [feedback, setFeedback] = useState({ type: '', text: '' });
   const [busyId, setBusyId] = useState(null);
@@ -45,6 +52,18 @@ const PassengerDashboard = () => {
       const activa = lista.find((p) => p.estado === 'activa' || p.estado === 'em_negociacao') || null;
       setProcura(activa);
       if (activa) {
+        const [g, enrolled] = await Promise.all([
+          getGrupoByProcura(activa.id),
+          listWaitlistByProcura(activa.id),
+        ]);
+        setGrupo(g);
+        setWaitlistEntries(enrolled);
+        if (g) {
+          const membros = await listMembrosGrupo(g.id);
+          setMembrosCount(membros.length);
+        } else {
+          setMembrosCount(0);
+        }
         const result = await findCompatibleOfertas({
           preferred_time: String(activa.preferred_time).slice(0, 5),
           origin_lat: Number(activa.origin_lat),
@@ -54,6 +73,11 @@ const PassengerDashboard = () => {
           n_candidato: activa.n_candidato,
         });
         setMatches({ direct: result.direct, waitlist: result.waitlist });
+      } else {
+        setGrupo(null);
+        setMembrosCount(0);
+        setWaitlistEntries([]);
+        setMatches({ direct: [], waitlist: [] });
       }
     } catch (err) {
       console.error(err);
@@ -92,17 +116,54 @@ const PassengerDashboard = () => {
     }
   };
 
+  /**
+   * N_proposto = N_actual no instante da proposta.
+   * Grupo vivo: N_actual < n_maximo NÃO bloqueia — só falta de grupo quando N>1.
+   * @returns {{ nProposto: number, grupoId: string | null, erro: string | null }}
+   */
+  const resolverPropostaN = () => {
+    if (grupo?.id) {
+      const nProposto = membrosCount;
+      if (nProposto < 1) {
+        return {
+          nProposto: 0,
+          grupoId: grupo.id,
+          erro: 'O grupo precisa de pelo menos um passageiro para propor.',
+        };
+      }
+      return { nProposto, grupoId: grupo.id, erro: null };
+    }
+    const nProposto = procura?.n_candidato ?? 1;
+    if (nProposto > 1) {
+      return {
+        nProposto,
+        grupoId: null,
+        erro: 'Para propor com mais de uma pessoa, cria um grupo na procura.',
+      };
+    }
+    return { nProposto: 1, grupoId: null, erro: null };
+  };
+
   const handlePropor = async (oferta) => {
     if (!procura) return;
     setBusyId(oferta.id);
     setFeedback({ type: '', text: '' });
+
+    const { nProposto, grupoId, erro } = resolverPropostaN();
+    if (erro) {
+      setFeedback({ type: 'error', text: erro });
+      setBusyId(null);
+      return;
+    }
+
     try {
       await createProposta({
         oferta_id: oferta.id,
         procura_id: procura.id,
+        grupo_id: grupoId,
         modo_preco: oferta.modo_preco,
         valor_mensal_ask_kz: oferta.valor_mensal_ask_kz,
-        n_passageiros_propostos: procura.n_candidato,
+        n_passageiros_propostos: nProposto,
       });
       setFeedback({ type: 'success', text: 'Proposta enviada ao motorista.' });
     } catch (err) {
@@ -119,7 +180,10 @@ const PassengerDashboard = () => {
       await enqueueWaitlist({
         oferta_id: oferta.id,
         procura_id: procura.id,
+        grupo_id: grupo?.id ?? null,
       });
+      const enrolled = await listWaitlistByProcura(procura.id);
+      setWaitlistEntries(enrolled);
       setFeedback({ type: 'success', text: 'Entraste na lista de espera.' });
     } catch (err) {
       setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
@@ -130,6 +194,11 @@ const PassengerDashboard = () => {
 
   const labelModo = (modo) =>
     modo === 'TOTAL_ACORDO' ? 'Total do acordo' : 'Por passageiro';
+
+  const waitlistEstadoOferta = (ofertaId) =>
+    waitlistEntries.find((e) => e.oferta_id === ofertaId)?.estado ?? null;
+
+  const temPromocaoWaitlist = waitlistEntries.some((e) => e.estado === 'notificada');
 
   return (
     <PageShell>
@@ -239,6 +308,12 @@ const PassengerDashboard = () => {
             </button>
           </section>
 
+          <GrupoProcuraPanel
+            procura={procura}
+            userId={user.id}
+            onGrupoChange={carregar}
+          />
+
           {(view === 'matches' || view === 'hub') && (
             <>
               <p className="text-sm font-semibold text-slate-500">
@@ -292,34 +367,67 @@ const PassengerDashboard = () => {
                 </section>
               ))}
 
+              {temPromocaoWaitlist && (
+                <div
+                  role="status"
+                  className="rounded-xl px-4 py-3 text-sm font-medium bg-amber-50 text-amber-900 border border-amber-200"
+                >
+                  Abriu-se uma vaga numa oferta em que estás em espera. Podes propor
+                  acordo — não foste aceite automaticamente.
+                </div>
+              )}
+
               {matches.waitlist.length > 0 && (
                 <>
                   <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide">
                     Lista de espera
                   </h3>
-                  {matches.waitlist.map((oferta) => (
-                    <section
-                      key={oferta.id}
-                      className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-5 border border-slate-100 space-y-3"
-                    >
-                      <div className="font-bold flex items-center gap-2">
-                        {oferta.origin_name}
-                        <ArrowRight size={14} className="text-slate-400" aria-hidden="true" />
-                        {oferta.destination_name}
-                      </div>
-                      <p className="text-sm text-slate-500">
-                        Sem lugares suficientes agora ({oferta.vagas_disponiveis} disponíveis).
-                      </p>
-                      <button
-                        type="button"
-                        disabled={busyId === oferta.id}
-                        onClick={() => handleWaitlist(oferta)}
-                        className="text-sm font-bold text-primary"
+                  {matches.waitlist.map((oferta) => {
+                    const estadoEspera = waitlistEstadoOferta(oferta.id);
+                    return (
+                      <section
+                        key={oferta.id}
+                        className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-5 border border-slate-100 space-y-3"
                       >
-                        Entrar na lista de espera
-                      </button>
-                    </section>
-                  ))}
+                        <div className="font-bold flex items-center gap-2">
+                          {oferta.origin_name}
+                          <ArrowRight size={14} className="text-slate-400" aria-hidden="true" />
+                          {oferta.destination_name}
+                        </div>
+                        <p className="text-sm text-slate-500">
+                          Sem lugares suficientes agora ({oferta.vagas_disponiveis} disponíveis).
+                        </p>
+                        {estadoEspera === 'notificada' ? (
+                          <>
+                            <p className="text-sm font-medium text-amber-800">
+                              Há uma vaga — podes propor acordo.
+                            </p>
+                            <button
+                              type="button"
+                              disabled={busyId === oferta.id}
+                              onClick={() => handlePropor(oferta)}
+                              className="bg-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl disabled:opacity-60"
+                            >
+                              Propor acordo
+                            </button>
+                          </>
+                        ) : estadoEspera === 'activa' ? (
+                          <p className="text-sm font-medium text-slate-600">
+                            Estás na lista de espera.
+                          </p>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={busyId === oferta.id}
+                            onClick={() => handleWaitlist(oferta)}
+                            className="text-sm font-bold text-primary"
+                          >
+                            Entrar na lista de espera
+                          </button>
+                        )}
+                      </section>
+                    );
+                  })}
                 </>
               )}
 

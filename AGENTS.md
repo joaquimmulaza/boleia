@@ -85,7 +85,7 @@ SoT visual = **v0 (One MCP)** + shadcn JSX + tokens `src/index.css`. Em UI/UX: U
 
 🏛️ Relatório de Estado da Arquitetura: Boleia Certa
 **Última Atualização:** 4 de Setembro de 2026
-**Fase Atual:** Marketplace Oferta/Procura (Phase 6: **T22–T24 Done**; **T25←**) + **Agent loop Cursor** (v0/shadcn/UI Skills/Mobbin free-safe + tlc-spec-driven). Spec: `.specs/features/marketplace-oferta-procura/`. Checkpoint: `CHECKPOINT.md`.
+**Fase Atual:** Marketplace Oferta/Procura (Phase 6: **T22–T28 Done**; **T31←**) + **Agent loop Cursor** (v0/shadcn/UI Skills/Mobbin free-safe + tlc-spec-driven). Spec: `.specs/features/marketplace-oferta-procura/`. Checkpoint: `CHECKPOINT.md`.
 
 **O que já está implementado e validado:**
 1. **Infraestrutura e Backend (Supabase):**
@@ -99,15 +99,19 @@ SoT visual = **v0 (One MCP)** + shadcn JSX + tokens `src/index.css`. Em UI/UX: U
  * **Layout & paths:** `/` Landing, `/auth`, `/passageiro` (procura/matches/waitlist + **grupo** via `GrupoProcuraPanel`), `/motorista` (ofertas + propostas), `/veiculo`, `/publicar-trajeto` («Publicar oferta»), `/acordos` (`MyAgreements` 1:N), `/faltas`, `/perfil`.
  * **Grupo (T22–T23):** criar grupo; membros (telefone = fallback até T31); pickup opcional; sync `N_actual`; `createProposta` com `grupo_id` + `N_proposto = N_actual`; **não** bloquear por «grupo incompleto»; sync **não** invalida propostas abertas.
  * **Hub motorista (T24):** `PropostaReviewCard` + `enrichPropostasForReview` / `propostaReview` — lista snapshot + pickup + preço resolvido (copy humana); Aceitar → RPC `accept_proposal`.
+ * **E2E quotas (T25):** TOTAL_ACORDO N=3/4 + resto; `leavePassenger` não altera cabeçalho nem `quota_mensal_kz` dos restantes (`AgreementsE2E.test.jsx`).
+ * **Waitlist promoção (T26):** `promoteWaitlist` → RPC `promote_waitlist` (1º FIFO → `notificada` + notif `waitlist_promoted`); hook em `leavePassenger` (best-effort); UI hub com estados activa/notificada; **sem** auto-aceitar.
+ * **Publicar oferta (T27):** `PublishRoute` — selector dias Seg–Dom (default Seg–Sex) + toggle «Rota flexível» → `dias_semana` / `flexibilidade_rota`.
+ * **Detalhe acordo (T28):** `MyAgreements` — bloco «Preço combinado»/congelado; lista N pax; destaque quota passageiro; falta só se activo; `ConfirmationModal` `busy`.
  * **Deep linking:** `notificationRouter.js` — tipos `proposal_received`, `waitlist_promoted`, `match_available`, etc.
  * **AuthContext:** `{ session, user, loading, tipoPerfil, profile, refreshProfile }`.
  * **Design SoT:** v0 via One + shadcn (`src/components/ui/`) + UI Skills + Mobbin free-safe. Penpot descontinuado como SoT.
  * **Agent loop:** `.cursor/skills/boleia-agent-loop/`, `.cursor/rules/ui-stack.mdc`, `.cursor/rules/multi-agent-loop.mdc`, hooks `subagentStop`.
 3. **Serviços canónicos (`src/services/`):**
- * `OfertaService`, `ProcuraService`, `GrupoService` (`createGrupo`, `getGrupoByProcura`, `listMembrosGrupo`, `addMembroGrupo`, `syncNCandidato`), `PropostaService`, `AgreementService`, `MatchingService`, `WaitlistService`, `AbsenceService`, `LocationService` (Photon), `ProfileService.findPassageiroByTelefone`.
+ * `OfertaService`, `ProcuraService`, `GrupoService` (`createGrupo`, `getGrupoByProcura`, `listMembrosGrupo`, `addMembroGrupo`, `syncNCandidato`), `PropostaService`, `AgreementService`, `MatchingService`, `WaitlistService` (`enqueueWaitlist`, `promoteWaitlist`, listagens), `AbsenceService`, `LocationService` (Photon), `ProfileService.findPassageiroByTelefone`.
  * **Removido:** `RouteService`, `AgreementsService` (`requestSeat`), cards `Acordo*` acoplados a `routes`.
 4. **Utils:** `pricing.js`, `geo.js`, `matchingConfig.js`, `matchingFilters.js`.
 5. **Geocoding OSM (mantido):** Photon `countrycode=ao`; Autocomplete «Powered by OpenStreetMap».
 6. **UI copy:** nunca expor jargon (`N_actual`, `N_proposto`, `N_candidato`, `POR_PASSAGEIRO`) — só labels humanas («Grupo · 2 pessoas», «Por passageiro», «Total do acordo»).
 
-**Próximo (Phase 6):** T25 — E2E TOTAL_ACORDO N=3/4 + leave sem recalcular quotas; depois T26–T28 / T31.
+**Próximo (Phase 6):** T31 — `n_maximo` + grupo público / pedir entrada; depois T29 P2 / T30 P3.

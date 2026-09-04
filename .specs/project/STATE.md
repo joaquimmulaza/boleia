@@ -2,7 +2,7 @@
 
 ## Current Active Milestone
 - **Feature**: Marketplace Oferta / Procura
-- **Status**: Execute · **T1–T24 Done** · **próximo T25**
+- **Status**: Execute · **T1–T28 Done** · **próximo T31**
 - **Checkpoint:** [`.specs/features/marketplace-oferta-procura/CHECKPOINT.md`](../features/marketplace-oferta-procura/CHECKPOINT.md)
 
 ## Decisão de domínio (2026-09-04) — Grupo vivo
@@ -11,6 +11,7 @@
 - Proposta = snapshot; entrada de membro não muta/invalida propostas abertas
 - Preço nasce na oferta/proposta do motorista
 - RPC `accept_proposal` alinhada a `N_proposto` (LIMIT primeiros membros)
+- Waitlist: promoção = notif `waitlist_promoted` (RPC `promote_waitlist`), sem auto-aceitar
 - Pendente T31: `n_maximo` + descoberta pública / pedido de entrada
 
 ## Regra de ouro
@@ -18,8 +19,8 @@
 - Negócio = spec/planos (1:N; quatro Ns; preço dual congelado; grupo vivo)
 
 ## Next Steps (Phase 6)
-1. **T25** E2E TOTAL_ACORDO N=3/4 + leave sem recalcular quotas
-2. T26–T28 (paralelizáveis); T31 grupo público
+1. **T31** `n_maximo` + grupo público / pedir entrada
+2. T29 P2 (adenda); T30 P3 (mapa N pontos)
 
 ## Key links
 - Plan: `.cursor/plans/marketplace_oferta_procura_74cbb52a.plan.md`

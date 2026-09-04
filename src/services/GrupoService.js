@@ -20,21 +20,48 @@ export async function createGrupo(procuraId, nome) {
 }
 
 /**
- * Invalida propostas abertas quando N_candidato muda.
  * @param {string} procuraId
+ * @returns {Promise<object | null>}
  */
-async function invalidatePropostasAbertas(procuraId) {
-  const { error } = await supabase
-    .from('propostas')
-    .update({ estado: 'invalidada', updated_at: new Date().toISOString() })
+export async function getGrupoByProcura(procuraId) {
+  if (!procuraId) {
+    throw new Error('ID da procura é obrigatório.');
+  }
+
+  const { data, error } = await supabase
+    .from('grupos')
+    .select('*')
     .eq('procura_id', procuraId)
-    .eq('estado', 'aberta');
+    .maybeSingle();
 
   if (error) throw error;
+  return data;
 }
 
 /**
- * Sincroniza N_candidato da procura a partir dos membros activos do grupo.
+ * Lista membros activos do grupo com dados do perfil.
+ * @param {string} grupoId
+ * @returns {Promise<object[]>}
+ */
+export async function listMembrosGrupo(grupoId) {
+  if (!grupoId) {
+    throw new Error('ID do grupo é obrigatório.');
+  }
+
+  const { data, error } = await supabase
+    .from('membros_grupo')
+    .select('*, perfis(nome_completo, telefone)')
+    .eq('grupo_id', grupoId)
+    .eq('estado', 'activo')
+    .order('ordem_insercao', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Sincroniza N_actual da procura (coluna `n_candidato`) a partir dos membros activos.
+ * Não invalida propostas abertas — cada proposta mantém o seu N_proposto (snapshot).
  * @param {string} grupoId
  * @returns {Promise<number>}
  */
@@ -67,7 +94,6 @@ export async function syncNCandidato(grupoId) {
 
   if (updateError) throw updateError;
 
-  await invalidatePropostasAbertas(grupo.procura_id);
   return n;
 }
 

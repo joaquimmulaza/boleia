@@ -7,15 +7,30 @@ import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 
+/** ISO: 1=Seg … 7=Dom */
+const DIAS_SEMANA = [
+  { valor: 1, label: 'Seg' },
+  { valor: 2, label: 'Ter' },
+  { valor: 3, label: 'Qua' },
+  { valor: 4, label: 'Qui' },
+  { valor: 5, label: 'Sex' },
+  { valor: 6, label: 'Sáb' },
+  { valor: 7, label: 'Dom' },
+];
+
+const DIAS_UTEIS_DEFAULT = [1, 2, 3, 4, 5];
+
 /**
  * Publicar oferta de capacidade (substitui publicar trajeto / routes).
- * Copy humana: «Por passageiro» | «Total do acordo».
+ * Copy humana: «Por passageiro» | «Total do acordo» | «Rota flexível».
  */
 const PublishRoute = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [modoPreco, setModoPreco] = useState('POR_PASSAGEIRO');
+  const [diasSemana, setDiasSemana] = useState(() => [...DIAS_UTEIS_DEFAULT]);
+  const [rotaFlexivel, setRotaFlexivel] = useState(false);
 
   const [formData, setFormData] = useState({
     origin_name: '',
@@ -50,6 +65,16 @@ const PublishRoute = () => {
       destination_lat: coordinates.lat,
       destination_lng: coordinates.lng,
     }));
+  };
+
+  const toggleDia = (valor) => {
+    setDiasSemana((prev) => {
+      if (prev.includes(valor)) {
+        if (prev.length <= 1) return prev;
+        return prev.filter((d) => d !== valor).toSorted((a, b) => a - b);
+      }
+      return [...prev, valor].toSorted((a, b) => a - b);
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -90,6 +115,8 @@ const PublishRoute = () => {
         destination_lng: formData.destination_lng,
         departure_time: formData.departure_time,
         return_time: formData.return_time || null,
+        dias_semana: diasSemana,
+        flexibilidade_rota: rotaFlexivel,
       });
       setMessage({ type: 'success', text: 'Oferta publicada com sucesso!' });
       setTimeout(() => navigate('/motorista'), 1500);
@@ -201,6 +228,49 @@ const PublishRoute = () => {
               />
             </label>
           </div>
+
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-semibold text-charcoal dark:text-slate-300">
+              Dias da semana
+            </span>
+            <div
+              className="flex flex-wrap gap-2"
+              role="group"
+              aria-label="Dias da semana"
+            >
+              {DIAS_SEMANA.map(({ valor, label }) => {
+                const activo = diasSemana.includes(valor);
+                return (
+                  <button
+                    key={valor}
+                    type="button"
+                    aria-pressed={activo}
+                    onClick={() => toggleDia(valor)}
+                    className={`min-w-10 h-10 px-2.5 rounded-lg text-sm font-bold transition-all ${
+                      activo
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'bg-light-gray dark:bg-slate-800 text-slate-500'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <label className="flex items-center justify-between gap-3 rounded-lg bg-light-gray dark:bg-slate-800 px-3 py-3 cursor-pointer">
+            <span className="text-sm font-semibold text-charcoal dark:text-slate-300">
+              Rota flexível
+            </span>
+            <input
+              type="checkbox"
+              checked={rotaFlexivel}
+              onChange={(e) => setRotaFlexivel(e.target.checked)}
+              className="h-5 w-5 accent-primary rounded"
+              aria-label="Rota flexível"
+            />
+          </label>
 
           <label className="flex flex-col gap-1.5 text-sm font-semibold text-charcoal dark:text-slate-300">
             <span className="flex items-center gap-1.5">

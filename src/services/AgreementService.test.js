@@ -5,6 +5,7 @@ import {
   getAgreementsForDriver,
   getAgreementsForPassenger,
 } from './AgreementService.js';
+import { promoteWaitlist } from './WaitlistService.js';
 import { supabase } from '../lib/supabase';
 
 vi.mock('../lib/supabase', () => ({
@@ -12,6 +13,10 @@ vi.mock('../lib/supabase', () => ({
     from: vi.fn(),
     rpc: vi.fn(),
   },
+}));
+
+vi.mock('./WaitlistService.js', () => ({
+  promoteWaitlist: vi.fn().mockResolvedValue(null),
 }));
 
 describe('AgreementService', () => {
@@ -59,31 +64,64 @@ describe('AgreementService', () => {
   });
 
   describe('leavePassenger', () => {
-    it('marca passageiro saiu e não altera preços do cabeçalho', async () => {
-      const preco = {
-        id: 'acordo-1',
-        oferta_id: 'of-1',
-        valor_mensal_por_passageiro_kz: 30000,
-        valor_mensal_total_kz: 120000,
-        n_passageiros_contrato: 4,
-      };
+    const preco = {
+      id: 'acordo-1',
+      oferta_id: 'of-1',
+      valor_mensal_por_passageiro_kz: 30000,
+      valor_mensal_total_kz: 120000,
+      n_passageiros_contrato: 4,
+    };
+
+    /**
+     * Mock: leave lê quotas activas antes/depois; UPDATE só { estado: 'saiu' }.
+     * @param {{ quotasDepois?: object[] }} [opts]
+     */
+    function mockLeaveFlow(opts = {}) {
+      const activosAntes = [
+        { passenger_id: 'pax-1', quota_mensal_kz: 30000, estado: 'activo' },
+        { passenger_id: 'pax-2', quota_mensal_kz: 30000, estado: 'activo' },
+        { passenger_id: 'pax-3', quota_mensal_kz: 30000, estado: 'activo' },
+        { passenger_id: 'pax-4', quota_mensal_kz: 30000, estado: 'activo' },
+      ];
+      const restantes =
+        opts.quotasDepois ??
+        [
+          { passenger_id: 'pax-2', quota_mensal_kz: 30000, estado: 'activo' },
+          { passenger_id: 'pax-3', quota_mensal_kz: 30000, estado: 'activo' },
+          { passenger_id: 'pax-4', quota_mensal_kz: 30000, estado: 'activo' },
+        ];
+
+      let selectPassageirosCalls = 0;
+      let updatePayload = null;
 
       supabase.from.mockImplementation((table) => {
         if (table === 'acordos') {
           return {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({ data: preco, error: null }),
+                single: vi.fn().mockResolvedValue({ data: { ...preco }, error: null }),
               }),
             }),
           };
         }
         if (table === 'acordos_passageiros') {
           return {
-            update: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnValue({
-                eq: vi.fn().mockResolvedValue({ error: null }),
+                eq: vi.fn().mockImplementation(() => {
+                  selectPassageirosCalls += 1;
+                  const rows = selectPassageirosCalls === 1 ? activosAntes : restantes;
+                  return Promise.resolve({ data: rows, error: null });
+                }),
               }),
+            }),
+            update: vi.fn().mockImplementation((payload) => {
+              updatePayload = payload;
+              return {
+                eq: vi.fn().mockReturnValue({
+                  eq: vi.fn().mockResolvedValue({ error: null }),
+                }),
+              };
             }),
           };
         }
@@ -105,11 +143,70 @@ describe('AgreementService', () => {
         return {};
       });
 
+      return {
+        getSelectPassageirosCalls: () => selectPassageirosCalls,
+        getUpdatePayload: () => updatePayload,
+      };
+    }
+
+    it('marca passageiro saiu e não altera preços do cabeçalho', async () => {
+      const spy = mockLeaveFlow();
+
       const result = await leavePassenger('acordo-1', 'pax-1');
 
       expect(result.valor_mensal_por_passageiro_kz).toBe(30000);
       expect(result.valor_mensal_total_kz).toBe(120000);
       expect(result.n_passageiros_contrato).toBe(4);
+      expect(spy.getUpdatePayload()).toEqual({ estado: 'saiu' });
+      expect(spy.getSelectPassageirosCalls()).toBeGreaterThanOrEqual(2);
+    });
+
+    it('preserva quota_mensal_kz dos restantes (sem recálculo por N_activos)', async () => {
+      mockLeaveFlow();
+
+      const result = await leavePassenger('acordo-1', 'pax-1');
+
+      expect(result.n_passageiros_contrato).toBe(4);
+      expect(result.valor_mensal_total_kz).toBe(120000);
+    });
+
+    it('lança se quotas restantes forem alteradas após leave', async () => {
+      mockLeaveFlow({
+        quotasDepois: [
+          { passenger_id: 'pax-2', quota_mensal_kz: 40000, estado: 'activo' },
+          { passenger_id: 'pax-3', quota_mensal_kz: 40000, estado: 'activo' },
+          { passenger_id: 'pax-4', quota_mensal_kz: 40000, estado: 'activo' },
+        ],
+      });
+
+      await expect(leavePassenger('acordo-1', 'pax-1')).rejects.toThrow(
+        /não pode alterar quotas dos restantes/i,
+      );
+      expect(promoteWaitlist).not.toHaveBeenCalled();
+    });
+
+    it('após leave bem-sucedido promove 1º da waitlist (notif, sem auto-aceitar)', async () => {
+      mockLeaveFlow();
+      promoteWaitlist.mockResolvedValue({
+        id: 'w-1',
+        oferta_id: 'of-1',
+        estado: 'notificada',
+      });
+
+      await leavePassenger('acordo-1', 'pax-1');
+
+      expect(promoteWaitlist).toHaveBeenCalledWith('of-1');
+      expect(promoteWaitlist).toHaveBeenCalledTimes(1);
+    });
+
+    it('leave não falha se promoção waitlist falhar (best-effort)', async () => {
+      mockLeaveFlow();
+      promoteWaitlist.mockRejectedValue(new Error('RPC indisponível'));
+
+      const result = await leavePassenger('acordo-1', 'pax-1');
+
+      expect(result.id).toBe('acordo-1');
+      expect(promoteWaitlist).toHaveBeenCalledWith('of-1');
     });
   });
 

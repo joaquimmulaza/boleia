@@ -1,7 +1,34 @@
 import React from 'react';
 
-const ConfirmationModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = 'Confirmar', cancelText = 'Voltar' }) => {
+/**
+ * Modal de confirmação (acções destrutivas / irreversíveis).
+ * @param {{
+ *   isOpen: boolean,
+ *   title: string,
+ *   message: string,
+ *   onConfirm: () => void,
+ *   onCancel: () => void,
+ *   confirmText?: string,
+ *   cancelText?: string,
+ *   busy?: boolean,
+ * }} props
+ */
+const ConfirmationModal = ({
+  isOpen,
+  title,
+  message,
+  onConfirm,
+  onCancel,
+  confirmText = 'Confirmar',
+  cancelText = 'Voltar',
+  busy = false,
+}) => {
   if (!isOpen) return null;
+
+  const handleOverlayClick = () => {
+    if (busy) return;
+    onCancel();
+  };
 
   return (
     <div className="fixed inset-0 z-modal flex items-center justify-center p-4">
@@ -9,7 +36,7 @@ const ConfirmationModal = ({ isOpen, title, message, onConfirm, onCancel, confir
       <div
         className="fixed inset-0 bg-black/80"
         aria-hidden="true"
-        onClick={onCancel}
+        onClick={handleOverlayClick}
       />
 
       {/* Modal Dialog */}
@@ -31,14 +58,18 @@ const ConfirmationModal = ({ isOpen, title, message, onConfirm, onCancel, confir
         {/* Actions - Vertical layout typical of modern mobile apps */}
         <div className="flex flex-col gap-2 p-4 pt-0">
           <button
+            type="button"
             onClick={onConfirm}
-            className="w-full py-3.5 px-4 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold rounded-2xl transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+            disabled={busy}
+            className="w-full py-3.5 px-4 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold rounded-2xl transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 disabled:opacity-60 disabled:cursor-not-allowed disabled:pointer-events-none"
           >
             {confirmText}
           </button>
           <button
+            type="button"
             onClick={onCancel}
-            className="w-full py-3.5 px-4 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 dark:active:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-2xl transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+            disabled={busy}
+            className="w-full py-3.5 px-4 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 dark:active:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-2xl transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 disabled:opacity-60 disabled:cursor-not-allowed disabled:pointer-events-none"
           >
             {cancelText}
           </button>

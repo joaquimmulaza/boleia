@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { promoteWaitlist } from './WaitlistService.js';
 
 /**
  * Aceita proposta via RPC atómica (cria acordo 1:N + congela preços).
@@ -28,7 +29,8 @@ export async function createAgreementFromProposal(propostaId) {
 }
 
 /**
- * Passageiro sai: liberta 1 vaga; preços do cabeçalho ficam intactos (sem recálculo).
+ * Passageiro sai: liberta 1 vaga; preços do cabeçalho e quotas dos restantes
+ * ficam intactos (sem recálculo por N_activos).
  * @param {string} acordoId
  * @param {string} passengerId
  */
@@ -46,6 +48,22 @@ export async function leavePassenger(acordoId, passengerId) {
     .single();
 
   if (antesError) throw antesError;
+
+  const { data: activosAntes, error: quotasAntesError } = await supabase
+    .from('acordos_passageiros')
+    .select('passenger_id, quota_mensal_kz, estado')
+    .eq('acordo_id', acordoId)
+    .eq('estado', 'activo');
+
+  if (quotasAntesError) throw quotasAntesError;
+
+  /** @type {Record<string, number>} */
+  const quotasRestantesAntes = {};
+  for (const row of activosAntes || []) {
+    if (row.passenger_id !== passengerId) {
+      quotasRestantesAntes[row.passenger_id] = row.quota_mensal_kz;
+    }
+  }
 
   const { error: leaveError } = await supabase
     .from('acordos_passageiros')
@@ -98,6 +116,29 @@ export async function leavePassenger(acordoId, passengerId) {
     depois.n_passageiros_contrato !== antes.n_passageiros_contrato
   ) {
     throw new Error('Invariante violado: saída não pode alterar preços do acordo.');
+  }
+
+  const { data: activosDepois, error: quotasDepoisError } = await supabase
+    .from('acordos_passageiros')
+    .select('passenger_id, quota_mensal_kz, estado')
+    .eq('acordo_id', acordoId)
+    .eq('estado', 'activo');
+
+  if (quotasDepoisError) throw quotasDepoisError;
+
+  for (const row of activosDepois || []) {
+    if (quotasRestantesAntes[row.passenger_id] !== row.quota_mensal_kz) {
+      throw new Error(
+        'Invariante violado: saída não pode alterar quotas dos restantes.',
+      );
+    }
+  }
+
+  // Promoção waitlist = notificação (sem auto-aceitar); best-effort após leave.
+  try {
+    await promoteWaitlist(antes.oferta_id);
+  } catch (promoteError) {
+    console.error('Erro ao promover lista de espera:', promoteError);
   }
 
   return depois;

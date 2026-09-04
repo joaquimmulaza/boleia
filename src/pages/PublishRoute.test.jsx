@@ -46,6 +46,21 @@ describe('PublishRoute — Publicar oferta', () => {
     vi.clearAllMocks();
   });
 
+  const fillRequiredFields = () => {
+    fireEvent.change(document.querySelector('input[name="origin_name"]'), {
+      target: { value: 'Talatona' },
+    });
+    fireEvent.change(document.querySelector('input[name="destination_name"]'), {
+      target: { value: 'Mutual' },
+    });
+    fireEvent.change(document.querySelector('input[name="departure_time"]'), {
+      target: { value: '07:15' },
+    });
+    fireEvent.change(document.querySelector('input[name="valor_mensal_ask_kz"]'), {
+      target: { value: '40000' },
+    });
+  };
+
   it('renderiza selector de modo e campos principais', async () => {
     await act(async () => {
       renderWithRouter(<PublishRoute />);
@@ -60,25 +75,30 @@ describe('PublishRoute — Publicar oferta', () => {
     expect(screen.getByRole('button', { name: /Publicar oferta/i })).toBeInTheDocument();
   });
 
-  it('submete createOferta com POR_PASSAGEIRO', async () => {
+  it('mostra dias Seg–Sex seleccionados por omissão e toggle Rota flexível', async () => {
+    await act(async () => {
+      renderWithRouter(<PublishRoute />);
+    });
+
+    expect(screen.getByRole('group', { name: /Dias da semana/i })).toBeInTheDocument();
+    for (const dia of ['Seg', 'Ter', 'Qua', 'Qui', 'Sex']) {
+      expect(screen.getByRole('button', { name: dia })).toHaveAttribute('aria-pressed', 'true');
+    }
+    expect(screen.getByRole('button', { name: 'Sáb' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Dom' })).toHaveAttribute('aria-pressed', 'false');
+
+    const flexToggle = screen.getByRole('checkbox', { name: /Rota flexível/i });
+    expect(flexToggle).not.toBeChecked();
+  });
+
+  it('submete createOferta com POR_PASSAGEIRO, dias Seg–Sex e flexibilidade desligada', async () => {
     createOferta.mockResolvedValue({ id: 'of-1' });
 
     await act(async () => {
       renderWithRouter(<PublishRoute />);
     });
 
-    fireEvent.change(document.querySelector('input[name="origin_name"]'), {
-      target: { value: 'Talatona' },
-    });
-    fireEvent.change(document.querySelector('input[name="destination_name"]'), {
-      target: { value: 'Mutual' },
-    });
-    fireEvent.change(document.querySelector('input[name="departure_time"]'), {
-      target: { value: '07:15' },
-    });
-    fireEvent.change(document.querySelector('input[name="valor_mensal_ask_kz"]'), {
-      target: { value: '40000' },
-    });
+    fillRequiredFields();
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Publicar oferta/i }));
@@ -92,10 +112,39 @@ describe('PublishRoute — Publicar oferta', () => {
           origin_name: 'Talatona',
           destination_name: 'Mutual',
           departure_time: '07:15',
+          dias_semana: [1, 2, 3, 4, 5],
+          flexibilidade_rota: false,
         }),
       );
     });
     expect(await screen.findByRole('alert')).toHaveTextContent(/Oferta publicada/i);
+  });
+
+  it('inclui flexibilidade_rota e dias alterados no payload createOferta', async () => {
+    createOferta.mockResolvedValue({ id: 'of-1' });
+
+    await act(async () => {
+      renderWithRouter(<PublishRoute />);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sex' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sáb' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Rota flexível/i }));
+
+    fillRequiredFields();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Publicar oferta/i }));
+    });
+
+    await waitFor(() => {
+      expect(createOferta).toHaveBeenCalledWith(
+        expect.objectContaining({
+          dias_semana: [1, 2, 3, 4, 6],
+          flexibilidade_rota: true,
+        }),
+      );
+    });
   });
 
   it('permite alternar para Total do acordo', async () => {
@@ -106,15 +155,7 @@ describe('PublishRoute — Publicar oferta', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Total do acordo/i }));
-    fireEvent.change(document.querySelector('input[name="origin_name"]'), {
-      target: { value: 'Talatona' },
-    });
-    fireEvent.change(document.querySelector('input[name="destination_name"]'), {
-      target: { value: 'Mutual' },
-    });
-    fireEvent.change(document.querySelector('input[name="departure_time"]'), {
-      target: { value: '07:15' },
-    });
+    fillRequiredFields();
     fireEvent.change(document.querySelector('input[name="valor_mensal_ask_kz"]'), {
       target: { value: '120000' },
     });
@@ -128,6 +169,8 @@ describe('PublishRoute — Publicar oferta', () => {
         expect.objectContaining({
           modo_preco: 'TOTAL_ACORDO',
           valor_mensal_ask_kz: 120000,
+          dias_semana: [1, 2, 3, 4, 5],
+          flexibilidade_rota: false,
         }),
       );
     });
