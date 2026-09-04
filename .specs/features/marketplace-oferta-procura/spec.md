@@ -46,15 +46,41 @@ O MVP actual modela boleias como **rota → pedido de vaga → acordo 1:1** (`ro
 - Vários acordos activos do mesmo motorista só se a soma de `N_activos` em todos os seus acordos ≤ `vagas_totais` da oferta.
 - Proibido reformular o domínio como fluxo 1:1 (`requestSeat`-style).
 
-### Três Ns (nunca misturar)
+### Quatro Ns (nunca misturar)
 
 | Símbolo | Significado | Uso |
 |---|---|---|
-| `N_candidato` | Tamanho actual da procura/grupo (membros activos na procura) | Matching, propostas abertas, elegibilidade vs. vagas; **não** congela preço |
-| `N_contrato` | Passageiros efectivamente incluídos **no momento da aceitação** | Snapshot imutável sem adenda; base do preço congelado |
+| `N_actual` | Passageiros **actualmente** no grupo/procura (membros activos). Coluna BD: `procuras.n_candidato` | Necessidade viva; matching vs vagas; UI «Grupo · 2 pessoas»; **não** congela preço |
+| `N_proposto` | Passageiros considerados **numa proposta** (`propostas.n_passageiros_propostos`) | Snapshot da negociação; base do preço **nessa** proposta; imutável após criar a versão |
+| `N_contrato` | Passageiros efectivamente incluídos **no acordo aceite** (`acordos.n_passageiros_contrato`) | Snapshot imutável sem adenda; base do preço congelado do contrato |
 | `N_activos` | `COUNT(acordos_passageiros WHERE estado = 'activo')` **agora** | Só capacidade / `vagas_disponiveis` / UI de lotação — **nunca** divisor de preço nem de faltas |
 
-`N_candidato` pode diferir de `N_contrato` (membro sai/entra entre proposta e aceite → nova versão da proposta). `N_activos` pode cair abaixo de `N_contrato` após saídas — quotas do mês corrente **não** mudam.
+**Aliases / legado de naming:** `N_candidato` nos docs antigos = `N_actual`. Preferir `N_actual` daqui em diante. A coluna `n_candidato` mantém-se por estabilidade de schema.
+
+**Regras:**
+
+- `N_actual` pode crescer ou diminuir enquanto o grupo está aberto (até `n_maximo` / capacidade pretendida do criador).
+- Uma proposta **não** acompanha alterações posteriores de `N_actual`: mantém o seu `N_proposto`.
+- Renegociar com outro N → **nova versão** de proposta (novo `N_proposto`), nunca mutar a proposta aberta antiga.
+- Na aceitação: `N_contrato = N_proposto` da proposta aceite. Incluir exactamente `N_proposto` membros (ordem estável `ordem_insercao`); se `N_actual < N_proposto`, a aceitação falha.
+- `N_activos` pode cair abaixo de `N_contrato` após saídas — quotas do mês corrente **não** mudam.
+
+### Grupo = procura colectiva viva (obrigatório)
+
+O grupo **não** é um «pacote fechado» que precisa de estar cheio para negociar.
+
+| Premissa **errada** (proibida) | Premissa **correcta** |
+|---|---|
+| Grupo incompleto ⇒ não pode procurar / enviar / receber proposta | Grupo incompleto ⇒ continua aberto a novos membros **e** pode receber/enviar propostas com `N_proposto = N_actual` |
+| Preço nasce no grupo | Preço nasce na **oferta/proposta** do motorista (`POR_PASSAGEIRO` \| `TOTAL_ACORDO`) |
+| Entrada só por telefone / conhecer o criador | Grupo **público/descobrível**: ver → pedir entrada → aprovação/entrada → `N_actual` aumenta |
+| Entrar membro invalida automaticamente propostas abertas | Propostas abertas **mantêm** o snapshot; renegociação com novo N = nova proposta |
+
+**Necessidade do grupo** (procura colectiva): `N_actual`, `n_maximo` (capacidade pretendida pelo criador), OD, horários, dias, pontos preferenciais, demais condições. **Sem** preço próprio obrigatório.
+
+**Proposta:** captura `N_proposto` (+ modo/ask do motorista) no instante da negociação. Vários motoristas podem ter propostas abertas em paralelo (1:M). Aceitar uma → 1 acordo 1:N; restantes abertas da mesma procura → canceladas/rejeitadas conforme máquina de estados.
+
+**Exemplo canónico:** grupo 2/4 (`N_actual=2`, `n_maximo=4`); motorista propõe `TOTAL_ACORDO` 100.000 Kz com `N_proposto=2` → 50.000 Kz/passageiro. Entra um 3.º membro → proposta existente **inalterada** (ainda N=2 / 50k). Nova negociação a 3 → nova proposta (`N_proposto=3`, resto 33334+33333+33333).
 
 ### Preço
 
@@ -130,19 +156,21 @@ Aceitar proposta só se `N_proposto <= vagas_disponiveis` no momento da aceitaç
 
 ### P1: Criar procura individual ou grupo ⭐ MVP
 
-**User Story**: Como passageiro, quero criar uma procura (só ou em grupo com pontos preferenciais) para matchar com ofertas de capacidade.
+**User Story**: Como passageiro, quero criar uma procura (só ou em grupo vivo com pontos preferenciais) para matchar com ofertas de capacidade — mesmo que o grupo ainda não tenha atingido a capacidade pretendida.
 
 **Why P1**: Lado da procura do marketplace.
 
 **Acceptance Criteria**:
 
-1. WHEN um passageiro cria procura individual THEN o sistema SHALL criar `procuras` com `N_candidato` = 1.
-2. WHEN se cria um grupo com M membros THEN `membros_grupo` SHALL ter M linhas e `N_candidato` = M.
-3. WHEN um membro entra/sai **antes** de contrato THEN propostas abertas com `N_candidato` antigo SHALL ser invalidadas / exigir nova versão.
-4. WHEN a procura define teto de preço THEN o matching SHALL poder usar esse teto como filtro suave (não bloqueio rígido no MVP se omitido).
-5. WHEN existem várias ofertas compatíveis THEN a procura/grupo SHALL poder receber **múltiplas** propostas de motoristas em paralelo (não há exclusividade 1:1 na negociação).
+1. WHEN um passageiro cria procura individual THEN o sistema SHALL criar `procuras` com `N_actual` = 1.
+2. WHEN se cria um grupo com M membros THEN `membros_grupo` SHALL ter M linhas e `N_actual` = M; o criador MAY definir `n_maximo` (capacidade pretendida) ≥ M.
+3. WHEN `N_actual < n_maximo` THEN o grupo SHALL permanecer aberto a novos membros **e** elegível a propostas com `N_proposto = N_actual` (não bloquear por «incompleto»).
+4. WHEN um membro entra/sai **antes** de contrato THEN propostas abertas existentes SHALL **manter** o seu `N_proposto` (snapshot); renegociar com outro N SHALL exigir **nova** proposta/versão — **proibido** mutar `n_passageiros_propostos` de uma proposta aberta.
+5. WHEN a procura define teto de preço THEN o matching SHALL poder usar esse teto como filtro suave (não bloqueio rígido no MVP se omitido). O grupo **não** precisa de preço próprio — o preço vem da oferta/proposta do motorista.
+6. WHEN existem várias ofertas/motoristas compatíveis THEN a procura/grupo SHALL poder receber **múltiplas** propostas em paralelo (1:M).
+7. WHEN um passageiro descobre um grupo público THEN SHALL poder pedir entrada (aprovação/entrada) sem depender de telefone do criador (descoberta pública — MVP produto; convite por telefone é só fallback transitório).
 
-**Independent Test**: Criar grupo de 3; verificar `N_candidato` = 3 e pontos por membro.
+**Independent Test**: Grupo 2/4; proposta TOTAL 100000 com N=2 → 50000/pax; entrar 3.º membro não altera a proposta; nova proposta N=3 usa regra de resto.
 
 ---
 
@@ -154,13 +182,15 @@ Aceitar proposta só se `N_proposto <= vagas_disponiveis` no momento da aceitaç
 
 **Acceptance Criteria**:
 
-1. WHEN se aceita proposta com `N_proposto <= vagas_disponiveis` THEN o sistema SHALL, atomicamente: lock oferta, inserir **um** `acordos` + N `acordos_passageiros`, persistir `n_passageiros_contrato` (= `N_contrato`), preços congelados, `modo_preco`, e recalcular `vagas_disponiveis` via `N_activos`.
+1. WHEN se aceita proposta com `N_proposto <= vagas_disponiveis` THEN o sistema SHALL, atomicamente: lock oferta, inserir **um** `acordos` + N `acordos_passageiros`, persistir `n_passageiros_contrato` (= `N_contrato` = `N_proposto`), preços congelados, `modo_preco`, e recalcular `vagas_disponiveis` via `N_activos`.
 2. WHEN `modo_preco = POR_PASSAGEIRO` THEN individual SHALL = valor negociado (inteiro) e total SHALL = individual × `N_contrato`.
-3. WHEN `modo_preco = TOTAL_ACORDO` THEN total SHALL = valor negociado (inteiro) e as `quota_mensal_kz` SHALL seguir a regra de resto documentada (`base`/`resto`); `valor_mensal_por_passageiro_kz` do cabeçalho SHALL = `base`. N = `N_contrato` da proposta aceite, **nunca** vagas do carro nem `N_activos`.
+3. WHEN `modo_preco = TOTAL_ACORDO` THEN total SHALL = valor negociado (inteiro) e as `quota_mensal_kz` SHALL seguir a regra de resto documentada (`base`/`resto`); `valor_mensal_por_passageiro_kz` do cabeçalho SHALL = `base`. N = `N_contrato` (= `N_proposto` aceite), **nunca** vagas do carro nem `N_activos` nem `n_maximo` do grupo.
 4. WHEN `resto = 0` THEN todas as `quota_mensal_kz` SHALL ser iguais a `base`; WHEN `resto > 0` THEN exactamente `resto` passageiros (ordem estável) SHALL ter `base + 1` e a soma SHALL = total.
 5. WHEN `N_proposto > vagas_disponiveis` THEN o sistema SHALL **não** criar acordo parcial e SHALL oferecer/registar lista de espera.
 6. WHEN dois aceites concorrentes excedem vagas THEN no máximo um SHALL ter sucesso; o outro SHALL falhar ou ir para waitlist (sem overbooking).
-7. WHEN uma proposta é aceite THEN outras propostas da mesma procura/grupo MAY permanecer abertas ou ser canceladas por regra de produto (design); o acordo criado é sempre 1 motorista + N passageiros — nunca um vínculo 1:1 implícito.
+7. WHEN uma proposta é aceite THEN outras propostas **abertas** da mesma procura/grupo SHALL ser canceladas (default conservador); o acordo criado é sempre 1 motorista + N passageiros — nunca um vínculo 1:1 implícito.
+8. WHEN o grupo tem `N_actual > N_proposto` na aceitação THEN o sistema SHALL incluir apenas os primeiros `N_proposto` membros activos por `ordem_insercao` (composição alinhada ao snapshot da proposta). WHEN `N_actual < N_proposto` THEN a aceitação SHALL falhar.
+9. WHEN se cria uma proposta THEN `n_passageiros_propostos` SHALL = `N_actual` no instante da criação (não o `n_maximo`).
 
 **Independent Test**: TOTAL 120.000 / N=4 → 30.000×4; TOTAL 100.000 / N=3 → quotas 33334+33333+33333; `vagas_disponiveis` decrementa `N_contrato`.
 
@@ -217,7 +247,7 @@ Aceitar proposta só se `N_proposto <= vagas_disponiveis` no momento da aceitaç
 
 ### P1: Matching oferta ↔ procura/grupo ⭐ MVP
 
-**User Story**: Como passageiro, quero ver ofertas compatíveis com a minha procura/grupo (horário, geo, capacidade ≥ `N_candidato`).
+**User Story**: Como passageiro, quero ver ofertas compatíveis com a minha procura/grupo (horário, geo, capacidade ≥ `N_actual`).
 
 **Why P1**: Substitui listagem de `routes` no dashboard.
 
@@ -227,12 +257,12 @@ Aceitar proposta só se `N_proposto <= vagas_disponiveis` no momento da aceitaç
    - **Horário:** diferença absoluta entre horário da oferta e da procura ≤ tolerância configurável (default **±15 minutos**);
    - **Geo origem:** distância haversine entre origem da oferta e origem da procura ≤ raio configurável (default a fixar em design/config, ex. km);
    - **Geo destino:** idem para destino (mesmo parâmetro de raio ou parâmetros separados origem/destino — ambos configuráveis);
-   - **Capacidade para aceite directo:** `N_candidato` ≤ `vagas_disponiveis` (usa `N_candidato`, não `N_contrato` nem `N_activos` de outro acordo).
-2. WHEN `N_candidato > vagas_disponiveis` THEN a oferta SHALL ser elegível para waitlist, não para aceitação directa.
-3. WHEN o motorista revê uma proposta de grupo THEN a UI/dados SHALL expor **todos** os pontos preferenciais dos membros (`N_candidato` / snapshot da proposta).
+   - **Capacidade para aceite directo:** `N_actual` ≤ `vagas_disponiveis` (usa `N_actual`, não `N_contrato` nem `N_activos` de outro acordo).
+2. WHEN `N_actual > vagas_disponiveis` THEN a oferta SHALL ser elegível para waitlist, não para aceitação directa.
+3. WHEN o motorista revê uma proposta de grupo THEN a UI/dados SHALL expor os pontos preferenciais dos membros cobertos por essa proposta (`N_proposto` / snapshot).
 4. WHEN se avalia matching no MVP THEN o sistema SHALL **não** calcular routing por estrada, ETA, nem matriz de distâncias rodoviárias.
 
-**Independent Test**: Procura com `N_candidato`=3 só aceita directamente ofertas com ≥3 vagas; oferta a 20 min de diferença com tolerância 15 min é excluída; sem chamadas a motor de rotas.
+**Independent Test**: Procura com `N_actual`=3 só aceita directamente ofertas com ≥3 vagas; oferta a 20 min de diferença com tolerância 15 min é excluída; sem chamadas a motor de rotas.
 
 ---
 
@@ -295,13 +325,15 @@ Aceitar proposta só se `N_proposto <= vagas_disponiveis` no momento da aceitaç
 
 ## Edge Cases
 
-- WHEN `N_candidato = 1` (procura individual) THEN acordo 1:N degenera para 1 linha em `acordos_passageiros` e preço resolve normalmente (`N_contrato = 1`).
+- WHEN `N_actual = 1` (procura individual) THEN acordo 1:N degenera para 1 linha em `acordos_passageiros` e preço resolve normalmente (`N_contrato = 1`).
 - WHEN `TOTAL_ACORDO` e `T % N_contrato ≠ 0` THEN o sistema SHALL aplicar a regra de resto; NÃO SHALL alterar `T` nem usar decimais de Kz.
-- WHEN `N_candidato` muda após proposta aberta mas antes do aceite THEN `N_contrato` na aceitação SHALL reflectir o snapshot da **versão** aceite (nova versão se membros mudaram).
+- WHEN `N_actual` muda após proposta aberta mas antes do aceite THEN a proposta aberta SHALL **manter** `N_proposto`; na aceitação `N_contrato = N_proposto`. Se o grupo quiser negociar o novo N → **nova** proposta.
 - WHEN um passageiro sai após contrato THEN `N_activos` diminui e `N_contrato` / preços do cabeçalho permanecem; vagas libertam-se pela fórmula de capacidade.
 - WHEN todos os passageiros saem THEN o acordo SHALL poder passar a cancelado/expirado e libertar todas as vagas; preços históricos permanecem para auditoria.
 - WHEN `vagas_disponiveis = 0` THEN estado oferta `cheia`; waitlist activa; anúncio não desaparece.
-- WHEN proposta está aberta e membro do grupo sai THEN proposta antiga SHALL invalidar-se (nova versão obrigatória).
+- WHEN proposta está aberta e um membro entra no grupo THEN a proposta **não** se invalida automaticamente; continua válida para o seu `N_proposto`.
+- WHEN proposta está aberta e membros saem de forma que `N_actual < N_proposto` THEN a aceitação dessa proposta SHALL falhar até haver membros suficientes ou nova proposta com N menor.
+- WHEN `N_actual < n_maximo` THEN o grupo SHALL continuar público/negociável (nunca bloquear por «incompleto»).
 - WHEN sessão inválida THEN mutações (criar oferta/procura/aceitar) SHALL falhar com erro amigável (sem fallback de teste `passenger-123`).
 - WHEN falta só ida (se regra permitir) THEN desconto SHALL seguir `regra_desconto_falta` (não assumir sempre ida+regresso).
 - WHEN duas ofertas estão dentro do raio e da tolerância horária THEN ambas SHALL poder gerar propostas para a mesma procura (cardinalidade 1:M na negociação).
@@ -320,8 +352,8 @@ Aceitar proposta só se `N_proposto <= vagas_disponiveis` no momento da aceitaç
 | MKT-06 | P1: Capacidade = soma pax activos | Design | Pending |
 | MKT-07 | P1: Faltas sem /4 | Design | Pending |
 | MKT-08 | P1: Lista de espera | Design | Pending |
-| MKT-09 | P1: Matching ±15min + raio + N_candidato (sem routing) | Design | Pending |
-| MKT-17 | P1: Três Ns distintos (candidato/contrato/activos) | Design | Pending |
+| MKT-09 | P1: Matching ±15min + raio + N_actual (sem routing) | Design | Pending |
+| MKT-17 | P1: Quatro Ns (actual/proposto/contrato/activos) + grupo vivo | Design | Pending |
 | MKT-18 | P1: Procura 1:M propostas; aceite → 1 acordo 1:N | Design | Pending |
 | MKT-10 | P1: Migração limpa + preservar infra | Design | Pending |
 | MKT-11 | P1: RLS tabelas novas | Design | Pending |

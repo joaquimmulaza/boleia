@@ -3,13 +3,18 @@ import { MapPin, AlertCircle, ArrowRight, Clock, Users, ChevronRight } from 'luc
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { listOfertasByDriver } from '../services/OfertaService';
-import { listPropostasByOferta, rejectProposta } from '../services/PropostaService';
+import {
+  listPropostasByOferta,
+  rejectProposta,
+  enrichPropostasForReview,
+} from '../services/PropostaService';
 import { createAgreementFromProposal } from '../services/AgreementService';
 import { supabase } from '../lib/supabase';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 import EmptyState from '../components/EmptyState';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import PropostaReviewCard from '../components/PropostaReviewCard';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 
@@ -36,8 +41,9 @@ const DriverDashboard = () => {
   const [hasVehicle, setHasVehicle] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [ofertas, setOfertas] = useState([]);
-  const [propostas, setPropostas] = useState([]);
+  const [reviews, setReviews] = useState([]);
   const [selectedOfertaId, setSelectedOfertaId] = useState(null);
+  const [loadingPropostas, setLoadingPropostas] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', text: '' });
   const [busyId, setBusyId] = useState(null);
 
@@ -71,12 +77,18 @@ const DriverDashboard = () => {
 
   const handleVerPropostas = async (ofertaId) => {
     setSelectedOfertaId(ofertaId);
+    setReviews([]);
+    setLoadingPropostas(true);
     setFeedback({ type: '', text: '' });
     try {
       const lista = await listPropostasByOferta(ofertaId);
-      setPropostas(lista.filter((p) => p.estado === 'aberta'));
+      const abertas = lista.filter((p) => p.estado === 'aberta');
+      const enriched = await enrichPropostasForReview(abertas);
+      setReviews(enriched);
     } catch (err) {
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
+    } finally {
+      setLoadingPropostas(false);
     }
   };
 
@@ -86,7 +98,7 @@ const DriverDashboard = () => {
     try {
       await createAgreementFromProposal(propostaId);
       setFeedback({ type: 'success', text: 'Proposta aceite. Acordo criado.' });
-      setPropostas((prev) => prev.filter((p) => p.id !== propostaId));
+      setReviews((prev) => prev.filter((r) => r.proposta.id !== propostaId));
       await carregar();
     } catch (err) {
       setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
@@ -99,7 +111,7 @@ const DriverDashboard = () => {
     setBusyId(propostaId);
     try {
       await rejectProposta(propostaId);
-      setPropostas((prev) => prev.filter((p) => p.id !== propostaId));
+      setReviews((prev) => prev.filter((r) => r.proposta.id !== propostaId));
     } catch (err) {
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
     } finally {
@@ -116,7 +128,7 @@ const DriverDashboard = () => {
         onAction={() => navigate('/publicar-trajeto')}
       />
 
-      {feedback.text && (
+      {feedback.text && !selectedOfertaId && (
         <div
           role="alert"
           className={`mb-4 rounded-xl px-4 py-3 text-sm font-medium ${
@@ -212,43 +224,31 @@ const DriverDashboard = () => {
       {selectedOfertaId && (
         <div className="mt-8 space-y-3">
           <h2 className="text-lg font-bold text-balance">Rever propostas</h2>
-          {propostas.length === 0 ? (
+          {feedback.text && (
+            <div
+              role="alert"
+              className={`rounded-xl px-4 py-3 text-sm font-medium ${
+                feedback.type === 'success'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-red-50 text-red-700 border border-red-200'
+              }`}
+            >
+              {feedback.text}
+            </div>
+          )}
+          {loadingPropostas ? (
+            <LoadingSkeleton />
+          ) : reviews.length === 0 ? (
             <p className="text-sm text-slate-500">Não há propostas abertas nesta oferta.</p>
           ) : (
-            propostas.map((p) => (
-              <section
-                key={p.id}
-                className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 shadow-sm space-y-3"
-              >
-                <div className="flex justify-between text-sm">
-                  <span className="font-semibold">
-                    {p.n_passageiros_propostos}{' '}
-                    {p.n_passageiros_propostos === 1 ? 'passageiro' : 'passageiros'}
-                  </span>
-                  <span className="text-primary font-bold tabular-nums">
-                    {formatKwanza(p.valor_mensal_ask_kz)} Kz
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500">{labelModo(p.modo_preco)}</p>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    disabled={busyId === p.id}
-                    onClick={() => handleAceitar(p.id)}
-                    className="flex-1 bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60"
-                  >
-                    Aceitar proposta
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busyId === p.id}
-                    onClick={() => handleRecusar(p.id)}
-                    className="flex-1 bg-slate-100 dark:bg-slate-800 font-bold py-3 rounded-xl disabled:opacity-60"
-                  >
-                    Recusar
-                  </button>
-                </div>
-              </section>
+            reviews.map((review) => (
+              <PropostaReviewCard
+                key={review.proposta.id}
+                review={review}
+                busy={busyId === review.proposta.id || loadingPropostas}
+                onAceitar={() => handleAceitar(review.proposta.id)}
+                onRecusar={() => handleRecusar(review.proposta.id)}
+              />
             ))
           )}
         </div>

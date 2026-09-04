@@ -2,26 +2,19 @@
 
 **Date:** 2026-09-04  
 **Feature:** Marketplace Oferta / Procura  
-**Fase TLC:** Execute  
-**Task actual:** **T1–T21 Complete** + Visual QA  
+**Fase TLC:** Execute · **Phase 6**  
+**Task actual:** **T25** — E2E TOTAL_ACORDO N=3/4 + leave sem recalcular quotas  
 **Branch:** `main`
 
 ---
 
-## Visual QA (2026-09-04)
+## Retomar noutro chat
 
-Fluxo E2E no browser (`localhost:5173`), contas QA criadas:
+**Ler primeiro:** [`.specs/features/marketplace-oferta-procura/CHECKPOINT.md`](features/marketplace-oferta-procura/CHECKPOINT.md)
 
-1. Motorista: veículo → publicar oferta Talatona→Miramar → hub
-2. Passageiro: procura → match → propor acordo
-3. Motorista: aceitar proposta → acordo activo + notificação
+Prompt:
 
-**Correcções na sessão QA:**
-- RLS: recursão infinita `acordos` ↔ `acordos_passageiros` → funções `is_acordo_driver` / `is_acordo_passenger` (migração `fix_rls_acordos_recursion`)
-- Plural «1 oferta compatível»
-- Cartão de acordo mostra origem→destino (join `ofertas_capacidade`)
-
-**Pendências visuais (não bloqueantes):** Penpot MCP offline; UI mobile-first em viewport largo (esperado); detalhe de acordo ainda simplificado vs v0.
+> Continua marketplace a partir de `.specs/features/marketplace-oferta-procura/CHECKPOINT.md`. Próxima task T25.
 
 ---
 
@@ -29,8 +22,11 @@ Fluxo E2E no browser (`localhost:5173`), contas QA criadas:
 
 | Fase | Status |
 |------|--------|
-| T1–T21 | **Done** |
+| T1–T24 | **Done** (T24 hub motorista multi-pax) |
+| T25 | **Pending ← AQUI** |
+| T26–T28, T31 | Pending (T26∥T27∥T28 após T24) |
+| T29–T30 | P2/P3 |
 
-## Contas QA (teste)
-- `qa.motorista.mkt+20260904@boleiacerta.test` / `TesteQA123!`
-- `qa.passageiro.mkt+20260904@boleiacerta.test` / `TesteQA123!`
+## Porquê Phase 6
+
+Schema/RPC suportam 1:N; T22–T24 cobrem grupo vivo + propor + rever/aceitar no hub. Falta E2E TOTAL_ACORDO + invariante de leave (T25).

@@ -87,7 +87,7 @@ Os boards Penpot iniciais eram wireframes com jargon técnico — rejeitados. Fo
 - «Por passageiro» / «Total do acordo»
 - «3 lugares disponíveis», «Grupo · 3 pessoas», «4 ofertas compatíveis»
 - «120.000 Kz», «40.000 Kz / pessoa»
-- **Proibido na UI:** `N_candidato`, `N_contrato`, `N_activos`, `POR_PASSAGEIRO`, `TOTAL_ACORDO`, `modo_preco`, `ask`
+- **Proibido na UI:** `N_actual`, `N_proposto`, `N_candidato`, `N_contrato`, `N_activos`, `POR_PASSAGEIRO`, `TOTAL_ACORDO`, `modo_preco`, `ask`
 
 ### Vistas v0 (screen switcher)
 
@@ -180,15 +180,21 @@ Tipagem em JSDoc no código (sem TypeScript). Campos conceptuais:
 
 ### `procuras` / `grupos` / `membros_grupo`
 
-- Procura âncora; grupo opcional com membros e pontos preferenciais  
-- `N_candidato` = COUNT membros activos (derivado ou coluna mantida em sync)
+- Procura âncora; grupo opcional = **procura colectiva viva**
+- `N_actual` = COUNT membros activos (coluna `n_candidato` em sync)
+- `n_maximo` = capacidade pretendida pelo criador (grupo continua aberto e negociável enquanto `N_actual < n_maximo`)
+- Pontos preferenciais por membro; OD/horários/dias na procura
+- **Sem** preço próprio obrigatório no grupo — preço na oferta/proposta do motorista
+- Descoberta pública + pedido de entrada (telefone = fallback transitório)
 
 ### `propostas`
 
 - `oferta_id`, `procura_id` e/ou `grupo_id`
-- `modo_preco`, `valor_mensal_ask_kz`, `n_passageiros_propostos` (snapshot ≈ `N_candidato` na versão)
+- `modo_preco`, `valor_mensal_ask_kz`, `n_passageiros_propostos` (= **`N_proposto`** snapshot de `N_actual` no instante da criação — **não** mutar se o grupo crescer)
 - `estado`: `aberta` | `aceite` | `rejeitada` | `invalidada` | `cancelada`
 - Uma procura pode ter **M** propostas abertas
+- Entrada de membro **não** invalida propostas abertas; renegociação com outro N = **nova** proposta
+- Aceitação: incluir primeiros `N_proposto` membros por `ordem_insercao` se `N_actual > N_proposto`
 
 ### `acordos` + `acordos_passageiros`
 
@@ -247,7 +253,7 @@ Regras (todas AND para aceite directo):
 1. `|hora_oferta - hora_procura| ≤ tolerância` (mesmo dia-da-semana relevante)  
 2. distância origem ≤ raio origem  
 3. distância destino ≤ raio destino  
-4. `N_candidato ≤ vagas_disponiveis`
+4. `N_actual ≤ vagas_disponiveis`
 
 Se 1–3 ok mas 4 falha → elegível waitlist.  
 **Fora do MVP:** OSRM, Google Directions, ETA, path snapping.
@@ -274,7 +280,7 @@ Haversine: novo helper puro em `src/utils/geo.js` (TDD) — não depende de Phot
 
 ### `ProcuraService` / `GrupoService`
 
-- Criar procura; gerir membros; invalidar propostas se `N_candidato` muda  
+- Criar procura; gerir membros; sync `N_actual`; **não** invalidar propostas abertas só porque `N_actual` mudou  
 
 ### `PropostaService`
 
@@ -414,3 +420,135 @@ Estados: lista N pax → sair (confirm) → quotas intactas; registar falta → 
 1. **Tu:** abrir https://v0.app/chat/cYa4j7gxE0p e validar as 8 vistas (aprovar ou pedir ajustes).  
 2. **Reabrir Penpot MCP** → reimportar boards a partir do v0 (descartar wireframes com jargon).  
 3. Aprovar Design → `tasks.md` (MKT-*).
+
+---
+
+## T24 — Hub motorista: rever proposta multi-passageiro
+
+**Task:** T24 (MKT-03) · **Gate design:** Ready for Implementer  
+**Path UI:** `/motorista` → `DriverDashboard.jsx` secção «Rever propostas»  
+**Accept path (já existe):** `createAgreementFromProposal` → RPC `accept_proposal`
+
+### Gap actual (código)
+
+O hub lista ofertas e propostas abertas com contagem + ask + Aceitar/Recusar. **Falta:** lista de passageiros cobertos pelo snapshot, pontos de pickup, e **preço resolvido** via `resolveAgreementPricing` (preview), com copy humana.
+
+### User flow
+
+```mermaid
+flowchart TD
+  A[Motorista em /motorista] --> B[Lista ofertas]
+  B --> C[Ver propostas]
+  C --> D{Propostas abertas?}
+  D -->|Não| E[Empty: Não há propostas abertas nesta oferta.]
+  D -->|Sim| F[Card por proposta]
+  F --> G[Header Grupo · N pessoas]
+  G --> H[Lista passageiros + pickup]
+  H --> I[Breakdown preço resolvido]
+  I --> J{Acção}
+  J -->|Aceitar| K[ConfirmationModal opcional]
+  K --> L[RPC accept_proposal / loading]
+  L -->|OK| M[Success + remove card + refresh ofertas]
+  L -->|Erro| N[Erro junto à acção]
+  J -->|Recusar| O[rejectProposta / remove card]
+```
+
+1. Motorista abre oferta → «Ver propostas».  
+2. Para cada proposta `aberta`: vê composição do snapshot (`n_passageiros_propostos`) — primeiros N membros por `ordem_insercao` (grupo vivo; **nunca** «grupo incompleto»).  
+3. Vê preço resolvido (labels humanas + Kz).  
+4. Aceitar → RPC atómica (já wired); Recusar → `rejectProposta`.
+
+### Estados UI
+
+| Estado | UI |
+|--------|-----|
+| **Empty** (sem propostas na oferta) | Texto: «Não há propostas abertas nesta oferta.» — sem CTA extra (já tem «Publicar oferta» no header) |
+| **Loading** (lista ofertas / propostas / membros) | `LoadingSkeleton` estrutural (baseline-ui); botões Aceitar/Recusar `disabled` + `busyId` |
+| **Error** | Banner/`role="alert"` junto à secção de acção (`getFriendlyErrorMessage` / mensagem RPC PT) |
+| **Success** (aceite) | «Proposta aceite. Acordo criado.» (emerald); card removido; ofertas refresh (vagas) |
+| **Busy** (aceitar/recusar) | Ambos CTAs disabled no card activo; sem double-submit |
+| **Confirmação** (recomendado) | `ConfirmationModal` antes de Aceitar (acção irreversível — baseline-ui AlertDialog) |
+
+### Composição do card (ordem visual)
+
+1. **Cabeçalho:** chip «Nova» (opcional) + título humano  
+   - Grupo: «Grupo · 2 pessoas»  
+   - Procura solo: «1 passageiro» / «2 passageiros»  
+2. **Lista passageiros** (snapshot): avatar iniciais · nome · pickup opcional (`MapPin` + texto curto)  
+3. **Separator**  
+4. **Preço resolvido** (ver regras abaixo)  
+5. **CTAs:** primary «Aceitar proposta» · secondary «Recusar»
+
+### Regras de display de preço (`resolveAgreementPricing`)
+
+Preview client-side antes do RPC (não muta BD):
+
+```js
+resolveAgreementPricing({
+  modo_preco: proposta.modo_preco,       // interno; UI não mostra o enum
+  valor_ask_kz: proposta.valor_mensal_ask_kz,
+  n_passageiros: proposta.n_passageiros_propostos,
+})
+```
+
+| Modo interno | Labels UI | O que mostrar |
+|--------------|-----------|---------------|
+| `POR_PASSAGEIRO` | «Por passageiro» | Ask / pessoa · Total = ask × N (`valor_mensal_total_kz`) |
+| `TOTAL_ACORDO` | «Total do acordo» | Total = ask · «Por passageiro» ≈ `valor_mensal_por_passageiro_kz` (base) · se `T % N ≠ 0`, nota humana: primeiros passageiros (por ordem) pagam +1 Kz para fechar o total exacto; opcionalmente listar `quotas[i]` por linha |
+
+- Sempre **Kz** + `tabular-nums` + `formatKwanza`.  
+- **Proibido na UI:** `N_actual`, `N_proposto`, `N_candidato`, `POR_PASSAGEIRO`, `TOTAL_ACORDO`, `modo_preco`, `ask`.
+
+### Copy samples (PT-PT)
+
+- «Rever propostas»  
+- «Grupo · 3 pessoas»  
+- «Ponto de encontro: Talatona, perto do Condo»  
+- «Total do acordo» → «120.000 Kz»  
+- «Por passageiro» → «40.000 Kz / pessoa»  
+- «Alguns passageiros pagam 33.334 Kz e outros 33.333 Kz para o total fechar exacto.» (só se resto ≠ 0)  
+- «Aceitar proposta» / «Recusar»  
+- «Proposta aceite. Acordo criado.»  
+- «Não há propostas abertas nesta oferta.»
+
+### Componentes
+
+| Peça | Fonte | Notas |
+|------|-------|-------|
+| Shell / header / empty / skeleton | `PageShell`, `PageHeader`, `EmptyState`, `LoadingSkeleton` | Já no hub |
+| Card content | Tailwind section actual **ou** `@shadcn/card` | Preferir tokens existentes; add se necessário |
+| CTAs | `src/components/ui/button.jsx` (já) | `default` / `secondary` |
+| Chip estado | Badge shadcn **ou** chip Tailwind actual | `npx shadcn@latest add @shadcn/badge` |
+| Lista pax | Avatar shadcn (opcional) + Lucide `MapPin` | `npx shadcn@latest add @shadcn/avatar` |
+| Separador preço | `@shadcn/separator` (opcional) | `npx shadcn@latest add @shadcn/separator` |
+| Confirmar aceite | `ConfirmationModal` | Já no repo |
+| Pricing | `resolveAgreementPricing` + `formatKwanza` | Preview only |
+| Dados membros | `listMembrosGrupo` (+ slice primeiros N) | Via `grupo_id` da proposta |
+
+**shadcn add (se faltar no repo):**  
+`npx shadcn@latest add @shadcn/card @shadcn/badge @shadcn/separator @shadcn/avatar`  
+Hoje só `button` existe em `src/components/ui/` — reutilizar padrões Tailwind do hub se o Implementer preferir não instalar todos.
+
+### Dados / composição snapshot
+
+- `proposta.n_passageiros_propostos` = N do contrato previsto.  
+- Membros: `listMembrosGrupo(grupo_id)` ordenados por `ordem_insercao` → **slice(0, N)**.  
+- Se `N_actual > N` (grupo cresceu): mostrar só os N cobertos; copy neutra (ex. «Passageiros neste acordo») — **nunca** «grupo incompleto».  
+- Se `N_actual < N` na revisão: ainda mostrar aviso suave de que a aceitação pode falhar (RPC) — sem jargon.
+
+### Referências de design
+
+| Fonte | Resultado |
+|-------|-----------|
+| **UI Skills** | `ibelick/baseline-ui` — `text-balance`/`text-pretty`, skeletons, erro junto à acção, AlertDialog p/ irreversível, `tabular-nums`, um accent `#10b748`, sem glow/purple |
+| **Mobbin** | **Falhou** (plano free / paid required) — degradado; não bloqueia |
+| **v0 marketplace (canónico)** | Chat https://v0.app/chat/cYa4j7gxE0p · vista **6. Rever proposta** · código `.specs/features/marketplace-oferta-procura/v0-reference/` |
+| **v0 T24 (refino multi-pax)** | Chat https://v0.app/chat/tLT9dcf4coN · Create async (`v0-pro`, msg `cFoHsCeYHPwNQd530OBim4QcPJNq8NDK`) — briefing multi-pax + pickup + pricing; geração pode ainda estar a correr; **SoT visual imediato** = vista 6 de `cYa4j7gxE0p` + esta secção. **Sem** deploy Vercel |
+| **shadcn** | Button (local) · Card/Badge/Separator/Avatar (@shadcn registry) |
+
+### Implementer checklist (após este gate)
+
+1. TDD: testes do card/secção com lista membros + preview pricing (incl. TOTAL resto).  
+2. Estender `DriverDashboard` (ou extrair `PropostaReviewCard.jsx`) sem reinventar Accept RPC.  
+3. Copy humana only; mapear enums só no código.  
+4. Visual QA vs v0 `cYa4j7gxE0p` + chat T24 `tLT9dcf4coN`.

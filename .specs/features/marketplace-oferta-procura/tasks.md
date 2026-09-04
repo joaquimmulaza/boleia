@@ -4,7 +4,8 @@
 **Spec / Context**: `spec.md`, `context.md`  
 **UI visual**: `.specs/features/marketplace-oferta-procura/v0-reference/` (aprovado)  
 **SoT negócio**: planos marketplace + mapa impacto + `spec.md` / `context.md` / `design.md` — **prevalecem sobre o protótipo v0** se houver conflito  
-**Status**: In Progress
+**Status**: Phase 1–5 Done · Phase 6: **T22–T24 Done** · **T25←** — completar bifurcação 1:N
+**Checkpoint:** [CHECKPOINT.md](./CHECKPOINT.md)
 
 ---
 
@@ -44,6 +45,15 @@ T14 → T15 → T16 → T17 → T18 → T19
 T20 → T21
 ```
 
+### Phase 6 — Bifurcação 1:N (produto; após T21)
+
+```
+T22 → T23 → T24 → T25
+T26, T27, T28 (após T24)
+T29 (P2), T30 (P3)
+```
+
+**Status global:** Phase 1–5 **Done**. Phase 6: T22–T24 **Done** · **T25← AQUI**.
 ---
 
 ## Tools por fase
@@ -231,6 +241,94 @@ T20 → T21
 
 ---
 
+## Phase 6: Completar bifurcação 1:N (produto ainda N=1)
+
+> Diagnóstico (2026-09-04): schema/RPC ~80–90%; serviços ~70%; UI ~40% (só prova N=1).  
+> Plano: `.cursor/plans/marketplace_oferta_procura_74cbb52a.plan.md`  
+> Checkpoint: `.specs/features/marketplace-oferta-procura/CHECKPOINT.md`
+
+### T22: UI Grupo na procura (criar / membros / sync N_candidato)
+
+- **ID:** MKT-02, MKT-17
+- **Do:** Em `/passageiro` — criar grupo ligado à procura; adicionar membros (mín. owner + convidados); pontos pickup opcionais; chamar `GrupoService` (`createGrupo`, `addMembro`, `syncNCandidato`); UI copy humana (nunca `N_candidato`)
+- **Deps:** T9, T17
+- **Status:** Done
+- **Verify:** Procura com 3 membros → `n_candidato === 3` (`N_actual`); propostas abertas **mantêm** snapshot ao mudar membros (não invalidar automaticamente)
+- **TDD:** testes página/serviço grupo antes da UI
+- **Ficheiros:** `GrupoProcuraPanel.jsx`, `GrupoService` (`getGrupoByProcura`, `listMembrosGrupo`), `ProfileService.findPassageiroByTelefone`, integrado em `PassengerDashboard`
+
+### T23: Proposta com `grupo_id` + N_proposto (= N_actual)
+
+- **ID:** MKT-03, MKT-18, MKT-17  
+- **Do:** `createProposta` passa `grupo_id` quando existe; `n_passageiros_propostos = N_actual` (snapshot); **não** bloquear por grupo «incompleto» vs `n_maximo`  
+- **Deps:** T22, T10  
+- **Status:** Done (revisto 2026-09-04 — grupo vivo)  
+- **Verify:** Proposta com `grupo_id` e `N_proposto = N_actual` (ex. 2/4 → N=2); entrada posterior de membro **não** muta a proposta  
+- **Notas:** Serviço exige `grupo_id` só se N>1 (entidade grupo); RPC `accept_proposal` inclui primeiros `N_proposto` membros; sync N_actual **não** invalida propostas abertas
+
+### T24: Hub motorista — rever proposta multi-passageiro
+
+- **ID:** MKT-03
+- **Do:** Em «Rever propostas»: listar passageiros/pontos do grupo; preço resolvido (Por passageiro / Total do acordo); Aceitar chama RPC (já atómica)
+- **Deps:** T23, T16
+- **Status:** Done
+- **Verify:** Aceitar N=3 cria 3 `acordos_passageiros`; oferta `vagas_disponiveis` −3; estado `parcial`/`cheia`
+- **Nota:** UI+enrich TDD (`propostaReview`, `PropostaReviewCard`, loading sem stale). Efeito RPC N=3 deferido a T25 E2E.
+
+### T25: E2E TOTAL_ACORDO N=3/4 + saída sem recalcular quotas
+
+- **ID:** MKT-04, MKT-05, MKT-06  
+- **Do:** Testes (Vitest + smoke browser se possível): ask 120000 TOTAL_ACORDO N=3 → 40000; 100000/3 resto; `leavePassenger` não altera `valor_mensal_*` nem quotas restantes  
+- **Deps:** T24, T11  
+- **Status:** Pending  
+- **Verify:** Asserções verdes; grep sem recálculo por COUNT(activos)
+
+### T26: Waitlist — promoção ao libertar vaga
+
+- **ID:** MKT-08, MKT-12  
+- **Do:** Ao `leavePassenger` / cancelamento: notificar 1º da `lista_espera` (`waitlist_promoted`); serviço `promoteWaitlist` ou trigger/RPC; UI passageiro mostra estado na lista  
+- **Deps:** T12, T17  
+- **Status:** Pending  
+- **Verify:** Sair pax → notif waitlist; sem auto-aceitar
+
+### T27: Publicar oferta — dias_semana + flexibilidade (mínimo)
+
+- **ID:** MKT-01  
+- **Do:** UI `/publicar-trajeto`: selector Seg–Sex (default) + toggle «Rota flexível» → `flexibilidade_rota` / `dias_semana` (já no `OfertaService`)  
+- **Deps:** T15, T8  
+- **Status:** Pending  
+- **Verify:** Oferta gravada com flags; copy humana
+
+### T28: Detalhe acordo 1:N (lista passageiros + preço congelado)
+
+- **ID:** MKT-03  
+- **Do:** `/acordos` detalhe alinhado v0: lista pax, quota, CTA sair / registar falta; badge «Preço combinado / congelado»  
+- **Deps:** T18, T24  
+- **Status:** Pending  
+- **Verify:** Motorista vê N linhas; passageiro vê a sua quota
+
+### T29 (P2): Adenda / renegotiateAgreementPricing
+
+- **ID:** MKT-13  
+- **Status:** Pending (fora da wave imediata)  
+- **Nota:** Só mutação de preços / N_contrato via adenda explícita
+
+### T30 (P3): Mapa N pontos preferenciais
+
+- **ID:** MKT-15  
+- **Status:** Pending (placeholder OK até Penpot)  
+- **Nota:** Antes do motorista aceitar — pontos dos membros cobertos pelo `N_proposto`
+
+### T31: Grupo vivo — `n_maximo` + descoberta pública / pedido de entrada
+
+- **ID:** MKT-02, MKT-17  
+- **Do:** Coluna `n_maximo` em `grupos` (ou procura); UI capacidade pretendida; listagem pública de grupos + fluxo pedir entrada / aprovação (substituir convite só por telefone)  
+- **Deps:** T22  
+- **Status:** Pending  
+- **Verify:** Grupo 2/4 visível a outros passageiros; pedido de entrada aumenta `N_actual`; propostas abertas inalteradas
+
+---
+
 ## Parallelism
 
 | Wave | Tasks |
@@ -241,6 +339,9 @@ T20 → T21
 | D | T8–T12 paralelo; T11/T13 após T7 |
 | E | T14–T19 sequencial por ecrã |
 | F | T20–T21 |
+| G | T22 → T23 → T24 → T25 (sequencial; núcleo bifurcação) |
+| H | T26, T27, T28 (após T24; paralelizáveis entre si) |
+| I | T29 P2; T30 P3 |
 
 ---
 
@@ -248,21 +349,21 @@ T20 → T21
 
 | ID | Tasks |
 |----|-------|
-| MKT-01 | T5, T6, T8, T15 |
-| MKT-02 | T6, T9, T17 |
-| MKT-03 | T7, T11, T16 |
-| MKT-04 | T1, T7 |
-| MKT-05 | T7, T11 |
-| MKT-06 | T7 |
+| MKT-01 | T5, T6, T8, T15, T27 |
+| MKT-02 | T6, T9, T17, T22 |
+| MKT-03 | T7, T11, T16, T23, T24, T28 |
+| MKT-04 | T1, T7, T25 |
+| MKT-05 | T7, T11, T25 |
+| MKT-06 | T7, T25 |
 | MKT-07 | T7, T13, T19 |
-| MKT-08 | T6, T12, T17 |
+| MKT-08 | T6, T12, T17, T26 |
 | MKT-09 | T2, T3, T12, T17 |
 | MKT-10 | T4 |
 | MKT-11 | T6 |
-| MKT-12 | T7, T19 |
-| MKT-13 | (P2 — fora desta wave) |
+| MKT-12 | T7, T19, T26 |
+| MKT-13 | T29 (P2) |
 | MKT-14 | T19 |
-| MKT-15 | (P3 — placeholder mapa OK) |
+| MKT-15 | T30 (P3) |
 | MKT-16 | T20 |
-| MKT-17 | T3, T9, T11 |
-| MKT-18 | T6, T10, T16 |
+| MKT-17 | T3, T9, T11, T22 |
+| MKT-18 | T6, T10, T16, T23 |
