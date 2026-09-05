@@ -1,0 +1,1 @@
+{"nodes": [{"id": "codex_skills_react_best_practices_rules_rendering_conditional_render", "label": "Use Explicit Conditional Rendering", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/rendering-conditional-render.md", "rationale": "Prevents rendering 0 or NaN."}], "edges": [], "hyperedges": []}

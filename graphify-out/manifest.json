@@ -1,0 +1,2732 @@
+{
+  ".agent/skills/best-practices/.skill-meta.json": {
+    "mtime": 1774788810.7501843,
+    "seen": 1787736773.0150206,
+    "ast_hash": "738206df5efb8e7d31d2695604d77a7d",
+    "semantic_hash": "738206df5efb8e7d31d2695604d77a7d"
+  },
+  ".agent/skills/docs-writer/.skill-meta.json": {
+    "mtime": 1774788811.3341062,
+    "seen": 1787736773.0150206,
+    "ast_hash": "df087f6b12924e43bc31498795d3b26b",
+    "semantic_hash": "df087f6b12924e43bc31498795d3b26b"
+  },
+  ".agent/skills/frontend-design/.skill-meta.json": {
+    "mtime": 1774788827.1104035,
+    "seen": 1787736773.0150206,
+    "ast_hash": "8064fa409ab9dd4f4f6cf6e73242f869",
+    "semantic_hash": "8064fa409ab9dd4f4f6cf6e73242f869"
+  },
+  ".agent/skills/playwright-skill/.skill-meta.json": {
+    "mtime": 1774788828.0890055,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c056862d2a40861d45436b5492b69563",
+    "semantic_hash": "c056862d2a40861d45436b5492b69563"
+  },
+  ".agent/skills/playwright-skill/lib/helpers.js": {
+    "mtime": 1774788828.086207,
+    "seen": 1787736773.0150206,
+    "ast_hash": "71fcd909fed8ed6a521c74e154e47753",
+    "semantic_hash": "71fcd909fed8ed6a521c74e154e47753"
+  },
+  ".agent/skills/playwright-skill/package.json": {
+    "mtime": 1774788828.078849,
+    "seen": 1787736773.0150206,
+    "ast_hash": "caa88403a81d05a1a77adb4c5482e458",
+    "semantic_hash": "caa88403a81d05a1a77adb4c5482e458"
+  },
+  ".agent/skills/playwright-skill/run.js": {
+    "mtime": 1774788828.082862,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5a54d2be3e8fbd66b57f71b336ec24f1",
+    "semantic_hash": "5a54d2be3e8fbd66b57f71b336ec24f1"
+  },
+  ".agent/skills/react-best-practices/.skill-meta.json": {
+    "mtime": 1774788832.791407,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c3e01a8605348540620b82dcd4aa0406",
+    "semantic_hash": "c3e01a8605348540620b82dcd4aa0406"
+  },
+  ".agent/skills/security-best-practices/.skill-meta.json": {
+    "mtime": 1774788833.6666374,
+    "seen": 1787736773.0150206,
+    "ast_hash": "2234a530469c2956b427efc271252c81",
+    "semantic_hash": "2234a530469c2956b427efc271252c81"
+  },
+  ".agent/skills/subagent-creator/.skill-meta.json": {
+    "mtime": 1774788834.1507294,
+    "seen": 1787736773.0150206,
+    "ast_hash": "4f8c6602538d44561c3103949ac51515",
+    "semantic_hash": "4f8c6602538d44561c3103949ac51515"
+  },
+  ".agent/skills/technical-design-doc-creator/.skill-meta.json": {
+    "mtime": 1774788834.6363971,
+    "seen": 1787736773.0150206,
+    "ast_hash": "ea04a68707a26678b1d19d2f92738de2",
+    "semantic_hash": "ea04a68707a26678b1d19d2f92738de2"
+  },
+  ".agent/skills/tlc-spec-driven/.skill-meta.json": {
+    "mtime": 1774788835.439773,
+    "seen": 1787736773.0150206,
+    "ast_hash": "cb40b27665919b9db6ea41a816bd3b00",
+    "semantic_hash": "cb40b27665919b9db6ea41a816bd3b00"
+  },
+  ".agent/skills/web-design-guidelines/.skill-meta.json": {
+    "mtime": 1774788835.871903,
+    "seen": 1787736773.0150206,
+    "ast_hash": "dc122db0b3cd9cfe2f518aa8196a4b24",
+    "semantic_hash": "dc122db0b3cd9cfe2f518aa8196a4b24"
+  },
+  ".agents/.skill-lock.json": {
+    "mtime": 1774788865.2427802,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c1696abcebfed6b7ece8cad5db608102",
+    "semantic_hash": "c1696abcebfed6b7ece8cad5db608102"
+  },
+  ".cline/skills/best-practices/.skill-meta.json": {
+    "mtime": 1774788810.7501843,
+    "seen": 1787736773.0150206,
+    "ast_hash": "738206df5efb8e7d31d2695604d77a7d",
+    "semantic_hash": "738206df5efb8e7d31d2695604d77a7d"
+  },
+  ".cline/skills/docs-writer/.skill-meta.json": {
+    "mtime": 1774788811.3341062,
+    "seen": 1787736773.0150206,
+    "ast_hash": "df087f6b12924e43bc31498795d3b26b",
+    "semantic_hash": "df087f6b12924e43bc31498795d3b26b"
+  },
+  ".cline/skills/frontend-design/.skill-meta.json": {
+    "mtime": 1774788827.1104035,
+    "seen": 1787736773.0150206,
+    "ast_hash": "8064fa409ab9dd4f4f6cf6e73242f869",
+    "semantic_hash": "8064fa409ab9dd4f4f6cf6e73242f869"
+  },
+  ".cline/skills/playwright-skill/.skill-meta.json": {
+    "mtime": 1774788828.0890055,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c056862d2a40861d45436b5492b69563",
+    "semantic_hash": "c056862d2a40861d45436b5492b69563"
+  },
+  ".cline/skills/playwright-skill/lib/helpers.js": {
+    "mtime": 1774788828.086207,
+    "seen": 1787736773.0150206,
+    "ast_hash": "71fcd909fed8ed6a521c74e154e47753",
+    "semantic_hash": "71fcd909fed8ed6a521c74e154e47753"
+  },
+  ".cline/skills/playwright-skill/package.json": {
+    "mtime": 1774788828.078849,
+    "seen": 1787736773.0150206,
+    "ast_hash": "caa88403a81d05a1a77adb4c5482e458",
+    "semantic_hash": "caa88403a81d05a1a77adb4c5482e458"
+  },
+  ".cline/skills/playwright-skill/run.js": {
+    "mtime": 1774788828.082862,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5a54d2be3e8fbd66b57f71b336ec24f1",
+    "semantic_hash": "5a54d2be3e8fbd66b57f71b336ec24f1"
+  },
+  ".cline/skills/react-best-practices/.skill-meta.json": {
+    "mtime": 1774788832.791407,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c3e01a8605348540620b82dcd4aa0406",
+    "semantic_hash": "c3e01a8605348540620b82dcd4aa0406"
+  },
+  ".cline/skills/security-best-practices/.skill-meta.json": {
+    "mtime": 1774788833.6666374,
+    "seen": 1787736773.0150206,
+    "ast_hash": "2234a530469c2956b427efc271252c81",
+    "semantic_hash": "2234a530469c2956b427efc271252c81"
+  },
+  ".cline/skills/subagent-creator/.skill-meta.json": {
+    "mtime": 1774788834.1507294,
+    "seen": 1787736773.0150206,
+    "ast_hash": "4f8c6602538d44561c3103949ac51515",
+    "semantic_hash": "4f8c6602538d44561c3103949ac51515"
+  },
+  ".cline/skills/technical-design-doc-creator/.skill-meta.json": {
+    "mtime": 1774788834.6363971,
+    "seen": 1787736773.0150206,
+    "ast_hash": "ea04a68707a26678b1d19d2f92738de2",
+    "semantic_hash": "ea04a68707a26678b1d19d2f92738de2"
+  },
+  ".cline/skills/tlc-spec-driven/.skill-meta.json": {
+    "mtime": 1774788835.439773,
+    "seen": 1787736773.0150206,
+    "ast_hash": "cb40b27665919b9db6ea41a816bd3b00",
+    "semantic_hash": "cb40b27665919b9db6ea41a816bd3b00"
+  },
+  ".cline/skills/web-design-guidelines/.skill-meta.json": {
+    "mtime": 1774788835.871903,
+    "seen": 1787736773.0150206,
+    "ast_hash": "dc122db0b3cd9cfe2f518aa8196a4b24",
+    "semantic_hash": "dc122db0b3cd9cfe2f518aa8196a4b24"
+  },
+  ".codex/skills/best-practices/.skill-meta.json": {
+    "mtime": 1774788810.7501843,
+    "seen": 1787736773.0150206,
+    "ast_hash": "738206df5efb8e7d31d2695604d77a7d",
+    "semantic_hash": "738206df5efb8e7d31d2695604d77a7d"
+  },
+  ".codex/skills/docs-writer/.skill-meta.json": {
+    "mtime": 1774788811.3341062,
+    "seen": 1787736773.0150206,
+    "ast_hash": "df087f6b12924e43bc31498795d3b26b",
+    "semantic_hash": "df087f6b12924e43bc31498795d3b26b"
+  },
+  ".codex/skills/frontend-design/.skill-meta.json": {
+    "mtime": 1774788827.1104035,
+    "seen": 1787736773.0150206,
+    "ast_hash": "8064fa409ab9dd4f4f6cf6e73242f869",
+    "semantic_hash": "8064fa409ab9dd4f4f6cf6e73242f869"
+  },
+  ".codex/skills/playwright-skill/.skill-meta.json": {
+    "mtime": 1774788828.0890055,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c056862d2a40861d45436b5492b69563",
+    "semantic_hash": "c056862d2a40861d45436b5492b69563"
+  },
+  ".codex/skills/playwright-skill/lib/helpers.js": {
+    "mtime": 1774788828.086207,
+    "seen": 1787736773.0150206,
+    "ast_hash": "71fcd909fed8ed6a521c74e154e47753",
+    "semantic_hash": "71fcd909fed8ed6a521c74e154e47753"
+  },
+  ".codex/skills/playwright-skill/package.json": {
+    "mtime": 1774788828.078849,
+    "seen": 1787736773.0150206,
+    "ast_hash": "caa88403a81d05a1a77adb4c5482e458",
+    "semantic_hash": "caa88403a81d05a1a77adb4c5482e458"
+  },
+  ".codex/skills/playwright-skill/run.js": {
+    "mtime": 1774788828.082862,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5a54d2be3e8fbd66b57f71b336ec24f1",
+    "semantic_hash": "5a54d2be3e8fbd66b57f71b336ec24f1"
+  },
+  ".codex/skills/react-best-practices/.skill-meta.json": {
+    "mtime": 1774788832.791407,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c3e01a8605348540620b82dcd4aa0406",
+    "semantic_hash": "c3e01a8605348540620b82dcd4aa0406"
+  },
+  ".codex/skills/security-best-practices/.skill-meta.json": {
+    "mtime": 1774788833.6666374,
+    "seen": 1787736773.0150206,
+    "ast_hash": "2234a530469c2956b427efc271252c81",
+    "semantic_hash": "2234a530469c2956b427efc271252c81"
+  },
+  ".codex/skills/subagent-creator/.skill-meta.json": {
+    "mtime": 1774788834.1507294,
+    "seen": 1787736773.0150206,
+    "ast_hash": "4f8c6602538d44561c3103949ac51515",
+    "semantic_hash": "4f8c6602538d44561c3103949ac51515"
+  },
+  ".codex/skills/technical-design-doc-creator/.skill-meta.json": {
+    "mtime": 1774788834.6363971,
+    "seen": 1787736773.0150206,
+    "ast_hash": "ea04a68707a26678b1d19d2f92738de2",
+    "semantic_hash": "ea04a68707a26678b1d19d2f92738de2"
+  },
+  ".codex/skills/tlc-spec-driven/.skill-meta.json": {
+    "mtime": 1774788835.439773,
+    "seen": 1787736773.0150206,
+    "ast_hash": "cb40b27665919b9db6ea41a816bd3b00",
+    "semantic_hash": "cb40b27665919b9db6ea41a816bd3b00"
+  },
+  ".codex/skills/web-design-guidelines/.skill-meta.json": {
+    "mtime": 1774788835.871903,
+    "seen": 1787736773.0150206,
+    "ast_hash": "dc122db0b3cd9cfe2f518aa8196a4b24",
+    "semantic_hash": "dc122db0b3cd9cfe2f518aa8196a4b24"
+  },
+  ".cursor/skills/best-practices/.skill-meta.json": {
+    "mtime": 1774788810.7501843,
+    "seen": 1787736773.0150206,
+    "ast_hash": "738206df5efb8e7d31d2695604d77a7d",
+    "semantic_hash": "738206df5efb8e7d31d2695604d77a7d"
+  },
+  ".cursor/skills/docs-writer/.skill-meta.json": {
+    "mtime": 1774788811.3341062,
+    "seen": 1787736773.0150206,
+    "ast_hash": "df087f6b12924e43bc31498795d3b26b",
+    "semantic_hash": "df087f6b12924e43bc31498795d3b26b"
+  },
+  ".cursor/skills/frontend-design/.skill-meta.json": {
+    "mtime": 1774788827.1104035,
+    "seen": 1787736773.0150206,
+    "ast_hash": "8064fa409ab9dd4f4f6cf6e73242f869",
+    "semantic_hash": "8064fa409ab9dd4f4f6cf6e73242f869"
+  },
+  ".cursor/skills/playwright-skill/.skill-meta.json": {
+    "mtime": 1774788828.0890055,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c056862d2a40861d45436b5492b69563",
+    "semantic_hash": "c056862d2a40861d45436b5492b69563"
+  },
+  ".cursor/skills/playwright-skill/lib/helpers.js": {
+    "mtime": 1774788828.086207,
+    "seen": 1787736773.0150206,
+    "ast_hash": "71fcd909fed8ed6a521c74e154e47753",
+    "semantic_hash": "71fcd909fed8ed6a521c74e154e47753"
+  },
+  ".cursor/skills/playwright-skill/package.json": {
+    "mtime": 1774788828.078849,
+    "seen": 1787736773.0150206,
+    "ast_hash": "caa88403a81d05a1a77adb4c5482e458",
+    "semantic_hash": "caa88403a81d05a1a77adb4c5482e458"
+  },
+  ".cursor/skills/playwright-skill/run.js": {
+    "mtime": 1774788828.082862,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5a54d2be3e8fbd66b57f71b336ec24f1",
+    "semantic_hash": "5a54d2be3e8fbd66b57f71b336ec24f1"
+  },
+  ".cursor/skills/react-best-practices/.skill-meta.json": {
+    "mtime": 1774788832.791407,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c3e01a8605348540620b82dcd4aa0406",
+    "semantic_hash": "c3e01a8605348540620b82dcd4aa0406"
+  },
+  ".cursor/skills/security-best-practices/.skill-meta.json": {
+    "mtime": 1774788833.6666374,
+    "seen": 1787736773.0150206,
+    "ast_hash": "2234a530469c2956b427efc271252c81",
+    "semantic_hash": "2234a530469c2956b427efc271252c81"
+  },
+  ".cursor/skills/subagent-creator/.skill-meta.json": {
+    "mtime": 1774788834.1507294,
+    "seen": 1787736773.0150206,
+    "ast_hash": "4f8c6602538d44561c3103949ac51515",
+    "semantic_hash": "4f8c6602538d44561c3103949ac51515"
+  },
+  ".cursor/skills/technical-design-doc-creator/.skill-meta.json": {
+    "mtime": 1774788834.6363971,
+    "seen": 1787736773.0150206,
+    "ast_hash": "ea04a68707a26678b1d19d2f92738de2",
+    "semantic_hash": "ea04a68707a26678b1d19d2f92738de2"
+  },
+  ".cursor/skills/tlc-spec-driven/.skill-meta.json": {
+    "mtime": 1774788835.439773,
+    "seen": 1787736773.0150206,
+    "ast_hash": "cb40b27665919b9db6ea41a816bd3b00",
+    "semantic_hash": "cb40b27665919b9db6ea41a816bd3b00"
+  },
+  ".cursor/skills/web-design-guidelines/.skill-meta.json": {
+    "mtime": 1774788835.871903,
+    "seen": 1787736773.0150206,
+    "ast_hash": "dc122db0b3cd9cfe2f518aa8196a4b24",
+    "semantic_hash": "dc122db0b3cd9cfe2f518aa8196a4b24"
+  },
+  ".gemini/skills/best-practices/.skill-meta.json": {
+    "mtime": 1774788810.7501843,
+    "seen": 1787736773.0150206,
+    "ast_hash": "738206df5efb8e7d31d2695604d77a7d",
+    "semantic_hash": "738206df5efb8e7d31d2695604d77a7d"
+  },
+  ".gemini/skills/docs-writer/.skill-meta.json": {
+    "mtime": 1774788811.3341062,
+    "seen": 1787736773.0150206,
+    "ast_hash": "df087f6b12924e43bc31498795d3b26b",
+    "semantic_hash": "df087f6b12924e43bc31498795d3b26b"
+  },
+  ".gemini/skills/frontend-design/.skill-meta.json": {
+    "mtime": 1774788827.1104035,
+    "seen": 1787736773.0150206,
+    "ast_hash": "8064fa409ab9dd4f4f6cf6e73242f869",
+    "semantic_hash": "8064fa409ab9dd4f4f6cf6e73242f869"
+  },
+  ".gemini/skills/playwright-skill/.skill-meta.json": {
+    "mtime": 1774788828.0890055,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c056862d2a40861d45436b5492b69563",
+    "semantic_hash": "c056862d2a40861d45436b5492b69563"
+  },
+  ".gemini/skills/playwright-skill/lib/helpers.js": {
+    "mtime": 1774788828.086207,
+    "seen": 1787736773.0150206,
+    "ast_hash": "71fcd909fed8ed6a521c74e154e47753",
+    "semantic_hash": "71fcd909fed8ed6a521c74e154e47753"
+  },
+  ".gemini/skills/playwright-skill/package.json": {
+    "mtime": 1774788828.078849,
+    "seen": 1787736773.0150206,
+    "ast_hash": "caa88403a81d05a1a77adb4c5482e458",
+    "semantic_hash": "caa88403a81d05a1a77adb4c5482e458"
+  },
+  ".gemini/skills/playwright-skill/run.js": {
+    "mtime": 1774788828.082862,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5a54d2be3e8fbd66b57f71b336ec24f1",
+    "semantic_hash": "5a54d2be3e8fbd66b57f71b336ec24f1"
+  },
+  ".gemini/skills/react-best-practices/.skill-meta.json": {
+    "mtime": 1774788832.791407,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c3e01a8605348540620b82dcd4aa0406",
+    "semantic_hash": "c3e01a8605348540620b82dcd4aa0406"
+  },
+  ".gemini/skills/security-best-practices/.skill-meta.json": {
+    "mtime": 1774788833.6666374,
+    "seen": 1787736773.0150206,
+    "ast_hash": "2234a530469c2956b427efc271252c81",
+    "semantic_hash": "2234a530469c2956b427efc271252c81"
+  },
+  ".gemini/skills/subagent-creator/.skill-meta.json": {
+    "mtime": 1774788834.1507294,
+    "seen": 1787736773.0150206,
+    "ast_hash": "4f8c6602538d44561c3103949ac51515",
+    "semantic_hash": "4f8c6602538d44561c3103949ac51515"
+  },
+  ".gemini/skills/technical-design-doc-creator/.skill-meta.json": {
+    "mtime": 1774788834.6363971,
+    "seen": 1787736773.0150206,
+    "ast_hash": "ea04a68707a26678b1d19d2f92738de2",
+    "semantic_hash": "ea04a68707a26678b1d19d2f92738de2"
+  },
+  ".gemini/skills/tlc-spec-driven/.skill-meta.json": {
+    "mtime": 1774788835.439773,
+    "seen": 1787736773.0150206,
+    "ast_hash": "cb40b27665919b9db6ea41a816bd3b00",
+    "semantic_hash": "cb40b27665919b9db6ea41a816bd3b00"
+  },
+  ".gemini/skills/web-design-guidelines/.skill-meta.json": {
+    "mtime": 1774788835.871903,
+    "seen": 1787736773.0150206,
+    "ast_hash": "dc122db0b3cd9cfe2f518aa8196a4b24",
+    "semantic_hash": "dc122db0b3cd9cfe2f518aa8196a4b24"
+  },
+  ".github/skills/best-practices/.skill-meta.json": {
+    "mtime": 1774788810.7501843,
+    "seen": 1787736773.0150206,
+    "ast_hash": "738206df5efb8e7d31d2695604d77a7d",
+    "semantic_hash": "738206df5efb8e7d31d2695604d77a7d"
+  },
+  ".github/skills/docs-writer/.skill-meta.json": {
+    "mtime": 1774788811.3341062,
+    "seen": 1787736773.0150206,
+    "ast_hash": "df087f6b12924e43bc31498795d3b26b",
+    "semantic_hash": "df087f6b12924e43bc31498795d3b26b"
+  },
+  ".github/skills/frontend-design/.skill-meta.json": {
+    "mtime": 1774788827.1104035,
+    "seen": 1787736773.0150206,
+    "ast_hash": "8064fa409ab9dd4f4f6cf6e73242f869",
+    "semantic_hash": "8064fa409ab9dd4f4f6cf6e73242f869"
+  },
+  ".github/skills/playwright-skill/.skill-meta.json": {
+    "mtime": 1774788828.0890055,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c056862d2a40861d45436b5492b69563",
+    "semantic_hash": "c056862d2a40861d45436b5492b69563"
+  },
+  ".github/skills/playwright-skill/lib/helpers.js": {
+    "mtime": 1774788828.086207,
+    "seen": 1787736773.0150206,
+    "ast_hash": "71fcd909fed8ed6a521c74e154e47753",
+    "semantic_hash": "71fcd909fed8ed6a521c74e154e47753"
+  },
+  ".github/skills/playwright-skill/package.json": {
+    "mtime": 1774788828.078849,
+    "seen": 1787736773.0150206,
+    "ast_hash": "caa88403a81d05a1a77adb4c5482e458",
+    "semantic_hash": "caa88403a81d05a1a77adb4c5482e458"
+  },
+  ".github/skills/playwright-skill/run.js": {
+    "mtime": 1774788828.082862,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5a54d2be3e8fbd66b57f71b336ec24f1",
+    "semantic_hash": "5a54d2be3e8fbd66b57f71b336ec24f1"
+  },
+  ".github/skills/react-best-practices/.skill-meta.json": {
+    "mtime": 1774788832.791407,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c3e01a8605348540620b82dcd4aa0406",
+    "semantic_hash": "c3e01a8605348540620b82dcd4aa0406"
+  },
+  ".github/skills/security-best-practices/.skill-meta.json": {
+    "mtime": 1774788833.6666374,
+    "seen": 1787736773.0150206,
+    "ast_hash": "2234a530469c2956b427efc271252c81",
+    "semantic_hash": "2234a530469c2956b427efc271252c81"
+  },
+  ".github/skills/subagent-creator/.skill-meta.json": {
+    "mtime": 1774788834.1507294,
+    "seen": 1787736773.0150206,
+    "ast_hash": "4f8c6602538d44561c3103949ac51515",
+    "semantic_hash": "4f8c6602538d44561c3103949ac51515"
+  },
+  ".github/skills/technical-design-doc-creator/.skill-meta.json": {
+    "mtime": 1774788834.6363971,
+    "seen": 1787736773.0150206,
+    "ast_hash": "ea04a68707a26678b1d19d2f92738de2",
+    "semantic_hash": "ea04a68707a26678b1d19d2f92738de2"
+  },
+  ".github/skills/tlc-spec-driven/.skill-meta.json": {
+    "mtime": 1774788835.439773,
+    "seen": 1787736773.0150206,
+    "ast_hash": "cb40b27665919b9db6ea41a816bd3b00",
+    "semantic_hash": "cb40b27665919b9db6ea41a816bd3b00"
+  },
+  ".github/skills/web-design-guidelines/.skill-meta.json": {
+    "mtime": 1774788835.871903,
+    "seen": 1787736773.0150206,
+    "ast_hash": "dc122db0b3cd9cfe2f518aa8196a4b24",
+    "semantic_hash": "dc122db0b3cd9cfe2f518aa8196a4b24"
+  },
+  ".trae/skills/best-practices/.skill-meta.json": {
+    "mtime": 1774788810.7501843,
+    "seen": 1787736773.0150206,
+    "ast_hash": "738206df5efb8e7d31d2695604d77a7d",
+    "semantic_hash": "738206df5efb8e7d31d2695604d77a7d"
+  },
+  ".trae/skills/docs-writer/.skill-meta.json": {
+    "mtime": 1774788811.3341062,
+    "seen": 1787736773.0150206,
+    "ast_hash": "df087f6b12924e43bc31498795d3b26b",
+    "semantic_hash": "df087f6b12924e43bc31498795d3b26b"
+  },
+  ".trae/skills/frontend-design/.skill-meta.json": {
+    "mtime": 1774788827.1104035,
+    "seen": 1787736773.0150206,
+    "ast_hash": "8064fa409ab9dd4f4f6cf6e73242f869",
+    "semantic_hash": "8064fa409ab9dd4f4f6cf6e73242f869"
+  },
+  ".trae/skills/playwright-skill/.skill-meta.json": {
+    "mtime": 1774788828.0890055,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c056862d2a40861d45436b5492b69563",
+    "semantic_hash": "c056862d2a40861d45436b5492b69563"
+  },
+  ".trae/skills/playwright-skill/lib/helpers.js": {
+    "mtime": 1774788828.086207,
+    "seen": 1787736773.0150206,
+    "ast_hash": "71fcd909fed8ed6a521c74e154e47753",
+    "semantic_hash": "71fcd909fed8ed6a521c74e154e47753"
+  },
+  ".trae/skills/playwright-skill/package.json": {
+    "mtime": 1774788828.078849,
+    "seen": 1787736773.0150206,
+    "ast_hash": "caa88403a81d05a1a77adb4c5482e458",
+    "semantic_hash": "caa88403a81d05a1a77adb4c5482e458"
+  },
+  ".trae/skills/playwright-skill/run.js": {
+    "mtime": 1774788828.082862,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5a54d2be3e8fbd66b57f71b336ec24f1",
+    "semantic_hash": "5a54d2be3e8fbd66b57f71b336ec24f1"
+  },
+  ".trae/skills/react-best-practices/.skill-meta.json": {
+    "mtime": 1774788832.791407,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c3e01a8605348540620b82dcd4aa0406",
+    "semantic_hash": "c3e01a8605348540620b82dcd4aa0406"
+  },
+  ".trae/skills/security-best-practices/.skill-meta.json": {
+    "mtime": 1774788833.6666374,
+    "seen": 1787736773.0150206,
+    "ast_hash": "2234a530469c2956b427efc271252c81",
+    "semantic_hash": "2234a530469c2956b427efc271252c81"
+  },
+  ".trae/skills/subagent-creator/.skill-meta.json": {
+    "mtime": 1774788834.1507294,
+    "seen": 1787736773.0150206,
+    "ast_hash": "4f8c6602538d44561c3103949ac51515",
+    "semantic_hash": "4f8c6602538d44561c3103949ac51515"
+  },
+  ".trae/skills/technical-design-doc-creator/.skill-meta.json": {
+    "mtime": 1774788834.6363971,
+    "seen": 1787736773.0150206,
+    "ast_hash": "ea04a68707a26678b1d19d2f92738de2",
+    "semantic_hash": "ea04a68707a26678b1d19d2f92738de2"
+  },
+  ".trae/skills/tlc-spec-driven/.skill-meta.json": {
+    "mtime": 1774788835.439773,
+    "seen": 1787736773.0150206,
+    "ast_hash": "cb40b27665919b9db6ea41a816bd3b00",
+    "semantic_hash": "cb40b27665919b9db6ea41a816bd3b00"
+  },
+  ".trae/skills/web-design-guidelines/.skill-meta.json": {
+    "mtime": 1774788835.871903,
+    "seen": 1787736773.0150206,
+    "ast_hash": "dc122db0b3cd9cfe2f518aa8196a4b24",
+    "semantic_hash": "dc122db0b3cd9cfe2f518aa8196a4b24"
+  },
+  "drop_rotas_diarias.sql": {
+    "mtime": 1773697205.8647654,
+    "seen": 1787736773.0150206,
+    "ast_hash": "7ca3baebf655ec510693c95db9438d39",
+    "semantic_hash": "7ca3baebf655ec510693c95db9438d39"
+  },
+  "eslint.config.js": {
+    "mtime": 1773398644.5362568,
+    "seen": 1787736773.0150206,
+    "ast_hash": "49c8473bcfcec3aef596a5fb04a6df06",
+    "semantic_hash": "49c8473bcfcec3aef596a5fb04a6df06"
+  },
+  "lint-fix.sh": {
+    "mtime": 1774342050.2971184,
+    "seen": 1787736773.0150206,
+    "ast_hash": "1d39d4afb41000374c5f89c2bfe6c033",
+    "semantic_hash": "1d39d4afb41000374c5f89c2bfe6c033"
+  },
+  "package.json": {
+    "mtime": 1774451519.197979,
+    "seen": 1787736773.0150206,
+    "ast_hash": "a87c941f962ab80ec4586e6171a0ca2d",
+    "semantic_hash": "a87c941f962ab80ec4586e6171a0ca2d"
+  },
+  "skills/react-components/examples/gold-standard-card.tsx": {
+    "mtime": 1772744576.0,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5fd5875a691ca4b8f826a30ee8351799",
+    "semantic_hash": "5fd5875a691ca4b8f826a30ee8351799"
+  },
+  "skills/react-components/package.json": {
+    "mtime": 1772744576.0,
+    "seen": 1787736773.0150206,
+    "ast_hash": "a104ae9a9b30016da5f63fa024635635",
+    "semantic_hash": "a104ae9a9b30016da5f63fa024635635"
+  },
+  "skills/react-components/resources/component-template.tsx": {
+    "mtime": 1772744576.0,
+    "seen": 1787736773.0150206,
+    "ast_hash": "31412d04b5db5703e2c10af4c3dac2b7",
+    "semantic_hash": "31412d04b5db5703e2c10af4c3dac2b7"
+  },
+  "skills/react-components/resources/style-guide.json": {
+    "mtime": 1772744576.0,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9eb0a7bbdda55ed0306017289938b7be",
+    "semantic_hash": "9eb0a7bbdda55ed0306017289938b7be"
+  },
+  "skills/react-components/scripts/fetch-stitch.sh": {
+    "mtime": 1772744576.0,
+    "seen": 1787736773.0150206,
+    "ast_hash": "cd13f943ccebc43fe8eee6e865dae5cc",
+    "semantic_hash": "cd13f943ccebc43fe8eee6e865dae5cc"
+  },
+  "skills/react-components/scripts/validate.js": {
+    "mtime": 1772744576.0,
+    "seen": 1787736773.0150206,
+    "ast_hash": "2d57ea12d84db0593f3b8078747c7798",
+    "semantic_hash": "2d57ea12d84db0593f3b8078747c7798"
+  },
+  "skills/remotion/examples/WalkthroughComposition.tsx": {
+    "mtime": 1772744576.0,
+    "seen": 1787736773.0150206,
+    "ast_hash": "ad79e704972d0b35efb188e18d6325a5",
+    "semantic_hash": "ad79e704972d0b35efb188e18d6325a5"
+  },
+  "skills/remotion/examples/screens.json": {
+    "mtime": 1772744576.0,
+    "seen": 1787736773.0150206,
+    "ast_hash": "1ccc905e40ed95b80cd32aeaa0a6b5be",
+    "semantic_hash": "1ccc905e40ed95b80cd32aeaa0a6b5be"
+  },
+  "skills/remotion/resources/screen-slide-template.tsx": {
+    "mtime": 1772744576.0,
+    "seen": 1787736773.0150206,
+    "ast_hash": "73e82b070b4ace529e14c48bfe6215a6",
+    "semantic_hash": "73e82b070b4ace529e14c48bfe6215a6"
+  },
+  "skills/remotion/scripts/download-stitch-asset.sh": {
+    "mtime": 1772744576.0,
+    "seen": 1787736773.0150206,
+    "ast_hash": "3e67f5ee258e463f08372cbce26e74fd",
+    "semantic_hash": "3e67f5ee258e463f08372cbce26e74fd"
+  },
+  "skills/shadcn-ui/examples/auth-layout.tsx": {
+    "mtime": 1772744576.0,
+    "seen": 1787736773.0150206,
+    "ast_hash": "dd976fd7b9b489b7f2d317b5ef0d0151",
+    "semantic_hash": "dd976fd7b9b489b7f2d317b5ef0d0151"
+  },
+  "skills/shadcn-ui/examples/data-table.tsx": {
+    "mtime": 1772744576.0,
+    "seen": 1787736773.0150206,
+    "ast_hash": "555548542147c57b7d54aa30114f1e02",
+    "semantic_hash": "555548542147c57b7d54aa30114f1e02"
+  },
+  "skills/shadcn-ui/examples/form-pattern.tsx": {
+    "mtime": 1772744576.0,
+    "seen": 1787736773.0150206,
+    "ast_hash": "aade0fd0c922dfe068ef2d77d31f210d",
+    "semantic_hash": "aade0fd0c922dfe068ef2d77d31f210d"
+  },
+  "skills/shadcn-ui/scripts/verify-setup.sh": {
+    "mtime": 1772744576.0,
+    "seen": 1787736773.0150206,
+    "ast_hash": "12bbd68a4e55abd2543d972aea346a96",
+    "semantic_hash": "12bbd68a4e55abd2543d972aea346a96"
+  },
+  "src/App.jsx": {
+    "mtime": 1784922676.4512787,
+    "seen": 1787736773.0150206,
+    "ast_hash": "26baacc3313bdacd4029a7a193b071f2",
+    "semantic_hash": "26baacc3313bdacd4029a7a193b071f2"
+  },
+  "src/components/AcordoCardMotorista.jsx": {
+    "mtime": 1774471440.433256,
+    "seen": 1787736773.0150206,
+    "ast_hash": "509dd769e179797ac2141d7a08ab58e8",
+    "semantic_hash": "509dd769e179797ac2141d7a08ab58e8"
+  },
+  "src/components/AcordoCardPassageiro.jsx": {
+    "mtime": 1774471440.4364572,
+    "seen": 1787736773.0150206,
+    "ast_hash": "98970763da84f5b61a7378d4947fa758",
+    "semantic_hash": "98970763da84f5b61a7378d4947fa758"
+  },
+  "src/components/AcordoDetailsModal.jsx": {
+    "mtime": 1774779511.6594481,
+    "seen": 1787736773.0150206,
+    "ast_hash": "384b18ae3745c10311cebb6282e1432f",
+    "semantic_hash": "384b18ae3745c10311cebb6282e1432f"
+  },
+  "src/components/AcordoDetailsModal.test.jsx": {
+    "mtime": 1774779454.0593643,
+    "seen": 1787736773.0150206,
+    "ast_hash": "4e4eac06703d3b916a3c61b397c9c191",
+    "semantic_hash": "4e4eac06703d3b916a3c61b397c9c191"
+  },
+  "src/components/AcordoKebabMenu.jsx": {
+    "mtime": 1774471440.4390254,
+    "seen": 1787736773.0150206,
+    "ast_hash": "a08c923cd53b1ab1dc50f110c049a775",
+    "semantic_hash": "a08c923cd53b1ab1dc50f110c049a775"
+  },
+  "src/components/AddressInput.jsx": {
+    "mtime": 1774003024.640984,
+    "seen": 1787736773.0150206,
+    "ast_hash": "f2d27b3d62a531e667b4b646a823a15f",
+    "semantic_hash": "f2d27b3d62a531e667b4b646a823a15f"
+  },
+  "src/components/AutocompleteDropdown.jsx": {
+    "mtime": 1784824387.9567964,
+    "seen": 1787736773.0150206,
+    "ast_hash": "113ad1540e2c59da5f4941649bd17893",
+    "semantic_hash": "113ad1540e2c59da5f4941649bd17893"
+  },
+  "src/components/AutocompleteDropdown.test.jsx": {
+    "mtime": 1784824412.8244467,
+    "seen": 1787736773.0150206,
+    "ast_hash": "511814e97dd48750ccaf640acbf14909",
+    "semantic_hash": "511814e97dd48750ccaf640acbf14909"
+  },
+  "src/components/ConfirmationModal.jsx": {
+    "mtime": 1774420357.9021826,
+    "seen": 1787736773.0150206,
+    "ast_hash": "b2bb46c05c2584cbdd39c0de69cdb028",
+    "semantic_hash": "b2bb46c05c2584cbdd39c0de69cdb028"
+  },
+  "src/components/EmptyState.jsx": {
+    "mtime": 1773990118.632614,
+    "seen": 1787736773.0150206,
+    "ast_hash": "14e56dd656aea23adc4cacd970173862",
+    "semantic_hash": "14e56dd656aea23adc4cacd970173862"
+  },
+  "src/components/EstadoBadge.jsx": {
+    "mtime": 1773990118.638917,
+    "seen": 1787736773.0150206,
+    "ast_hash": "f4fb8279952d39003363933129c27b22",
+    "semantic_hash": "f4fb8279952d39003363933129c27b22"
+  },
+  "src/components/LogAbsenceModal.jsx": {
+    "mtime": 1773948864.330563,
+    "seen": 1787736773.0150206,
+    "ast_hash": "7735925ebce52ec8f2f9c7ed4c2db335",
+    "semantic_hash": "7735925ebce52ec8f2f9c7ed4c2db335"
+  },
+  "src/components/NotificationBell.jsx": {
+    "mtime": 1774769977.905205,
+    "seen": 1787736773.0150206,
+    "ast_hash": "84cf9bb7faf48fc2e74cd7780a72104c",
+    "semantic_hash": "84cf9bb7faf48fc2e74cd7780a72104c"
+  },
+  "src/components/OnboardingPermissions.integration.test.jsx": {
+    "mtime": 1784905064.7697475,
+    "seen": 1787736773.0150206,
+    "ast_hash": "288cbaf5f2a8f27af0932e76cd78abda",
+    "semantic_hash": "288cbaf5f2a8f27af0932e76cd78abda"
+  },
+  "src/components/OnboardingPermissions.jsx": {
+    "mtime": 1784906468.7922184,
+    "seen": 1787736773.0150206,
+    "ast_hash": "73183124624980c2dd354fe90436294e",
+    "semantic_hash": "73183124624980c2dd354fe90436294e"
+  },
+  "src/components/ProtectedRoute.jsx": {
+    "mtime": 1774721741.6116862,
+    "seen": 1787736773.0150206,
+    "ast_hash": "92627ce578a7a1e30bfb8f1d620b0ea1",
+    "semantic_hash": "92627ce578a7a1e30bfb8f1d620b0ea1"
+  },
+  "src/components/ProtectedRoute.test.jsx": {
+    "mtime": 1774721768.5012827,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5ad3eb7c698eacad3eb35151d47d9016",
+    "semantic_hash": "5ad3eb7c698eacad3eb35151d47d9016"
+  },
+  "src/components/SearchAddressInput.jsx": {
+    "mtime": 1774003024.644104,
+    "seen": 1787736773.0150206,
+    "ast_hash": "51a3ea87b564a0f1e91259357a32b1fc",
+    "semantic_hash": "51a3ea87b564a0f1e91259357a32b1fc"
+  },
+  "src/components/ThemeToggle.jsx": {
+    "mtime": 1773953985.377498,
+    "seen": 1787736773.0150206,
+    "ast_hash": "4a2f170871136473a8d6e7eba3315694",
+    "semantic_hash": "4a2f170871136473a8d6e7eba3315694"
+  },
+  "src/components/ThemeToggle.test.jsx": {
+    "mtime": 1773953985.378516,
+    "seen": 1787736773.0150206,
+    "ast_hash": "0472f99afcb5230d00142479a03991a7",
+    "semantic_hash": "0472f99afcb5230d00142479a03991a7"
+  },
+  "src/components/UpdatePrompt.jsx": {
+    "mtime": 1784924267.5063913,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9f6e37c6935775e671b3fb56099c87d7",
+    "semantic_hash": "9f6e37c6935775e671b3fb56099c87d7"
+  },
+  "src/components/UpdatePrompt.test.jsx": {
+    "mtime": 1784918191.03181,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e2ea57be396e467c6bb628a4c5bf8f26",
+    "semantic_hash": "e2ea57be396e467c6bb628a4c5bf8f26"
+  },
+  "src/contexts/AuthContext.jsx": {
+    "mtime": 1774721625.642843,
+    "seen": 1787736773.0150206,
+    "ast_hash": "05d16c6c134322db98f84e88dd1fca38",
+    "semantic_hash": "05d16c6c134322db98f84e88dd1fca38"
+  },
+  "src/contexts/AuthContext.test.jsx": {
+    "mtime": 1774721514.9988382,
+    "seen": 1787736773.0150206,
+    "ast_hash": "173d81ebd1901fe90bc35dacfef43e2c",
+    "semantic_hash": "173d81ebd1901fe90bc35dacfef43e2c"
+  },
+  "src/contexts/ThemeContext.jsx": {
+    "mtime": 1773953985.3805172,
+    "seen": 1787736773.0150206,
+    "ast_hash": "0d5e50b8520e174a1e5b8294fa0ec2ee",
+    "semantic_hash": "0d5e50b8520e174a1e5b8294fa0ec2ee"
+  },
+  "src/contexts/ThemeContext.test.jsx": {
+    "mtime": 1773953985.3814795,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5caf715e86f687c4a588476b06f880c8",
+    "semantic_hash": "5caf715e86f687c4a588476b06f880c8"
+  },
+  "src/hooks/useAuthForm.js": {
+    "mtime": 1774782002.980471,
+    "seen": 1787736773.0150206,
+    "ast_hash": "52869bf51d7d55c757a67035bc3b28d1",
+    "semantic_hash": "52869bf51d7d55c757a67035bc3b28d1"
+  },
+  "src/hooks/useAutocomplete.js": {
+    "mtime": 1784824379.4142275,
+    "seen": 1787736773.0150206,
+    "ast_hash": "7a434edd0424be72497fb722e486c83b",
+    "semantic_hash": "7a434edd0424be72497fb722e486c83b"
+  },
+  "src/hooks/useNotifications.js": {
+    "mtime": 1774471440.4419074,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9aaa6000bc77fd1798468d7033a7de22",
+    "semantic_hash": "9aaa6000bc77fd1798468d7033a7de22"
+  },
+  "src/hooks/useNotifications.test.js": {
+    "mtime": 1774342050.3038797,
+    "seen": 1787736773.0150206,
+    "ast_hash": "b64630607778967ea7f7203f53e14940",
+    "semantic_hash": "b64630607778967ea7f7203f53e14940"
+  },
+  "src/hooks/usePushNotifications.js": {
+    "mtime": 1774531254.6124015,
+    "seen": 1787736773.0150206,
+    "ast_hash": "1d9e5632a87f2618a2c481bd25a55dbb",
+    "semantic_hash": "1d9e5632a87f2618a2c481bd25a55dbb"
+  },
+  "src/hooks/usePushNotifications.test.js": {
+    "mtime": 1774531254.6129177,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c4c002f57d8485427ec83c08f27c9278",
+    "semantic_hash": "c4c002f57d8485427ec83c08f27c9278"
+  },
+  "src/layouts/Layout.jsx": {
+    "mtime": 1784906512.6665108,
+    "seen": 1787736773.0150206,
+    "ast_hash": "b53b6f6dc912f7d2ad0eb92efd02ca47",
+    "semantic_hash": "b53b6f6dc912f7d2ad0eb92efd02ca47"
+  },
+  "src/layouts/Layout.test.jsx": {
+    "mtime": 1784901989.5876894,
+    "seen": 1787736773.0150206,
+    "ast_hash": "1ae43fb68c8e47113c912d8e72027a09",
+    "semantic_hash": "1ae43fb68c8e47113c912d8e72027a09"
+  },
+  "src/lib/supabase.js": {
+    "mtime": 1773414140.4302151,
+    "seen": 1787736773.0150206,
+    "ast_hash": "0f0d650b58a32e42853f7fe3ab7df7b1",
+    "semantic_hash": "0f0d650b58a32e42853f7fe3ab7df7b1"
+  },
+  "src/main.jsx": {
+    "mtime": 1774342050.3083987,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e955b4517c16354f8682e25f2a309615",
+    "semantic_hash": "e955b4517c16354f8682e25f2a309615"
+  },
+  "src/pages/AbsenceTracker.jsx": {
+    "mtime": 1774763606.815418,
+    "seen": 1787736773.0150206,
+    "ast_hash": "6ad5663fe65ed3bae838072ae6de121d",
+    "semantic_hash": "6ad5663fe65ed3bae838072ae6de121d"
+  },
+  "src/pages/AbsenceTracker.test.jsx": {
+    "mtime": 1773953005.5595171,
+    "seen": 1787736773.0150206,
+    "ast_hash": "65e1440ff8029f8a78eb2ce6b48ccb2b",
+    "semantic_hash": "65e1440ff8029f8a78eb2ce6b48ccb2b"
+  },
+  "src/pages/AgreementsE2E.test.jsx": {
+    "mtime": 1774430938.1833098,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e19f64cc056c3a347de09b09ef8d87f5",
+    "semantic_hash": "e19f64cc056c3a347de09b09ef8d87f5"
+  },
+  "src/pages/Auth.jsx": {
+    "mtime": 1784903068.5724995,
+    "seen": 1787736773.0150206,
+    "ast_hash": "579ebb47cc7c3e64180b8d212fc8e6d3",
+    "semantic_hash": "579ebb47cc7c3e64180b8d212fc8e6d3"
+  },
+  "src/pages/Auth.test.jsx": {
+    "mtime": 1784901994.1910925,
+    "seen": 1787736773.0150206,
+    "ast_hash": "fbeee7aad5192f7552529da794054e6d",
+    "semantic_hash": "fbeee7aad5192f7552529da794054e6d"
+  },
+  "src/pages/AuthValidation.test.jsx": {
+    "mtime": 1774342050.3134427,
+    "seen": 1787736773.0150206,
+    "ast_hash": "6533db04705569bfdb35c41af18033af",
+    "semantic_hash": "6533db04705569bfdb35c41af18033af"
+  },
+  "src/pages/DriverDashboard.jsx": {
+    "mtime": 1784924028.3052888,
+    "seen": 1787736773.0150206,
+    "ast_hash": "08290389e700a36f6455149e9858c9ce",
+    "semantic_hash": "08290389e700a36f6455149e9858c9ce"
+  },
+  "src/pages/DriverDashboard.test.jsx": {
+    "mtime": 1784924038.704963,
+    "seen": 1787736773.0150206,
+    "ast_hash": "846c17671d9b3b3ed99cfb5fd4411c60",
+    "semantic_hash": "846c17671d9b3b3ed99cfb5fd4411c60"
+  },
+  "src/pages/LandingPage.jsx": {
+    "mtime": 1784903092.0860586,
+    "seen": 1787736773.0150206,
+    "ast_hash": "a18b8622620758ed91e1c8931bf65dbe",
+    "semantic_hash": "a18b8622620758ed91e1c8931bf65dbe"
+  },
+  "src/pages/LandingPage.test.jsx": {
+    "mtime": 1784902101.7746952,
+    "seen": 1787736773.0150206,
+    "ast_hash": "fd8a3b821fa34eaa1f5b087820f43e63",
+    "semantic_hash": "fd8a3b821fa34eaa1f5b087820f43e63"
+  },
+  "src/pages/MyAgreements.jsx": {
+    "mtime": 1774779476.873897,
+    "seen": 1787736773.0150206,
+    "ast_hash": "7ed9deec700f9585db137aca3f1da627",
+    "semantic_hash": "7ed9deec700f9585db137aca3f1da627"
+  },
+  "src/pages/MyAgreements.test.jsx": {
+    "mtime": 1774784059.1490252,
+    "seen": 1787736773.0150206,
+    "ast_hash": "21b37b0f0776a40acc883343f039ace4",
+    "semantic_hash": "21b37b0f0776a40acc883343f039ace4"
+  },
+  "src/pages/PassengerDashboard.jsx": {
+    "mtime": 1774782020.6786945,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e7a91abf1154a6eee17b87882003b9db",
+    "semantic_hash": "e7a91abf1154a6eee17b87882003b9db"
+  },
+  "src/pages/PassengerDashboard.test.jsx": {
+    "mtime": 1784824446.7939126,
+    "seen": 1787736773.0150206,
+    "ast_hash": "6b67353fd5aceb8882b0b1e69b6c0808",
+    "semantic_hash": "6b67353fd5aceb8882b0b1e69b6c0808"
+  },
+  "src/pages/Profile.jsx": {
+    "mtime": 1774763560.243795,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9d16fb875c3ae77deb9aba430bc8ed1a",
+    "semantic_hash": "9d16fb875c3ae77deb9aba430bc8ed1a"
+  },
+  "src/pages/Profile.test.jsx": {
+    "mtime": 1773993467.027244,
+    "seen": 1787736773.0150206,
+    "ast_hash": "cbb9af5a224b988d3c6c81e0051a9c45",
+    "semantic_hash": "cbb9af5a224b988d3c6c81e0051a9c45"
+  },
+  "src/pages/PublishRoute.jsx": {
+    "mtime": 1774782018.650293,
+    "seen": 1787736773.0150206,
+    "ast_hash": "3ae9bf6ccf8a1b077b5df08e75942eea",
+    "semantic_hash": "3ae9bf6ccf8a1b077b5df08e75942eea"
+  },
+  "src/pages/PublishRoute.test.jsx": {
+    "mtime": 1784824438.1189942,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9cfeca3f02b389b0809ab373771b1bab",
+    "semantic_hash": "9cfeca3f02b389b0809ab373771b1bab"
+  },
+  "src/pages/VehicleSetup.integration.test.jsx": {
+    "mtime": 1784902115.765425,
+    "seen": 1787736773.0150206,
+    "ast_hash": "d4ebddad52f7fca728eb956aaaedfa47",
+    "semantic_hash": "d4ebddad52f7fca728eb956aaaedfa47"
+  },
+  "src/pages/VehicleSetup.jsx": {
+    "mtime": 1774806691.8478143,
+    "seen": 1787736773.0150206,
+    "ast_hash": "6bd18df48e5e3318ea3e30ce9c1bdff5",
+    "semantic_hash": "6bd18df48e5e3318ea3e30ce9c1bdff5"
+  },
+  "src/pages/VehicleSetup.test.jsx": {
+    "mtime": 1774806658.0471828,
+    "seen": 1787736773.0150206,
+    "ast_hash": "57eb8304128c18b9519e02a50bfd8af5",
+    "semantic_hash": "57eb8304128c18b9519e02a50bfd8af5"
+  },
+  "src/services/AbsenceService.js": {
+    "mtime": 1773709271.6309428,
+    "seen": 1787736773.0150206,
+    "ast_hash": "85477d7a020793e0862cbe6955c3fafa",
+    "semantic_hash": "85477d7a020793e0862cbe6955c3fafa"
+  },
+  "src/services/AgreementLifecycle.test.js": {
+    "mtime": 1774360672.5280187,
+    "seen": 1787736773.0150206,
+    "ast_hash": "ef6df23c5e402dba88c354249e22019d",
+    "semantic_hash": "ef6df23c5e402dba88c354249e22019d"
+  },
+  "src/services/AgreementsService.js": {
+    "mtime": 1774775368.853774,
+    "seen": 1787736773.0150206,
+    "ast_hash": "7b7f47c53a977ea4e35ff3046650b9fd",
+    "semantic_hash": "7b7f47c53a977ea4e35ff3046650b9fd"
+  },
+  "src/services/AgreementsService.test.js": {
+    "mtime": 1774471440.4519536,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5fcbd0805d2fd8191ad592db8cca7226",
+    "semantic_hash": "5fcbd0805d2fd8191ad592db8cca7226"
+  },
+  "src/services/LocationService.js": {
+    "mtime": 1784824348.0709093,
+    "seen": 1787736773.0150206,
+    "ast_hash": "61c37af2356e4a31e8d6b4a5933a43c5",
+    "semantic_hash": "61c37af2356e4a31e8d6b4a5933a43c5"
+  },
+  "src/services/LocationService.test.js": {
+    "mtime": 1784824299.4806888,
+    "seen": 1787736773.0150206,
+    "ast_hash": "f3b5c26bb9e6f83325fd883b9cf19329",
+    "semantic_hash": "f3b5c26bb9e6f83325fd883b9cf19329"
+  },
+  "src/services/ProfileService.js": {
+    "mtime": 1773993467.029331,
+    "seen": 1787736773.0150206,
+    "ast_hash": "a44630c91869561033045be00d328402",
+    "semantic_hash": "a44630c91869561033045be00d328402"
+  },
+  "src/services/ProfileService.test.js": {
+    "mtime": 1773993467.030513,
+    "seen": 1787736773.0150206,
+    "ast_hash": "b259e446566107824358c4b550d4eba4",
+    "semantic_hash": "b259e446566107824358c4b550d4eba4"
+  },
+  "src/services/RouteService.js": {
+    "mtime": 1774003024.670308,
+    "seen": 1787736773.0150206,
+    "ast_hash": "643ce34861ec07e02d589d681b765b1f",
+    "semantic_hash": "643ce34861ec07e02d589d681b765b1f"
+  },
+  "src/setupTests.js": {
+    "mtime": 1774345997.7430272,
+    "seen": 1787736773.0150206,
+    "ast_hash": "39529208dfc584ff87969cf460d5f8e5",
+    "semantic_hash": "39529208dfc584ff87969cf460d5f8e5"
+  },
+  "src/sw.js": {
+    "mtime": 1784923138.2250721,
+    "seen": 1787736773.0150206,
+    "ast_hash": "12b50a07ed37e4d32ca43967b1546827",
+    "semantic_hash": "12b50a07ed37e4d32ca43967b1546827"
+  },
+  "src/test/supabaseTestUtils.js": {
+    "mtime": 1774794028.6601844,
+    "seen": 1787736773.0150206,
+    "ast_hash": "648dc5ad84676d9776213aef8a459b9c",
+    "semantic_hash": "648dc5ad84676d9776213aef8a459b9c"
+  },
+  "src/utils/errorHandler.js": {
+    "mtime": 1774781884.001034,
+    "seen": 1787736773.0150206,
+    "ast_hash": "492b55c4d3a400e7fbbbc7463a8014a9",
+    "semantic_hash": "492b55c4d3a400e7fbbbc7463a8014a9"
+  },
+  "src/utils/errorHandler.test.js": {
+    "mtime": 1774781274.8364315,
+    "seen": 1787736773.0150206,
+    "ast_hash": "65757d07caf9274810ae29d850dd145a",
+    "semantic_hash": "65757d07caf9274810ae29d850dd145a"
+  },
+  "src/utils/formatters.js": {
+    "mtime": 1773933421.1372032,
+    "seen": 1787736773.0150206,
+    "ast_hash": "42a8561eef6863010a89d0bd9faf27cd",
+    "semantic_hash": "42a8561eef6863010a89d0bd9faf27cd"
+  },
+  "src/utils/formatters.test.js": {
+    "mtime": 1773933421.1387143,
+    "seen": 1787736773.0150206,
+    "ast_hash": "a7e96a6d49b6e87892ec617aff9584d7",
+    "semantic_hash": "a7e96a6d49b6e87892ec617aff9584d7"
+  },
+  "src/utils/notificationRouter.js": {
+    "mtime": 1774723854.1643128,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e072494ddb8fb085c365e9f361155e03",
+    "semantic_hash": "e072494ddb8fb085c365e9f361155e03"
+  },
+  "src/utils/notificationRouter.test.js": {
+    "mtime": 1774723856.1904435,
+    "seen": 1787736773.0150206,
+    "ast_hash": "63a3c258f10af05e427bb69c6a1c82f9",
+    "semantic_hash": "63a3c258f10af05e427bb69c6a1c82f9"
+  },
+  "src/utils/validation.js": {
+    "mtime": 1773931217.4289672,
+    "seen": 1787736773.0150206,
+    "ast_hash": "b17e4814c23eb3ab0a00ff68557f00da",
+    "semantic_hash": "b17e4814c23eb3ab0a00ff68557f00da"
+  },
+  "supabase/functions/send-push/index.ts": {
+    "mtime": 1784886349.26831,
+    "seen": 1787736773.0150206,
+    "ast_hash": "117cc8d9e6d576084a0155c9059d16e7",
+    "semantic_hash": "117cc8d9e6d576084a0155c9059d16e7"
+  },
+  "supabase/migrations/20260329154810_remote_schema.sql": {
+    "mtime": 1774799291.3905432,
+    "seen": 1787736773.0150206,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "supabase/migrations/20260329161035_remote_schema.sql": {
+    "mtime": 1774800846.2508218,
+    "seen": 1787736773.0150206,
+    "ast_hash": "00ac25e645d0aa66a2c5645cc4dc90b1",
+    "semantic_hash": "00ac25e645d0aa66a2c5645cc4dc90b1"
+  },
+  "test_results.json": {
+    "mtime": 1774783849.470626,
+    "seen": 1787736773.0150206,
+    "ast_hash": "7d66980bf9f6918a1f64ea623ce79667",
+    "semantic_hash": "7d66980bf9f6918a1f64ea623ce79667"
+  },
+  "vercel.json": {
+    "mtime": 1774430372.574923,
+    "seen": 1787736773.0150206,
+    "ast_hash": "61bd31a2b0ac08f10f13c932b32d6ca1",
+    "semantic_hash": "61bd31a2b0ac08f10f13c932b32d6ca1"
+  },
+  "vite.config.js": {
+    "mtime": 1784923134.1831582,
+    "seen": 1787736773.0150206,
+    "ast_hash": "6d98167d3f01b5c9f71cea9cdceea9b3",
+    "semantic_hash": "6d98167d3f01b5c9f71cea9cdceea9b3"
+  },
+  ".agent/skills/playwright-skill/API_REFERENCE.md": {
+    "mtime": 1774788828.078849,
+    "seen": 1787736773.0150206,
+    "ast_hash": "233b44172f13459f5b910ab95b84b81f",
+    "semantic_hash": "233b44172f13459f5b910ab95b84b81f"
+  },
+  ".agent/skills/playwright-skill/SKILL.md": {
+    "mtime": 1774788828.0839207,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9b3bf253ffd548c09ce36288197beba7",
+    "semantic_hash": "9b3bf253ffd548c09ce36288197beba7"
+  },
+  ".agent/skills/react-best-practices/AGENTS.md": {
+    "mtime": 1774788828.5830202,
+    "seen": 1787736773.0150206,
+    "ast_hash": "fc8b8af2a66fa9cff8fcc2d414b5cdc5",
+    "semantic_hash": "fc8b8af2a66fa9cff8fcc2d414b5cdc5"
+  },
+  ".agent/skills/react-best-practices/README.md": {
+    "mtime": 1774788828.5706458,
+    "seen": 1787736773.0150206,
+    "ast_hash": "abb5236c535db0bf7ce6f38c8998bc47",
+    "semantic_hash": "abb5236c535db0bf7ce6f38c8998bc47"
+  },
+  ".agent/skills/react-best-practices/SKILL.md": {
+    "mtime": 1774788828.5276146,
+    "seen": 1787736773.0150206,
+    "ast_hash": "615ff491b00c2ee29de88e3f3ede849c",
+    "semantic_hash": "615ff491b00c2ee29de88e3f3ede849c"
+  },
+  ".agent/skills/react-best-practices/rules/_sections.md": {
+    "mtime": 1774788828.5253634,
+    "seen": 1787736773.0150206,
+    "ast_hash": "b8c110b45145ded6919562772afe067c",
+    "semantic_hash": "b8c110b45145ded6919562772afe067c"
+  },
+  ".agent/skills/security-best-practices/SKILL.md": {
+    "mtime": 1774788833.3377855,
+    "seen": 1787736773.0150206,
+    "ast_hash": "b08372c23dacb9a68c62221f53fd9cbf",
+    "semantic_hash": "b08372c23dacb9a68c62221f53fd9cbf"
+  },
+  ".agent/skills/security-best-practices/references/golang-general-backend-security.md": {
+    "mtime": 1774788833.3465748,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5168d64a5690ad1334f3d5472002627e",
+    "semantic_hash": "5168d64a5690ad1334f3d5472002627e"
+  },
+  ".agent/skills/security-best-practices/references/javascript-express-web-server-security.md": {
+    "mtime": 1774788833.3536763,
+    "seen": 1787736773.0150206,
+    "ast_hash": "1f6c79d3230a07172fa07f7aa48a02a1",
+    "semantic_hash": "1f6c79d3230a07172fa07f7aa48a02a1"
+  },
+  ".agent/skills/security-best-practices/references/javascript-general-web-frontend-security.md": {
+    "mtime": 1774788833.3465748,
+    "seen": 1787736773.0150206,
+    "ast_hash": "0f75f9aae94b44dde968a6729bc4c3e7",
+    "semantic_hash": "0f75f9aae94b44dde968a6729bc4c3e7"
+  },
+  ".agent/skills/security-best-practices/references/javascript-jquery-web-frontend-security.md": {
+    "mtime": 1774788833.3438213,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e0ba6a93128b25b2e2cad2c55d5fe6a3",
+    "semantic_hash": "e0ba6a93128b25b2e2cad2c55d5fe6a3"
+  },
+  ".agent/skills/security-best-practices/references/javascript-typescript-nextjs-web-server-security.md": {
+    "mtime": 1774788833.3519845,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9c35c4ea32498d71d36dd24043154dc2",
+    "semantic_hash": "9c35c4ea32498d71d36dd24043154dc2"
+  },
+  ".agent/skills/security-best-practices/references/javascript-typescript-react-web-frontend-security.md": {
+    "mtime": 1774788833.3465748,
+    "seen": 1787736773.0150206,
+    "ast_hash": "7c73a7353a76534fb6e4848c5796062d",
+    "semantic_hash": "7c73a7353a76534fb6e4848c5796062d"
+  },
+  ".agent/skills/tlc-spec-driven/README.md": {
+    "mtime": 1774788835.1376305,
+    "seen": 1787736773.0150206,
+    "ast_hash": "91de41c0dff0f4c65ac865a3678d44a6",
+    "semantic_hash": "91de41c0dff0f4c65ac865a3678d44a6"
+  },
+  ".agent/skills/tlc-spec-driven/SKILL.md": {
+    "mtime": 1774788835.1366043,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5eb1de19910e6b28cbbb9a8176029ce5",
+    "semantic_hash": "5eb1de19910e6b28cbbb9a8176029ce5"
+  },
+  ".agent/skills/tlc-spec-driven/references/brownfield-mapping.md": {
+    "mtime": 1774788835.148904,
+    "seen": 1787736773.0150206,
+    "ast_hash": "3ead7ce17da840bbeb31a26b7cd646f6",
+    "semantic_hash": "3ead7ce17da840bbeb31a26b7cd646f6"
+  },
+  ".agent/skills/tlc-spec-driven/references/design.md": {
+    "mtime": 1774788835.1452398,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e7ec91ea05dc49d1db8eaddf3aef82de",
+    "semantic_hash": "e7ec91ea05dc49d1db8eaddf3aef82de"
+  },
+  ".agent/skills/tlc-spec-driven/references/implement.md": {
+    "mtime": 1774788835.1452398,
+    "seen": 1787736773.0150206,
+    "ast_hash": "bd31501b5957a6a79c555fe3580f876c",
+    "semantic_hash": "bd31501b5957a6a79c555fe3580f876c"
+  },
+  ".agent/skills/tlc-spec-driven/references/quick-mode.md": {
+    "mtime": 1774788835.424388,
+    "seen": 1787736773.0150206,
+    "ast_hash": "dfc7c395cf5d9b8a16ffadcf7131904a",
+    "semantic_hash": "dfc7c395cf5d9b8a16ffadcf7131904a"
+  },
+  ".agent/skills/tlc-spec-driven/references/specify.md": {
+    "mtime": 1774788835.4377973,
+    "seen": 1787736773.0150206,
+    "ast_hash": "018690ac09d4c58b742ec2c403b5824c",
+    "semantic_hash": "018690ac09d4c58b742ec2c403b5824c"
+  },
+  ".agent/skills/tlc-spec-driven/references/state-management.md": {
+    "mtime": 1774788835.4275956,
+    "seen": 1787736773.0150206,
+    "ast_hash": "ac88429f2b674e70738879b60c2bbb90",
+    "semantic_hash": "ac88429f2b674e70738879b60c2bbb90"
+  },
+  ".agent/skills/tlc-spec-driven/references/tasks.md": {
+    "mtime": 1774788835.433814,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9f3da407e8e70141946219232eef9066",
+    "semantic_hash": "9f3da407e8e70141946219232eef9066"
+  },
+  ".agent/skills/web-design-guidelines/SKILL.md": {
+    "mtime": 1774788835.8691685,
+    "seen": 1787736773.0150206,
+    "ast_hash": "fb2f1486f0d4eb25198cb5d7a960d58d",
+    "semantic_hash": "fb2f1486f0d4eb25198cb5d7a960d58d"
+  },
+  ".cline/skills/playwright-skill/SKILL.md": {
+    "mtime": 1774788828.0839207,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9b3bf253ffd548c09ce36288197beba7",
+    "semantic_hash": "9b3bf253ffd548c09ce36288197beba7"
+  },
+  ".cline/skills/react-best-practices/AGENTS.md": {
+    "mtime": 1774788828.5830202,
+    "seen": 1787736773.0150206,
+    "ast_hash": "fc8b8af2a66fa9cff8fcc2d414b5cdc5",
+    "semantic_hash": "fc8b8af2a66fa9cff8fcc2d414b5cdc5"
+  },
+  ".cline/skills/react-best-practices/README.md": {
+    "mtime": 1774788828.5706458,
+    "seen": 1787736773.0150206,
+    "ast_hash": "abb5236c535db0bf7ce6f38c8998bc47",
+    "semantic_hash": "abb5236c535db0bf7ce6f38c8998bc47"
+  },
+  ".cline/skills/react-best-practices/SKILL.md": {
+    "mtime": 1774788828.5276146,
+    "seen": 1787736773.0150206,
+    "ast_hash": "615ff491b00c2ee29de88e3f3ede849c",
+    "semantic_hash": "615ff491b00c2ee29de88e3f3ede849c"
+  },
+  ".cline/skills/react-best-practices/rules/advanced-event-handler-refs.md": {
+    "mtime": 1774788828.5785124,
+    "seen": 1787736773.0150206,
+    "ast_hash": "f2a0d125f3773bfda91e187fa5bed48a",
+    "semantic_hash": "f2a0d125f3773bfda91e187fa5bed48a"
+  },
+  ".cline/skills/react-best-practices/rules/advanced-init-once.md": {
+    "mtime": 1774788828.5233674,
+    "seen": 1787736773.0150206,
+    "ast_hash": "0100519098b834e69a3515657a39bdc9",
+    "semantic_hash": "0100519098b834e69a3515657a39bdc9"
+  },
+  ".cline/skills/react-best-practices/rules/advanced-use-latest.md": {
+    "mtime": 1774788828.5757155,
+    "seen": 1787736773.0150206,
+    "ast_hash": "60309961293388c9b9e9fd4e0db344e3",
+    "semantic_hash": "60309961293388c9b9e9fd4e0db344e3"
+  },
+  ".cline/skills/react-best-practices/rules/client-event-listeners.md": {
+    "mtime": 1774788829.0185535,
+    "seen": 1787736773.0150206,
+    "ast_hash": "71062add972f9735348b7ae77e778eb8",
+    "semantic_hash": "71062add972f9735348b7ae77e778eb8"
+  },
+  ".cline/skills/react-best-practices/rules/client-localstorage-schema.md": {
+    "mtime": 1774788829.0141375,
+    "seen": 1787736773.0150206,
+    "ast_hash": "982a459b07cbec2f8386e526b924c339",
+    "semantic_hash": "982a459b07cbec2f8386e526b924c339"
+  },
+  ".cline/skills/react-best-practices/rules/client-passive-event-listeners.md": {
+    "mtime": 1774788831.0222032,
+    "seen": 1787736773.0150206,
+    "ast_hash": "3853533fd5f49fa2fc98296f9c34d84f",
+    "semantic_hash": "3853533fd5f49fa2fc98296f9c34d84f"
+  },
+  ".cline/skills/react-best-practices/rules/client-swr-dedup.md": {
+    "mtime": 1774788829.3974285,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e565fcba7836d339ca4707aad6fdaa4a",
+    "semantic_hash": "e565fcba7836d339ca4707aad6fdaa4a"
+  },
+  ".cline/skills/react-best-practices/rules/js-batch-dom-css.md": {
+    "mtime": 1774788829.4059792,
+    "seen": 1787736773.0150206,
+    "ast_hash": "869dbc06a931ccfb899b739316c348af",
+    "semantic_hash": "869dbc06a931ccfb899b739316c348af"
+  },
+  ".cline/skills/react-best-practices/rules/js-cache-function-results.md": {
+    "mtime": 1774788829.405164,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5d641ce87ef753d59e3205244e2851a1",
+    "semantic_hash": "5d641ce87ef753d59e3205244e2851a1"
+  },
+  ".cline/skills/react-best-practices/rules/js-cache-property-access.md": {
+    "mtime": 1774788829.3974285,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5b4ae3cd853b92222a8fd8c8d8202426",
+    "semantic_hash": "5b4ae3cd853b92222a8fd8c8d8202426"
+  },
+  ".cline/skills/react-best-practices/rules/js-cache-storage.md": {
+    "mtime": 1774788829.4059792,
+    "seen": 1787736773.0150206,
+    "ast_hash": "828f260566ff92df56089321fa41c116",
+    "semantic_hash": "828f260566ff92df56089321fa41c116"
+  },
+  ".cline/skills/react-best-practices/rules/js-combine-iterations.md": {
+    "mtime": 1774788829.3830354,
+    "seen": 1787736773.0150206,
+    "ast_hash": "4f241532133637fee75304d40f016713",
+    "semantic_hash": "4f241532133637fee75304d40f016713"
+  },
+  ".cline/skills/react-best-practices/rules/js-early-exit.md": {
+    "mtime": 1774788829.4034085,
+    "seen": 1787736773.0150206,
+    "ast_hash": "d300cb3e57255029e446bdfa49dc4074",
+    "semantic_hash": "d300cb3e57255029e446bdfa49dc4074"
+  },
+  ".cline/skills/react-best-practices/rules/js-hoist-regexp.md": {
+    "mtime": 1774788829.408816,
+    "seen": 1787736773.0150206,
+    "ast_hash": "ced4609a5916db47bbaccfcc3f2dcdbb",
+    "semantic_hash": "ced4609a5916db47bbaccfcc3f2dcdbb"
+  },
+  ".cline/skills/react-best-practices/rules/js-index-maps.md": {
+    "mtime": 1774788829.3886259,
+    "seen": 1787736773.0150206,
+    "ast_hash": "db5bcfde02e1ce9f41d6ed1f5aafc8c5",
+    "semantic_hash": "db5bcfde02e1ce9f41d6ed1f5aafc8c5"
+  },
+  ".cline/skills/react-best-practices/rules/js-length-check-first.md": {
+    "mtime": 1774788831.3850696,
+    "seen": 1787736773.0150206,
+    "ast_hash": "2ba208759dd91578f1085c28e6a92ce9",
+    "semantic_hash": "2ba208759dd91578f1085c28e6a92ce9"
+  },
+  ".cline/skills/react-best-practices/rules/js-min-max-loop.md": {
+    "mtime": 1774788831.391656,
+    "seen": 1787736773.0150206,
+    "ast_hash": "82f654d27529dd80be7ae33d45dcdf8c",
+    "semantic_hash": "82f654d27529dd80be7ae33d45dcdf8c"
+  },
+  ".cline/skills/react-best-practices/rules/js-set-map-lookups.md": {
+    "mtime": 1774788831.3645735,
+    "seen": 1787736773.0150206,
+    "ast_hash": "59a278e21ecd322bff566ba4ad7f5a30",
+    "semantic_hash": "59a278e21ecd322bff566ba4ad7f5a30"
+  },
+  ".cline/skills/react-best-practices/rules/js-tosorted-immutable.md": {
+    "mtime": 1774788831.3936834,
+    "seen": 1787736773.0150206,
+    "ast_hash": "fd0804905877b6b7b1858e5df1b5f3c4",
+    "semantic_hash": "fd0804905877b6b7b1858e5df1b5f3c4"
+  },
+  ".cline/skills/react-best-practices/rules/rendering-activity.md": {
+    "mtime": 1774788831.3596199,
+    "seen": 1787736773.0150206,
+    "ast_hash": "b66bde1377564aa196ba15fc94215cd3",
+    "semantic_hash": "b66bde1377564aa196ba15fc94215cd3"
+  },
+  ".cline/skills/react-best-practices/rules/rendering-animate-svg-wrapper.md": {
+    "mtime": 1774788831.396195,
+    "seen": 1787736773.0150206,
+    "ast_hash": "7301cbe48bf0e1c44934847861384d03",
+    "semantic_hash": "7301cbe48bf0e1c44934847861384d03"
+  },
+  ".cline/skills/react-best-practices/rules/rendering-conditional-render.md": {
+    "mtime": 1774788831.3662689,
+    "seen": 1787736773.0150206,
+    "ast_hash": "7aa6112d7544d55147e183b84add9c31",
+    "semantic_hash": "7aa6112d7544d55147e183b84add9c31"
+  },
+  ".cline/skills/react-best-practices/rules/rendering-content-visibility.md": {
+    "mtime": 1774788831.3720796,
+    "seen": 1787736773.0150206,
+    "ast_hash": "a4ec0125d3a9d79ac2ab5f7a7b5b4d7d",
+    "semantic_hash": "a4ec0125d3a9d79ac2ab5f7a7b5b4d7d"
+  },
+  ".cline/skills/react-best-practices/rules/rendering-hoist-jsx.md": {
+    "mtime": 1774788831.3880346,
+    "seen": 1787736773.0150206,
+    "ast_hash": "00519c11155c5c2a6f493d7980211a71",
+    "semantic_hash": "00519c11155c5c2a6f493d7980211a71"
+  },
+  ".cline/skills/react-best-practices/rules/rendering-hydration-no-flicker.md": {
+    "mtime": 1774788831.3880346,
+    "seen": 1787736773.0150206,
+    "ast_hash": "a33ebc96d26525f94c460342d913e47a",
+    "semantic_hash": "a33ebc96d26525f94c460342d913e47a"
+  },
+  ".cline/skills/react-best-practices/rules/rendering-hydration-suppress-warning.md": {
+    "mtime": 1774788831.7128382,
+    "seen": 1787736773.0150206,
+    "ast_hash": "23bc895f5697c19a59712bf19474ec12",
+    "semantic_hash": "23bc895f5697c19a59712bf19474ec12"
+  },
+  ".cline/skills/react-best-practices/rules/rendering-svg-precision.md": {
+    "mtime": 1774788831.637694,
+    "seen": 1787736773.0150206,
+    "ast_hash": "1b880754ee449c52ccc725481f8b2e90",
+    "semantic_hash": "1b880754ee449c52ccc725481f8b2e90"
+  },
+  ".cline/skills/react-best-practices/rules/rendering-usetransition-loading.md": {
+    "mtime": 1774788831.65511,
+    "seen": 1787736773.0150206,
+    "ast_hash": "3cea04ec76a76183cebc6571ac6365a2",
+    "semantic_hash": "3cea04ec76a76183cebc6571ac6365a2"
+  },
+  ".cline/skills/react-best-practices/rules/rerender-defer-reads.md": {
+    "mtime": 1774788831.6328323,
+    "seen": 1787736773.0150206,
+    "ast_hash": "2b754062eb7b203632859f6515ed3561",
+    "semantic_hash": "2b754062eb7b203632859f6515ed3561"
+  },
+  ".cline/skills/react-best-practices/rules/rerender-dependencies.md": {
+    "mtime": 1774788831.9375746,
+    "seen": 1787736773.0150206,
+    "ast_hash": "ad0e42cd0616237f62f8a5abbc2138bc",
+    "semantic_hash": "ad0e42cd0616237f62f8a5abbc2138bc"
+  },
+  ".cline/skills/react-best-practices/rules/rerender-derived-state-no-effect.md": {
+    "mtime": 1774788831.652976,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c83ba3c8ea58015fd30072790a4959c4",
+    "semantic_hash": "c83ba3c8ea58015fd30072790a4959c4"
+  },
+  ".cline/skills/react-best-practices/rules/rerender-derived-state.md": {
+    "mtime": 1774788831.7160578,
+    "seen": 1787736773.0150206,
+    "ast_hash": "fadd31941e355786cb0cc7bba3c672fd",
+    "semantic_hash": "fadd31941e355786cb0cc7bba3c672fd"
+  },
+  ".cline/skills/react-best-practices/rules/rerender-functional-setstate.md": {
+    "mtime": 1774788831.65511,
+    "seen": 1787736773.0150206,
+    "ast_hash": "188c0b949d23c11885914c573f4a770a",
+    "semantic_hash": "188c0b949d23c11885914c573f4a770a"
+  },
+  ".cline/skills/react-best-practices/rules/rerender-lazy-state-init.md": {
+    "mtime": 1774788831.6479478,
+    "seen": 1787736773.0150206,
+    "ast_hash": "6f9fc3d826cea2ca484912256149b077",
+    "semantic_hash": "6f9fc3d826cea2ca484912256149b077"
+  },
+  ".cline/skills/react-best-practices/rules/rerender-memo-with-default-value.md": {
+    "mtime": 1774788831.644582,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9bfa45660e0a4d4f180e1d12d9ed44ea",
+    "semantic_hash": "9bfa45660e0a4d4f180e1d12d9ed44ea"
+  },
+  ".cline/skills/react-best-practices/rules/rerender-memo.md": {
+    "mtime": 1774788832.2029295,
+    "seen": 1787736773.0150206,
+    "ast_hash": "f0decabf1e4cf032c36f0977c81167b7",
+    "semantic_hash": "f0decabf1e4cf032c36f0977c81167b7"
+  },
+  ".cline/skills/react-best-practices/rules/rerender-move-effect-to-event.md": {
+    "mtime": 1774788832.1882827,
+    "seen": 1787736773.0150206,
+    "ast_hash": "599463fe624afd8822ba2bfa7c0138d5",
+    "semantic_hash": "599463fe624afd8822ba2bfa7c0138d5"
+  },
+  ".cline/skills/react-best-practices/rules/rerender-simple-expression-in-memo.md": {
+    "mtime": 1774788832.1973405,
+    "seen": 1787736773.0150206,
+    "ast_hash": "42c37552160cff86a0fcbd93a27aa74e",
+    "semantic_hash": "42c37552160cff86a0fcbd93a27aa74e"
+  },
+  ".cline/skills/react-best-practices/rules/rerender-transitions.md": {
+    "mtime": 1774788832.1771648,
+    "seen": 1787736773.0150206,
+    "ast_hash": "3f275bbfb966fcb39c554ad959fdf016",
+    "semantic_hash": "3f275bbfb966fcb39c554ad959fdf016"
+  },
+  ".cline/skills/react-best-practices/rules/rerender-use-ref-transient-values.md": {
+    "mtime": 1774788832.2592368,
+    "seen": 1787736773.0150206,
+    "ast_hash": "24d2e82617e2da4207afaf049e1314f3",
+    "semantic_hash": "24d2e82617e2da4207afaf049e1314f3"
+  },
+  ".cline/skills/react-best-practices/rules/server-after-nonblocking.md": {
+    "mtime": 1774788832.1827967,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c88a79384f87826bf1b20aa3637093a5",
+    "semantic_hash": "c88a79384f87826bf1b20aa3637093a5"
+  },
+  ".cline/skills/react-best-practices/rules/server-auth-actions.md": {
+    "mtime": 1774788832.2592368,
+    "seen": 1787736773.0150206,
+    "ast_hash": "d8691820d666e5dd9094ccc6996398e3",
+    "semantic_hash": "d8691820d666e5dd9094ccc6996398e3"
+  },
+  ".cline/skills/react-best-practices/rules/server-cache-lru.md": {
+    "mtime": 1774788832.2019184,
+    "seen": 1787736773.0150206,
+    "ast_hash": "723195ea460bfbc4d43b4eb0c47b246b",
+    "semantic_hash": "723195ea460bfbc4d43b4eb0c47b246b"
+  },
+  ".cline/skills/react-best-practices/rules/server-cache-react.md": {
+    "mtime": 1774788832.2050867,
+    "seen": 1787736773.0150206,
+    "ast_hash": "bc168ee66c4378854c7aa23cb9ca1369",
+    "semantic_hash": "bc168ee66c4378854c7aa23cb9ca1369"
+  },
+  ".cline/skills/react-best-practices/rules/server-dedup-props.md": {
+    "mtime": 1774788832.4708457,
+    "seen": 1787736773.0150206,
+    "ast_hash": "86bf6f2d562ca98bca778a5b9d2f0251",
+    "semantic_hash": "86bf6f2d562ca98bca778a5b9d2f0251"
+  },
+  ".cline/skills/react-best-practices/rules/server-parallel-fetching.md": {
+    "mtime": 1774788832.7885303,
+    "seen": 1787736773.0150206,
+    "ast_hash": "1a36cf0b49a1a498fc1150afbf7a42c2",
+    "semantic_hash": "1a36cf0b49a1a498fc1150afbf7a42c2"
+  },
+  ".cline/skills/react-best-practices/rules/server-serialization.md": {
+    "mtime": 1774788832.7885303,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e6d34426614852685f43609dd9e3b250",
+    "semantic_hash": "e6d34426614852685f43609dd9e3b250"
+  },
+  ".cline/skills/security-best-practices/references/javascript-express-web-server-security.md": {
+    "mtime": 1774788833.3536763,
+    "seen": 1787736773.0150206,
+    "ast_hash": "1f6c79d3230a07172fa07f7aa48a02a1",
+    "semantic_hash": "1f6c79d3230a07172fa07f7aa48a02a1"
+  },
+  ".cline/skills/security-best-practices/references/javascript-general-web-frontend-security.md": {
+    "mtime": 1774788833.3465748,
+    "seen": 1787736773.0150206,
+    "ast_hash": "0f75f9aae94b44dde968a6729bc4c3e7",
+    "semantic_hash": "0f75f9aae94b44dde968a6729bc4c3e7"
+  },
+  ".cline/skills/security-best-practices/references/javascript-jquery-web-frontend-security.md": {
+    "mtime": 1774788833.3438213,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e0ba6a93128b25b2e2cad2c55d5fe6a3",
+    "semantic_hash": "e0ba6a93128b25b2e2cad2c55d5fe6a3"
+  },
+  ".cline/skills/security-best-practices/references/javascript-typescript-nextjs-web-server-security.md": {
+    "mtime": 1774788833.3519845,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9c35c4ea32498d71d36dd24043154dc2",
+    "semantic_hash": "9c35c4ea32498d71d36dd24043154dc2"
+  },
+  ".cline/skills/security-best-practices/references/javascript-typescript-react-web-frontend-security.md": {
+    "mtime": 1774788833.3465748,
+    "seen": 1787736773.0150206,
+    "ast_hash": "7c73a7353a76534fb6e4848c5796062d",
+    "semantic_hash": "7c73a7353a76534fb6e4848c5796062d"
+  },
+  ".cline/skills/security-best-practices/references/javascript-typescript-vue-web-frontend-security.md": {
+    "mtime": 1774788833.3413122,
+    "seen": 1787736773.0150206,
+    "ast_hash": "590ac2115d7159c723146505ad95b969",
+    "semantic_hash": "590ac2115d7159c723146505ad95b969"
+  },
+  ".cline/skills/security-best-practices/references/python-django-web-server-security.md": {
+    "mtime": 1774788833.3465748,
+    "seen": 1787736773.0150206,
+    "ast_hash": "d61b6b5e4100189cdc4de67e3b666d8d",
+    "semantic_hash": "d61b6b5e4100189cdc4de67e3b666d8d"
+  },
+  ".cline/skills/security-best-practices/references/python-fastapi-web-server-security.md": {
+    "mtime": 1774788833.6588392,
+    "seen": 1787736773.0150206,
+    "ast_hash": "f80793acf053d3f15d8629f152727c87",
+    "semantic_hash": "f80793acf053d3f15d8629f152727c87"
+  },
+  ".cline/skills/security-best-practices/references/python-flask-web-server-security.md": {
+    "mtime": 1774788833.662952,
+    "seen": 1787736773.0150206,
+    "ast_hash": "97e2bf7b669bfed5a209788e6df01c3e",
+    "semantic_hash": "97e2bf7b669bfed5a209788e6df01c3e"
+  },
+  ".cline/skills/subagent-creator/SKILL.md": {
+    "mtime": 1774788834.145271,
+    "seen": 1787736773.0150206,
+    "ast_hash": "d45aa04de3308b809b9e697554c644d7",
+    "semantic_hash": "d45aa04de3308b809b9e697554c644d7"
+  },
+  ".cline/skills/technical-design-doc-creator/SKILL.md": {
+    "mtime": 1774788834.6335413,
+    "seen": 1787736773.0150206,
+    "ast_hash": "017354e90cca52fbd9ffec6fe09fee6a",
+    "semantic_hash": "017354e90cca52fbd9ffec6fe09fee6a"
+  },
+  ".cline/skills/tlc-spec-driven/SKILL.md": {
+    "mtime": 1774788835.1366043,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5eb1de19910e6b28cbbb9a8176029ce5",
+    "semantic_hash": "5eb1de19910e6b28cbbb9a8176029ce5"
+  },
+  ".cline/skills/tlc-spec-driven/references/brownfield-mapping.md": {
+    "mtime": 1774788835.148904,
+    "seen": 1787736773.0150206,
+    "ast_hash": "3ead7ce17da840bbeb31a26b7cd646f6",
+    "semantic_hash": "3ead7ce17da840bbeb31a26b7cd646f6"
+  },
+  ".cline/skills/tlc-spec-driven/references/concerns.md": {
+    "mtime": 1774788835.1397834,
+    "seen": 1787736773.0150206,
+    "ast_hash": "aa40ae77aed1e43110285b16edaef483",
+    "semantic_hash": "aa40ae77aed1e43110285b16edaef483"
+  },
+  ".cline/skills/tlc-spec-driven/references/design.md": {
+    "mtime": 1774788835.1452398,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e7ec91ea05dc49d1db8eaddf3aef82de",
+    "semantic_hash": "e7ec91ea05dc49d1db8eaddf3aef82de"
+  },
+  ".cline/skills/tlc-spec-driven/references/discuss.md": {
+    "mtime": 1774788835.143758,
+    "seen": 1787736773.0150206,
+    "ast_hash": "191bbd3975266e8cde908686b40b95c2",
+    "semantic_hash": "191bbd3975266e8cde908686b40b95c2"
+  },
+  ".cline/skills/tlc-spec-driven/references/implement.md": {
+    "mtime": 1774788835.1452398,
+    "seen": 1787736773.0150206,
+    "ast_hash": "bd31501b5957a6a79c555fe3580f876c",
+    "semantic_hash": "bd31501b5957a6a79c555fe3580f876c"
+  },
+  ".cline/skills/tlc-spec-driven/references/project-init.md": {
+    "mtime": 1774788835.424388,
+    "seen": 1787736773.0150206,
+    "ast_hash": "712d58a89958393db3b5d08e959d48be",
+    "semantic_hash": "712d58a89958393db3b5d08e959d48be"
+  },
+  ".cline/skills/tlc-spec-driven/references/quick-mode.md": {
+    "mtime": 1774788835.424388,
+    "seen": 1787736773.0150206,
+    "ast_hash": "dfc7c395cf5d9b8a16ffadcf7131904a",
+    "semantic_hash": "dfc7c395cf5d9b8a16ffadcf7131904a"
+  },
+  ".cline/skills/tlc-spec-driven/references/roadmap.md": {
+    "mtime": 1774788835.428727,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e6cdb557c4c3b3f9a3dde1782f04d10b",
+    "semantic_hash": "e6cdb557c4c3b3f9a3dde1782f04d10b"
+  },
+  ".cline/skills/tlc-spec-driven/references/session-handoff.md": {
+    "mtime": 1774788835.433814,
+    "seen": 1787736773.0150206,
+    "ast_hash": "1b7f204cde0874ea8439f92e5c49037b",
+    "semantic_hash": "1b7f204cde0874ea8439f92e5c49037b"
+  },
+  ".cline/skills/tlc-spec-driven/references/specify.md": {
+    "mtime": 1774788835.4377973,
+    "seen": 1787736773.0150206,
+    "ast_hash": "018690ac09d4c58b742ec2c403b5824c",
+    "semantic_hash": "018690ac09d4c58b742ec2c403b5824c"
+  },
+  ".cline/skills/tlc-spec-driven/references/state-management.md": {
+    "mtime": 1774788835.4275956,
+    "seen": 1787736773.0150206,
+    "ast_hash": "ac88429f2b674e70738879b60c2bbb90",
+    "semantic_hash": "ac88429f2b674e70738879b60c2bbb90"
+  },
+  ".cline/skills/tlc-spec-driven/references/tasks.md": {
+    "mtime": 1774788835.433814,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9f3da407e8e70141946219232eef9066",
+    "semantic_hash": "9f3da407e8e70141946219232eef9066"
+  },
+  ".cline/skills/tlc-spec-driven/references/validate.md": {
+    "mtime": 1774788835.4367867,
+    "seen": 1787736773.0150206,
+    "ast_hash": "1c91dc8da2242cd4ce9f950bd89171f7",
+    "semantic_hash": "1c91dc8da2242cd4ce9f950bd89171f7"
+  },
+  ".cline/skills/web-design-guidelines/SKILL.md": {
+    "mtime": 1774788835.8691685,
+    "seen": 1787736773.0150206,
+    "ast_hash": "fb2f1486f0d4eb25198cb5d7a960d58d",
+    "semantic_hash": "fb2f1486f0d4eb25198cb5d7a960d58d"
+  },
+  ".codex/skills/best-practices/SKILL.md": {
+    "mtime": 1774788810.7436862,
+    "seen": 1787736773.0150206,
+    "ast_hash": "73f44868a94ab067b62405d49d6f5aa0",
+    "semantic_hash": "73f44868a94ab067b62405d49d6f5aa0"
+  },
+  ".codex/skills/docs-writer/SKILL.md": {
+    "mtime": 1774788811.2440016,
+    "seen": 1787736773.0150206,
+    "ast_hash": "b308c48ecaaff4d1e483dea39f212762",
+    "semantic_hash": "b308c48ecaaff4d1e483dea39f212762"
+  },
+  ".codex/skills/frontend-design/SKILL.md": {
+    "mtime": 1774788811.7763686,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e5e7e8355eb34cbb9c431086c6781b48",
+    "semantic_hash": "e5e7e8355eb34cbb9c431086c6781b48"
+  },
+  ".codex/skills/playwright-skill/SKILL.md": {
+    "mtime": 1774788828.0839207,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9b3bf253ffd548c09ce36288197beba7",
+    "semantic_hash": "9b3bf253ffd548c09ce36288197beba7"
+  },
+  ".codex/skills/react-best-practices/AGENTS.md": {
+    "mtime": 1774788828.5830202,
+    "seen": 1787736773.0150206,
+    "ast_hash": "fc8b8af2a66fa9cff8fcc2d414b5cdc5",
+    "semantic_hash": "fc8b8af2a66fa9cff8fcc2d414b5cdc5"
+  },
+  ".codex/skills/react-best-practices/SKILL.md": {
+    "mtime": 1774788828.5276146,
+    "seen": 1787736773.0150206,
+    "ast_hash": "615ff491b00c2ee29de88e3f3ede849c",
+    "semantic_hash": "615ff491b00c2ee29de88e3f3ede849c"
+  },
+  ".codex/skills/react-best-practices/rules/_sections.md": {
+    "mtime": 1774788828.5253634,
+    "seen": 1787736773.0150206,
+    "ast_hash": "b8c110b45145ded6919562772afe067c",
+    "semantic_hash": "b8c110b45145ded6919562772afe067c"
+  },
+  ".codex/skills/react-best-practices/rules/advanced-event-handler-refs.md": {
+    "mtime": 1774788828.5785124,
+    "seen": 1787736773.0150206,
+    "ast_hash": "f2a0d125f3773bfda91e187fa5bed48a",
+    "semantic_hash": "f2a0d125f3773bfda91e187fa5bed48a"
+  },
+  ".codex/skills/react-best-practices/rules/advanced-init-once.md": {
+    "mtime": 1774788828.5233674,
+    "seen": 1787736773.0150206,
+    "ast_hash": "0100519098b834e69a3515657a39bdc9",
+    "semantic_hash": "0100519098b834e69a3515657a39bdc9"
+  },
+  ".codex/skills/react-best-practices/rules/advanced-use-latest.md": {
+    "mtime": 1774788828.5757155,
+    "seen": 1787736773.0150206,
+    "ast_hash": "60309961293388c9b9e9fd4e0db344e3",
+    "semantic_hash": "60309961293388c9b9e9fd4e0db344e3"
+  },
+  ".codex/skills/react-best-practices/rules/async-api-routes.md": {
+    "mtime": 1774788828.6629274,
+    "seen": 1787736773.0150206,
+    "ast_hash": "344fa543b37e303660404e1ef3a4638b",
+    "semantic_hash": "344fa543b37e303660404e1ef3a4638b"
+  },
+  ".codex/skills/react-best-practices/rules/async-defer-await.md": {
+    "mtime": 1774788828.604966,
+    "seen": 1787736773.0150206,
+    "ast_hash": "6c0229d5e8267c3036443b39cd1805a6",
+    "semantic_hash": "6c0229d5e8267c3036443b39cd1805a6"
+  },
+  ".codex/skills/react-best-practices/rules/async-dependencies.md": {
+    "mtime": 1774788829.0039172,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9c5622d97b20b9e0cb79455b4322061a",
+    "semantic_hash": "9c5622d97b20b9e0cb79455b4322061a"
+  },
+  ".codex/skills/react-best-practices/rules/async-parallel.md": {
+    "mtime": 1774788828.9667573,
+    "seen": 1787736773.0150206,
+    "ast_hash": "a0e06a8e9985cdff4ece0312d8ee35db",
+    "semantic_hash": "a0e06a8e9985cdff4ece0312d8ee35db"
+  },
+  ".codex/skills/react-best-practices/rules/async-suspense-boundaries.md": {
+    "mtime": 1774788829.0081494,
+    "seen": 1787736773.0150206,
+    "ast_hash": "dbb2fc80721ca1ce32426f43219d314f",
+    "semantic_hash": "dbb2fc80721ca1ce32426f43219d314f"
+  },
+  ".codex/skills/react-best-practices/rules/bundle-barrel-imports.md": {
+    "mtime": 1774788829.0081494,
+    "seen": 1787736773.0150206,
+    "ast_hash": "cb9904b16c26f7670dacf4b7f8d53af8",
+    "semantic_hash": "cb9904b16c26f7670dacf4b7f8d53af8"
+  },
+  ".codex/skills/react-best-practices/rules/bundle-conditional.md": {
+    "mtime": 1774788828.9565604,
+    "seen": 1787736773.0150206,
+    "ast_hash": "585be2b6fc418c766e5b91cc2141d334",
+    "semantic_hash": "585be2b6fc418c766e5b91cc2141d334"
+  },
+  ".codex/skills/react-best-practices/rules/bundle-defer-third-party.md": {
+    "mtime": 1774788828.973955,
+    "seen": 1787736773.0150206,
+    "ast_hash": "6d4d1d4fac411f724071428dd0bc93ba",
+    "semantic_hash": "6d4d1d4fac411f724071428dd0bc93ba"
+  },
+  ".codex/skills/react-best-practices/rules/bundle-dynamic-imports.md": {
+    "mtime": 1774788828.9639127,
+    "seen": 1787736773.0150206,
+    "ast_hash": "72d89583306887810f67e9f7860f06af",
+    "semantic_hash": "72d89583306887810f67e9f7860f06af"
+  },
+  ".codex/skills/react-best-practices/rules/bundle-preload.md": {
+    "mtime": 1774788829.0081494,
+    "seen": 1787736773.0150206,
+    "ast_hash": "924ec7e7502ca042070326d38e88f8cd",
+    "semantic_hash": "924ec7e7502ca042070326d38e88f8cd"
+  },
+  ".codex/skills/react-best-practices/rules/client-event-listeners.md": {
+    "mtime": 1774788829.0185535,
+    "seen": 1787736773.0150206,
+    "ast_hash": "71062add972f9735348b7ae77e778eb8",
+    "semantic_hash": "71062add972f9735348b7ae77e778eb8"
+  },
+  ".codex/skills/react-best-practices/rules/client-localstorage-schema.md": {
+    "mtime": 1774788829.0141375,
+    "seen": 1787736773.0150206,
+    "ast_hash": "982a459b07cbec2f8386e526b924c339",
+    "semantic_hash": "982a459b07cbec2f8386e526b924c339"
+  },
+  ".codex/skills/react-best-practices/rules/client-passive-event-listeners.md": {
+    "mtime": 1774788831.0222032,
+    "seen": 1787736773.0150206,
+    "ast_hash": "3853533fd5f49fa2fc98296f9c34d84f",
+    "semantic_hash": "3853533fd5f49fa2fc98296f9c34d84f"
+  },
+  ".codex/skills/react-best-practices/rules/client-swr-dedup.md": {
+    "mtime": 1774788829.3974285,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e565fcba7836d339ca4707aad6fdaa4a",
+    "semantic_hash": "e565fcba7836d339ca4707aad6fdaa4a"
+  },
+  ".codex/skills/react-best-practices/rules/js-batch-dom-css.md": {
+    "mtime": 1774788829.4059792,
+    "seen": 1787736773.0150206,
+    "ast_hash": "869dbc06a931ccfb899b739316c348af",
+    "semantic_hash": "869dbc06a931ccfb899b739316c348af"
+  },
+  ".codex/skills/react-best-practices/rules/js-cache-function-results.md": {
+    "mtime": 1774788829.405164,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5d641ce87ef753d59e3205244e2851a1",
+    "semantic_hash": "5d641ce87ef753d59e3205244e2851a1"
+  },
+  ".codex/skills/react-best-practices/rules/js-cache-property-access.md": {
+    "mtime": 1774788829.3974285,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5b4ae3cd853b92222a8fd8c8d8202426",
+    "semantic_hash": "5b4ae3cd853b92222a8fd8c8d8202426"
+  },
+  ".codex/skills/react-best-practices/rules/js-cache-storage.md": {
+    "mtime": 1774788829.4059792,
+    "seen": 1787736773.0150206,
+    "ast_hash": "828f260566ff92df56089321fa41c116",
+    "semantic_hash": "828f260566ff92df56089321fa41c116"
+  },
+  ".codex/skills/react-best-practices/rules/js-combine-iterations.md": {
+    "mtime": 1774788829.3830354,
+    "seen": 1787736773.0150206,
+    "ast_hash": "4f241532133637fee75304d40f016713",
+    "semantic_hash": "4f241532133637fee75304d40f016713"
+  },
+  ".codex/skills/react-best-practices/rules/js-early-exit.md": {
+    "mtime": 1774788829.4034085,
+    "seen": 1787736773.0150206,
+    "ast_hash": "d300cb3e57255029e446bdfa49dc4074",
+    "semantic_hash": "d300cb3e57255029e446bdfa49dc4074"
+  },
+  ".codex/skills/react-best-practices/rules/js-hoist-regexp.md": {
+    "mtime": 1774788829.408816,
+    "seen": 1787736773.0150206,
+    "ast_hash": "ced4609a5916db47bbaccfcc3f2dcdbb",
+    "semantic_hash": "ced4609a5916db47bbaccfcc3f2dcdbb"
+  },
+  ".codex/skills/react-best-practices/rules/js-index-maps.md": {
+    "mtime": 1774788829.3886259,
+    "seen": 1787736773.0150206,
+    "ast_hash": "db5bcfde02e1ce9f41d6ed1f5aafc8c5",
+    "semantic_hash": "db5bcfde02e1ce9f41d6ed1f5aafc8c5"
+  },
+  ".codex/skills/react-best-practices/rules/js-length-check-first.md": {
+    "mtime": 1774788831.3850696,
+    "seen": 1787736773.0150206,
+    "ast_hash": "2ba208759dd91578f1085c28e6a92ce9",
+    "semantic_hash": "2ba208759dd91578f1085c28e6a92ce9"
+  },
+  ".codex/skills/react-best-practices/rules/js-min-max-loop.md": {
+    "mtime": 1774788831.391656,
+    "seen": 1787736773.0150206,
+    "ast_hash": "82f654d27529dd80be7ae33d45dcdf8c",
+    "semantic_hash": "82f654d27529dd80be7ae33d45dcdf8c"
+  },
+  ".codex/skills/react-best-practices/rules/js-set-map-lookups.md": {
+    "mtime": 1774788831.3645735,
+    "seen": 1787736773.0150206,
+    "ast_hash": "59a278e21ecd322bff566ba4ad7f5a30",
+    "semantic_hash": "59a278e21ecd322bff566ba4ad7f5a30"
+  },
+  ".codex/skills/react-best-practices/rules/js-tosorted-immutable.md": {
+    "mtime": 1774788831.3936834,
+    "seen": 1787736773.0150206,
+    "ast_hash": "fd0804905877b6b7b1858e5df1b5f3c4",
+    "semantic_hash": "fd0804905877b6b7b1858e5df1b5f3c4"
+  },
+  ".codex/skills/react-best-practices/rules/rendering-activity.md": {
+    "mtime": 1774788831.3596199,
+    "seen": 1787736773.0150206,
+    "ast_hash": "b66bde1377564aa196ba15fc94215cd3",
+    "semantic_hash": "b66bde1377564aa196ba15fc94215cd3"
+  },
+  ".codex/skills/react-best-practices/rules/rendering-animate-svg-wrapper.md": {
+    "mtime": 1774788831.396195,
+    "seen": 1787736773.0150206,
+    "ast_hash": "7301cbe48bf0e1c44934847861384d03",
+    "semantic_hash": "7301cbe48bf0e1c44934847861384d03"
+  },
+  ".codex/skills/react-best-practices/rules/rendering-conditional-render.md": {
+    "mtime": 1774788831.3662689,
+    "seen": 1787736773.0150206,
+    "ast_hash": "7aa6112d7544d55147e183b84add9c31",
+    "semantic_hash": "7aa6112d7544d55147e183b84add9c31"
+  },
+  ".codex/skills/react-best-practices/rules/rendering-content-visibility.md": {
+    "mtime": 1774788831.3720796,
+    "seen": 1787736773.0150206,
+    "ast_hash": "a4ec0125d3a9d79ac2ab5f7a7b5b4d7d",
+    "semantic_hash": "a4ec0125d3a9d79ac2ab5f7a7b5b4d7d"
+  },
+  ".codex/skills/react-best-practices/rules/rendering-hoist-jsx.md": {
+    "mtime": 1774788831.3880346,
+    "seen": 1787736773.0150206,
+    "ast_hash": "00519c11155c5c2a6f493d7980211a71",
+    "semantic_hash": "00519c11155c5c2a6f493d7980211a71"
+  },
+  ".codex/skills/react-best-practices/rules/rendering-hydration-no-flicker.md": {
+    "mtime": 1774788831.3880346,
+    "seen": 1787736773.0150206,
+    "ast_hash": "a33ebc96d26525f94c460342d913e47a",
+    "semantic_hash": "a33ebc96d26525f94c460342d913e47a"
+  },
+  ".codex/skills/react-best-practices/rules/rendering-hydration-suppress-warning.md": {
+    "mtime": 1774788831.7128382,
+    "seen": 1787736773.0150206,
+    "ast_hash": "23bc895f5697c19a59712bf19474ec12",
+    "semantic_hash": "23bc895f5697c19a59712bf19474ec12"
+  },
+  ".codex/skills/react-best-practices/rules/rendering-svg-precision.md": {
+    "mtime": 1774788831.637694,
+    "seen": 1787736773.0150206,
+    "ast_hash": "1b880754ee449c52ccc725481f8b2e90",
+    "semantic_hash": "1b880754ee449c52ccc725481f8b2e90"
+  },
+  ".codex/skills/react-best-practices/rules/rendering-usetransition-loading.md": {
+    "mtime": 1774788831.65511,
+    "seen": 1787736773.0150206,
+    "ast_hash": "3cea04ec76a76183cebc6571ac6365a2",
+    "semantic_hash": "3cea04ec76a76183cebc6571ac6365a2"
+  },
+  ".codex/skills/react-best-practices/rules/rerender-defer-reads.md": {
+    "mtime": 1774788831.6328323,
+    "seen": 1787736773.0150206,
+    "ast_hash": "2b754062eb7b203632859f6515ed3561",
+    "semantic_hash": "2b754062eb7b203632859f6515ed3561"
+  },
+  ".codex/skills/react-best-practices/rules/rerender-dependencies.md": {
+    "mtime": 1774788831.9375746,
+    "seen": 1787736773.0150206,
+    "ast_hash": "ad0e42cd0616237f62f8a5abbc2138bc",
+    "semantic_hash": "ad0e42cd0616237f62f8a5abbc2138bc"
+  },
+  ".codex/skills/react-best-practices/rules/rerender-derived-state-no-effect.md": {
+    "mtime": 1774788831.652976,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c83ba3c8ea58015fd30072790a4959c4",
+    "semantic_hash": "c83ba3c8ea58015fd30072790a4959c4"
+  },
+  ".codex/skills/react-best-practices/rules/rerender-derived-state.md": {
+    "mtime": 1774788831.7160578,
+    "seen": 1787736773.0150206,
+    "ast_hash": "fadd31941e355786cb0cc7bba3c672fd",
+    "semantic_hash": "fadd31941e355786cb0cc7bba3c672fd"
+  },
+  ".codex/skills/react-best-practices/rules/rerender-functional-setstate.md": {
+    "mtime": 1774788831.65511,
+    "seen": 1787736773.0150206,
+    "ast_hash": "188c0b949d23c11885914c573f4a770a",
+    "semantic_hash": "188c0b949d23c11885914c573f4a770a"
+  },
+  ".codex/skills/react-best-practices/rules/rerender-lazy-state-init.md": {
+    "mtime": 1774788831.6479478,
+    "seen": 1787736773.0150206,
+    "ast_hash": "6f9fc3d826cea2ca484912256149b077",
+    "semantic_hash": "6f9fc3d826cea2ca484912256149b077"
+  },
+  ".codex/skills/react-best-practices/rules/rerender-memo-with-default-value.md": {
+    "mtime": 1774788831.644582,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9bfa45660e0a4d4f180e1d12d9ed44ea",
+    "semantic_hash": "9bfa45660e0a4d4f180e1d12d9ed44ea"
+  },
+  ".codex/skills/react-best-practices/rules/rerender-memo.md": {
+    "mtime": 1774788832.2029295,
+    "seen": 1787736773.0150206,
+    "ast_hash": "f0decabf1e4cf032c36f0977c81167b7",
+    "semantic_hash": "f0decabf1e4cf032c36f0977c81167b7"
+  },
+  ".codex/skills/react-best-practices/rules/rerender-move-effect-to-event.md": {
+    "mtime": 1774788832.1882827,
+    "seen": 1787736773.0150206,
+    "ast_hash": "599463fe624afd8822ba2bfa7c0138d5",
+    "semantic_hash": "599463fe624afd8822ba2bfa7c0138d5"
+  },
+  ".codex/skills/react-best-practices/rules/rerender-simple-expression-in-memo.md": {
+    "mtime": 1774788832.1973405,
+    "seen": 1787736773.0150206,
+    "ast_hash": "42c37552160cff86a0fcbd93a27aa74e",
+    "semantic_hash": "42c37552160cff86a0fcbd93a27aa74e"
+  },
+  ".codex/skills/react-best-practices/rules/rerender-transitions.md": {
+    "mtime": 1774788832.1771648,
+    "seen": 1787736773.0150206,
+    "ast_hash": "3f275bbfb966fcb39c554ad959fdf016",
+    "semantic_hash": "3f275bbfb966fcb39c554ad959fdf016"
+  },
+  ".codex/skills/react-best-practices/rules/rerender-use-ref-transient-values.md": {
+    "mtime": 1774788832.2592368,
+    "seen": 1787736773.0150206,
+    "ast_hash": "24d2e82617e2da4207afaf049e1314f3",
+    "semantic_hash": "24d2e82617e2da4207afaf049e1314f3"
+  },
+  ".codex/skills/react-best-practices/rules/server-after-nonblocking.md": {
+    "mtime": 1774788832.1827967,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c88a79384f87826bf1b20aa3637093a5",
+    "semantic_hash": "c88a79384f87826bf1b20aa3637093a5"
+  },
+  ".codex/skills/react-best-practices/rules/server-auth-actions.md": {
+    "mtime": 1774788832.2592368,
+    "seen": 1787736773.0150206,
+    "ast_hash": "d8691820d666e5dd9094ccc6996398e3",
+    "semantic_hash": "d8691820d666e5dd9094ccc6996398e3"
+  },
+  ".codex/skills/react-best-practices/rules/server-cache-lru.md": {
+    "mtime": 1774788832.2019184,
+    "seen": 1787736773.0150206,
+    "ast_hash": "723195ea460bfbc4d43b4eb0c47b246b",
+    "semantic_hash": "723195ea460bfbc4d43b4eb0c47b246b"
+  },
+  ".codex/skills/react-best-practices/rules/server-cache-react.md": {
+    "mtime": 1774788832.2050867,
+    "seen": 1787736773.0150206,
+    "ast_hash": "bc168ee66c4378854c7aa23cb9ca1369",
+    "semantic_hash": "bc168ee66c4378854c7aa23cb9ca1369"
+  },
+  ".codex/skills/react-best-practices/rules/server-dedup-props.md": {
+    "mtime": 1774788832.4708457,
+    "seen": 1787736773.0150206,
+    "ast_hash": "86bf6f2d562ca98bca778a5b9d2f0251",
+    "semantic_hash": "86bf6f2d562ca98bca778a5b9d2f0251"
+  },
+  ".codex/skills/react-best-practices/rules/server-parallel-fetching.md": {
+    "mtime": 1774788832.7885303,
+    "seen": 1787736773.0150206,
+    "ast_hash": "1a36cf0b49a1a498fc1150afbf7a42c2",
+    "semantic_hash": "1a36cf0b49a1a498fc1150afbf7a42c2"
+  },
+  ".codex/skills/react-best-practices/rules/server-serialization.md": {
+    "mtime": 1774788832.7885303,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e6d34426614852685f43609dd9e3b250",
+    "semantic_hash": "e6d34426614852685f43609dd9e3b250"
+  },
+  ".codex/skills/security-best-practices/SKILL.md": {
+    "mtime": 1774788833.3377855,
+    "seen": 1787736773.0150206,
+    "ast_hash": "b08372c23dacb9a68c62221f53fd9cbf",
+    "semantic_hash": "b08372c23dacb9a68c62221f53fd9cbf"
+  },
+  ".codex/skills/security-best-practices/references/golang-general-backend-security.md": {
+    "mtime": 1774788833.3465748,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5168d64a5690ad1334f3d5472002627e",
+    "semantic_hash": "5168d64a5690ad1334f3d5472002627e"
+  },
+  ".codex/skills/security-best-practices/references/javascript-express-web-server-security.md": {
+    "mtime": 1774788833.3536763,
+    "seen": 1787736773.0150206,
+    "ast_hash": "1f6c79d3230a07172fa07f7aa48a02a1",
+    "semantic_hash": "1f6c79d3230a07172fa07f7aa48a02a1"
+  },
+  ".codex/skills/security-best-practices/references/javascript-general-web-frontend-security.md": {
+    "mtime": 1774788833.3465748,
+    "seen": 1787736773.0150206,
+    "ast_hash": "0f75f9aae94b44dde968a6729bc4c3e7",
+    "semantic_hash": "0f75f9aae94b44dde968a6729bc4c3e7"
+  },
+  ".codex/skills/security-best-practices/references/javascript-jquery-web-frontend-security.md": {
+    "mtime": 1774788833.3438213,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e0ba6a93128b25b2e2cad2c55d5fe6a3",
+    "semantic_hash": "e0ba6a93128b25b2e2cad2c55d5fe6a3"
+  },
+  ".codex/skills/security-best-practices/references/javascript-typescript-nextjs-web-server-security.md": {
+    "mtime": 1774788833.3519845,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9c35c4ea32498d71d36dd24043154dc2",
+    "semantic_hash": "9c35c4ea32498d71d36dd24043154dc2"
+  },
+  ".codex/skills/security-best-practices/references/javascript-typescript-react-web-frontend-security.md": {
+    "mtime": 1774788833.3465748,
+    "seen": 1787736773.0150206,
+    "ast_hash": "7c73a7353a76534fb6e4848c5796062d",
+    "semantic_hash": "7c73a7353a76534fb6e4848c5796062d"
+  },
+  ".codex/skills/security-best-practices/references/javascript-typescript-vue-web-frontend-security.md": {
+    "mtime": 1774788833.3413122,
+    "seen": 1787736773.0150206,
+    "ast_hash": "590ac2115d7159c723146505ad95b969",
+    "semantic_hash": "590ac2115d7159c723146505ad95b969"
+  },
+  ".codex/skills/security-best-practices/references/python-django-web-server-security.md": {
+    "mtime": 1774788833.3465748,
+    "seen": 1787736773.0150206,
+    "ast_hash": "d61b6b5e4100189cdc4de67e3b666d8d",
+    "semantic_hash": "d61b6b5e4100189cdc4de67e3b666d8d"
+  },
+  ".codex/skills/security-best-practices/references/python-fastapi-web-server-security.md": {
+    "mtime": 1774788833.6588392,
+    "seen": 1787736773.0150206,
+    "ast_hash": "f80793acf053d3f15d8629f152727c87",
+    "semantic_hash": "f80793acf053d3f15d8629f152727c87"
+  },
+  ".codex/skills/security-best-practices/references/python-flask-web-server-security.md": {
+    "mtime": 1774788833.662952,
+    "seen": 1787736773.0150206,
+    "ast_hash": "97e2bf7b669bfed5a209788e6df01c3e",
+    "semantic_hash": "97e2bf7b669bfed5a209788e6df01c3e"
+  },
+  ".codex/skills/subagent-creator/SKILL.md": {
+    "mtime": 1774788834.145271,
+    "seen": 1787736773.0150206,
+    "ast_hash": "d45aa04de3308b809b9e697554c644d7",
+    "semantic_hash": "d45aa04de3308b809b9e697554c644d7"
+  },
+  ".codex/skills/technical-design-doc-creator/SKILL.md": {
+    "mtime": 1774788834.6335413,
+    "seen": 1787736773.0150206,
+    "ast_hash": "017354e90cca52fbd9ffec6fe09fee6a",
+    "semantic_hash": "017354e90cca52fbd9ffec6fe09fee6a"
+  },
+  ".codex/skills/tlc-spec-driven/SKILL.md": {
+    "mtime": 1774788835.1366043,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5eb1de19910e6b28cbbb9a8176029ce5",
+    "semantic_hash": "5eb1de19910e6b28cbbb9a8176029ce5"
+  },
+  ".codex/skills/web-design-guidelines/SKILL.md": {
+    "mtime": 1774788835.8691685,
+    "seen": 1787736773.0150206,
+    "ast_hash": "fb2f1486f0d4eb25198cb5d7a960d58d",
+    "semantic_hash": "fb2f1486f0d4eb25198cb5d7a960d58d"
+  },
+  ".cursor/skills/best-practices/SKILL.md": {
+    "mtime": 1774788810.7436862,
+    "seen": 1787736773.0150206,
+    "ast_hash": "73f44868a94ab067b62405d49d6f5aa0",
+    "semantic_hash": "73f44868a94ab067b62405d49d6f5aa0"
+  },
+  ".cursor/skills/docs-writer/SKILL.md": {
+    "mtime": 1774788811.2440016,
+    "seen": 1787736773.0150206,
+    "ast_hash": "b308c48ecaaff4d1e483dea39f212762",
+    "semantic_hash": "b308c48ecaaff4d1e483dea39f212762"
+  },
+  ".cursor/skills/docs-writer/references/style-guide.md": {
+    "mtime": 1774788811.33308,
+    "seen": 1787736773.0150206,
+    "ast_hash": "d526a4bac0e17e20936f972ab1aa4659",
+    "semantic_hash": "d526a4bac0e17e20936f972ab1aa4659"
+  },
+  ".cursor/skills/frontend-design/SKILL.md": {
+    "mtime": 1774788811.7763686,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e5e7e8355eb34cbb9c431086c6781b48",
+    "semantic_hash": "e5e7e8355eb34cbb9c431086c6781b48"
+  },
+  ".cursor/skills/frontend-design/references/color-and-contrast.md": {
+    "mtime": 1774788811.7792118,
+    "seen": 1787736773.0150206,
+    "ast_hash": "0e90f887b2def64c80fd696b95ef3f47",
+    "semantic_hash": "0e90f887b2def64c80fd696b95ef3f47"
+  },
+  ".cursor/skills/frontend-design/references/motion-design.md": {
+    "mtime": 1774788827.1054149,
+    "seen": 1787736773.0150206,
+    "ast_hash": "2a38a73c6bbd11c3c95bc1a4602c75f9",
+    "semantic_hash": "2a38a73c6bbd11c3c95bc1a4602c75f9"
+  },
+  ".cursor/skills/frontend-design/references/typography.md": {
+    "mtime": 1774788826.8220346,
+    "seen": 1787736773.0150206,
+    "ast_hash": "87652066ed139b97ddf379ea19d84989",
+    "semantic_hash": "87652066ed139b97ddf379ea19d84989"
+  },
+  ".cursor/skills/playwright-skill/API_REFERENCE.md": {
+    "mtime": 1774788828.078849,
+    "seen": 1787736773.0150206,
+    "ast_hash": "233b44172f13459f5b910ab95b84b81f",
+    "semantic_hash": "233b44172f13459f5b910ab95b84b81f"
+  },
+  ".cursor/skills/playwright-skill/SKILL.md": {
+    "mtime": 1774788828.0839207,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9b3bf253ffd548c09ce36288197beba7",
+    "semantic_hash": "9b3bf253ffd548c09ce36288197beba7"
+  },
+  ".cursor/skills/react-best-practices/AGENTS.md": {
+    "mtime": 1774788828.5830202,
+    "seen": 1787736773.0150206,
+    "ast_hash": "fc8b8af2a66fa9cff8fcc2d414b5cdc5",
+    "semantic_hash": "fc8b8af2a66fa9cff8fcc2d414b5cdc5"
+  },
+  ".cursor/skills/react-best-practices/SKILL.md": {
+    "mtime": 1774788828.5276146,
+    "seen": 1787736773.0150206,
+    "ast_hash": "615ff491b00c2ee29de88e3f3ede849c",
+    "semantic_hash": "615ff491b00c2ee29de88e3f3ede849c"
+  },
+  ".cursor/skills/react-best-practices/rules/rendering-hoist-jsx.md": {
+    "mtime": 1774788831.3880346,
+    "seen": 1787736773.0150206,
+    "ast_hash": "00519c11155c5c2a6f493d7980211a71",
+    "semantic_hash": "00519c11155c5c2a6f493d7980211a71"
+  },
+  ".cursor/skills/react-best-practices/rules/rendering-hydration-no-flicker.md": {
+    "mtime": 1774788831.3880346,
+    "seen": 1787736773.0150206,
+    "ast_hash": "a33ebc96d26525f94c460342d913e47a",
+    "semantic_hash": "a33ebc96d26525f94c460342d913e47a"
+  },
+  ".cursor/skills/react-best-practices/rules/rendering-hydration-suppress-warning.md": {
+    "mtime": 1774788831.7128382,
+    "seen": 1787736773.0150206,
+    "ast_hash": "23bc895f5697c19a59712bf19474ec12",
+    "semantic_hash": "23bc895f5697c19a59712bf19474ec12"
+  },
+  ".cursor/skills/react-best-practices/rules/rendering-svg-precision.md": {
+    "mtime": 1774788831.637694,
+    "seen": 1787736773.0150206,
+    "ast_hash": "1b880754ee449c52ccc725481f8b2e90",
+    "semantic_hash": "1b880754ee449c52ccc725481f8b2e90"
+  },
+  ".cursor/skills/react-best-practices/rules/rendering-usetransition-loading.md": {
+    "mtime": 1774788831.65511,
+    "seen": 1787736773.0150206,
+    "ast_hash": "3cea04ec76a76183cebc6571ac6365a2",
+    "semantic_hash": "3cea04ec76a76183cebc6571ac6365a2"
+  },
+  ".cursor/skills/react-best-practices/rules/rerender-defer-reads.md": {
+    "mtime": 1774788831.6328323,
+    "seen": 1787736773.0150206,
+    "ast_hash": "2b754062eb7b203632859f6515ed3561",
+    "semantic_hash": "2b754062eb7b203632859f6515ed3561"
+  },
+  ".cursor/skills/react-best-practices/rules/rerender-dependencies.md": {
+    "mtime": 1774788831.9375746,
+    "seen": 1787736773.0150206,
+    "ast_hash": "ad0e42cd0616237f62f8a5abbc2138bc",
+    "semantic_hash": "ad0e42cd0616237f62f8a5abbc2138bc"
+  },
+  ".cursor/skills/react-best-practices/rules/rerender-derived-state-no-effect.md": {
+    "mtime": 1774788831.652976,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c83ba3c8ea58015fd30072790a4959c4",
+    "semantic_hash": "c83ba3c8ea58015fd30072790a4959c4"
+  },
+  ".cursor/skills/react-best-practices/rules/rerender-derived-state.md": {
+    "mtime": 1774788831.7160578,
+    "seen": 1787736773.0150206,
+    "ast_hash": "fadd31941e355786cb0cc7bba3c672fd",
+    "semantic_hash": "fadd31941e355786cb0cc7bba3c672fd"
+  },
+  ".cursor/skills/react-best-practices/rules/rerender-functional-setstate.md": {
+    "mtime": 1774788831.65511,
+    "seen": 1787736773.0150206,
+    "ast_hash": "188c0b949d23c11885914c573f4a770a",
+    "semantic_hash": "188c0b949d23c11885914c573f4a770a"
+  },
+  ".cursor/skills/react-best-practices/rules/rerender-lazy-state-init.md": {
+    "mtime": 1774788831.6479478,
+    "seen": 1787736773.0150206,
+    "ast_hash": "6f9fc3d826cea2ca484912256149b077",
+    "semantic_hash": "6f9fc3d826cea2ca484912256149b077"
+  },
+  ".cursor/skills/react-best-practices/rules/rerender-memo-with-default-value.md": {
+    "mtime": 1774788831.644582,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9bfa45660e0a4d4f180e1d12d9ed44ea",
+    "semantic_hash": "9bfa45660e0a4d4f180e1d12d9ed44ea"
+  },
+  ".cursor/skills/react-best-practices/rules/rerender-memo.md": {
+    "mtime": 1774788832.2029295,
+    "seen": 1787736773.0150206,
+    "ast_hash": "f0decabf1e4cf032c36f0977c81167b7",
+    "semantic_hash": "f0decabf1e4cf032c36f0977c81167b7"
+  },
+  ".cursor/skills/react-best-practices/rules/rerender-move-effect-to-event.md": {
+    "mtime": 1774788832.1882827,
+    "seen": 1787736773.0150206,
+    "ast_hash": "599463fe624afd8822ba2bfa7c0138d5",
+    "semantic_hash": "599463fe624afd8822ba2bfa7c0138d5"
+  },
+  ".cursor/skills/react-best-practices/rules/rerender-simple-expression-in-memo.md": {
+    "mtime": 1774788832.1973405,
+    "seen": 1787736773.0150206,
+    "ast_hash": "42c37552160cff86a0fcbd93a27aa74e",
+    "semantic_hash": "42c37552160cff86a0fcbd93a27aa74e"
+  },
+  ".cursor/skills/react-best-practices/rules/rerender-transitions.md": {
+    "mtime": 1774788832.1771648,
+    "seen": 1787736773.0150206,
+    "ast_hash": "3f275bbfb966fcb39c554ad959fdf016",
+    "semantic_hash": "3f275bbfb966fcb39c554ad959fdf016"
+  },
+  ".cursor/skills/react-best-practices/rules/rerender-use-ref-transient-values.md": {
+    "mtime": 1774788832.2592368,
+    "seen": 1787736773.0150206,
+    "ast_hash": "24d2e82617e2da4207afaf049e1314f3",
+    "semantic_hash": "24d2e82617e2da4207afaf049e1314f3"
+  },
+  ".cursor/skills/react-best-practices/rules/server-after-nonblocking.md": {
+    "mtime": 1774788832.1827967,
+    "seen": 1787736773.0150206,
+    "ast_hash": "c88a79384f87826bf1b20aa3637093a5",
+    "semantic_hash": "c88a79384f87826bf1b20aa3637093a5"
+  },
+  ".cursor/skills/react-best-practices/rules/server-auth-actions.md": {
+    "mtime": 1774788832.2592368,
+    "seen": 1787736773.0150206,
+    "ast_hash": "d8691820d666e5dd9094ccc6996398e3",
+    "semantic_hash": "d8691820d666e5dd9094ccc6996398e3"
+  },
+  ".cursor/skills/react-best-practices/rules/server-cache-lru.md": {
+    "mtime": 1774788832.2019184,
+    "seen": 1787736773.0150206,
+    "ast_hash": "723195ea460bfbc4d43b4eb0c47b246b",
+    "semantic_hash": "723195ea460bfbc4d43b4eb0c47b246b"
+  },
+  ".cursor/skills/react-best-practices/rules/server-cache-react.md": {
+    "mtime": 1774788832.2050867,
+    "seen": 1787736773.0150206,
+    "ast_hash": "bc168ee66c4378854c7aa23cb9ca1369",
+    "semantic_hash": "bc168ee66c4378854c7aa23cb9ca1369"
+  },
+  ".cursor/skills/react-best-practices/rules/server-dedup-props.md": {
+    "mtime": 1774788832.4708457,
+    "seen": 1787736773.0150206,
+    "ast_hash": "86bf6f2d562ca98bca778a5b9d2f0251",
+    "semantic_hash": "86bf6f2d562ca98bca778a5b9d2f0251"
+  },
+  ".cursor/skills/react-best-practices/rules/server-parallel-fetching.md": {
+    "mtime": 1774788832.7885303,
+    "seen": 1787736773.0150206,
+    "ast_hash": "1a36cf0b49a1a498fc1150afbf7a42c2",
+    "semantic_hash": "1a36cf0b49a1a498fc1150afbf7a42c2"
+  },
+  ".cursor/skills/react-best-practices/rules/server-serialization.md": {
+    "mtime": 1774788832.7885303,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e6d34426614852685f43609dd9e3b250",
+    "semantic_hash": "e6d34426614852685f43609dd9e3b250"
+  },
+  ".cursor/skills/security-best-practices/SKILL.md": {
+    "mtime": 1774788833.3377855,
+    "seen": 1787736773.0150206,
+    "ast_hash": "b08372c23dacb9a68c62221f53fd9cbf",
+    "semantic_hash": "b08372c23dacb9a68c62221f53fd9cbf"
+  },
+  ".cursor/skills/security-best-practices/references/golang-general-backend-security.md": {
+    "mtime": 1774788833.3465748,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5168d64a5690ad1334f3d5472002627e",
+    "semantic_hash": "5168d64a5690ad1334f3d5472002627e"
+  },
+  ".cursor/skills/security-best-practices/references/javascript-express-web-server-security.md": {
+    "mtime": 1774788833.3536763,
+    "seen": 1787736773.0150206,
+    "ast_hash": "1f6c79d3230a07172fa07f7aa48a02a1",
+    "semantic_hash": "1f6c79d3230a07172fa07f7aa48a02a1"
+  },
+  ".cursor/skills/security-best-practices/references/javascript-general-web-frontend-security.md": {
+    "mtime": 1774788833.3465748,
+    "seen": 1787736773.0150206,
+    "ast_hash": "0f75f9aae94b44dde968a6729bc4c3e7",
+    "semantic_hash": "0f75f9aae94b44dde968a6729bc4c3e7"
+  },
+  ".cursor/skills/security-best-practices/references/javascript-jquery-web-frontend-security.md": {
+    "mtime": 1774788833.3438213,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e0ba6a93128b25b2e2cad2c55d5fe6a3",
+    "semantic_hash": "e0ba6a93128b25b2e2cad2c55d5fe6a3"
+  },
+  ".cursor/skills/security-best-practices/references/javascript-typescript-nextjs-web-server-security.md": {
+    "mtime": 1774788833.3519845,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9c35c4ea32498d71d36dd24043154dc2",
+    "semantic_hash": "9c35c4ea32498d71d36dd24043154dc2"
+  },
+  ".cursor/skills/security-best-practices/references/javascript-typescript-react-web-frontend-security.md": {
+    "mtime": 1774788833.3465748,
+    "seen": 1787736773.0150206,
+    "ast_hash": "7c73a7353a76534fb6e4848c5796062d",
+    "semantic_hash": "7c73a7353a76534fb6e4848c5796062d"
+  },
+  ".cursor/skills/security-best-practices/references/javascript-typescript-vue-web-frontend-security.md": {
+    "mtime": 1774788833.3413122,
+    "seen": 1787736773.0150206,
+    "ast_hash": "590ac2115d7159c723146505ad95b969",
+    "semantic_hash": "590ac2115d7159c723146505ad95b969"
+  },
+  ".cursor/skills/security-best-practices/references/python-django-web-server-security.md": {
+    "mtime": 1774788833.3465748,
+    "seen": 1787736773.0150206,
+    "ast_hash": "d61b6b5e4100189cdc4de67e3b666d8d",
+    "semantic_hash": "d61b6b5e4100189cdc4de67e3b666d8d"
+  },
+  ".cursor/skills/security-best-practices/references/python-fastapi-web-server-security.md": {
+    "mtime": 1774788833.6588392,
+    "seen": 1787736773.0150206,
+    "ast_hash": "f80793acf053d3f15d8629f152727c87",
+    "semantic_hash": "f80793acf053d3f15d8629f152727c87"
+  },
+  ".cursor/skills/security-best-practices/references/python-flask-web-server-security.md": {
+    "mtime": 1774788833.662952,
+    "seen": 1787736773.0150206,
+    "ast_hash": "97e2bf7b669bfed5a209788e6df01c3e",
+    "semantic_hash": "97e2bf7b669bfed5a209788e6df01c3e"
+  },
+  ".cursor/skills/subagent-creator/SKILL.md": {
+    "mtime": 1774788834.145271,
+    "seen": 1787736773.0150206,
+    "ast_hash": "d45aa04de3308b809b9e697554c644d7",
+    "semantic_hash": "d45aa04de3308b809b9e697554c644d7"
+  },
+  ".cursor/skills/technical-design-doc-creator/README.md": {
+    "mtime": 1774788834.6273792,
+    "seen": 1787736773.0150206,
+    "ast_hash": "b88b9e06094488b72d0bb9ef2082b118",
+    "semantic_hash": "b88b9e06094488b72d0bb9ef2082b118"
+  },
+  ".cursor/skills/technical-design-doc-creator/SKILL.md": {
+    "mtime": 1774788834.6335413,
+    "seen": 1787736773.0150206,
+    "ast_hash": "017354e90cca52fbd9ffec6fe09fee6a",
+    "semantic_hash": "017354e90cca52fbd9ffec6fe09fee6a"
+  },
+  ".cursor/skills/tlc-spec-driven/SKILL.md": {
+    "mtime": 1774788835.1366043,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5eb1de19910e6b28cbbb9a8176029ce5",
+    "semantic_hash": "5eb1de19910e6b28cbbb9a8176029ce5"
+  },
+  ".cursor/skills/tlc-spec-driven/references/design.md": {
+    "mtime": 1774788835.1452398,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e7ec91ea05dc49d1db8eaddf3aef82de",
+    "semantic_hash": "e7ec91ea05dc49d1db8eaddf3aef82de"
+  },
+  ".cursor/skills/tlc-spec-driven/references/implement.md": {
+    "mtime": 1774788835.1452398,
+    "seen": 1787736773.0150206,
+    "ast_hash": "bd31501b5957a6a79c555fe3580f876c",
+    "semantic_hash": "bd31501b5957a6a79c555fe3580f876c"
+  },
+  ".cursor/skills/tlc-spec-driven/references/specify.md": {
+    "mtime": 1774788835.4377973,
+    "seen": 1787736773.0150206,
+    "ast_hash": "018690ac09d4c58b742ec2c403b5824c",
+    "semantic_hash": "018690ac09d4c58b742ec2c403b5824c"
+  },
+  ".cursor/skills/tlc-spec-driven/references/tasks.md": {
+    "mtime": 1774788835.433814,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9f3da407e8e70141946219232eef9066",
+    "semantic_hash": "9f3da407e8e70141946219232eef9066"
+  },
+  ".cursor/skills/web-design-guidelines/SKILL.md": {
+    "mtime": 1774788835.8691685,
+    "seen": 1787736773.0150206,
+    "ast_hash": "fb2f1486f0d4eb25198cb5d7a960d58d",
+    "semantic_hash": "fb2f1486f0d4eb25198cb5d7a960d58d"
+  },
+  ".gemini/skills/best-practices/SKILL.md": {
+    "mtime": 1774788810.7436862,
+    "seen": 1787736773.0150206,
+    "ast_hash": "73f44868a94ab067b62405d49d6f5aa0",
+    "semantic_hash": "73f44868a94ab067b62405d49d6f5aa0"
+  },
+  ".gemini/skills/docs-writer/SKILL.md": {
+    "mtime": 1774788811.2440016,
+    "seen": 1787736773.0150206,
+    "ast_hash": "b308c48ecaaff4d1e483dea39f212762",
+    "semantic_hash": "b308c48ecaaff4d1e483dea39f212762"
+  },
+  ".gemini/skills/frontend-design/SKILL.md": {
+    "mtime": 1774788811.7763686,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e5e7e8355eb34cbb9c431086c6781b48",
+    "semantic_hash": "e5e7e8355eb34cbb9c431086c6781b48"
+  },
+  ".gemini/skills/security-best-practices/references/golang-general-backend-security.md": {
+    "mtime": 1774788833.3465748,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5168d64a5690ad1334f3d5472002627e",
+    "semantic_hash": "5168d64a5690ad1334f3d5472002627e"
+  },
+  ".gemini/skills/security-best-practices/references/javascript-express-web-server-security.md": {
+    "mtime": 1774788833.3536763,
+    "seen": 1787736773.0150206,
+    "ast_hash": "1f6c79d3230a07172fa07f7aa48a02a1",
+    "semantic_hash": "1f6c79d3230a07172fa07f7aa48a02a1"
+  },
+  ".gemini/skills/security-best-practices/references/javascript-general-web-frontend-security.md": {
+    "mtime": 1774788833.3465748,
+    "seen": 1787736773.0150206,
+    "ast_hash": "0f75f9aae94b44dde968a6729bc4c3e7",
+    "semantic_hash": "0f75f9aae94b44dde968a6729bc4c3e7"
+  },
+  ".gemini/skills/security-best-practices/references/javascript-jquery-web-frontend-security.md": {
+    "mtime": 1774788833.3438213,
+    "seen": 1787736773.0150206,
+    "ast_hash": "e0ba6a93128b25b2e2cad2c55d5fe6a3",
+    "semantic_hash": "e0ba6a93128b25b2e2cad2c55d5fe6a3"
+  },
+  ".gemini/skills/security-best-practices/references/javascript-typescript-nextjs-web-server-security.md": {
+    "mtime": 1774788833.3519845,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9c35c4ea32498d71d36dd24043154dc2",
+    "semantic_hash": "9c35c4ea32498d71d36dd24043154dc2"
+  },
+  ".gemini/skills/security-best-practices/references/javascript-typescript-react-web-frontend-security.md": {
+    "mtime": 1774788833.3465748,
+    "seen": 1787736773.0150206,
+    "ast_hash": "7c73a7353a76534fb6e4848c5796062d",
+    "semantic_hash": "7c73a7353a76534fb6e4848c5796062d"
+  },
+  ".trae/skills/tlc-spec-driven/references/tasks.md": {
+    "mtime": 1774788835.433814,
+    "seen": 1787736773.0150206,
+    "ast_hash": "9f3da407e8e70141946219232eef9066",
+    "semantic_hash": "9f3da407e8e70141946219232eef9066"
+  },
+  ".trae/skills/tlc-spec-driven/references/validate.md": {
+    "mtime": 1774788835.4367867,
+    "seen": 1787736773.0150206,
+    "ast_hash": "1c91dc8da2242cd4ce9f950bd89171f7",
+    "semantic_hash": "1c91dc8da2242cd4ce9f950bd89171f7"
+  },
+  ".trae/skills/web-design-guidelines/SKILL.md": {
+    "mtime": 1774788835.8691685,
+    "seen": 1787736773.0150206,
+    "ast_hash": "fb2f1486f0d4eb25198cb5d7a960d58d",
+    "semantic_hash": "fb2f1486f0d4eb25198cb5d7a960d58d"
+  },
+  ".trae/skills/web-design-guidelines/references/guideline.md": {
+    "mtime": 1774788835.870757,
+    "seen": 1787736773.0150206,
+    "ast_hash": "cef6bb2465efba173f178ef6cd4c4d24",
+    "semantic_hash": "cef6bb2465efba173f178ef6cd4c4d24"
+  },
+  "AGENTS.md": {
+    "mtime": 1784824553.9934173,
+    "seen": 1787736773.0150206,
+    "ast_hash": "41e7ae055a30dad890974168cc0b30fe",
+    "semantic_hash": "41e7ae055a30dad890974168cc0b30fe"
+  },
+  "CONTEXT.md": {
+    "mtime": 1784919639.4999807,
+    "seen": 1787736773.0150206,
+    "ast_hash": "6ad501094e0bf054b8365160351907a8",
+    "semantic_hash": "6ad501094e0bf054b8365160351907a8"
+  },
+  "README.md": {
+    "mtime": 1784824481.4612086,
+    "seen": 1787736773.0150206,
+    "ast_hash": "182d7b9d80f462e905a66db77f623d3b",
+    "semantic_hash": "182d7b9d80f462e905a66db77f623d3b"
+  },
+  "skills/design-md/SKILL.md": {
+    "mtime": 1772744576.0,
+    "seen": 1787736773.0150206,
+    "ast_hash": "4b266b875f3395ac7f4ca794d6cab5f6",
+    "semantic_hash": "4b266b875f3395ac7f4ca794d6cab5f6"
+  },
+  "skills/design-md/examples/DESIGN.md": {
+    "mtime": 1772744576.0,
+    "seen": 1787736773.0150206,
+    "ast_hash": "40dd3711ad93801345ba8d0317feb28b",
+    "semantic_hash": "40dd3711ad93801345ba8d0317feb28b"
+  },
+  "skills/enhance-prompt/SKILL.md": {
+    "mtime": 1772744576.0,
+    "seen": 1787736773.0150206,
+    "ast_hash": "6b8d09d5631e94be48010ba277c1b5ce",
+    "semantic_hash": "6b8d09d5631e94be48010ba277c1b5ce"
+  },
+  "skills/react-components/SKILL.md": {
+    "mtime": 1772744576.0,
+    "seen": 1787736773.0150206,
+    "ast_hash": "0385b144247cb4469712cf1b979309de",
+    "semantic_hash": "0385b144247cb4469712cf1b979309de"
+  },
+  "skills/remotion/SKILL.md": {
+    "mtime": 1772744576.0,
+    "seen": 1787736773.0150206,
+    "ast_hash": "a98e08c36d00621cfa9c9146e7ec73c2",
+    "semantic_hash": "a98e08c36d00621cfa9c9146e7ec73c2"
+  },
+  "skills/shadcn-ui/SKILL.md": {
+    "mtime": 1772744576.0,
+    "seen": 1787736773.0150206,
+    "ast_hash": "97f6bb28fde45eab6780b5090f3b12fd",
+    "semantic_hash": "97f6bb28fde45eab6780b5090f3b12fd"
+  },
+  "skills/stitch-loop/SKILL.md": {
+    "mtime": 1772744576.0,
+    "seen": 1787736773.0150206,
+    "ast_hash": "ce307451363e2183bb550c02cdc44a39",
+    "semantic_hash": "ce307451363e2183bb550c02cdc44a39"
+  },
+  "test_results.txt": {
+    "mtime": 1774783770.7160325,
+    "seen": 1787736773.0150206,
+    "ast_hash": "f4b43edf7a5f03f0060750492bee3ff8",
+    "semantic_hash": "f4b43edf7a5f03f0060750492bee3ff8"
+  },
+  "public/boleia-logo.png": {
+    "mtime": 1784901560.8688016,
+    "seen": 1787736773.0150206,
+    "ast_hash": "7d4572de2c91763c0fd0e680f52a4794",
+    "semantic_hash": "7d4572de2c91763c0fd0e680f52a4794"
+  },
+  "public/favicon.svg": {
+    "mtime": 1773398644.7858582,
+    "seen": 1787736773.0150206,
+    "ast_hash": "7e840862161341271697daa99a40d76b",
+    "semantic_hash": "7e840862161341271697daa99a40d76b"
+  },
+  "public/icons.svg": {
+    "mtime": 1773398644.8221045,
+    "seen": 1787736773.0150206,
+    "ast_hash": "3b4fcfcf393eca4d264dca4a4663bc37",
+    "semantic_hash": "3b4fcfcf393eca4d264dca4a4663bc37"
+  },
+  "src/assets/hero.png": {
+    "mtime": 1773398644.7215855,
+    "seen": 1787736773.0150206,
+    "ast_hash": "5cf2b0762834cdddc0dd3ec1397b5011",
+    "semantic_hash": "5cf2b0762834cdddc0dd3ec1397b5011"
+  }
+}

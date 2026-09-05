@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { resolveAgreementPricing } from '../utils/resolveAgreementPricing.js';
 import { promoteWaitlist } from './WaitlistService.js';
 
 /**
@@ -142,6 +143,70 @@ export async function leavePassenger(acordoId, passengerId) {
   }
 
   return depois;
+}
+
+/**
+ * Adenda: único caminho de serviço para mutar preços / n_passageiros_contrato.
+ * Default de n_passageiros = COUNT de passageiros activos; se passado, deve
+ * coincidir com esse COUNT (MVP — evita fantasmas).
+ *
+ * @param {string} acordoId
+ * @param {{
+ *   modo_preco: 'POR_PASSAGEIRO' | 'TOTAL_ACORDO',
+ *   valor_ask_kz: number,
+ *   n_passageiros?: number,
+ * }} input
+ */
+export async function renegotiateAgreementPricing(acordoId, input) {
+  if (!acordoId) {
+    throw new Error('ID do acordo é obrigatório.');
+  }
+  if (!input || !input.modo_preco || input.valor_ask_kz == null) {
+    throw new Error('modo_preco e valor_ask_kz são obrigatórios.');
+  }
+
+  let nPassageiros = input.n_passageiros;
+  if (nPassageiros == null) {
+    const { count, error: countError } = await supabase
+      .from('acordos_passageiros')
+      .select('*', { count: 'exact', head: true })
+      .eq('acordo_id', acordoId)
+      .eq('estado', 'activo');
+
+    if (countError) throw countError;
+    nPassageiros = count ?? 0;
+  }
+
+  // Validação client-side espelhada da RPC (POR_PASSAGEIRO / TOTAL + resto).
+  resolveAgreementPricing({
+    modo_preco: input.modo_preco,
+    valor_ask_kz: input.valor_ask_kz,
+    n_passageiros: nPassageiros,
+  });
+
+  const { data: acordoIdOut, error: rpcError } = await supabase.rpc(
+    'renegotiate_agreement_pricing',
+    {
+      p_acordo_id: acordoId,
+      p_modo_preco: input.modo_preco,
+      p_valor_ask_kz: input.valor_ask_kz,
+      p_n_passageiros: nPassageiros,
+    },
+  );
+
+  if (rpcError) {
+    throw new Error(rpcError.message || 'Falha ao renegociar preço do acordo.');
+  }
+
+  const id = acordoIdOut ?? acordoId;
+  const { data, error } = await supabase
+    .from('acordos')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) throw error;
+  return data;
 }
 
 /**

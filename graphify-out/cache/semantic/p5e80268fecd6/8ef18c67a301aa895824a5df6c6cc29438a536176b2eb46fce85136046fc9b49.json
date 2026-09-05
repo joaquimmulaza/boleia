@@ -1,0 +1,1 @@
+{"nodes": [{"id": "docs_writer_skill", "label": "Docs Writer", "file_type": "code", "source_file": ".gemini/skills/docs-writer/SKILL.md", "rationale": "General documentation tool for READMEs and guides, distinct from technical design docs."}], "edges": [], "hyperedges": []}

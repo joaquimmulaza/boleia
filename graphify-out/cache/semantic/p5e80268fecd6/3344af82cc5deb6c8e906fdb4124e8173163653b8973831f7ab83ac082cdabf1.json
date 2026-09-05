@@ -1,0 +1,1 @@
+{"nodes": [{"id": "codex_skills_react_best_practices_rules_async_suspense_boundaries", "label": "Strategic Suspense Boundaries", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/async-suspense-boundaries.md", "rationale": "Enables streaming and faster initial paint."}], "edges": [], "hyperedges": []}

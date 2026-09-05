@@ -1,0 +1,24 @@
+---
+description: Stack UI obrigatória — v0 (One), UI Skills, shadcn, Mobbin free-safe. Aplicar em qualquer tarefa de interface ou UX.
+alwaysApply: true
+---
+
+# UI Stack (v0-first)
+
+Quando o pedido tocar UI, UX, ecrãs, componentes visuais, layout ou polish:
+
+1. **Não** usar Penpot / Superdesign / Stitch como SoT.
+2. **UI Skills MCP** (`user-UI Skills MCP`): `list_skills` / `get_skill` (ex. `ibelick/baseline-ui`) antes de inventar spacing/hierarquia.
+3. **shadcn MCP** (`plugin-shadcn-shadcn`): search → view/examples → `get_add_command_for_items`; primitivos em `src/components/ui/` (**só `.jsx`/`.js`**).
+4. **Mobbin** (`plugin-mobbin-mobbin`) — free-safe apenas:
+   - `mode: "standard"` (nunca `deep`)
+   - `limit` ≤ 5
+   - `platform: "web"`
+   - Se 403/auth/plano free: **degradar sem bloquear**; anotar no handoff.
+5. **v0 via One** (`user-one`, platform `v0`):
+   - `list_one_integrations` → `search_one_platform_actions` → `get_one_action_knowledge` → `execute_one_action`
+   - Create Chat / Send Message / Get Chat Files
+   - **OBRIGATÓRIO — gerar UI, não só plano:** se o v0 responder com plano/roadmap sem código/preview, enviar imediatamente uma segunda mensagem (Send Message) a mandar **construir/implementar** a interface (ex.: «Implementa agora o plano: gera o código JSX e o preview da landing completa»). Só considerar o gate design completo quando existir interface gerada (ficheiros/código do chat), não apenas o plano.
+   - Confirmar com o utilizador antes de create/deploy Vercel project
+6. Tokens: mapear para `src/index.css` (`--color-primary`, backgrounds, etc.).
+7. Seguir skills em `.cursor/skills/boleia-agent-loop/ui-designer` e `ui-qa`.

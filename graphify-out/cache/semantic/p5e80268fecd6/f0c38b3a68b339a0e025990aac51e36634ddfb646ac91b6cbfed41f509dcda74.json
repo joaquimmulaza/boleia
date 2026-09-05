@@ -1,0 +1,1 @@
+{"nodes": [{"id": "javascript_jquery_web_frontend_security_jq_xss_001", "label": "JQ-XSS-001: jQuery HTML Injection", "file_type": "rationale", "source_file": ".cline/skills/security-best-practices/references/javascript-jquery-web-frontend-security.md", "rationale": "Untrusted data must not be inserted as HTML via .html(), .append(), etc."}], "edges": [], "hyperedges": []}

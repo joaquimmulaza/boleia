@@ -1,0 +1,1684 @@
+{
+  "communities": {
+    "0": [
+      "agent_skills_playwright_skill_package",
+      "agent_skills_playwright_skill_package_author",
+      "agent_skills_playwright_skill_package_dependencies",
+      "agent_skills_playwright_skill_package_dependencies_playwright",
+      "agent_skills_playwright_skill_package_description",
+      "agent_skills_playwright_skill_package_engines",
+      "agent_skills_playwright_skill_package_engines_node",
+      "agent_skills_playwright_skill_package_keywords",
+      "agent_skills_playwright_skill_package_license",
+      "agent_skills_playwright_skill_package_main",
+      "agent_skills_playwright_skill_package_name",
+      "agent_skills_playwright_skill_package_scripts",
+      "agent_skills_playwright_skill_package_scripts_install_all_browsers",
+      "agent_skills_playwright_skill_package_scripts_setup",
+      "agent_skills_playwright_skill_package_version",
+      "cline_skills_playwright_skill_package_keywords",
+      "codex_skills_playwright_skill_package_keywords",
+      "cursor_skills_playwright_skill_package",
+      "cursor_skills_playwright_skill_package_author",
+      "cursor_skills_playwright_skill_package_dependencies",
+      "cursor_skills_playwright_skill_package_dependencies_playwright",
+      "cursor_skills_playwright_skill_package_description",
+      "cursor_skills_playwright_skill_package_engines",
+      "cursor_skills_playwright_skill_package_engines_node",
+      "cursor_skills_playwright_skill_package_keywords",
+      "cursor_skills_playwright_skill_package_license",
+      "cursor_skills_playwright_skill_package_main",
+      "cursor_skills_playwright_skill_package_name",
+      "cursor_skills_playwright_skill_package_scripts",
+      "cursor_skills_playwright_skill_package_scripts_install_all_browsers",
+      "cursor_skills_playwright_skill_package_scripts_setup",
+      "cursor_skills_playwright_skill_package_version",
+      "gemini_skills_playwright_skill_package",
+      "gemini_skills_playwright_skill_package_author",
+      "gemini_skills_playwright_skill_package_dependencies",
+      "gemini_skills_playwright_skill_package_dependencies_playwright",
+      "gemini_skills_playwright_skill_package_description",
+      "gemini_skills_playwright_skill_package_engines",
+      "gemini_skills_playwright_skill_package_engines_node",
+      "gemini_skills_playwright_skill_package_keywords",
+      "gemini_skills_playwright_skill_package_license",
+      "gemini_skills_playwright_skill_package_main",
+      "gemini_skills_playwright_skill_package_name",
+      "gemini_skills_playwright_skill_package_scripts",
+      "gemini_skills_playwright_skill_package_scripts_install_all_browsers",
+      "gemini_skills_playwright_skill_package_scripts_setup",
+      "gemini_skills_playwright_skill_package_version",
+      "github_skills_playwright_skill_package_keywords",
+      "trae_skills_playwright_skill_package_json_playwright",
+      "trae_skills_playwright_skill_package_json_ref_automation",
+      "trae_skills_playwright_skill_package_json_ref_browser_testing",
+      "trae_skills_playwright_skill_package_json_ref_claude_skill",
+      "trae_skills_playwright_skill_package_json_ref_general_purpose",
+      "trae_skills_playwright_skill_package_json_ref_web_automation",
+      "trae_skills_playwright_skill_package_keywords"
+    ],
+    "1": [
+      "autoprefixer",
+      "eslint",
+      "eslint_js",
+      "eslint_plugin_react_hooks",
+      "eslint_plugin_react_refresh",
+      "globals",
+      "happy_dom",
+      "jsdom",
+      "package_devdependencies",
+      "package_devdependencies_autoprefixer",
+      "package_devdependencies_eslint",
+      "package_devdependencies_eslint_js",
+      "package_devdependencies_eslint_plugin_react_hooks",
+      "package_devdependencies_eslint_plugin_react_refresh",
+      "package_devdependencies_globals",
+      "package_devdependencies_happy_dom",
+      "package_devdependencies_jsdom",
+      "package_devdependencies_postcss",
+      "package_devdependencies_tailwindcss",
+      "package_devdependencies_tailwindcss_vite",
+      "package_devdependencies_testing_library_dom",
+      "package_devdependencies_testing_library_jest_dom",
+      "package_devdependencies_testing_library_react",
+      "package_devdependencies_types_react",
+      "package_devdependencies_types_react_dom",
+      "package_devdependencies_vite",
+      "package_devdependencies_vite_plugin_pwa",
+      "package_devdependencies_vitejs_plugin_react",
+      "package_devdependencies_vitest",
+      "postcss",
+      "tailwindcss",
+      "tailwindcss_vite",
+      "testing_library_dom",
+      "testing_library_react",
+      "types_react",
+      "types_react_dom",
+      "vite",
+      "vite_plugin_pwa",
+      "vitejs_plugin_react",
+      "vitest"
+    ],
+    "2": [
+      "cline_skills_react_best_practices_agents",
+      "cline_skills_react_best_practices_readme",
+      "cline_skills_react_best_practices_rules_advanced_event_handler_refs",
+      "cline_skills_react_best_practices_rules_advanced_init_once",
+      "cline_skills_react_best_practices_rules_advanced_use_latest",
+      "cline_skills_react_best_practices_rules_client_event_listeners",
+      "cline_skills_react_best_practices_rules_client_localstorage_schema",
+      "cline_skills_react_best_practices_rules_client_passive_event_listeners",
+      "cline_skills_react_best_practices_rules_client_swr_dedup",
+      "cline_skills_react_best_practices_rules_js_batch_dom_css",
+      "cline_skills_react_best_practices_rules_js_cache_function_results",
+      "cline_skills_react_best_practices_rules_js_cache_property_access",
+      "cline_skills_react_best_practices_rules_js_cache_storage",
+      "cline_skills_react_best_practices_rules_js_combine_iterations",
+      "cline_skills_react_best_practices_rules_js_early_exit",
+      "cline_skills_react_best_practices_rules_js_hoist_regexp",
+      "cline_skills_react_best_practices_rules_js_index_maps",
+      "cline_skills_react_best_practices_rules_js_length_check_first",
+      "cline_skills_react_best_practices_rules_js_min_max_loop",
+      "cline_skills_react_best_practices_rules_js_set_map_lookups",
+      "cline_skills_react_best_practices_rules_js_tosorted_immutable",
+      "cline_skills_react_best_practices_rules_rendering_activity",
+      "cline_skills_react_best_practices_rules_rendering_animate_svg_wrapper",
+      "cline_skills_react_best_practices_rules_rendering_conditional_render",
+      "cline_skills_react_best_practices_rules_rendering_content_visibility",
+      "cline_skills_react_best_practices_rules_rendering_usetransition_loading",
+      "cline_skills_react_best_practices_rules_rerender_defer_reads",
+      "cline_skills_react_best_practices_rules_rerender_derived_state",
+      "cline_skills_react_best_practices_rules_rerender_lazy_state_init",
+      "cline_skills_react_best_practices_rules_rerender_memo",
+      "cline_skills_react_best_practices_rules_rerender_memo_with_default_value",
+      "cline_skills_react_best_practices_rules_rerender_simple_expression_in_memo",
+      "cline_skills_react_best_practices_rules_rerender_transitions",
+      "cline_skills_react_best_practices_rules_rerender_use_ref_transient_values",
+      "cline_skills_react_best_practices_rules_server_after_nonblocking",
+      "cline_skills_react_best_practices_rules_server_parallel_fetching",
+      "cline_skills_react_best_practices_skill"
+    ],
+    "3": [
+      "lucide_react",
+      "package",
+      "package_dependencies",
+      "package_dependencies_lucide_react",
+      "package_dependencies_maplibre_gl",
+      "package_dependencies_react",
+      "package_dependencies_react_dom",
+      "package_dependencies_react_router_dom",
+      "package_dependencies_sentry_react",
+      "package_dependencies_supabase_supabase_js",
+      "package_dependencies_uuid",
+      "package_dependencies_workbox_core",
+      "package_dependencies_workbox_precaching",
+      "package_dependencies_workbox_routing",
+      "package_dependencies_workbox_window",
+      "package_json_maplibre_gl",
+      "package_name",
+      "package_private",
+      "package_scripts",
+      "package_scripts_build",
+      "package_scripts_dev",
+      "package_scripts_lint",
+      "package_scripts_preview",
+      "package_scripts_test",
+      "package_scripts_test_run",
+      "package_type",
+      "package_version",
+      "react",
+      "react_dom",
+      "react_router_dom",
+      "sentry_react",
+      "supabase_supabase_js",
+      "uuid",
+      "workbox_core",
+      "workbox_precaching",
+      "workbox_routing",
+      "workbox_window"
+    ],
+    "4": [
+      "agent_skills_web_design_guidelines_skill",
+      "codenavi_skill",
+      "cursor_skills_technical_design_doc_creator_skill",
+      "cursor_skills_tlc_spec_driven_skill",
+      "docs_writer_style_guide",
+      "frontend_design_color",
+      "frontend_design_motion",
+      "frontend_design_typography",
+      "gemini_skills_docs_writer_skill",
+      "gemini_skills_frontend_design_skill",
+      "mermaid_studio_skill",
+      "playwright_api_reference",
+      "playwright_skill",
+      "tlc_spec_driven_brownfield",
+      "tlc_spec_driven_brownfield_mapping",
+      "tlc_spec_driven_concerns",
+      "tlc_spec_driven_design",
+      "tlc_spec_driven_execute",
+      "tlc_spec_driven_knowledge_chain",
+      "tlc_spec_driven_quick_mode",
+      "tlc_spec_driven_specify",
+      "tlc_spec_driven_state",
+      "tlc_spec_driven_tasks",
+      "web_design_guidelines_reference"
+    ],
+    "5": [
+      "src_components_onboardingpermissions",
+      "src_components_onboardingpermissions_checkshouldskip",
+      "src_components_onboardingpermissions_integration_test",
+      "src_components_onboardingpermissions_integration_test_renderwithauth",
+      "src_components_onboardingpermissions_onboardingpermissions",
+      "src_components_protectedroute",
+      "src_components_protectedroute_protectedroute",
+      "src_components_protectedroute_test",
+      "src_components_protectedroute_test_renderwithrouter",
+      "src_contexts_authcontext",
+      "src_contexts_authcontext_authcontext",
+      "src_contexts_authcontext_authprovider",
+      "src_contexts_authcontext_test",
+      "src_contexts_authcontext_test_testcomponent",
+      "src_contexts_authcontext_useauth",
+      "src_layouts_layout",
+      "src_layouts_layout_layout",
+      "src_layouts_layout_test",
+      "src_layouts_layout_test_renderwithrouterandtheme"
+    ],
+    "6": [
+      "agent_skills_playwright_skill_lib_helpers",
+      "agent_skills_playwright_skill_lib_helpers_authenticate",
+      "agent_skills_playwright_skill_lib_helpers_chromium_firefox_webkit",
+      "agent_skills_playwright_skill_lib_helpers_createcontext",
+      "agent_skills_playwright_skill_lib_helpers_createpage",
+      "agent_skills_playwright_skill_lib_helpers_detectdevservers",
+      "agent_skills_playwright_skill_lib_helpers_extracttabledata",
+      "agent_skills_playwright_skill_lib_helpers_extracttexts",
+      "agent_skills_playwright_skill_lib_helpers_getextraheadersfromenv",
+      "agent_skills_playwright_skill_lib_helpers_handlecookiebanner",
+      "agent_skills_playwright_skill_lib_helpers_launchbrowser",
+      "agent_skills_playwright_skill_lib_helpers_retrywithbackoff",
+      "agent_skills_playwright_skill_lib_helpers_safeclick",
+      "agent_skills_playwright_skill_lib_helpers_safetype",
+      "agent_skills_playwright_skill_lib_helpers_scrollpage",
+      "agent_skills_playwright_skill_lib_helpers_takescreenshot",
+      "agent_skills_playwright_skill_lib_helpers_waitforpageready"
+    ],
+    "7": [
+      "cline_skills_playwright_skill_lib_helpers",
+      "cline_skills_playwright_skill_lib_helpers_authenticate",
+      "cline_skills_playwright_skill_lib_helpers_chromium_firefox_webkit",
+      "cline_skills_playwright_skill_lib_helpers_createcontext",
+      "cline_skills_playwright_skill_lib_helpers_createpage",
+      "cline_skills_playwright_skill_lib_helpers_detectdevservers",
+      "cline_skills_playwright_skill_lib_helpers_extracttabledata",
+      "cline_skills_playwright_skill_lib_helpers_extracttexts",
+      "cline_skills_playwright_skill_lib_helpers_getextraheadersfromenv",
+      "cline_skills_playwright_skill_lib_helpers_handlecookiebanner",
+      "cline_skills_playwright_skill_lib_helpers_launchbrowser",
+      "cline_skills_playwright_skill_lib_helpers_retrywithbackoff",
+      "cline_skills_playwright_skill_lib_helpers_safeclick",
+      "cline_skills_playwright_skill_lib_helpers_safetype",
+      "cline_skills_playwright_skill_lib_helpers_scrollpage",
+      "cline_skills_playwright_skill_lib_helpers_takescreenshot",
+      "cline_skills_playwright_skill_lib_helpers_waitforpageready"
+    ],
+    "8": [
+      "codex_skills_playwright_skill_lib_helpers",
+      "codex_skills_playwright_skill_lib_helpers_authenticate",
+      "codex_skills_playwright_skill_lib_helpers_chromium_firefox_webkit",
+      "codex_skills_playwright_skill_lib_helpers_createcontext",
+      "codex_skills_playwright_skill_lib_helpers_createpage",
+      "codex_skills_playwright_skill_lib_helpers_detectdevservers",
+      "codex_skills_playwright_skill_lib_helpers_extracttabledata",
+      "codex_skills_playwright_skill_lib_helpers_extracttexts",
+      "codex_skills_playwright_skill_lib_helpers_getextraheadersfromenv",
+      "codex_skills_playwright_skill_lib_helpers_handlecookiebanner",
+      "codex_skills_playwright_skill_lib_helpers_launchbrowser",
+      "codex_skills_playwright_skill_lib_helpers_retrywithbackoff",
+      "codex_skills_playwright_skill_lib_helpers_safeclick",
+      "codex_skills_playwright_skill_lib_helpers_safetype",
+      "codex_skills_playwright_skill_lib_helpers_scrollpage",
+      "codex_skills_playwright_skill_lib_helpers_takescreenshot",
+      "codex_skills_playwright_skill_lib_helpers_waitforpageready"
+    ],
+    "9": [
+      "cursor_skills_playwright_skill_lib_helpers",
+      "cursor_skills_playwright_skill_lib_helpers_authenticate",
+      "cursor_skills_playwright_skill_lib_helpers_chromium_firefox_webkit",
+      "cursor_skills_playwright_skill_lib_helpers_createcontext",
+      "cursor_skills_playwright_skill_lib_helpers_createpage",
+      "cursor_skills_playwright_skill_lib_helpers_detectdevservers",
+      "cursor_skills_playwright_skill_lib_helpers_extracttabledata",
+      "cursor_skills_playwright_skill_lib_helpers_extracttexts",
+      "cursor_skills_playwright_skill_lib_helpers_getextraheadersfromenv",
+      "cursor_skills_playwright_skill_lib_helpers_handlecookiebanner",
+      "cursor_skills_playwright_skill_lib_helpers_launchbrowser",
+      "cursor_skills_playwright_skill_lib_helpers_retrywithbackoff",
+      "cursor_skills_playwright_skill_lib_helpers_safeclick",
+      "cursor_skills_playwright_skill_lib_helpers_safetype",
+      "cursor_skills_playwright_skill_lib_helpers_scrollpage",
+      "cursor_skills_playwright_skill_lib_helpers_takescreenshot",
+      "cursor_skills_playwright_skill_lib_helpers_waitforpageready"
+    ],
+    "10": [
+      "gemini_skills_playwright_skill_lib_helpers",
+      "gemini_skills_playwright_skill_lib_helpers_authenticate",
+      "gemini_skills_playwright_skill_lib_helpers_chromium_firefox_webkit",
+      "gemini_skills_playwright_skill_lib_helpers_createcontext",
+      "gemini_skills_playwright_skill_lib_helpers_createpage",
+      "gemini_skills_playwright_skill_lib_helpers_detectdevservers",
+      "gemini_skills_playwright_skill_lib_helpers_extracttabledata",
+      "gemini_skills_playwright_skill_lib_helpers_extracttexts",
+      "gemini_skills_playwright_skill_lib_helpers_getextraheadersfromenv",
+      "gemini_skills_playwright_skill_lib_helpers_handlecookiebanner",
+      "gemini_skills_playwright_skill_lib_helpers_launchbrowser",
+      "gemini_skills_playwright_skill_lib_helpers_retrywithbackoff",
+      "gemini_skills_playwright_skill_lib_helpers_safeclick",
+      "gemini_skills_playwright_skill_lib_helpers_safetype",
+      "gemini_skills_playwright_skill_lib_helpers_scrollpage",
+      "gemini_skills_playwright_skill_lib_helpers_takescreenshot",
+      "gemini_skills_playwright_skill_lib_helpers_waitforpageready"
+    ],
+    "11": [
+      "github_skills_playwright_skill_lib_helpers",
+      "github_skills_playwright_skill_lib_helpers_authenticate",
+      "github_skills_playwright_skill_lib_helpers_chromium_firefox_webkit",
+      "github_skills_playwright_skill_lib_helpers_createcontext",
+      "github_skills_playwright_skill_lib_helpers_createpage",
+      "github_skills_playwright_skill_lib_helpers_detectdevservers",
+      "github_skills_playwright_skill_lib_helpers_extracttabledata",
+      "github_skills_playwright_skill_lib_helpers_extracttexts",
+      "github_skills_playwright_skill_lib_helpers_getextraheadersfromenv",
+      "github_skills_playwright_skill_lib_helpers_handlecookiebanner",
+      "github_skills_playwright_skill_lib_helpers_launchbrowser",
+      "github_skills_playwright_skill_lib_helpers_retrywithbackoff",
+      "github_skills_playwright_skill_lib_helpers_safeclick",
+      "github_skills_playwright_skill_lib_helpers_safetype",
+      "github_skills_playwright_skill_lib_helpers_scrollpage",
+      "github_skills_playwright_skill_lib_helpers_takescreenshot",
+      "github_skills_playwright_skill_lib_helpers_waitforpageready"
+    ],
+    "12": [
+      "src_components_addressinput",
+      "src_components_addressinput_addressinput",
+      "src_components_autocompletedropdown",
+      "src_components_autocompletedropdown_autocompletedropdown",
+      "src_components_autocompletedropdown_test",
+      "src_components_searchaddressinput",
+      "src_components_searchaddressinput_searchaddressinput",
+      "src_hooks_useautocomplete",
+      "src_hooks_useautocomplete_useautocomplete",
+      "src_services_locationservice",
+      "src_services_locationservice_getplacedetails",
+      "src_services_locationservice_getplacepredictions",
+      "src_services_locationservice_mapfeature",
+      "src_services_locationservice_test",
+      "src_services_locationservice_test_makefeature",
+      "src_services_locationservice_test_makephotonresponse",
+      "src_services_locationservice_test_mockfetch"
+    ],
+    "13": [
+      "trae_skills_playwright_skill_lib_helpers",
+      "trae_skills_playwright_skill_lib_helpers_authenticate",
+      "trae_skills_playwright_skill_lib_helpers_chromium_firefox_webkit",
+      "trae_skills_playwright_skill_lib_helpers_createcontext",
+      "trae_skills_playwright_skill_lib_helpers_createpage",
+      "trae_skills_playwright_skill_lib_helpers_detectdevservers",
+      "trae_skills_playwright_skill_lib_helpers_extracttabledata",
+      "trae_skills_playwright_skill_lib_helpers_extracttexts",
+      "trae_skills_playwright_skill_lib_helpers_getextraheadersfromenv",
+      "trae_skills_playwright_skill_lib_helpers_handlecookiebanner",
+      "trae_skills_playwright_skill_lib_helpers_launchbrowser",
+      "trae_skills_playwright_skill_lib_helpers_retrywithbackoff",
+      "trae_skills_playwright_skill_lib_helpers_safeclick",
+      "trae_skills_playwright_skill_lib_helpers_safetype",
+      "trae_skills_playwright_skill_lib_helpers_scrollpage",
+      "trae_skills_playwright_skill_lib_helpers_takescreenshot",
+      "trae_skills_playwright_skill_lib_helpers_waitforpageready"
+    ],
+    "14": [
+      "auth_users",
+      "supabase_migrations_20260329161035_remote_schema",
+      "supabase_migrations_20260329161035_remote_schema_public_acordos",
+      "supabase_migrations_20260329161035_remote_schema_public_decrement_available_seats",
+      "supabase_migrations_20260329161035_remote_schema_public_faltas",
+      "supabase_migrations_20260329161035_remote_schema_public_handle_acordo_notifications",
+      "supabase_migrations_20260329161035_remote_schema_public_handle_falta_desconto",
+      "supabase_migrations_20260329161035_remote_schema_public_handle_new_notification_push",
+      "supabase_migrations_20260329161035_remote_schema_public_handle_new_user",
+      "supabase_migrations_20260329161035_remote_schema_public_increment_available_seats",
+      "supabase_migrations_20260329161035_remote_schema_public_notificacoes",
+      "supabase_migrations_20260329161035_remote_schema_public_perfis",
+      "supabase_migrations_20260329161035_remote_schema_public_push_subscriptions",
+      "supabase_migrations_20260329161035_remote_schema_public_rls_auto_enable",
+      "supabase_migrations_20260329161035_remote_schema_public_routes",
+      "supabase_migrations_20260329161035_remote_schema_public_veiculos"
+    ],
+    "15": [
+      "src_components_confirmationmodal",
+      "src_components_confirmationmodal_confirmationmodal",
+      "src_components_emptystate",
+      "src_components_emptystate_emptystate",
+      "src_pages_agreementse2e_test",
+      "src_pages_myagreements",
+      "src_pages_myagreements_loadingskeleton",
+      "src_pages_myagreements_myagreements",
+      "src_pages_myagreements_test",
+      "src_services_agreementsservice",
+      "src_services_agreementsservice_approveagreement",
+      "src_services_agreementsservice_cancelagreement",
+      "src_services_agreementsservice_getagreementsforuser",
+      "src_services_agreementsservice_hideagreement",
+      "src_services_agreementsservice_rejectagreement",
+      "src_services_agreementsservice_test"
+    ],
+    "16": [
+      "cline_skills_playwright_skill_package",
+      "cline_skills_playwright_skill_package_author",
+      "cline_skills_playwright_skill_package_dependencies",
+      "cline_skills_playwright_skill_package_dependencies_playwright",
+      "cline_skills_playwright_skill_package_description",
+      "cline_skills_playwright_skill_package_engines",
+      "cline_skills_playwright_skill_package_engines_node",
+      "cline_skills_playwright_skill_package_license",
+      "cline_skills_playwright_skill_package_main",
+      "cline_skills_playwright_skill_package_name",
+      "cline_skills_playwright_skill_package_scripts",
+      "cline_skills_playwright_skill_package_scripts_install_all_browsers",
+      "cline_skills_playwright_skill_package_scripts_setup",
+      "cline_skills_playwright_skill_package_version"
+    ],
+    "17": [
+      "codex_skills_playwright_skill_package",
+      "codex_skills_playwright_skill_package_author",
+      "codex_skills_playwright_skill_package_dependencies",
+      "codex_skills_playwright_skill_package_dependencies_playwright",
+      "codex_skills_playwright_skill_package_description",
+      "codex_skills_playwright_skill_package_engines",
+      "codex_skills_playwright_skill_package_engines_node",
+      "codex_skills_playwright_skill_package_license",
+      "codex_skills_playwright_skill_package_main",
+      "codex_skills_playwright_skill_package_name",
+      "codex_skills_playwright_skill_package_scripts",
+      "codex_skills_playwright_skill_package_scripts_install_all_browsers",
+      "codex_skills_playwright_skill_package_scripts_setup",
+      "codex_skills_playwright_skill_package_version"
+    ],
+    "18": [
+      "github_skills_playwright_skill_package",
+      "github_skills_playwright_skill_package_author",
+      "github_skills_playwright_skill_package_dependencies",
+      "github_skills_playwright_skill_package_dependencies_playwright",
+      "github_skills_playwright_skill_package_description",
+      "github_skills_playwright_skill_package_engines",
+      "github_skills_playwright_skill_package_engines_node",
+      "github_skills_playwright_skill_package_license",
+      "github_skills_playwright_skill_package_main",
+      "github_skills_playwright_skill_package_name",
+      "github_skills_playwright_skill_package_scripts",
+      "github_skills_playwright_skill_package_scripts_install_all_browsers",
+      "github_skills_playwright_skill_package_scripts_setup",
+      "github_skills_playwright_skill_package_version"
+    ],
+    "19": [
+      "src_components_logabsencemodal",
+      "src_components_logabsencemodal_logabsencemodal",
+      "src_pages_absencetracker",
+      "src_pages_absencetracker_absencetracker",
+      "src_pages_absencetracker_test",
+      "src_pages_absencetracker_test_faltadeteste",
+      "src_pages_absencetracker_test_mockgetabsences_mockdata",
+      "src_services_absenceservice",
+      "src_services_absenceservice_getabsences",
+      "src_services_absenceservice_logabsence",
+      "src_utils_formatters",
+      "src_utils_formatters_formatcurrency",
+      "src_utils_formatters_formatdate",
+      "src_utils_formatters_test"
+    ],
+    "20": [
+      "src_components_notificationbell",
+      "src_components_notificationbell_formattimeago",
+      "src_components_notificationbell_notificationbell",
+      "src_components_notificationbell_notificationicon",
+      "src_hooks_usenotifications_usenotifications",
+      "src_hooks_usepushnotifications",
+      "src_hooks_usepushnotifications_test",
+      "src_hooks_usepushnotifications_urlb64touint8array",
+      "src_hooks_usepushnotifications_usepushnotifications",
+      "src_sw",
+      "src_utils_notificationrouter",
+      "src_utils_notificationrouter_notificationroutemap",
+      "src_utils_notificationrouter_resolvenotificationroute",
+      "src_utils_notificationrouter_test"
+    ],
+    "21": [
+      "trae_skills_playwright_skill_package",
+      "trae_skills_playwright_skill_package_author",
+      "trae_skills_playwright_skill_package_dependencies",
+      "trae_skills_playwright_skill_package_dependencies_playwright",
+      "trae_skills_playwright_skill_package_description",
+      "trae_skills_playwright_skill_package_engines",
+      "trae_skills_playwright_skill_package_engines_node",
+      "trae_skills_playwright_skill_package_license",
+      "trae_skills_playwright_skill_package_main",
+      "trae_skills_playwright_skill_package_name",
+      "trae_skills_playwright_skill_package_scripts",
+      "trae_skills_playwright_skill_package_scripts_install_all_browsers",
+      "trae_skills_playwright_skill_package_scripts_setup",
+      "trae_skills_playwright_skill_package_version"
+    ],
+    "22": [
+      "skills_react_components_package",
+      "skills_react_components_package_dependencies",
+      "skills_react_components_package_dependencies_swc_core",
+      "skills_react_components_package_description",
+      "skills_react_components_package_engines",
+      "skills_react_components_package_engines_node",
+      "skills_react_components_package_name",
+      "skills_react_components_package_scripts",
+      "skills_react_components_package_scripts_fetch",
+      "skills_react_components_package_scripts_validate",
+      "skills_react_components_package_type",
+      "skills_react_components_package_version",
+      "swc_core"
+    ],
+    "23": [
+      "src_components_themetoggle",
+      "src_components_themetoggle_test",
+      "src_components_themetoggle_themetoggle",
+      "src_contexts_themecontext",
+      "src_contexts_themecontext_test",
+      "src_contexts_themecontext_test_testcomponent",
+      "src_contexts_themecontext_themecontext",
+      "src_contexts_themecontext_themeprovider",
+      "src_contexts_themecontext_usetheme",
+      "src_pages_landingpage",
+      "src_pages_landingpage_landingpage",
+      "src_pages_landingpage_test",
+      "src_pages_landingpage_test_mocknavigate"
+    ],
+    "24": [
+      "src_pages_vehiclesetup",
+      "src_pages_vehiclesetup_integration_test",
+      "src_pages_vehiclesetup_test",
+      "src_pages_vehiclesetup_test_mockgetuser_mockupsert_mockeq_mockselect",
+      "src_pages_vehiclesetup_test_rendercomponent",
+      "src_pages_vehiclesetup_vehiclesetup",
+      "src_test_supabasetestutils",
+      "src_test_supabasetestutils_createtestuser",
+      "src_test_supabasetestutils_deletetestuser",
+      "src_test_supabasetestutils_supabaselocal",
+      "src_utils_errorhandler",
+      "src_utils_errorhandler_getfriendlyerrormessage",
+      "src_utils_errorhandler_test"
+    ],
+    "25": [
+      "src_app",
+      "src_app_app",
+      "src_app_rootroute",
+      "src_components_updateprompt",
+      "src_components_updateprompt_test",
+      "src_components_updateprompt_updateprompt",
+      "src_main",
+      "src_pages_driverdashboard",
+      "src_pages_driverdashboard_driverdashboard",
+      "src_pages_driverdashboard_test",
+      "src_pages_driverdashboard_test_mockinsert_mockfrom_mockgetuser",
+      "src_pages_driverdashboard_test_mocknavigate"
+    ],
+    "26": [
+      "src_components_acordocardmotorista",
+      "src_components_acordocardmotorista_acordocardmotorista",
+      "src_components_acordocardmotorista_formatkz",
+      "src_components_acordocardpassageiro",
+      "src_components_acordocardpassageiro_acordocardpassageiro",
+      "src_components_acordocardpassageiro_formatkz",
+      "src_components_acordokebabmenu",
+      "src_components_acordokebabmenu_acordokebabmenu",
+      "src_components_estadobadge",
+      "src_components_estadobadge_estadobadge",
+      "src_components_estadobadge_getbadgeclasses"
+    ],
+    "27": [
+      "src_hooks_usenotifications",
+      "src_hooks_usenotifications_test",
+      "src_lib_supabase",
+      "src_lib_supabase_supabase",
+      "src_pages_publishroute",
+      "src_pages_publishroute_publishroute",
+      "src_pages_publishroute_test",
+      "src_pages_publishroute_test_renderwithrouter",
+      "src_services_agreementlifecycle_test",
+      "src_services_routeservice",
+      "src_services_routeservice_publishroute"
+    ],
+    "28": [
+      "src_pages_passengerdashboard",
+      "src_pages_passengerdashboard_formatkwanza",
+      "src_pages_passengerdashboard_passengerdashboard",
+      "src_pages_passengerdashboard_routecard",
+      "src_pages_passengerdashboard_test",
+      "src_pages_passengerdashboard_test_map",
+      "src_pages_passengerdashboard_test_map_constructor",
+      "src_pages_passengerdashboard_test_mockgt_mockfrom_mockdata_mockgetuser_mockeq_mockacordosdata",
+      "src_pages_passengerdashboard_test_mockrequestseat",
+      "src_pages_passengerdashboard_test_rotadeteste",
+      "src_services_agreementsservice_requestseat"
+    ],
+    "29": [
+      "agent_skills_playwright_skill_run",
+      "agent_skills_playwright_skill_run_checkplaywrightinstalled",
+      "agent_skills_playwright_skill_run_cleanupoldtempfiles",
+      "agent_skills_playwright_skill_run_execsync",
+      "agent_skills_playwright_skill_run_fs",
+      "agent_skills_playwright_skill_run_getcodetoexecute",
+      "agent_skills_playwright_skill_run_installplaywright",
+      "agent_skills_playwright_skill_run_main",
+      "agent_skills_playwright_skill_run_path",
+      "agent_skills_playwright_skill_run_wrapcodeifneeded"
+    ],
+    "30": [
+      "cline_skills_playwright_skill_run",
+      "cline_skills_playwright_skill_run_checkplaywrightinstalled",
+      "cline_skills_playwright_skill_run_cleanupoldtempfiles",
+      "cline_skills_playwright_skill_run_execsync",
+      "cline_skills_playwright_skill_run_fs",
+      "cline_skills_playwright_skill_run_getcodetoexecute",
+      "cline_skills_playwright_skill_run_installplaywright",
+      "cline_skills_playwright_skill_run_main",
+      "cline_skills_playwright_skill_run_path",
+      "cline_skills_playwright_skill_run_wrapcodeifneeded"
+    ],
+    "31": [
+      "cline_skills_tlc_spec_driven_references_design",
+      "cline_skills_tlc_spec_driven_references_discuss",
+      "cline_skills_tlc_spec_driven_references_implement",
+      "cline_skills_tlc_spec_driven_references_quick_mode",
+      "cline_skills_tlc_spec_driven_references_session_handoff",
+      "cline_skills_tlc_spec_driven_references_specify",
+      "cline_skills_tlc_spec_driven_references_state_management",
+      "cline_skills_tlc_spec_driven_references_tasks",
+      "cline_skills_tlc_spec_driven_references_validate",
+      "codex_skills_playwright_skill_skill"
+    ],
+    "32": [
+      "codex_skills_playwright_skill_run",
+      "codex_skills_playwright_skill_run_checkplaywrightinstalled",
+      "codex_skills_playwright_skill_run_cleanupoldtempfiles",
+      "codex_skills_playwright_skill_run_execsync",
+      "codex_skills_playwright_skill_run_fs",
+      "codex_skills_playwright_skill_run_getcodetoexecute",
+      "codex_skills_playwright_skill_run_installplaywright",
+      "codex_skills_playwright_skill_run_main",
+      "codex_skills_playwright_skill_run_path",
+      "codex_skills_playwright_skill_run_wrapcodeifneeded"
+    ],
+    "33": [
+      "cursor_skills_playwright_skill_run",
+      "cursor_skills_playwright_skill_run_checkplaywrightinstalled",
+      "cursor_skills_playwright_skill_run_cleanupoldtempfiles",
+      "cursor_skills_playwright_skill_run_execsync",
+      "cursor_skills_playwright_skill_run_fs",
+      "cursor_skills_playwright_skill_run_getcodetoexecute",
+      "cursor_skills_playwright_skill_run_installplaywright",
+      "cursor_skills_playwright_skill_run_main",
+      "cursor_skills_playwright_skill_run_path",
+      "cursor_skills_playwright_skill_run_wrapcodeifneeded"
+    ],
+    "34": [
+      "gemini_skills_playwright_skill_run",
+      "gemini_skills_playwright_skill_run_checkplaywrightinstalled",
+      "gemini_skills_playwright_skill_run_cleanupoldtempfiles",
+      "gemini_skills_playwright_skill_run_execsync",
+      "gemini_skills_playwright_skill_run_fs",
+      "gemini_skills_playwright_skill_run_getcodetoexecute",
+      "gemini_skills_playwright_skill_run_installplaywright",
+      "gemini_skills_playwright_skill_run_main",
+      "gemini_skills_playwright_skill_run_path",
+      "gemini_skills_playwright_skill_run_wrapcodeifneeded"
+    ],
+    "35": [
+      "gemini_skills_security_best_practices_references_javascript_general_web_frontend_security_spec",
+      "gemini_skills_security_best_practices_references_javascript_jquery_web_frontend_security_spec",
+      "gemini_skills_security_best_practices_references_javascript_typescript_react_web_frontend_security_spec",
+      "jq_xss_001",
+      "js_csp_002",
+      "js_msg_001",
+      "js_tt_001",
+      "js_xss_001",
+      "next_csrf_001",
+      "react_xss_001"
+    ],
+    "36": [
+      "github_skills_playwright_skill_run",
+      "github_skills_playwright_skill_run_checkplaywrightinstalled",
+      "github_skills_playwright_skill_run_cleanupoldtempfiles",
+      "github_skills_playwright_skill_run_execsync",
+      "github_skills_playwright_skill_run_fs",
+      "github_skills_playwright_skill_run_getcodetoexecute",
+      "github_skills_playwright_skill_run_installplaywright",
+      "github_skills_playwright_skill_run_main",
+      "github_skills_playwright_skill_run_path",
+      "github_skills_playwright_skill_run_wrapcodeifneeded"
+    ],
+    "37": [
+      "src_hooks_useauthform",
+      "src_hooks_useauthform_useauthform",
+      "src_pages_auth",
+      "src_pages_auth_auth",
+      "src_pages_auth_test",
+      "src_pages_auth_test_mocknavigate",
+      "src_pages_authvalidation_test",
+      "src_pages_authvalidation_test_mocknavigate",
+      "src_utils_validation",
+      "src_utils_validation_validatetelefone"
+    ],
+    "38": [
+      "trae_skills_playwright_skill_run",
+      "trae_skills_playwright_skill_run_checkplaywrightinstalled",
+      "trae_skills_playwright_skill_run_cleanupoldtempfiles",
+      "trae_skills_playwright_skill_run_execsync",
+      "trae_skills_playwright_skill_run_fs",
+      "trae_skills_playwright_skill_run_getcodetoexecute",
+      "trae_skills_playwright_skill_run_installplaywright",
+      "trae_skills_playwright_skill_run_main",
+      "trae_skills_playwright_skill_run_path",
+      "trae_skills_playwright_skill_run_wrapcodeifneeded"
+    ],
+    "39": [
+      "agent_skills_react_best_practices_agents",
+      "codex_skills_react_best_practices_rules_async_dependencies",
+      "codex_skills_react_best_practices_rules_async_parallel",
+      "codex_skills_react_best_practices_rules_bundle_barrel_imports",
+      "codex_skills_react_best_practices_rules_sections",
+      "cursor_skills_react_best_practices_agents_doc",
+      "cursor_skills_react_best_practices_skill",
+      "gemini_skills_best_practices_skill",
+      "react_best_practices_rules_sections"
+    ],
+    "40": [
+      "src_pages_profile",
+      "src_pages_profile_profile",
+      "src_pages_profile_test",
+      "src_services_profileservice",
+      "src_services_profileservice_getprofile",
+      "src_services_profileservice_getvehicle",
+      "src_services_profileservice_test",
+      "src_services_profileservice_updateprofile",
+      "src_services_profileservice_updatevehicle"
+    ],
+    "41": [
+      "agent_skills_security_best_practices_references_golang_general_backend_security_concept",
+      "agent_skills_security_best_practices_references_javascript_express_web_server_security_concept",
+      "agent_skills_security_best_practices_references_javascript_general_web_frontend_security_concept",
+      "agent_skills_security_best_practices_references_javascript_jquery_web_frontend_security_concept",
+      "agent_skills_security_best_practices_references_javascript_typescript_nextjs_web_server_security_concept",
+      "agent_skills_security_best_practices_references_javascript_typescript_react_web_frontend_security_concept",
+      "owasp_cheat_sheet_series"
+    ],
+    "42": [
+      "skills_design_md_examples_design_md_example",
+      "skills_design_md_skill",
+      "skills_enhance_prompt_skill",
+      "skills_react_components_skill",
+      "skills_remotion_skill",
+      "skills_stitch_loop_skill"
+    ],
+    "43": [
+      "cline_skills_react_best_practices_rules_server_auth_actions",
+      "cursor_skills_security_best_practices_references_javascript_express_web_server_security",
+      "cursor_skills_security_best_practices_references_javascript_general_web_frontend_security",
+      "cursor_skills_security_best_practices_references_javascript_jquery_web_frontend_security",
+      "cursor_skills_security_best_practices_references_javascript_typescript_nextjs_web_server_security"
+    ],
+    "44": [
+      "skills_shadcn_ui_examples_data_table",
+      "skills_shadcn_ui_examples_data_table_columns",
+      "skills_shadcn_ui_examples_data_table_data",
+      "skills_shadcn_ui_examples_data_table_datatableexample",
+      "skills_shadcn_ui_examples_data_table_user"
+    ],
+    "45": [
+      "skills_shadcn_ui_examples_form_pattern",
+      "skills_shadcn_ui_examples_form_pattern_formschema",
+      "skills_shadcn_ui_examples_form_pattern_formvalues",
+      "skills_shadcn_ui_examples_form_pattern_userprofileform",
+      "skills_shadcn_ui_examples_form_pattern_userprofileform_onsubmit"
+    ],
+    "46": [
+      "src_components_acordodetailsmodal",
+      "src_components_acordodetailsmodal_acordodetailsmodal",
+      "src_components_acordodetailsmodal_formatkz",
+      "src_components_acordodetailsmodal_test",
+      "src_components_acordodetailsmodal_test_mockacordo"
+    ],
+    "47": [
+      "cline_skills_subagent_creator_skill",
+      "cursor_skills_security_best_practices_references_javascript_typescript_nextjs_web_server_security_next_csp_001",
+      "cursor_skills_security_best_practices_references_javascript_typescript_nextjs_web_server_security_next_headers_001",
+      "cursor_skills_security_best_practices_references_javascript_typescript_nextjs_web_server_security_next_xss_001"
+    ],
+    "48": [
+      "codex_skills_security_best_practices_references_golang_general_backend_security",
+      "codex_skills_security_best_practices_references_javascript_express_web_server_security",
+      "codex_skills_security_best_practices_references_javascript_general_web_frontend_security",
+      "codex_skills_security_best_practices_skill"
+    ],
+    "49": [
+      "skills_remotion_examples_walkthroughcomposition",
+      "skills_remotion_examples_walkthroughcomposition_calculateduration",
+      "skills_remotion_examples_walkthroughcomposition_remotionroot",
+      "skills_remotion_examples_walkthroughcomposition_walkthroughcomposition"
+    ],
+    "50": [
+      "cline_skills_security_best_practices_references_javascript_general_web_frontend_security_js_xss_001",
+      "cline_skills_security_best_practices_references_javascript_typescript_react_web_frontend_security_react_xss_001",
+      "cline_skills_security_best_practices_references_javascript_typescript_vue_web_frontend_security_vue_xss_001"
+    ],
+    "51": [
+      "cline_skills_security_best_practices_references_python_django_web_server_security_django_deploy_001",
+      "cline_skills_security_best_practices_references_python_flask_web_server_security_flask_deploy_001",
+      "cursor_skills_security_best_practices_references_python_fastapi_web_server_security_fastapi_deploy_001"
+    ],
+    "52": [
+      "codex_skills_security_best_practices_references_python_flask_web_server_security_flask_csrf_001",
+      "codex_skills_security_best_practices_references_python_flask_web_server_security_flask_headers_001",
+      "codex_skills_security_best_practices_references_python_flask_web_server_security_flask_sess_001"
+    ],
+    "53": [
+      "skills_react_components_examples_gold_standard_card",
+      "skills_react_components_examples_gold_standard_card_activitycard",
+      "skills_react_components_examples_gold_standard_card_activitycardprops"
+    ],
+    "54": [
+      "skills_react_components_resources_component_template",
+      "skills_react_components_resources_component_template_stitchcomponent",
+      "skills_react_components_resources_component_template_stitchcomponentprops"
+    ],
+    "55": [
+      "skills_remotion_resources_screen_slide_template",
+      "skills_remotion_resources_screen_slide_template_screenslide",
+      "skills_remotion_resources_screen_slide_template_screenslideprops"
+    ],
+    "56": [
+      "skills_shadcn_ui_examples_auth_layout",
+      "skills_shadcn_ui_examples_auth_layout_authlayout",
+      "skills_shadcn_ui_examples_auth_layout_authlayout_onsubmit"
+    ],
+    "57": [
+      "agent_skills_playwright_skill_api_reference",
+      "agent_skills_playwright_skill_skill"
+    ],
+    "58": [
+      "cline_skills_react_best_practices_rules_rendering_hoist_jsx",
+      "cline_skills_react_best_practices_rules_rendering_svg_precision"
+    ],
+    "59": [
+      "cline_skills_react_best_practices_rules_rendering_hydration_no_flicker",
+      "cline_skills_react_best_practices_rules_rendering_hydration_suppress_warning"
+    ],
+    "60": [
+      "cline_skills_react_best_practices_rules_rerender_dependencies",
+      "cline_skills_react_best_practices_rules_rerender_functional_setstate"
+    ],
+    "61": [
+      "cline_skills_react_best_practices_rules_rerender_derived_state_no_effect",
+      "cline_skills_react_best_practices_rules_rerender_move_effect_to_event"
+    ],
+    "62": [
+      "cline_skills_react_best_practices_rules_server_cache_lru",
+      "cline_skills_react_best_practices_rules_server_cache_react"
+    ],
+    "63": [
+      "cline_skills_react_best_practices_rules_server_dedup_props",
+      "cline_skills_react_best_practices_rules_server_serialization"
+    ],
+    "64": [
+      "cline_skills_security_best_practices_references_javascript_express_web_server_security_express_cookie_001",
+      "cline_skills_security_best_practices_references_javascript_express_web_server_security_express_csrf_001"
+    ],
+    "65": [
+      "cline_skills_security_best_practices_references_javascript_express_web_server_security_express_inject_001",
+      "cline_skills_security_best_practices_references_javascript_express_web_server_security_express_input_001"
+    ],
+    "66": [
+      "cline_skills_tlc_spec_driven_references_project_init",
+      "cline_skills_tlc_spec_driven_references_roadmap"
+    ],
+    "67": [
+      "codex_skills_frontend_design_skill",
+      "codex_skills_react_best_practices_agents"
+    ],
+    "68": [
+      "codex_skills_react_best_practices_rules_advanced_event_handler_refs",
+      "codex_skills_react_best_practices_rules_advanced_use_latest"
+    ],
+    "69": [
+      "codex_skills_security_best_practices_references_python_fastapi_web_server_security_fastapi_files_001",
+      "codex_skills_security_best_practices_references_python_fastapi_web_server_security_fastapi_files_002"
+    ],
+    "70": [
+      "codex_skills_security_best_practices_references_python_fastapi_web_server_security_fastapi_headers_001",
+      "codex_skills_security_best_practices_references_python_fastapi_web_server_security_fastapi_xss_001"
+    ],
+    "71": [
+      "cursor_skills_security_best_practices_references_javascript_typescript_nextjs_web_server_security_next_action_001",
+      "cursor_skills_technical_design_doc_creator_readme"
+    ],
+    "72": [
+      "drop_rotas_diarias",
+      "drop_rotas_diarias_public_handle_falta_desconto"
+    ],
+    "73": [
+      "express_csrf_001",
+      "gemini_skills_security_best_practices_references_javascript_express_web_server_security_spec"
+    ],
+    "74": [
+      "gemini_skills_security_best_practices_references_golang_general_backend_security_spec",
+      "go_http_001"
+    ],
+    "75": [
+      "gemini_skills_security_best_practices_references_javascript_typescript_nextjs_web_server_security_spec",
+      "next_cache_001"
+    ],
+    "76": [
+      "lint_fix",
+      "lint_fix_sh__entry"
+    ],
+    "77": [
+      "public_acordos",
+      "public_routes"
+    ],
+    "78": [
+      "skills_react_components_scripts_fetch_stitch",
+      "skills_react_components_scripts_fetch_stitch_sh__entry"
+    ],
+    "79": [
+      "skills_react_components_scripts_validate",
+      "skills_react_components_scripts_validate_validatecomponent"
+    ],
+    "80": [
+      "skills_remotion_scripts_download_stitch_asset",
+      "skills_remotion_scripts_download_stitch_asset_sh__entry"
+    ],
+    "81": [
+      "skills_shadcn_ui_scripts_verify_setup",
+      "skills_shadcn_ui_scripts_verify_setup_sh__entry"
+    ],
+    "82": [
+      "vercel",
+      "vercel_rewrites"
+    ],
+    "83": [
+      "ag_md"
+    ],
+    "84": [
+      "agent_skills_tlc_spec_driven_readme"
+    ],
+    "85": [
+      "cline_skills_security_best_practices_references_javascript_express_web_server_security_express_headers_001"
+    ],
+    "86": [
+      "cline_skills_security_best_practices_references_javascript_express_web_server_security_express_redirect_001"
+    ],
+    "87": [
+      "cline_skills_security_best_practices_references_javascript_general_web_frontend_security_js_url_001"
+    ],
+    "88": [
+      "cline_skills_security_best_practices_references_javascript_jquery_web_frontend_security_jq_xss_001"
+    ],
+    "89": [
+      "cline_skills_security_best_practices_references_javascript_typescript_nextjs_web_server_security_next_secrets_001"
+    ],
+    "90": [
+      "cline_skills_security_best_practices_references_python_django_web_server_security_django_config_001"
+    ],
+    "91": [
+      "cline_skills_security_best_practices_references_python_django_web_server_security_django_deploy_002"
+    ],
+    "92": [
+      "cline_skills_security_best_practices_references_python_django_web_server_security_django_sql_001"
+    ],
+    "93": [
+      "cline_skills_security_best_practices_references_python_fastapi_web_server_security_fastapi_auth_003"
+    ],
+    "94": [
+      "cline_skills_web_design_guidelines_skill"
+    ],
+    "95": [
+      "codex_skills_best_practices_skill"
+    ],
+    "96": [
+      "codex_skills_docs_writer_skill"
+    ],
+    "97": [
+      "codex_skills_react_best_practices_rules_advanced_init_once"
+    ],
+    "98": [
+      "codex_skills_react_best_practices_rules_async_api_routes"
+    ],
+    "99": [
+      "codex_skills_react_best_practices_rules_async_defer_await"
+    ],
+    "100": [
+      "codex_skills_react_best_practices_rules_async_suspense_boundaries"
+    ],
+    "101": [
+      "codex_skills_react_best_practices_rules_bundle_conditional"
+    ],
+    "102": [
+      "codex_skills_react_best_practices_rules_bundle_defer_third_party"
+    ],
+    "103": [
+      "codex_skills_react_best_practices_rules_bundle_dynamic_imports"
+    ],
+    "104": [
+      "codex_skills_react_best_practices_rules_bundle_preload"
+    ],
+    "105": [
+      "codex_skills_react_best_practices_rules_client_event_listeners"
+    ],
+    "106": [
+      "codex_skills_react_best_practices_rules_client_localstorage_schema"
+    ],
+    "107": [
+      "codex_skills_react_best_practices_rules_client_passive_event_listeners"
+    ],
+    "108": [
+      "codex_skills_react_best_practices_rules_client_swr_dedup"
+    ],
+    "109": [
+      "codex_skills_react_best_practices_rules_js_batch_dom_css"
+    ],
+    "110": [
+      "codex_skills_react_best_practices_rules_js_cache_function_results"
+    ],
+    "111": [
+      "codex_skills_react_best_practices_rules_js_cache_property_access"
+    ],
+    "112": [
+      "codex_skills_react_best_practices_rules_js_cache_storage"
+    ],
+    "113": [
+      "codex_skills_react_best_practices_rules_js_combine_iterations"
+    ],
+    "114": [
+      "codex_skills_react_best_practices_rules_js_early_exit"
+    ],
+    "115": [
+      "codex_skills_react_best_practices_rules_js_hoist_regexp"
+    ],
+    "116": [
+      "codex_skills_react_best_practices_rules_js_index_maps"
+    ],
+    "117": [
+      "codex_skills_react_best_practices_rules_js_length_check_first"
+    ],
+    "118": [
+      "codex_skills_react_best_practices_rules_js_min_max_loop"
+    ],
+    "119": [
+      "codex_skills_react_best_practices_rules_js_set_map_lookups"
+    ],
+    "120": [
+      "codex_skills_react_best_practices_rules_js_tosorted_immutable"
+    ],
+    "121": [
+      "codex_skills_react_best_practices_rules_rendering_activity"
+    ],
+    "122": [
+      "codex_skills_react_best_practices_rules_rendering_animate_svg_wrapper"
+    ],
+    "123": [
+      "codex_skills_react_best_practices_rules_rendering_conditional_render"
+    ],
+    "124": [
+      "codex_skills_react_best_practices_rules_rendering_content_visibility"
+    ],
+    "125": [
+      "codex_skills_react_best_practices_rules_rendering_hoist_jsx"
+    ],
+    "126": [
+      "codex_skills_react_best_practices_rules_rendering_hydration_no_flicker"
+    ],
+    "127": [
+      "codex_skills_react_best_practices_rules_rendering_hydration_suppress_warning"
+    ],
+    "128": [
+      "codex_skills_react_best_practices_rules_rendering_svg_precision"
+    ],
+    "129": [
+      "codex_skills_react_best_practices_rules_rendering_usetransition_loading"
+    ],
+    "130": [
+      "codex_skills_react_best_practices_rules_rerender_defer_reads"
+    ],
+    "131": [
+      "codex_skills_react_best_practices_rules_rerender_dependencies"
+    ],
+    "132": [
+      "codex_skills_react_best_practices_rules_rerender_derived_state"
+    ],
+    "133": [
+      "codex_skills_react_best_practices_rules_rerender_derived_state_no_effect"
+    ],
+    "134": [
+      "codex_skills_react_best_practices_rules_rerender_functional_setstate"
+    ],
+    "135": [
+      "codex_skills_react_best_practices_rules_rerender_lazy_state_init"
+    ],
+    "136": [
+      "codex_skills_react_best_practices_rules_rerender_memo"
+    ],
+    "137": [
+      "codex_skills_react_best_practices_rules_rerender_memo_with_default_value"
+    ],
+    "138": [
+      "codex_skills_react_best_practices_rules_rerender_move_effect_to_event"
+    ],
+    "139": [
+      "codex_skills_react_best_practices_rules_rerender_simple_expression_in_memo"
+    ],
+    "140": [
+      "codex_skills_react_best_practices_rules_rerender_transitions"
+    ],
+    "141": [
+      "codex_skills_react_best_practices_rules_rerender_use_ref_transient_values"
+    ],
+    "142": [
+      "codex_skills_react_best_practices_rules_server_after_nonblocking"
+    ],
+    "143": [
+      "codex_skills_react_best_practices_rules_server_auth_actions"
+    ],
+    "144": [
+      "codex_skills_react_best_practices_rules_server_cache_lru"
+    ],
+    "145": [
+      "codex_skills_react_best_practices_rules_server_cache_react"
+    ],
+    "146": [
+      "codex_skills_react_best_practices_rules_server_dedup_props"
+    ],
+    "147": [
+      "codex_skills_react_best_practices_rules_server_parallel_fetching"
+    ],
+    "148": [
+      "codex_skills_react_best_practices_rules_server_serialization"
+    ],
+    "149": [
+      "codex_skills_security_best_practices_references_python_fastapi_web_server_security_fastapi_cors_001"
+    ],
+    "150": [
+      "codex_skills_security_best_practices_references_python_fastapi_web_server_security_fastapi_host_001"
+    ],
+    "151": [
+      "codex_skills_security_best_practices_references_python_fastapi_web_server_security_fastapi_inject_001"
+    ],
+    "152": [
+      "codex_skills_security_best_practices_references_python_fastapi_web_server_security_fastapi_inject_002"
+    ],
+    "153": [
+      "codex_skills_security_best_practices_references_python_fastapi_web_server_security_fastapi_limits_001"
+    ],
+    "154": [
+      "codex_skills_security_best_practices_references_python_fastapi_web_server_security_fastapi_proxy_001"
+    ],
+    "155": [
+      "codex_skills_security_best_practices_references_python_fastapi_web_server_security_fastapi_redirect_001"
+    ],
+    "156": [
+      "codex_skills_security_best_practices_references_python_fastapi_web_server_security_fastapi_ssrf_001"
+    ],
+    "157": [
+      "codex_skills_security_best_practices_references_python_fastapi_web_server_security_fastapi_ssti_001"
+    ],
+    "158": [
+      "codex_skills_security_best_practices_references_python_fastapi_web_server_security_fastapi_supply_001"
+    ],
+    "159": [
+      "codex_skills_security_best_practices_references_python_fastapi_web_server_security_fastapi_upload_001"
+    ],
+    "160": [
+      "codex_skills_security_best_practices_references_python_fastapi_web_server_security_fastapi_ws_001"
+    ],
+    "161": [
+      "codex_skills_security_best_practices_references_python_flask_web_server_security_flask_config_001"
+    ],
+    "162": [
+      "codex_skills_security_best_practices_references_python_flask_web_server_security_flask_cors_001"
+    ],
+    "163": [
+      "codex_skills_security_best_practices_references_python_flask_web_server_security_flask_deploy_002"
+    ],
+    "164": [
+      "codex_skills_security_best_practices_references_python_flask_web_server_security_flask_host_001"
+    ],
+    "165": [
+      "codex_skills_security_best_practices_references_python_flask_web_server_security_flask_http_001"
+    ],
+    "166": [
+      "codex_skills_security_best_practices_references_python_flask_web_server_security_flask_inject_001"
+    ],
+    "167": [
+      "codex_skills_security_best_practices_references_python_flask_web_server_security_flask_inject_002"
+    ],
+    "168": [
+      "codex_skills_security_best_practices_references_python_flask_web_server_security_flask_limits_001"
+    ],
+    "169": [
+      "codex_skills_security_best_practices_references_python_flask_web_server_security_flask_path_001"
+    ],
+    "170": [
+      "codex_skills_security_best_practices_references_python_flask_web_server_security_flask_proxy_001"
+    ],
+    "171": [
+      "codex_skills_security_best_practices_references_python_flask_web_server_security_flask_redirect_001"
+    ],
+    "172": [
+      "codex_skills_security_best_practices_references_python_flask_web_server_security_flask_sess_002"
+    ],
+    "173": [
+      "codex_skills_security_best_practices_references_python_flask_web_server_security_flask_ssrf_001"
+    ],
+    "174": [
+      "codex_skills_security_best_practices_references_python_flask_web_server_security_flask_supply_001"
+    ],
+    "175": [
+      "codex_skills_security_best_practices_references_python_flask_web_server_security_flask_upload_001"
+    ],
+    "176": [
+      "codex_skills_security_best_practices_references_python_flask_web_server_security_flask_xss_001"
+    ],
+    "177": [
+      "ctx_md"
+    ],
+    "178": [
+      "cursor_skills_security_best_practices_references_golang_general_backend_security"
+    ],
+    "179": [
+      "cursor_skills_security_best_practices_references_javascript_typescript_nextjs_web_server_security_next_cache_001"
+    ],
+    "180": [
+      "cursor_skills_security_best_practices_references_javascript_typescript_react_web_frontend_security_react_config_001"
+    ],
+    "181": [
+      "cursor_skills_security_best_practices_references_python_flask_web_server_security_flask_ssti_001"
+    ],
+    "182": [
+      "cursor_skills_security_best_practices_skill"
+    ],
+    "183": [
+      "django_config_001"
+    ],
+    "184": [
+      "eslint_config"
+    ],
+    "185": [
+      "fastapi_deploy_002"
+    ],
+    "186": [
+      "fs_domc_001"
+    ],
+    "187": [
+      "google_stitch"
+    ],
+    "188": [
+      "jq_ajax_001"
+    ],
+    "189": [
+      "jq_prototype_001"
+    ],
+    "190": [
+      "jq_supply_001"
+    ],
+    "191": [
+      "js_sri_001"
+    ],
+    "192": [
+      "js_storage_001"
+    ],
+    "193": [
+      "js_supply_001"
+    ],
+    "194": [
+      "maplibre_gl_maplibre_gl"
+    ],
+    "195": [
+      "next_deploy_001"
+    ],
+    "196": [
+      "next_secrets_001"
+    ],
+    "197": [
+      "photon_api"
+    ],
+    "198": [
+      "public_boleia_logo"
+    ],
+    "199": [
+      "public_favicon"
+    ],
+    "200": [
+      "public_icons"
+    ],
+    "201": [
+      "react_config_001"
+    ],
+    "202": [
+      "readme"
+    ],
+    "203": [
+      "skills_shadcn_ui_skill"
+    ],
+    "204": [
+      "src_assets_hero"
+    ],
+    "205": [
+      "src_setuptests"
+    ],
+    "206": [
+      "supabase_db_acordos"
+    ],
+    "207": [
+      "supabase_db_routes"
+    ],
+    "208": [
+      "supabase_db_veiculos"
+    ],
+    "209": [
+      "supabase_functions_send_push_index"
+    ],
+    "210": [
+      "supabase_migrations_20260329154810_remote_schema"
+    ],
+    "211": [
+      "test_results_txt"
+    ],
+    "212": [
+      "trae_skills_tlc_spec_driven_references_tasks"
+    ],
+    "213": [
+      "trae_skills_tlc_spec_driven_references_validate"
+    ],
+    "214": [
+      "vite_config"
+    ],
+    "215": [
+      "vue_xss_002"
+    ]
+  },
+  "cohesion": {
+    "0": 0.05858585858585859,
+    "1": 0.05128205128205128,
+    "2": 0.05405405405405406,
+    "3": 0.05405405405405406,
+    "4": 0.08695652173913043,
+    "5": 0.21637426900584794,
+    "6": 0.13970588235294118,
+    "7": 0.13970588235294118,
+    "8": 0.13970588235294118,
+    "9": 0.13970588235294118,
+    "10": 0.13970588235294118,
+    "11": 0.13970588235294118,
+    "12": 0.22794117647058823,
+    "13": 0.13970588235294118,
+    "14": 0.175,
+    "15": 0.31666666666666665,
+    "16": 0.14285714285714285,
+    "17": 0.14285714285714285,
+    "18": 0.14285714285714285,
+    "19": 0.27472527472527475,
+    "20": 0.26373626373626374,
+    "21": 0.14285714285714285,
+    "22": 0.15384615384615385,
+    "23": 0.2948717948717949,
+    "24": 0.24358974358974358,
+    "25": 0.24242424242424243,
+    "26": 0.32727272727272727,
+    "27": 0.4,
+    "28": 0.2545454545454545,
+    "29": 0.3111111111111111,
+    "30": 0.3111111111111111,
+    "31": 0.2,
+    "32": 0.3111111111111111,
+    "33": 0.3111111111111111,
+    "34": 0.3111111111111111,
+    "35": 0.2222222222222222,
+    "36": 0.3111111111111111,
+    "37": 0.3333333333333333,
+    "38": 0.3111111111111111,
+    "39": 0.2222222222222222,
+    "40": 0.6111111111111112,
+    "41": 0.38095238095238093,
+    "42": 0.3333333333333333,
+    "43": 0.4,
+    "44": 0.4,
+    "45": 0.4,
+    "46": 0.6,
+    "47": 0.5,
+    "48": 0.5,
+    "49": 0.6666666666666666,
+    "50": 0.6666666666666666,
+    "51": 0.6666666666666666,
+    "52": 0.6666666666666666,
+    "53": 0.6666666666666666,
+    "54": 0.6666666666666666,
+    "55": 0.6666666666666666,
+    "56": 0.6666666666666666,
+    "57": 1.0,
+    "58": 1.0,
+    "59": 1.0,
+    "60": 1.0,
+    "61": 1.0,
+    "62": 1.0,
+    "63": 1.0,
+    "64": 1.0,
+    "65": 1.0,
+    "66": 1.0,
+    "67": 1.0,
+    "68": 1.0,
+    "69": 1.0,
+    "70": 1.0,
+    "71": 1.0,
+    "72": 1.0,
+    "73": 1.0,
+    "74": 1.0,
+    "75": 1.0,
+    "76": 1.0,
+    "77": 1.0,
+    "78": 1.0,
+    "79": 1.0,
+    "80": 1.0,
+    "81": 1.0,
+    "82": 1.0,
+    "83": 1.0,
+    "84": 1.0,
+    "85": 1.0,
+    "86": 1.0,
+    "87": 1.0,
+    "88": 1.0,
+    "89": 1.0,
+    "90": 1.0,
+    "91": 1.0,
+    "92": 1.0,
+    "93": 1.0,
+    "94": 1.0,
+    "95": 1.0,
+    "96": 1.0,
+    "97": 1.0,
+    "98": 1.0,
+    "99": 1.0,
+    "100": 1.0,
+    "101": 1.0,
+    "102": 1.0,
+    "103": 1.0,
+    "104": 1.0,
+    "105": 1.0,
+    "106": 1.0,
+    "107": 1.0,
+    "108": 1.0,
+    "109": 1.0,
+    "110": 1.0,
+    "111": 1.0,
+    "112": 1.0,
+    "113": 1.0,
+    "114": 1.0,
+    "115": 1.0,
+    "116": 1.0,
+    "117": 1.0,
+    "118": 1.0,
+    "119": 1.0,
+    "120": 1.0,
+    "121": 1.0,
+    "122": 1.0,
+    "123": 1.0,
+    "124": 1.0,
+    "125": 1.0,
+    "126": 1.0,
+    "127": 1.0,
+    "128": 1.0,
+    "129": 1.0,
+    "130": 1.0,
+    "131": 1.0,
+    "132": 1.0,
+    "133": 1.0,
+    "134": 1.0,
+    "135": 1.0,
+    "136": 1.0,
+    "137": 1.0,
+    "138": 1.0,
+    "139": 1.0,
+    "140": 1.0,
+    "141": 1.0,
+    "142": 1.0,
+    "143": 1.0,
+    "144": 1.0,
+    "145": 1.0,
+    "146": 1.0,
+    "147": 1.0,
+    "148": 1.0,
+    "149": 1.0,
+    "150": 1.0,
+    "151": 1.0,
+    "152": 1.0,
+    "153": 1.0,
+    "154": 1.0,
+    "155": 1.0,
+    "156": 1.0,
+    "157": 1.0,
+    "158": 1.0,
+    "159": 1.0,
+    "160": 1.0,
+    "161": 1.0,
+    "162": 1.0,
+    "163": 1.0,
+    "164": 1.0,
+    "165": 1.0,
+    "166": 1.0,
+    "167": 1.0,
+    "168": 1.0,
+    "169": 1.0,
+    "170": 1.0,
+    "171": 1.0,
+    "172": 1.0,
+    "173": 1.0,
+    "174": 1.0,
+    "175": 1.0,
+    "176": 1.0,
+    "177": 1.0,
+    "178": 1.0,
+    "179": 1.0,
+    "180": 1.0,
+    "181": 1.0,
+    "182": 1.0,
+    "183": 1.0,
+    "184": 1.0,
+    "185": 1.0,
+    "186": 1.0,
+    "187": 1.0,
+    "188": 1.0,
+    "189": 1.0,
+    "190": 1.0,
+    "191": 1.0,
+    "192": 1.0,
+    "193": 1.0,
+    "194": 1.0,
+    "195": 1.0,
+    "196": 1.0,
+    "197": 1.0,
+    "198": 1.0,
+    "199": 1.0,
+    "200": 1.0,
+    "201": 1.0,
+    "202": 1.0,
+    "203": 1.0,
+    "204": 1.0,
+    "205": 1.0,
+    "206": 1.0,
+    "207": 1.0,
+    "208": 1.0,
+    "209": 1.0,
+    "210": 1.0,
+    "211": 1.0,
+    "212": 1.0,
+    "213": 1.0,
+    "214": 1.0,
+    "215": 1.0
+  },
+  "gods": [
+    {
+      "id": "cline_skills_react_best_practices_agents",
+      "label": "React Best Practices (Compiled)",
+      "degree": 49
+    },
+    {
+      "id": "src_lib_supabase_supabase",
+      "label": "supabase",
+      "degree": 31
+    },
+    {
+      "id": "trae_skills_playwright_skill_package_json_playwright",
+      "label": "playwright",
+      "degree": 14
+    },
+    {
+      "id": "src_contexts_authcontext_useauth",
+      "label": "useAuth()",
+      "degree": 14
+    },
+    {
+      "id": "cursor_skills_tlc_spec_driven_skill",
+      "label": "TLC Spec-Driven",
+      "degree": 12
+    },
+    {
+      "id": "src_pages_myagreements_myagreements",
+      "label": "MyAgreements()",
+      "degree": 10
+    },
+    {
+      "id": "src_utils_errorhandler_getfriendlyerrormessage",
+      "label": "getFriendlyErrorMessage()",
+      "degree": 10
+    },
+    {
+      "id": "agent_skills_playwright_skill_package_keywords",
+      "label": "keywords",
+      "degree": 7
+    },
+    {
+      "id": "cline_skills_playwright_skill_package_keywords",
+      "label": "keywords",
+      "degree": 7
+    },
+    {
+      "id": "codex_skills_playwright_skill_package_keywords",
+      "label": "keywords",
+      "degree": 7
+    }
+  ],
+  "surprises": [
+    {
+      "source": "DJANGO-DEPLOY-001: Do not use Django\u2019s development server in production",
+      "target": "FASTAPI-DEPLOY-001: Production Server Mode",
+      "source_files": [
+        ".cline/skills/security-best-practices/references/python-django-web-server-security.md",
+        ".cursor/skills/security-best-practices/references/python-fastapi-web-server-security.md"
+      ],
+      "confidence": "INFERRED",
+      "relation": "semantically_similar_to",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; semantically similar concepts with no structural link"
+    },
+    {
+      "source": "JS-XSS-001: Avoid innerHTML",
+      "target": "JQ-XSS-001: jQuery HTML Insertion",
+      "source_files": [
+        ".gemini/skills/security-best-practices/references/javascript-general-web-frontend-security.md",
+        ".codex/skills/security-best-practices/references/javascript-jquery-web-frontend-security.md"
+      ],
+      "confidence": "INFERRED",
+      "relation": "semantically_similar_to",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; semantically similar concepts with no structural link"
+    },
+    {
+      "source": "JS-XSS-001: Avoid innerHTML",
+      "target": "REACT-XSS-001: dangerouslySetInnerHTML",
+      "source_files": [
+        ".gemini/skills/security-best-practices/references/javascript-general-web-frontend-security.md",
+        ".codex/skills/security-best-practices/references/javascript-typescript-react-web-frontend-security.md"
+      ],
+      "confidence": "INFERRED",
+      "relation": "semantically_similar_to",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; semantically similar concepts with no structural link"
+    },
+    {
+      "source": "Best Practices",
+      "target": "React Best Practices Skill",
+      "source_files": [
+        ".gemini/skills/best-practices/SKILL.md",
+        ".cursor/skills/react-best-practices/SKILL.md"
+      ],
+      "confidence": "INFERRED",
+      "relation": "conceptually_related_to",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; peripheral node `Best Practices` unexpectedly reaches hub `React Best Practices Skill`"
+    },
+    {
+      "source": "React Best Practices Skill",
+      "target": "React Best Practices (Compiled)",
+      "source_files": [
+        ".cursor/skills/react-best-practices/SKILL.md",
+        ".agent/skills/react-best-practices/AGENTS.md"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "connects across different repos/directories; peripheral node `React Best Practices (Compiled)` unexpectedly reaches hub `React Best Practices Skill`"
+    }
+  ],
+  "tokens": {
+    "input": 1393333,
+    "output": 54059
+  }
+}

@@ -1,0 +1,1 @@
+{"nodes": [{"id": "codex_skills_react_best_practices_rules_bundle_barrel_imports", "label": "Avoid Barrel File Imports", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/bundle-barrel-imports.md", "rationale": "Reduces import cost (200-800ms) and build times."}], "edges": [], "hyperedges": []}

@@ -1,0 +1,1 @@
+{"nodes": [{"id": "vue_xss_002", "label": "VUE-XSS-002: Non-trusted Templates", "file_type": "concept", "source_file": ".codex/skills/security-best-practices/references/javascript-typescript-vue-web-frontend-security.md", "rationale": "Never use non-trusted templates (client-side template/code injection)."}], "edges": [], "hyperedges": []}

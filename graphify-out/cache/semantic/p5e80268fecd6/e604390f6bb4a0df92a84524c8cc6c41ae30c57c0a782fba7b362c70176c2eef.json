@@ -1,0 +1,1 @@
+{"nodes": [{"id": "codex_skills_react_best_practices_rules_rendering_content_visibility", "label": "CSS content-visibility for Long Lists", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/rendering-content-visibility.md", "rationale": "Defers off-screen rendering."}], "edges": [], "hyperedges": []}

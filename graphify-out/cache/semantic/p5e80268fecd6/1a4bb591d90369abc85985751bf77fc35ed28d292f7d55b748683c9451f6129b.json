@@ -1,0 +1,1 @@
+{"nodes": [{"id": "codex_skills_react_best_practices_rules_server_after_nonblocking", "label": "Use after() for Non-Blocking Operations", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/server-after-nonblocking.md", "rationale": "Prevents logging/analytics from blocking responses."}], "edges": [], "hyperedges": []}

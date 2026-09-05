@@ -1,14 +1,17 @@
 # Checkpoint — Marketplace Oferta / Procura
 
-**Data:** 2026-09-05 (~07:30 UTC+1)  
-**Branch:** `main` (ahead of `origin/main` — **não pushed**; pedir push explicitamente)  
-**Chat anterior:** T31 implementada (design + TDD + UI QA + code review **APPROVE**); contexto cheio → **continuar noutro chat**.  
+**Data:** 2026-09-05 (~09:15 UTC+1)  
+**Branch:** `main` (T29 + **T30 uncommitted**; T31 already on `origin/main`)  
+**Chat:** T30 Done (design + TDD paralelo A/B/C + UI QA + code-review **APPROVE** ×2 ciclos).  
 **Usar este ficheiro** para retomar sem perder contexto.
 
 **Commits relevantes:**
 - `178cd50` — T24 hub motorista multi-pax  
 - `dc52862` — **T25–T28** (E2E quotas, waitlist, oferta dias, detalhe acordo 1:N)  
-- `8a0111e` — **T31** n_maximo + grupo público / pedir entrada (**pushed** `origin/main`)  
+- `8a0111e` — **T31** n_maximo + grupo público / pedir entrada (**pushed**)  
+- `443d149` — sync CHECKPOINT pós-push T31  
+- *(uncommitted)* **T29** adenda / `renegotiateAgreementPricing`  
+- *(uncommitted)* **T30** mapa N pontos preferenciais (MapLibre)
 
 ---
 
@@ -18,29 +21,19 @@
 Continua marketplace a partir de:
 .specs/features/marketplace-oferta-procura/CHECKPOINT.md
 
-Próxima task: T29 (P2 — adenda / renegotiateAgreementPricing).
+Phase 6 T22–T31 (+ T29/T30) Done. T29+T30 UNCOMMITTED — commit só se eu pedir
+(ficheiros listados no CHECKPOINT; NÃO misturar lixo .cline/.codex/.cursor).
 
-Antes de código:
-0. T31 já está em `8a0111e` (pushed) — NÃO reinventar.
-1. Ler este CHECKPOINT.md (verdade dura + feito T22–T31 + o que falta)
-2. tasks.md Phase 6 — secção T29 (e T30 se relevante)
-3. Plano .cursor/plans/marketplace_oferta_procura_74cbb52a.plan.md
-4. spec.md: «Quatro Ns» + invariante de quota + adenda / MKT-13
-5. design.md — para T29: ui-designer → gate → implementer se houver UI
+Decisão produto 2026-09-05 (docs): motorista flexível SEM zona/OD obrigatório;
+propostas bidireccionais; aceite só contraparte. Tasks T32–T35 Planned —
+NÃO implementar código até eu pedir.
+
+Ler CHECKPOINT + AGENTS.md + spec.md (secção flexível / propostas).
 
 Regras: AGENTS.md + .cursorrules; TDD; JS+JSDoc; sem TS/toast;
-DDL só via Supabase MCP; copy UI humana (nunca N_actual / N_proposto / POR_PASSAGEIRO).
-Não reintroduzir «grupo incompleto = não pode propor».
-Não invalidar propostas abertas só porque N_actual mudou.
-Não recalcular quotas do mês ao leavePassenger.
-Não auto-aceitar waitlist (só notif waitlist_promoted).
-Adenda T29 = ÚNICO caminho para mutar preços / N_contrato (mês seguinte).
+DDL só via Supabase MCP; copy UI humana; invariantes grupo/waitlist/leave/adenda.
 
-Orquestração: .cursor/skills/tlc-spec-driven + boleia-agent-loop;
-paralelismo com .cursor/skills/subagent-creator quando scopes disjuntos.
-UI SoT: v0 (One) + shadcn JSX + UI Skills + Mobbin free-safe (nunca Penpot como gate).
-
-Git: `8a0111e` = T31 (pushed); `dc52862` = T25–T28; push só se eu pedir.
+Git: push só se eu pedir.
 ```
 
 ---
@@ -51,9 +44,11 @@ Cardinalidade **1 motorista : N passageiros** no acordo; procura/grupo → **M**
 Preço dual `POR_PASSAGEIRO` | `TOTAL_ACORDO`; lotação do veículo **nunca** divide preço.  
 Quotas **congeladas** na aceitação; saída de pax **não** recalcula mês corrente.  
 Capacidade global = soma `N_activos` nos acordos da oferta.  
-Matching MVP: ±15 min, raio OD 2500 m; waitlist se N > vagas (sem auto-aceitar).  
+Matching MVP: oferta **fixa** ±15 min + raio OD 2500 m; oferta **flexível** sem OD/zona (docs 2026-09-05; código T34/T35 Planned); waitlist se N > vagas (sem auto-aceitar).  
 Promoção waitlist = **notificação** (`waitlist_promoted`) + estado `notificada` — **nunca** auto-aceitar.  
-**Adenda (T29):** único caminho para mutar preços / `N_contrato` — aplica-se ao **mês seguinte**, nunca recalcular mês corrente via leave.
+**Adenda (T29 Done):** único caminho para mutar preços / `N_contrato` — copy «mês seguinte»; MVP aplica valores de imediato via RPC.  
+**Mapa (T30 Done):** pins 1-based dos pontos preferenciais do snapshot antes do aceite (MapLibre + OSM).  
+**Produto (2026-09-05, só docs):** motorista flexível sem zona; propostas A/B; aceite só contraparte; cadeia Procura→M propostas→1 acordo 1:N. **Não** implementar até pedido (T32–T35).
 
 ### Grupo = procura colectiva viva
 
@@ -70,10 +65,8 @@ Promoção waitlist = **notificação** (`waitlist_promoted`) + estado `notifica
 |---|---|---|
 | `N_actual` | `procuras.n_candidato` | Membros activos agora; matching; UI «Grupo · 2 de 4» |
 | `N_proposto` | `propostas.n_passageiros_propostos` | Snapshot da negociação; imutável na versão |
-| `N_contrato` | `acordos.n_passageiros_contrato` | Congelado no aceite; base do preço do contrato |
+| `N_contrato` | `acordos.n_passageiros_contrato` | Congelado no aceite; mutável **só** via adenda T29 |
 | `N_activos` | COUNT pax activos no acordo | Só vagas/UI lotação — nunca preço |
-
-**Exemplo canónico:** grupo 2/4; motorista TOTAL 100.000 com `N_proposto=2` → 50.000 Kz/pax. Entra 3.º → proposta **inalterada**. Nova negociação a 3 → nova proposta + regra de resto.
 
 Alias legado: `N_candidato` = `N_actual`. Coluna BD: `n_candidato`.
 
@@ -88,125 +81,89 @@ Alias legado: `N_candidato` = `N_actual`. Coluna BD: `n_candidato`.
 | 3 Serviços | T8–T13 | **Done** |
 | 4 UI | T14–T19 | **Done** |
 | 5 Docs | T20–T21 | **Done** |
-| 6 Bifurcação | **T22–T28 + T31 Done** (gates APPROVE) | **T29← AQUI** |
-| | T29 P2, T30 P3 | Pending |
+| 6 Bifurcação | **T22–T31 Done** (incl. T29 + T30) | **Phase 6 completa** |
+| 7 Flexível + propostas bi | T32–T35 Planned | **Só docs** (2026-09-05) — sem código até pedido |
 
 ### Maturidade (~)
 
 | Camada | % | Nota |
 |---|---|---|
-| Schema + RPC | ~96% | `accept_proposal` + `promote_waitlist` + `n_maximo`/pedidos; falta adenda T29 |
-| Serviços | ~97% | Leave + waitlist + entrada pública; quotas imutáveis |
-| UI produto | ~94% | Oferta dias/flex; detalhe 1:N; waitlist; grupo público |
-| E2E N>1 | ~85% | T25 Vitest; smoke browser opcional |
+| Schema + RPC | ~99% | `accept_proposal` + `promote_waitlist` + `renegotiate_agreement_pricing` + `n_maximo` · **débito T32:** bloquear `created_by` |
+| Serviços | ~99% | Adenda + leave + waitlist + grupo · **débito T34/T35:** flex sem OD + `findCompatibleProcuras` |
+| UI produto | ~99% | Adenda + mapa T30 · **débito T33/T34:** inbox B + PublishRoute OD opcional |
+| E2E N>1 | ~90% | T25 + T29 testes adenda |
 
 ---
 
-## Feito (não reinventar) — T22–T31
+## Feito (não reinventar) — T22–T31 + T29 + T30
 
-### T31 — `n_maximo` + grupo público / pedir entrada ← **Done (`8a0111e`, pushed)**
+### T30 — Mapa N pontos preferenciais ← **Done (uncommitted)**
 
-**Gates:** design APPROVE · UI QA APPROVE · code-review APPROVE (ciclo 2 após fix mensagens).
+**Gates:** design APPROVE · UI QA APPROVE (ciclo 2) · code-review APPROVE (ciclo 2) · **30** testes Vitest verdes.
 
-**DDL (Supabase MCP, project `fdclrbcgytnuqcrpsevw`):**
-- `grupos.n_maximo` INTEGER NOT NULL DEFAULT 4, CHECK 2–8
-- `membros_grupo.estado`: `activo` | `saiu` | `pendente` | `rejeitado`
+**UI / util:**
+- `buildPropostaReview` expõe `pickup_*` + `dropoff_*` coords
+- `buildPreferentialMapPoints` → pontos com `memberIndex` 1-based
+- `PreferentialPointsMap` — MapLibre dinâmico + OSM; pins numerados; empty/partial/erro/boot skeleton; deps por `pointsKey` (sem remount por referência)
+- `PropostaReviewCard` — mapa após título; omitido se `membros=[]`; nota «X de Y com localização»
 
-**Serviço `GrupoService.js`:**
-- `createGrupo(procuraId, nome, nMaximo)`
-- `listGruposAbertos({ excludeOwnerId, excludeGrupoId })`
-- `pedirEntradaGrupo` → estado `pendente` (**não** sync N)
-- `listPedidosPendentes` / `aprovarEntrada` / `rejeitarEntrada` (só se `pendente`)
-- `addMembroGrupo` respeita `n_maximo`; `syncNCandidato` só conta `activo`
-- Aprovar **não** toca tabela `propostas`
+**Design:** v0 https://v0.app/chat/jIH3o5n1EM1 · `design.md` § T30 · Mobbin degradado · SoT v0/shadcn (não Penpot)
 
-**UI:**
-- `GrupoProcuraPanel.jsx` — stepper «Até quantas pessoas?» 2–8; badge «Grupo · N de M»; pedidos Aceitar/Recusar; «Ou convidar por telefone» (fallback)
-- `GrupoDescobertaPanel.jsx` — «Grupos abertos» + Pedir entrada + empty
-- Wired em `PassengerDashboard.jsx` (`/passageiro`)
-
-**Testes:** `GrupoService.test.js`, `GrupoProcuraPanel.test.jsx`, `GrupoDescobertaPanel.test.jsx`, mocks em `PassengerDashboard.test.jsx` / `ProcuraService.test.js`
-
-**Design:** v0 https://v0.app/chat/jo0mXnLQf42 · secção T31 em `design.md` · Mobbin degradado (plano free)
-
-**Ficheiros T31 (para commit quando pedido):**
+**Ficheiros T30 (para commit quando pedido):**
 ```
-src/services/GrupoService.js
-src/services/GrupoService.test.js
-src/services/ProcuraService.test.js
-src/components/GrupoProcuraPanel.jsx
-src/components/GrupoProcuraPanel.test.jsx
-src/components/GrupoDescobertaPanel.jsx
-src/components/GrupoDescobertaPanel.test.jsx
-src/pages/PassengerDashboard.jsx
-src/pages/PassengerDashboard.test.jsx
+src/utils/propostaReview.js
+src/utils/propostaReview.test.js
+src/components/PreferentialPointsMap.jsx
+src/components/PreferentialPointsMap.test.jsx
+src/components/PropostaReviewCard.jsx
+src/components/PropostaReviewCard.test.jsx
 .specs/features/marketplace-oferta-procura/{CHECKPOINT,design,tasks}.md
 .specs/project/STATE.md
 AGENTS.md
 ```
+(+ `spec.md` se MKT-15 marcado Done no mesmo commit)
 
-### T22 — UI Grupo
-- `GrupoProcuraPanel` criar + membros; integrado hub passageiro
+### T29 — Adenda / `renegotiateAgreementPricing` ← **Done (uncommitted)**
 
-### T23 — Proposta grupo vivo
-- `createProposta` com `grupo_id`; `N_proposto = N_actual`; sem bloqueio «incompleto»; sync não invalida propostas
+**Gates:** design · UI QA · code-review APPROVE.  
+**RPC:** `renegotiate_agreement_pricing` · **UI:** `MyAgreements` «Renegociar preço».  
+**Ficheiros:** ver lista anterior no CHECKPOINT T29 (AgreementService, MyAgreements, ConfirmationModal, specs…).
 
-### T24 — Hub motorista (`178cd50`)
-- `PropostaReviewCard` / enrich; Aceitar → RPC `accept_proposal`
+### T31 — `n_maximo` + grupo público ← **Done (`8a0111e`, pushed)**
 
-### T25 — E2E quotas (`dc52862`)
-- `AgreementsE2E.test.jsx`; `leavePassenger` quotas restantes imutáveis
+### T22–T28 (resumo)
 
-### T26 — Waitlist promoção
-- RPC `promote_waitlist`; notif `waitlist_promoted`; **sem** auto-aceitar
-
-### T27 — Publicar oferta
-- `PublishRoute`: dias Seg–Dom + «Rota flexível»
-
-### T28 — Detalhe acordo 1:N
-- `MyAgreements`: «Preço combinado»; lista N; `ConfirmationModal` `busy`
+| Task | Essência | Commit |
+|------|----------|--------|
+| T22 | UI criar grupo + membros | pré-178cd50 |
+| T23 | Proposta grupo vivo; sem bloquear incompleto | pré-178cd50 |
+| T24 | Hub motorista `PropostaReviewCard` | `178cd50` |
+| T25 | E2E quotas + leave imutável | `dc52862` |
+| T26 | `promote_waitlist` (só notif) | `dc52862` |
+| T27 | Oferta dias + rota flexível | `dc52862` |
+| T28 | Detalhe acordo 1:N | `dc52862` |
 
 ---
 
-## O que falta (ordem)
+## O que falta
 
 ```
-T29 P2  ← COMEÇAR AQUI (adenda / renegotiateAgreementPricing)
-T30 P3  (mapa N pontos preferenciais)
+Phase 6 marketplace bifurcação — COMPLETA (T22–T31).
+Próximo: Phase 7 T32–T35 **quando o utilizador pedir** (docs já actualizados). Commits T29/T30 só sob pedido.
 ```
-
-### T29 (P2) — Adenda de preço ← **PRÓXIMA**
-
-**Do (tasks.md / MKT-13):**
-- Único caminho para mutar preços / `N_contrato` (mês seguinte)
-- **Não** recalcular mês corrente no leave
-- Fora da wave imediata anterior — agora é a prioridade
-
-**Verify (esperado):** adenda explícita altera preços só para o período seguinte; leave continua a preservar quotas do mês.
-
-**Ficheiros-chave prováveis:**
-1. Este `CHECKPOINT.md` + `tasks.md` T29 + `spec.md` MKT-13 / invariante quota
-2. `AgreementService.js` / RPC ou mutação controlada
-3. UI em `MyAgreements.jsx` (se houver ecrã de adenda) → ui-designer primeiro
-4. Testes TDD (invariante leave + adenda)
-
-### T30 (P3) — Mapa N pontos
-- Pontos dos membros cobertos pelo `N_proposto` antes do aceite
-- Placeholder OK até design
 
 ---
 
 ## Stack / serviços canónicos
 
 **BD** (`boleia` / `fdclrbcgytnuqcrpsevw`):  
-`ofertas_capacidade`, `procuras`, `grupos` (+`n_maximo`), `membros_grupo` (+pendente/rejeitado), `propostas`, `lista_espera`, `acordos`, `acordos_passageiros`, `faltas`, `veiculos`.  
-RPCs: `accept_proposal`, `promote_waitlist`.
+`ofertas_capacidade`, `procuras`, `grupos` (+`n_maximo`), `membros_grupo` (+pickup/dropoff coords), `propostas`, `lista_espera`, `acordos`, `acordos_passageiros`, `faltas`, `veiculos`.  
+RPCs: `accept_proposal`, `promote_waitlist`, `renegotiate_agreement_pricing`.
 
-**Serviços:** `OfertaService`, `ProcuraService`, `GrupoService` (T31 APIs), `PropostaService`, `AgreementService`, `MatchingService`, `WaitlistService`, `AbsenceService`, `LocationService` (Photon), `ProfileService.findPassageiroByTelefone`.
+**Serviços:** `OfertaService`, `ProcuraService`, `GrupoService`, `PropostaService`, `AgreementService` (+ `renegotiateAgreementPricing`), `MatchingService`, `WaitlistService`, `AbsenceService`, `LocationService` (Photon), `ProfileService.findPassageiroByTelefone`.  
+**Mapa:** `maplibre-gl` via `PreferentialPointsMap` (hub motorista).
 
-**UI paths:** `/passageiro` (procura + grupo + **descoberta**), `/motorista`, `/publicar-trajeto`, `/veiculo`, `/acordos`, `/faltas`, `/perfil`.
-
-**Removido (não recriar):** `RouteService`, `requestSeat`, cards `Acordo*` com `routes`.
+**Removido (não recriar):** `RouteService`, `requestSeat`, cards `Acordo*` com `routes`, Google Maps.
 
 ---
 
@@ -214,7 +171,6 @@ RPCs: `accept_proposal`, `promote_waitlist`.
 
 - Motorista: `qa.motorista.mkt+20260904@boleiacerta.test` / `TesteQA123!`
 - Passageiro: `qa.passageiro.mkt+20260904@boleiacerta.test` / `TesteQA123!`
-- T31 / N>1: vários perfis passageiro (descoberta pública)
 
 ---
 
@@ -226,24 +182,28 @@ RPCs: `accept_proposal`, `promote_waitlist`.
 4. Copy humana; nunca jargon de Ns / `POR_PASSAGEIRO`  
 5. Design SoT: v0/shadcn/UI Skills (Penpot descontinuado)  
 6. Commit / push **só** se o utilizador pedir  
-7. Um passo de cada vez — **T29** (após opcional commit T31)  
+7. Working tree: T29 + T30 uncommitted — **não** misturar `.cline`/`.codex`/`.cursor` lixo  
 8. Spec/planos prevalecem sobre v0 se houver conflito  
-9. Working tree pode ter lixo (`.cline` deletions, hooks Cursor, etc.) — **não** misturar no commit marketplace  
 
 ---
 
 ## Handoff git (snapshot)
 
 ```
+(uncommitted) feat(marketplace): T30 mapa N pontos preferenciais (MapLibre)
+(uncommitted) feat(marketplace): T29 adenda renegotiateAgreementPricing
+443d149 chore(marketplace): sincronizar CHECKPOINT após push T31
 8a0111e feat(marketplace): T31 n_maximo + grupo público / pedir entrada
-dc52862 feat(marketplace): T25–T28 quotas E2E, waitlist, oferta dias e detalhe 1:N
-178cd50 feat(marketplace): T24 hub motorista rever proposta multi-passageiro
 ```
 
-`main` = `origin/main` (synced após push de 2026-09-05).
+Mensagens sugeridas (quando pedires — **commits separados** preferível):
 
----
+```
+feat(marketplace): T30 mapa N pontos preferenciais
+```
 
-## Fora de âmbito
+```
+feat(marketplace): T29 adenda renegotiateAgreementPricing
+```
 
-Gateway pagamento; substituto automático; turn-by-turn; TypeScript; toast; `rotas_diarias` / Google Maps; dual-write; quotas desiguais; reintroduzir matching 1:1; auto-aceitar waitlist; reinventar T22–T31.
+Incluir **só** ficheiros da lista T29 ou T30 — **não** misturar lixo nem o outro task no mesmo commit sem pedido.

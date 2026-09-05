@@ -1,0 +1,29 @@
+import { useNavigate } from 'react-router-dom';
+
+/**
+ * CTA final da landing — soft claim sem números inventados.
+ * @typedef {Readonly<{}>} LandingCtaProps
+ */
+export default function LandingCta() {
+  const navigate = useNavigate();
+
+  return (
+    <section className="bg-primary/10 px-4 py-16">
+      <div className="mx-auto flex max-w-3xl flex-col items-center gap-8 text-center">
+        <h2 className="text-balance text-3xl font-bold text-slate-900 dark:text-white">
+          Junta-te ao Boleia Certa
+        </h2>
+        <p className="text-pretty text-slate-700 dark:text-slate-300">
+          Começa a combinar a tua boleia casa–trabalho com acordos mensais claros em Kz.
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate('/auth')}
+          className="w-full cursor-pointer rounded-xl bg-primary px-10 py-4 text-lg font-bold text-slate-900 transition-all hover:brightness-105 sm:w-auto"
+        >
+          Começar agora
+        </button>
+      </div>
+    </section>
+  );
+}

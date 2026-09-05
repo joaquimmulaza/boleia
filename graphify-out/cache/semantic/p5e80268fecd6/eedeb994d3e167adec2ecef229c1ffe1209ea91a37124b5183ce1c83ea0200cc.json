@@ -1,0 +1,1 @@
+{"nodes": [{"id": "codex_skills_react_best_practices_rules_client_swr_dedup", "label": "Use SWR for Automatic Deduplication", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/client-swr-dedup.md"}], "edges": [], "hyperedges": []}

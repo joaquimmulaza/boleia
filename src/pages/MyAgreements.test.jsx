@@ -24,12 +24,14 @@ vi.mock('../services/AgreementService', () => ({
   getAgreementsForDriver: vi.fn(),
   getAgreementsForPassenger: vi.fn(),
   leavePassenger: vi.fn(),
+  renegotiateAgreementPricing: vi.fn(),
 }));
 
 import {
   getAgreementsForDriver,
   getAgreementsForPassenger,
   leavePassenger,
+  renegotiateAgreementPricing,
 } from '../services/AgreementService';
 
 const acordoMotorista = {
@@ -306,5 +308,191 @@ describe('MyAgreements — marketplace 1:N', () => {
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
     expect(within(dialog).queryByRole('button', { name: /Sair do acordo/i })).not.toBeInTheDocument();
+  });
+});
+
+describe('MyAgreements — T29 adenda / renegociar preço', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+    getAgreementsForDriver.mockResolvedValue([acordoMotorista]);
+    getAgreementsForPassenger.mockResolvedValue([]);
+    renegotiateAgreementPricing.mockResolvedValue({ id: 'acordo-1' });
+  });
+
+  it('motorista com acordo activo vê CTA Renegociar preço acima de Registar falta', async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const renegociar = within(dialog).getByRole('button', { name: /Renegociar preço/i });
+    const falta = within(dialog).getByRole('button', { name: /Registar falta/i });
+    expect(renegociar.compareDocumentPosition(falta) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('passageiro não vê CTA Renegociar preço', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).queryByRole('button', { name: /Renegociar preço/i })).not.toBeInTheDocument();
+  });
+
+  it('acordo não activo: motorista não vê Renegociar preço', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      { ...acordoMotorista, id: 'acordo-cancelado', estado: 'cancelado' },
+    ]);
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).queryByRole('button', { name: /Renegociar preço/i })).not.toBeInTheDocument();
+  });
+
+  it('abre formulário Novo preço e preview Por passageiro', async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Renegociar preço/i }));
+
+    const dialog = screen.getByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByText(/^Novo preço$/i)).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/Actualiza o valor combinado do acordo/i),
+    ).toBeInTheDocument();
+
+    const valorInput = within(dialog).getByLabelText(/Valor mensal/i);
+    fireEvent.change(valorInput, { target: { value: '45000' } });
+
+    expect(within(dialog).getByText(/Como fica/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Cada um paga/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/45\.?\s?000 Kz/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Como fica/i).closest('div')).toHaveTextContent(
+      /Total\s+90[\s.]?000\s*Kz/i,
+    );
+    expect(within(dialog).queryByText(/POR_PASSAGEIRO/i)).not.toBeInTheDocument();
+    expect(within(dialog).queryByText(/TOTAL_ACORDO/i)).not.toBeInTheDocument();
+  });
+
+  it('preview Total do acordo com resto', async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Renegociar preço/i }));
+
+    const dialog = screen.getByRole('dialog', { name: /Detalhe do acordo/i });
+    fireEvent.click(within(dialog).getByRole('button', { name: /^Total do acordo$/i }));
+
+    const valorInput = within(dialog).getByLabelText(/Valor mensal/i);
+    fireEvent.change(valorInput, { target: { value: '100001' } });
+
+    const nInput = within(dialog).getByLabelText(/Passageiros no preço/i);
+    fireEvent.change(nInput, { target: { value: '3' } });
+
+    expect(within(dialog).getByText(/Como fica/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Como fica/i).closest('div')).toHaveTextContent(
+      /Total\s+100[\s.]?001\s*Kz/i,
+    );
+    expect(within(dialog).getByText(/O resto fica no último/i)).toBeInTheDocument();
+  });
+
+  it('Rever e confirmar chama renegotiateAgreementPricing com modo/valor correctos', async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Renegociar preço/i }));
+
+    const dialog = screen.getByRole('dialog', { name: /Detalhe do acordo/i });
+    fireEvent.click(within(dialog).getByRole('button', { name: /Total do acordo/i }));
+    fireEvent.change(within(dialog).getByLabelText(/Valor mensal/i), {
+      target: { value: '120000' },
+    });
+    fireEvent.change(within(dialog).getByLabelText(/Passageiros no preço/i), {
+      target: { value: '3' },
+    });
+
+    fireEvent.click(within(dialog).getByRole('button', { name: /Rever e confirmar/i }));
+
+    expect(screen.getByText(/Confirmar novo preço\?/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Aplica-se a partir do próximo mês\. O mês corrente mantém as quotas já combinadas\./i),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
+
+    await waitFor(() => {
+      expect(renegotiateAgreementPricing).toHaveBeenCalledWith('acordo-1', {
+        modo_preco: 'TOTAL_ACORDO',
+        valor_ask_kz: 120000,
+        n_passageiros: 3,
+      });
+    });
+  });
+
+  it('sucesso mostra mensagem e fecha o formulário de adenda', async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Renegociar preço/i }));
+
+    const dialog = screen.getByRole('dialog', { name: /Detalhe do acordo/i });
+    fireEvent.change(within(dialog).getByLabelText(/Valor mensal/i), {
+      target: { value: '45000' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: /Rever e confirmar/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
+
+    expect(
+      await screen.findByText(/Preço actualizado\. Aplica-se a partir do próximo mês\./i),
+    ).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.queryByText(/^Novo preço$/i)).not.toBeInTheDocument();
+    });
+
+    // Leave CTA / fluxo do passageiro permanece coberto pelos testes T28 existentes
+    expect(within(dialog).getByRole('button', { name: /Registar falta/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: /Renegociar preço/i })).toBeInTheDocument();
+  });
+
+  it('erro de renegociação mostra role=alert junto ao form', async () => {
+    renegotiateAgreementPricing.mockRejectedValue(new Error('Sem permissão para renegociar.'));
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Renegociar preço/i }));
+
+    const dialog = screen.getByRole('dialog', { name: /Detalhe do acordo/i });
+    fireEvent.change(within(dialog).getByLabelText(/Valor mensal/i), {
+      target: { value: '45000' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: /Rever e confirmar/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/Sem permissão para renegociar/i);
+    expect(within(dialog).getByText(/^Novo preço$/i)).toBeInTheDocument();
+  });
+
+  it('Cancelar fecha o formulário de adenda', async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Renegociar preço/i }));
+
+    const dialog = screen.getByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByText(/^Novo preço$/i)).toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: /^Cancelar$/i }));
+    expect(within(dialog).queryByText(/^Novo preço$/i)).not.toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: /Renegociar preço/i })).toBeInTheDocument();
   });
 });

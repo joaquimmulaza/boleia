@@ -1,0 +1,1 @@
+{"nodes": [{"id": "codex_skills_react_best_practices_rules_advanced_use_latest", "label": "useEffectEvent for Stable Callback Refs", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/advanced-use-latest.md", "rationale": "Prevents effect re-runs while avoiding stale closures."}], "edges": [], "hyperedges": []}

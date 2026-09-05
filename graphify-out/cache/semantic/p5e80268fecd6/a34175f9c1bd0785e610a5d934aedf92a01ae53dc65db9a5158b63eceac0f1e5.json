@@ -1,0 +1,1 @@
+{"nodes": [{"id": "rerender_dependencies", "label": "Narrow Effect Dependencies", "file_type": "document", "source_file": ".cursor/skills/react-best-practices/rules/rerender-dependencies.md", "rationale": "Minimizing effect re-runs by using primitive dependencies instead of objects."}], "edges": [], "hyperedges": []}

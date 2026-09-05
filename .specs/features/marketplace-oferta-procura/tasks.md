@@ -4,7 +4,7 @@
 **Spec / Context**: `spec.md`, `context.md`  
 **UI visual**: `.specs/features/marketplace-oferta-procura/v0-reference/` (aprovado)  
 **SoT negócio**: planos marketplace + mapa impacto + `spec.md` / `context.md` / `design.md` — **prevalecem sobre o protótipo v0** se houver conflito  
-**Status**: Phase 1–5 Done · Phase 6: **T22–T28 + T31 Done** · **T29←** (P2 adenda) / T30 P3
+**Status**: Phase 1–5 Done · Phase 6: **T22–T31 Done** (T29 + T30 uncommitted) · Checkpoint actualizado
 **Checkpoint:** [CHECKPOINT.md](./CHECKPOINT.md)
 
 ---
@@ -53,7 +53,7 @@ T26, T27, T28 (após T24)
 T29 (P2), T30 (P3)
 ```
 
-**Status global:** Phase 1–5 **Done**. Phase 6: T22–T28 + **T31 Done** · **T29←** / T30.
+**Status global:** Phase 1–5 **Done**. Phase 6: **T22–T31 Done** (T29/T30 uncommitted).
 ---
 
 ## Tools por fase
@@ -298,8 +298,9 @@ T29 (P2), T30 (P3)
 - **ID:** MKT-01  
 - **Do:** UI `/publicar-trajeto`: selector Seg–Sex (default) + toggle «Rota flexível» → `flexibilidade_rota` / `dias_semana` (já no `OfertaService`)  
 - **Deps:** T15, T8  
-- **Status:** Done  
-- **Verify:** Oferta gravada com flags; copy humana
+- **Status:** Done *(parcial face à decisão 2026-09-05: flag gravada, mas OD ainda obrigatório e matching ignora flex — ver T34)*  
+- **Verify:** Oferta gravada com flags; copy humana  
+- **Débito:** Modelo «flex = OD + flag» **incorrecto** pós-decisão; completar em T34 (oferta flexível sem OD)
 
 ### T28: Detalhe acordo 1:N (lista passageiros + preço congelado)
 
@@ -312,16 +313,31 @@ T29 (P2), T30 (P3)
 
 ### T29 (P2): Adenda / renegotiateAgreementPricing
 
-- **ID:** MKT-13  
-- **Status:** Pending (fora da wave imediata)  
-- **Nota:** Só mutação de preços / N_contrato via adenda explícita
+- **ID:** MKT-13
+- **Do:**
+  1. RPC Supabase `renegotiate_agreement_pricing` (SECURITY DEFINER) — único caminho DDL/SQL para mutar `acordos.modo_preco`, `valor_mensal_*`, `n_passageiros_contrato` e `acordos_passageiros.quota_mensal_kz` dos **activos**.
+  2. Serviço `renegotiateAgreementPricing(acordoId, { modo_preco, valor_ask_kz, n_passageiros? })` em `AgreementService.js` → `resolveAgreementPricing` + RPC; default `n_passageiros` = `COUNT` pax activos.
+  3. UI mínima em `/acordos` (`MyAgreements`): motorista em acordo activo → «Renegociar preço» → formulário (modo humano «Por passageiro» / «Total do acordo», valor Kz, N opcional) → confirmação «Aplica-se a partir do próximo mês» → feedback local.
+  4. TDD: leave **não** muta preços; adenda **sim**; TOTAL resto com N_activos; regressão E2E quotas.
+- **Deps:** T25, T28
+- **Status:** Done
+- **Verify:**
+  - Após leave, cabeçalho/quotas restantes intactos; após `renegotiateAgreementPricing`, novos valores no cabeçalho + quotas dos activos; `n_passageiros_contrato` alinhado ao N da adenda.
+  - Copy UI sem jargon (`N_contrato`, `POR_PASSAGEIRO`).
+  - Nenhum outro serviço escreve colunas de preço do acordo.
+- **Nota:** Gates APPROVE (design · UI QA · code-review). Migration MCP `renegotiate_agreement_pricing_rpc`; UI `MyAgreements` + `ConfirmationModal` `variant`; 40 testes verdes. MVP aplica valores de imediato; copy «próximo mês».
 
 ### T30 (P3): Mapa N pontos preferenciais
 
 - **ID:** MKT-15  
-- **Status:** Pending (placeholder OK até Penpot)  
-- **Nota:** Antes do motorista aceitar — pontos dos membros cobertos pelo `N_proposto`
-
+- **Status:** Done (design · UI QA · code-review APPROVE; MapLibre + OSM; 30 testes)  
+- **Do:**
+  1. Estender `buildPropostaReview` com `pickup_lat/lng` + `dropoff_*` nos membros do snapshot.
+  2. Novo `PreferentialPointsMap` (MapLibre + OSM, dynamic import) com pins 1-based.
+  3. Integrar em `PropostaReviewCard` após título; omitir se `membros=[]`; degradar 0/parcial/erro.
+- **Deps:** T24  
+- **Verify:** N coords → N pins numerados; sem coords → copy; solo sem mapa; Aceitar inalterado.  
+- **Nota:** v0 `jIH3o5n1EM1`; SoT v0/shadcn; Mobbin degradado; deps mapa por `pointsKey`.
 ### T31: Grupo vivo — `n_maximo` + descoberta pública / pedido de entrada
 
 - **ID:** MKT-02, MKT-17
@@ -330,6 +346,42 @@ T29 (P2), T30 (P3)
 - **Status:** Done
 - **Verify:** Grupo 2/4 visível a outros passageiros; pedido de entrada aumenta `N_actual`; propostas abertas inalteradas
 - **Nota:** DDL `n_maximo` + estados `pendente`/`rejeitado`; `GrupoDescobertaPanel`; telefone = fallback; design gate APPROVE (v0 `jo0mXnLQf42`)
+
+---
+
+## Phase 7 — Motorista flexível + propostas bidireccionais (docs 2026-09-05; **não** implementar até pedido explícito)
+
+### T32 (P0): Aceite/rejeição só pela contraparte
+
+- **ID:** MKT-03 (extensão), propostas bidireccionais  
+- **Do:** RPC `accept_proposal` (+ rejeição) recusa se `auth.uid() = created_by`; mensagem PT; alinhar RLS/serviço  
+- **Deps:** T11  
+- **Status:** Planned  
+- **Verify:** Criador não aceita própria proposta; contraparte sim; testes RPC/serviço
+
+### T33 (P1): Propostas sentido B + inbox passageiro + deep links
+
+- **ID:** propostas bidireccionais  
+- **Do:** UI motorista cria proposta sobre procura/grupo; inbox no hub passageiro; `notificationRouter` / notifs abrem a contraparte (não sempre `/motorista`)  
+- **Deps:** T32, T24, T17  
+- **Status:** Planned  
+- **Verify:** Fluxo B completo; deep link correcto; snapshot `N_proposto` intacto se N muda
+
+### T34 (P1): Oferta flexível real (sem OD obrigatório)
+
+- **ID:** MKT-01  
+- **Do:** `PublishRoute` / `OfertaService`: se flexível, OD opcional/ausente; validação; copy humana; **não** zonas/raio residencial  
+- **Deps:** T27 (débito), T8  
+- **Status:** Planned  
+- **Verify:** Criar oferta flexível sem OD; fixa continua a exigir OD
+
+### T35 (P1): Matching dual + descoberta motorista flexível
+
+- **ID:** MKT-09  
+- **Do:** Matching: fixa = geo+tempo; flexível = tempo/dias/capacidade **sem** OD/residência; `findCompatibleProcuras`; UI hub motorista listar procuras compatíveis  
+- **Deps:** T34, T3, T12  
+- **Status:** Planned  
+- **Verify:** Flexível não filtrada por geo OD da oferta; residência não exclui; testes unitários matching
 
 ---
 
@@ -346,6 +398,7 @@ T29 (P2), T30 (P3)
 | G | T22 → T23 → T24 → T25 (sequencial; núcleo bifurcação) |
 | H | T26, T27, T28 (após T24; paralelizáveis entre si) |
 | I | T29 P2; T30 P3 |
+| J | T32 → T33; T34 → T35 (após pedido explícito; T32 antes de T33) |
 
 ---
 
@@ -353,15 +406,15 @@ T29 (P2), T30 (P3)
 
 | ID | Tasks |
 |----|-------|
-| MKT-01 | T5, T6, T8, T15, T27 |
+| MKT-01 | T5, T6, T8, T15, T27, **T34** |
 | MKT-02 | T6, T9, T17, T22 |
-| MKT-03 | T7, T11, T16, T23, T24, T28 |
+| MKT-03 | T7, T11, T16, T23, T24, T28, **T32**, **T33** |
 | MKT-04 | T1, T7, T25 |
 | MKT-05 | T7, T11, T25 |
 | MKT-06 | T7, T25 |
 | MKT-07 | T7, T13, T19 |
 | MKT-08 | T6, T12, T17, T26 |
-| MKT-09 | T2, T3, T12, T17 |
+| MKT-09 | T2, T3, T12, T17, **T35** |
 | MKT-10 | T4 |
 | MKT-11 | T6 |
 | MKT-12 | T7, T19, T26 |

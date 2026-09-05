@@ -1,0 +1,1 @@
+{"nodes": [{"id": "codex_skills_react_best_practices_rules_rerender_memo", "label": "Extract to Memoized Components", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/rerender-memo.md", "rationale": "Enables early returns before expensive computation."}], "edges": [], "hyperedges": []}

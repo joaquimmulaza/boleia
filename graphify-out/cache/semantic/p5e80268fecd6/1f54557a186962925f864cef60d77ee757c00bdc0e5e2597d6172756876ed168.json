@@ -1,0 +1,1 @@
+{"nodes": [{"id": "codex_skills_react_best_practices_rules_rendering_activity", "label": "Use Activity Component for Show/Hide", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/rendering-activity.md", "rationale": "Preserves state/DOM for expensive components."}], "edges": [], "hyperedges": []}

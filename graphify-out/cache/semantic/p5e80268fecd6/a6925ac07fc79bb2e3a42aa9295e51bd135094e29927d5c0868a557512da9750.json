@@ -1,0 +1,1 @@
+{"nodes": [{"id": "codex_skills_react_best_practices_rules_server_cache_lru", "label": "Cross-Request LRU Caching", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/server-cache-lru.md", "rationale": "Caches data across sequential requests."}], "edges": [], "hyperedges": []}

@@ -1,0 +1,1 @@
+{"nodes": [{"id": "tlc_spec_driven_quick_mode", "label": "Quick Mode", "file_type": "concept", "source_file": ".agent/skills/tlc-spec-driven/references/quick-mode.md", "rationale": "Express lane for small tasks (\u22643 files)."}], "edges": [], "hyperedges": []}

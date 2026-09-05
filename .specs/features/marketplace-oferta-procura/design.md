@@ -7,6 +7,18 @@
 
 ---
 
+## Decisão de produto (2026-09-05) — Motorista flexível + propostas bidireccionais
+
+**Não implementar nesta etapa** — só definição. Código de produção intacto até tasks dedicadas.
+
+1. Oferta **fixa** vs **flexível** (sem OD obrigatório na flexível). Flexível ≠ «rota OD + flag».
+2. **Sem** zonas/polígonos/raio residencial no MVP. Residência ≠ área de atuação.
+3. Matching flexível ajuda a descobrir; motorista decide caso a caso.
+4. Propostas **A** (pax→motorista) e **B** (motorista→pax); só a **contraparte** aceita (`created_by` bloqueado).
+5. Cadeia: Procura → M propostas → 1 aceite → 1 acordo 1:N (corrigir residual «Procura→Motorista 1:1»).
+
+---
+
 ## Architecture Overview
 
 Reconstrução limpa do domínio de negócio sobre a infra existente (Auth, Push, Photon, Layout). Camadas:
@@ -14,7 +26,7 @@ Reconstrução limpa do domínio de negócio sobre a infra existente (Auth, Push
 1. **Postgres / Supabase** — schema novo + RPC atómica `accept_proposal` + triggers faltas/notificações  
 2. **Services (JS + Vitest)** — pricing, matching, ofertas, procuras, propostas, acordos 1:N, waitlist, faltas  
 3. **Pages / Components** — substituir dashboards/PublishRoute/MyAgreements/Acordo*; adaptar VehicleSetup e AbsenceTracker  
-4. **UI SoT** — Penpot (MCP); Superdesign só exploração; Cursor implementa + Visual QA  
+4. **UI SoT** — v0 (One) + shadcn + UI Skills (+ Mobbin free-safe); Cursor implementa + Visual QA  
 
 ```mermaid
 flowchart TB
@@ -174,9 +186,11 @@ Tipagem em JSDoc no código (sem TypeScript). Campos conceptuais:
 - `vagas_totais`, `vagas_disponiveis` (≥ 0)
 - `modo_preco`: `POR_PASSAGEIRO` | `TOTAL_ACORDO`
 - `valor_mensal_ask_kz` (int)
-- `flexibilidade_rota`, OD ou zonas, horários, `dias_semana`
+- `flexibilidade_rota` (`false` = **fixa**; `true` = **flexível**)
+- `dias_semana`, horário / janela
 - `estado`: `inactiva` | `disponivel` | `parcial` | `cheia`
-- coords: `origin_lat/lng`, `destination_lat/lng` (rota fixa) ou equivalentes de zona
+- **Fixa:** `origin_*` / `destination_*` obrigatórios
+- **Flexível:** OD **opcional/ausente** — MVP **não** usa zonas, polígonos nem raio residencial; residência do motorista ≠ área de atuação
 
 ### `procuras` / `grupos` / `membros_grupo`
 
@@ -190,9 +204,11 @@ Tipagem em JSDoc no código (sem TypeScript). Campos conceptuais:
 ### `propostas`
 
 - `oferta_id`, `procura_id` e/ou `grupo_id`
+- `created_by` — iniciador; **não** pode aceitar/rejeitar a própria proposta
+- Sentido **A** (passageiro/grupo→motorista) ou **B** (motorista→passageiro/grupo)
 - `modo_preco`, `valor_mensal_ask_kz`, `n_passageiros_propostos` (= **`N_proposto`** snapshot de `N_actual` no instante da criação — **não** mutar se o grupo crescer)
 - `estado`: `aberta` | `aceite` | `rejeitada` | `invalidada` | `cancelada`
-- Uma procura pode ter **M** propostas abertas
+- Uma procura pode ter **M** propostas abertas (qualquer sentido)
 - Entrada de membro **não** invalida propostas abertas; renegociação com outro N = **nova** proposta
 - Aceitação: incluir primeiros `N_proposto` membros por `ordem_insercao` se `N_actual > N_proposto`
 
@@ -244,9 +260,11 @@ Constantes (`src/utils/matchingConfig.js` ou similar):
 
 | Parâmetro | Default | Notas |
 |-----------|---------|-------|
-| `MATCH_TIME_TOLERANCE_MINUTES` | `15` | ± minutos |
-| `MATCH_RADIUS_ORIGIN_METERS` | `2500` | haversine; Luanda casa–trabalho |
-| `MATCH_RADIUS_DESTINATION_METERS` | `2500` | configurável à parte |
+| `MATCH_TIME_TOLERANCE_MINUTES` | `15` | ± minutos (oferta fixa e flexível) |
+| `MATCH_RADIUS_ORIGIN_METERS` | `2500` | haversine; **só oferta fixa** |
+| `MATCH_RADIUS_DESTINATION_METERS` | `2500` | **só oferta fixa** |
+
+### Oferta fixa (`flexibilidade_rota = false`)
 
 Regras (todas AND para aceite directo):
 
@@ -255,10 +273,18 @@ Regras (todas AND para aceite directo):
 3. distância destino ≤ raio destino  
 4. `N_actual ≤ vagas_disponiveis`
 
-Se 1–3 ok mas 4 falha → elegível waitlist.  
-**Fora do MVP:** OSRM, Google Directions, ETA, path snapping.
+Se 1–3 ok mas 4 falha → elegível waitlist.
 
-Haversine: novo helper puro em `src/utils/geo.js` (TDD) — não depende de Photon.
+### Oferta flexível (`flexibilidade_rota = true`)
+
+- **Não** exige OD na oferta; **não** aplica raio residencial nem polígonos/zonas.
+- Critérios MVP: janela/horário + dias + capacidade (`N_actual ≤ vagas`); matching **ajuda a descobrir**, não impõe zona.
+- Motorista decide caso a caso se a procura é conveniente (pode aceitar Talatona vivendo em Viana, etc.).
+- APIs: `findCompatibleOfertas(procura)` **e** `findCompatibleProcuras(ofertaFlex)` (sentido descoberta B).
+
+**Fora do MVP:** OSRM, Google Directions, ETA, path snapping, polígonos, zonas, raio a partir da residência do motorista.
+
+Haversine: helper puro em `src/utils/geo.js` (TDD) — não depende de Photon.
 
 ---
 
@@ -271,12 +297,14 @@ Haversine: novo helper puro em `src/utils/geo.js` (TDD) — não depende de Phot
 
 ### `MatchingService` — `src/services/MatchingService.js`
 
-- `findCompatibleOfertas(procura|grupo)` → lista filtrada  
-- Depende: ofertas activas, `matchingConfig`, `geo`  
+- `findCompatibleOfertas(procura|grupo)` → lista filtrada (fixas: geo+tempo; flexíveis: tempo/dias/capacidade)  
+- `findCompatibleProcuras(oferta)` → para motorista flexível descobrir procura/grupo (sem filtro residência)  
+- Depende: ofertas/procuras activas, `matchingConfig`, `geo`  
 
 ### `OfertaService` — `src/services/OfertaService.js`
 
 - CRUD oferta; deriva `vagas_totais` do veículo; estados `disponivel|parcial|cheia`  
+- Fixa: validar OD; Flexível: **não** exigir OD; **não** gravar/usar zona residencial  
 
 ### `ProcuraService` / `GrupoService`
 
@@ -284,12 +312,14 @@ Haversine: novo helper puro em `src/utils/geo.js` (TDD) — não depende de Phot
 
 ### `PropostaService`
 
-- Criar proposta (motorista→procura ou inverso conforme fluxo UI Penpot)  
-- Listar M propostas por procura  
+- Criar proposta sentido **A** ou **B** (`created_by` = iniciador)  
+- Listar M propostas por procura **e** por oferta (inbox contraparte)  
+- Rejeitar / aceitar só via contraparte (serviço + RPC)  
 
 ### `AgreementService` (substitui canónico de `requestSeat`)
 
 - `createAgreementFromProposal(propostaId)` → chama RPC `accept_proposal`  
+- RPC SHALL recusar se `auth.uid() = created_by`  
 - `leavePassenger(acordoId, passengerId)` → vagas; **assert** preços intactos  
 - `renegotiateAgreementPricing` (P2)  
 - Agent discretion: ao aceitar, **cancelar** outras propostas `aberta` da mesma procura/grupo  
@@ -877,4 +907,264 @@ ISSUES:
 - Mobbin degradado (plano free)
 - One/v0 chat T31 em curso ou layout textual como SoT imediato
 NEXT: Implementer T31 (DDL MCP → TDD GrupoService → UI) → UI QA + Code Reviewer
+```
+
+---
+
+## T29 — Adenda / renegotiateAgreementPricing
+
+**ID:** MKT-13 · **Path:** `/acordos` → detalhe em `MyAgreements.jsx` (sem rota nova)  
+**API (já fechada):** `renegotiateAgreementPricing(acordoId, { modo_preco, valor_ask_kz, n_passageiros? })`  
+**MVP:** valores aplicados de imediato no contrato; **copy** fala «próximo mês» (mês corrente mantém quotas já combinadas; faltas já registadas mantêm `desconto_kz`).
+
+### Quem vê o quê
+
+| Perfil | Acordo | UI |
+|--------|--------|-----|
+| **Motorista** | `activo` | CTA «Renegociar preço» no detalhe |
+| Motorista | cancelado / outro | Sem CTA |
+| Passageiro | qualquer | Sem CTA (só vê preço congelado + lista) |
+
+### User flow
+
+```mermaid
+flowchart TD
+  A["/acordos detalhe"] --> B{Motorista e activo?}
+  B -->|Não| C[Sem CTA renegociar]
+  B -->|Sim| D["CTA Renegociar preço"]
+  D --> E[Formulário adenda aberto]
+  E --> F["Modo: Por passageiro | Total do acordo"]
+  F --> G["Valor Kz inteiro + Passageiros no preço opcional"]
+  G --> H[Preview quotas · regra resto]
+  H --> I["Rever e confirmar"]
+  I --> J["ConfirmationModal · próximo mês"]
+  J -->|Voltar| E
+  J -->|Confirmar| K["busy · RPC renegotiate"]
+  K -->|OK| L["setMessage success · fecha form · refresh detalhe"]
+  K -->|Erro| M["role=alert junto ao form"]
+```
+
+1. No detalhe (T28), motorista activo toca «Renegociar preço» → abre secção inline (não navega).  
+2. Escolhe modo humano, valor mensal (Kz), opcionalmente «Passageiros no preço» (default = contagem de activos).  
+3. Preview actualiza com `resolveAgreementPricing` (cliente) — quotas por pessoa / total; em Total, resto no último.  
+4. «Rever e confirmar» abre `ConfirmationModal` com aviso do próximo mês.  
+5. Confirm → `busy` no modal → serviço → sucesso local ou erro `role="alert"`.
+
+### Estados UI
+
+| Estado | UI |
+|--------|-----|
+| **Idle** | Detalhe T28; CTA «Renegociar preço» (só motorista+activo), acima de «Registar falta» |
+| **Form open** | Secção «Novo preço» expandida; CTA principal do form «Rever e confirmar»; «Cancelar» fecha |
+| **Preview** | Bloco «Como fica» com quotas `tabular-nums` (derivado do form; sem extra fetch) |
+| **Busy** | Modal `busy`; CTAs disabled; overlay não fecha |
+| **Erro** | Banner `role="alert"` junto ao formulário (`getFriendlyErrorMessage` / mensagem de negócio) |
+| **Sucesso** | `setMessage` success no `PageShell`; form fecha; bloco «Preço combinado» reflecte novos valores após refresh |
+
+### Copy samples (PT-PT)
+
+- CTA: «Renegociar preço»  
+- Título form: «Novo preço» / subtítulo: «Actualiza o valor combinado do acordo.»  
+- Modo: «Por passageiro» · «Total do acordo»  
+- Campos: «Valor mensal» (+ sufixo «Kz») · «Passageiros no preço» (hint: «Por omissão: passageiros activos»)  
+- Preview: «Como fica» · «Cada um paga X Kz» · «Total Y Kz» · «O resto fica no último» (só Total com resto)  
+- Modal título: «Confirmar novo preço?»  
+- Modal corpo: «Aplica-se a partir do próximo mês. O mês corrente mantém as quotas já combinadas.»  
+- Confirmar / Voltar · Sucesso: «Preço actualizado. Aplica-se a partir do próximo mês.»  
+- **Proibido na UI:** `POR_PASSAGEIRO`, `TOTAL_ACORDO`, `modo_preco`, `valor_ask_kz`, `N_contrato`, `N_activos`, `n_passageiros`
+
+### Componentes
+
+| Peça | Fonte | Notas |
+|------|-------|-------|
+| Página | `MyAgreements.jsx` | Extensão do detalhe T28; estado local form + modal |
+| Shell | `PageShell` + `PageHeader` | Feedback `setMessage` existente |
+| CTA / acções | `src/components/ui/button.jsx` | Primary = confirmar; secondary/outline = Renegociar; ghost = Cancelar |
+| Modal | `ConfirmationModal` (`isOpen`, `busy`) | Confirm **não** vermelho destrutivo — usar primary `#10b748` neste fluxo (ou prop variant se já existir; senão classe local só para adenda) |
+| Form | Inline no detalhe | Preferir inputs nativos + Label Tailwind **ou** shadcn abaixo |
+| Preview | Bloco Tailwind | Reutilizar tipografia do bloco «Preço combinado» |
+| Serviço | `AgreementService.renegotiateAgreementPricing` | Não implementar neste gate |
+| Ícones | Lucide `Pencil` / `RefreshCw` (opcional) | `aria-hidden` |
+
+**shadcn (opcional — só se o Implementer precisar de primitivos):**
+
+```bash
+npx shadcn@latest add @shadcn/input @shadcn/label @shadcn/radio-group
+```
+
+Repo hoje só tem `button.jsx` em `src/components/ui/` — radio/input/label **não** existem localmente; OK usar segmented buttons Tailwind (padrão PublishRoute) sem instalar, ou adicionar JSX via comando acima.
+
+### Layout textual (SoT imediato)
+
+```
+── Detalhe acordo (activo · Motorista) ──
+Preço combinado                    40.000 Kz
+O valor fica congelado…
+Total do acordo 120.000 Kz
+
+Passageiros · 3
+  MS  Maria   Activo    40.000 Kz
+  …
+
+[ Renegociar preço ]     ← primary/secondary, só motorista+activo
+[ Registar falta ]
+[ Fechar ]
+
+── Form open ──
+Novo preço
+Actualiza o valor combinado do acordo.
+
+Modo
+ (•) Por passageiro   ( ) Total do acordo
+
+Valor mensal
+ [ 45000 ] Kz
+
+Passageiros no preço
+ [ 3 ]   hint: Por omissão = activos
+
+Como fica
+  Cada um paga 45.000 Kz
+  Total 135.000 Kz
+
+[ Cancelar ]  [ Rever e confirmar ]
+
+── ConfirmationModal ──
+Confirmar novo preço?
+Aplica-se a partir do próximo mês.
+O mês corrente mantém as quotas já combinadas.
+[ Confirmar ]  (busy → disabled)
+[ Voltar ]
+```
+
+### Referências de design
+
+| Fonte | Resultado |
+|-------|-----------|
+| **UI Skills** | `ibelick/baseline-ui` — text-balance/pretty, `tabular-nums`, erro junto à acção, AlertDialog para acção irreversível, accent único, sem purple/glow/gradients |
+| **Mobbin** | **Falhou** (plano free / paid required) — degradado; não bloqueia |
+| **v0 T29 (One)** | https://v0.app/chat/hT2KzrQr0Bt · plano alinhado (form inline + modal + preview); gerou até plan mode — **SoT imediato = layout textual** (+ canónico) |
+| **v0 canónico marketplace** | https://v0.app/chat/cYa4j7gxE0p · vista Acordos / preço humano |
+| **Tokens** | `src/index.css` primary `#10b748`, Plus Jakarta Sans, `max-w-md` |
+
+### Invariantes (Implementer)
+
+1. Só motorista + acordo activo vê CTA / pode submeter.  
+2. Copy «próximo mês» mesmo se MVP grava valores já; leave **não** recalcula.  
+3. Preview cliente com a mesma regra de resto que o serviço / RPC.  
+4. Sem toast library; sem TypeScript; sem jargon na UI.  
+5. Não criar página/rota nova — tudo em `MyAgreements` detalhe.
+
+### Implementer checklist
+
+1. Gate design APPROVE → TDD serviço/RPC (paralelo se já em curso) → UI mínima no detalhe.  
+2. Reutilizar `ConfirmationModal` + `Button` + padrões T28.  
+3. Visual QA vs layout textual / chat v0 T29.
+
+### VERDICT design (T29)
+
+```text
+VERDICT: APPROVE
+ISSUES:
+- Mobbin degradado (plano free)
+- One/v0 Create Chat síncrono timeout; async chat hT2KzrQr0Bt criado — SoT imediato = layout textual + canónico cYa4j7gxE0p
+- ConfirmationModal actual usa confirm vermelho (Sair); adenda precisa confirm primary/emerald — variante ou override local
+NEXT: Implementer T29 (RPC + renegotiateAgreementPricing TDD → UI MyAgreements) → UI QA + Code Reviewer
+```
+
+---
+
+## T30 — Mapa N pontos preferenciais
+
+**ID:** MKT-15 · **P3** · **Path UI:** `/motorista` → `PropostaReviewCard`  
+**Deps:** T24 · **Não tocar:** T29 uncommitted, DDL, leave/waitlist/adenda  
+**SoT:** v0 https://v0.app/chat/jIH3o5n1EM1 (UI gerada; mock CSS no sandbox → **MapLibre real no repo**) + UI Skills `ibelick/baseline-ui` + shadcn locais. **Não** Penpot. Mobbin degradado (plano free).
+
+### Gap
+
+| Camada | Hoje | Alvo |
+|--------|------|------|
+| BD / `listMembrosGrupo` | `pickup_*` + `dropoff_*` via `*` | Sem DDL / sem mudar fetch |
+| `buildPropostaReview` | só `pickup_name` | + `pickup_lat/lng` (+ `dropoff_*`) |
+| UI | lista texto | + `PreferentialPointsMap` (MapLibre + OSM) |
+
+### User flow
+
+```mermaid
+flowchart TD
+  A[Hub /motorista] --> B[PropostaReviewCard]
+  B --> C{Coords no slice N?}
+  C -->|N≥1| D[MapLibre pins + fitBounds]
+  C -->|0| E[Mensagem sem localização]
+  C -->|Parcial| F[Pins válidos + «X de Y com localização»]
+  D --> G[Lista + preço + Aceitar/Recusar]
+  E --> G
+  F --> G
+```
+
+### Estados
+
+| Estado | UI |
+|--------|-----|
+| Loading | Skeleton `h-[190px]` rounded-xl |
+| N pins | Marcadores 1…N; labels `pickup_name`; © OSM |
+| 1 ponto | Centro + zoom ~14 |
+| Sem coords | «Pontos de recolha sem localização no mapa» (lista textual mantém-se) |
+| Parcial | Só pins com lat/lng + «X de Y com localização» |
+| Erro tiles | Mensagem junto ao bloco; CTAs intactos |
+| Solo sem grupo | `membros=[]` → sem mapa |
+
+### Composição (ordem — alinha v0)
+
+1. Título (`Grupo · N pessoas`)  
+2. **Mapa** (~180–220px)  
+3. Lista membros  
+4. Preço  
+5. Aviso composição  
+6. Aceitar / Recusar + modal  
+
+Pins numerados 1-based alinhados à lista. Recolha = `#10b748`; desembarque (se coords) = slate secundário.
+
+### Layout textual
+
+```
+Grupo · 3 pessoas
+┌─ Mapa ~190px ──────────────┐
+│ (1) Talatona  (2) Benfica  │
+│ © OpenStreetMap            │
+└────────────────────────────┘
+○ Ana — Talatona
+○ Bruno — Benfica
+Por passageiro / Total · Kz
+[Aceitar] [Recusar]
+```
+
+### Componentes / scopes paralelos
+
+| Scope | Ficheiros | Notas |
+|-------|-----------|-------|
+| **A** | `propostaReview.js` + test | DTO lat/lng + `buildPreferentialMapPoints` |
+| **B** | `PreferentialPointsMap.jsx` + test | dynamic `maplibre-gl`; props `points`, `loading`, opcional `partialNote` |
+| **C** | `PropostaReviewCard` + test | mapa após título; nota parcial |
+
+### Copy
+
+- «Pontos de recolha sem localização no mapa»  
+- «X de Y com localização»  
+- Sem jargon `N_*` / modos internos
+
+### Invariantes
+
+1. Só slice `n_passageiros_propostos`.  
+2. Sem rota nova; sem Google Maps; sem toast/TS.  
+3. Aceitar → RPC existente.
+
+### VERDICT design (T30)
+
+```text
+VERDICT: APPROVE
+ISSUES:
+- Mobbin degradado (plano free)
+- v0 jIH3o5n1EM1 = composição/estados; sandbox mock CSS — repo usa maplibre-gl
+NEXT: A+B paralelo → C → UI QA + Code Reviewer
 ```

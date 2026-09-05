@@ -1,0 +1,1 @@
+{"nodes": [{"id": "technical_design_doc_creator_skill", "label": "Technical Design Doc Creator Skill", "file_type": "code", "source_file": ".cline/skills/technical-design-doc-creator/SKILL.md", "rationale": "Creates TDDs through interactive discovery."}], "edges": [], "hyperedges": []}

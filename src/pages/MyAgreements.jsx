@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowRight, Clock, Users, ChevronRight, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Clock, Users, ChevronRight, ShieldCheck, Pencil } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getAgreementsForDriver,
   getAgreementsForPassenger,
   leavePassenger,
+  renegotiateAgreementPricing,
 } from '../services/AgreementService';
 import EmptyState from '../components/EmptyState';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -15,6 +16,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import { Button } from '../components/ui/button';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
+import { resolveAgreementPricing } from '../utils/resolveAgreementPricing';
 
 /**
  * @param {string | null | undefined} estado
@@ -71,6 +73,16 @@ function formatHora(raw) {
 }
 
 /**
+ * Contagem de passageiros activos no acordo.
+ * @param {{ acordos_passageiros?: Array<{ estado?: string }> } | null | undefined} acordo
+ * @returns {number}
+ */
+function countActivos(acordo) {
+  const linhas = acordo?.acordos_passageiros || [];
+  return linhas.filter((p) => isActivo(p.estado)).length;
+}
+
+/**
  * Gestão de acordos 1 motorista : N passageiros.
  */
 const MyAgreements = () => {
@@ -84,10 +96,20 @@ const MyAgreements = () => {
   const [leaveModalOpen, setLeaveModalOpen] = useState(false);
   const [leaveBusy, setLeaveBusy] = useState(false);
 
+  const [adendaModo, setAdendaModo] = useState(
+    /** @type {'POR_PASSAGEIRO' | 'TOTAL_ACORDO'} */ ('POR_PASSAGEIRO'),
+  );
+  const [adendaValor, setAdendaValor] = useState('');
+  const [adendaN, setAdendaN] = useState('');
+  const [adendaFormOpen, setAdendaFormOpen] = useState(false);
+  const [adendaModalOpen, setAdendaModalOpen] = useState(false);
+  const [adendaBusy, setAdendaBusy] = useState(false);
+  const [adendaError, setAdendaError] = useState('');
+
   const carregar = useCallback(async () => {
     if (!user?.id) {
       setIsLoading(false);
-      return;
+      return [];
     }
     setIsLoading(true);
     try {
@@ -95,10 +117,13 @@ const MyAgreements = () => {
         tipoPerfil === 'Motorista'
           ? await getAgreementsForDriver(user.id)
           : await getAgreementsForPassenger(user.id);
-      setAcordos((data || []).filter((a) => !a.is_hidden_by_user));
+      const filtered = (data || []).filter((a) => !a.is_hidden_by_user);
+      setAcordos(filtered);
+      return filtered;
     } catch (err) {
       console.error(err);
       setMessage({ type: 'error', text: getFriendlyErrorMessage(err) });
+      return [];
     } finally {
       setIsLoading(false);
     }
@@ -124,6 +149,32 @@ const MyAgreements = () => {
   const activos = acordos.filter((a) => isActivo(a.estado));
   const outros = acordos.filter((a) => !isActivo(a.estado));
 
+  const closeAdendaForm = () => {
+    setAdendaFormOpen(false);
+    setAdendaModalOpen(false);
+    setAdendaBusy(false);
+    setAdendaError('');
+    setAdendaModo('POR_PASSAGEIRO');
+    setAdendaValor('');
+    setAdendaN('');
+  };
+
+  /**
+   * @param {typeof selected} acordo
+   */
+  const openAdendaForm = (acordo) => {
+    const nActivos = countActivos(acordo) || acordo?.n_passageiros_contrato || 1;
+    setAdendaModo('POR_PASSAGEIRO');
+    setAdendaValor(
+      acordo?.valor_mensal_por_passageiro_kz != null
+        ? String(acordo.valor_mensal_por_passageiro_kz)
+        : '',
+    );
+    setAdendaN(String(nActivos));
+    setAdendaError('');
+    setAdendaFormOpen(true);
+  };
+
   const handleLeave = async () => {
     if (!selected || !user?.id || leaveBusy) return;
     setLeaveBusy(true);
@@ -137,6 +188,47 @@ const MyAgreements = () => {
       setMessage({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
     } finally {
       setLeaveBusy(false);
+    }
+  };
+
+  const handleConfirmAdenda = async () => {
+    if (!selected || adendaBusy) return;
+    const valor = Number.parseInt(String(adendaValor), 10);
+    const n = Number.parseInt(String(adendaN), 10);
+    if (!Number.isInteger(valor) || valor < 0) {
+      setAdendaError('Indica um valor mensal válido em Kz (inteiro).');
+      setAdendaModalOpen(false);
+      return;
+    }
+    if (!Number.isInteger(n) || n < 1) {
+      setAdendaError('Indica o número de passageiros no preço.');
+      setAdendaModalOpen(false);
+      return;
+    }
+
+    setAdendaBusy(true);
+    setAdendaError('');
+    try {
+      await renegotiateAgreementPricing(selected.id, {
+        modo_preco: adendaModo,
+        valor_ask_kz: valor,
+        n_passageiros: n,
+      });
+      setMessage({
+        type: 'success',
+        text: 'Preço actualizado. Aplica-se a partir do próximo mês.',
+      });
+      const acordoId = selected.id;
+      closeAdendaForm();
+      const refreshed = await carregar();
+      const updated = refreshed.find((a) => a.id === acordoId);
+      if (updated) setSelected(updated);
+    } catch (err) {
+      console.error('Erro ao renegociar preço:', err);
+      setAdendaError(err.message || getFriendlyErrorMessage(err));
+      setAdendaModalOpen(false);
+    } finally {
+      setAdendaBusy(false);
     }
   };
 
@@ -157,7 +249,10 @@ const MyAgreements = () => {
       <button
         type="button"
         key={acordo.id}
-        onClick={() => setSelected(acordo)}
+        onClick={() => {
+          closeAdendaForm();
+          setSelected(acordo);
+        }}
         className="w-full text-left bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-2"
       >
         <div className="flex justify-between items-center">
@@ -201,10 +296,36 @@ const MyAgreements = () => {
     const nLinhas = selected.n_passageiros_contrato || linhas.length || 0;
     const activo = isActivo(selected.estado);
     const isPassageiro = tipoPerfil === 'Passageiro';
+    const isMotorista = tipoPerfil === 'Motorista';
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
     const quotaDestaque =
       minhaLinha?.quota_mensal_kz ?? selected.valor_mensal_por_passageiro_kz;
     const podeSair = isPassageiro && activo && (!minhaLinha || isActivo(minhaLinha.estado));
+    const podeRenegociar = isMotorista && activo;
+
+    const valorNum = Number.parseInt(String(adendaValor), 10);
+    const nNum = Number.parseInt(String(adendaN), 10);
+    let preview = null;
+    let previewHasResto = false;
+    if (
+      adendaFormOpen &&
+      Number.isInteger(valorNum) &&
+      valorNum >= 0 &&
+      Number.isInteger(nNum) &&
+      nNum >= 1
+    ) {
+      try {
+        preview = resolveAgreementPricing({
+          modo_preco: adendaModo,
+          valor_ask_kz: valorNum,
+          n_passageiros: nNum,
+        });
+        previewHasResto =
+          adendaModo === 'TOTAL_ACORDO' && valorNum % nNum !== 0;
+      } catch {
+        preview = null;
+      }
+    }
 
     return (
       <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
@@ -357,7 +478,145 @@ const MyAgreements = () => {
             </p>
           )}
 
+          {adendaFormOpen && podeRenegociar && (
+            <section
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/40 p-4 space-y-4"
+              aria-labelledby="adenda-title"
+            >
+              <div className="space-y-1">
+                <h3 id="adenda-title" className="text-base font-bold text-slate-900 dark:text-white">
+                  Novo preço
+                </h3>
+                <p className="text-sm text-slate-500 text-pretty">
+                  Actualiza o valor combinado do acordo.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Modo</p>
+                <div className="flex bg-slate-200/80 dark:bg-slate-800 rounded-xl p-1 gap-1">
+                  <button
+                    type="button"
+                    className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                      adendaModo === 'POR_PASSAGEIRO'
+                        ? 'bg-white dark:bg-slate-700 text-primary shadow-sm'
+                        : 'text-slate-500'
+                    }`}
+                    onClick={() => setAdendaModo('POR_PASSAGEIRO')}
+                  >
+                    Por passageiro
+                  </button>
+                  <button
+                    type="button"
+                    className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                      adendaModo === 'TOTAL_ACORDO'
+                        ? 'bg-white dark:bg-slate-700 text-primary shadow-sm'
+                        : 'text-slate-500'
+                    }`}
+                    onClick={() => setAdendaModo('TOTAL_ACORDO')}
+                  >
+                    Total do acordo
+                  </button>
+                </div>
+              </div>
+
+              <label className="flex flex-col gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                Valor mensal
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    step={1}
+                    value={adendaValor}
+                    onChange={(e) => setAdendaValor(e.target.value)}
+                    className="flex-1 h-11 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 outline-none focus:ring-2 focus:ring-primary/50 tabular-nums"
+                  />
+                  <span className="text-sm font-medium text-slate-500 shrink-0">Kz</span>
+                </div>
+              </label>
+
+              <label className="flex flex-col gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                Passageiros no preço
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  step={1}
+                  value={adendaN}
+                  onChange={(e) => setAdendaN(e.target.value)}
+                  className="h-11 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 outline-none focus:ring-2 focus:ring-primary/50 tabular-nums"
+                />
+                <span className="text-xs font-normal text-slate-400">
+                  Por omissão: passageiros activos
+                </span>
+              </label>
+
+              {preview && (
+                <div className="rounded-xl border border-emerald-200/80 bg-white dark:bg-slate-900 dark:border-emerald-900/40 p-3 space-y-1">
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">Como fica</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-300">
+                    Cada um paga{' '}
+                    <span className="tabular-nums font-semibold">
+                      {formatKwanza(preview.valor_mensal_por_passageiro_kz)} Kz
+                    </span>
+                  </p>
+                  <p className="text-sm text-slate-600 dark:text-slate-300">
+                    Total{' '}
+                    <span className="tabular-nums font-semibold">
+                      {formatKwanza(preview.valor_mensal_total_kz)} Kz
+                    </span>
+                  </p>
+                  {previewHasResto && (
+                    <p className="text-xs text-slate-500">O resto fica no último</p>
+                  )}
+                </div>
+              )}
+
+              {adendaError && (
+                <div
+                  role="alert"
+                  className="rounded-xl px-3 py-2.5 text-sm font-medium bg-red-50 text-red-700 border border-red-200"
+                >
+                  {adendaError}
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2 sm:flex-row-reverse">
+                <Button
+                  type="button"
+                  className="w-full h-11 rounded-xl font-bold"
+                  disabled={!preview}
+                  onClick={() => {
+                    setAdendaError('');
+                    setAdendaModalOpen(true);
+                  }}
+                >
+                  Rever e confirmar
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full h-11 rounded-xl font-bold text-slate-500"
+                  onClick={closeAdendaForm}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </section>
+          )}
+
           <div className="flex flex-col gap-2 pt-1">
+            {podeRenegociar && !adendaFormOpen && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-11 rounded-xl font-bold border-primary/30 text-primary hover:bg-primary/5"
+                onClick={() => openAdendaForm(selected)}
+              >
+                <Pencil size={16} aria-hidden="true" /> Renegociar preço
+              </Button>
+            )}
             {activo && (
               <Button
                 type="button"
@@ -382,7 +641,10 @@ const MyAgreements = () => {
               type="button"
               variant="ghost"
               className="w-full h-11 rounded-xl font-bold text-slate-500"
-              onClick={() => setSelected(null)}
+              onClick={() => {
+                closeAdendaForm();
+                setSelected(null);
+              }}
             >
               Fechar
             </Button>
@@ -445,6 +707,19 @@ const MyAgreements = () => {
         onConfirm={handleLeave}
         onCancel={() => {
           if (!leaveBusy) setLeaveModalOpen(false);
+        }}
+      />
+
+      <ConfirmationModal
+        isOpen={adendaModalOpen}
+        busy={adendaBusy}
+        variant="primary"
+        title="Confirmar novo preço?"
+        message="Aplica-se a partir do próximo mês. O mês corrente mantém as quotas já combinadas."
+        confirmText="Confirmar"
+        onConfirm={handleConfirmAdenda}
+        onCancel={() => {
+          if (!adendaBusy) setAdendaModalOpen(false);
         }}
       />
     </PageShell>

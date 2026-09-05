@@ -1,0 +1,1 @@
+{"nodes": [{"id": "rerender_memo", "label": "Extract to Memoized Components", "file_type": "concept", "source_file": ".cline/skills/react-best-practices/rules/rerender-memo.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null, "rationale": "Enables early returns before expensive computations."}], "edges": [], "hyperedges": []}

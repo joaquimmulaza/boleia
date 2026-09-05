@@ -1,0 +1,1 @@
+{"nodes": [{"id": "codex_skills_react_best_practices_rules_advanced_init_once", "label": "Initialize App Once", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/advanced-init-once.md", "rationale": "Avoids duplicate initialization in development/remounts."}], "edges": [], "hyperedges": []}

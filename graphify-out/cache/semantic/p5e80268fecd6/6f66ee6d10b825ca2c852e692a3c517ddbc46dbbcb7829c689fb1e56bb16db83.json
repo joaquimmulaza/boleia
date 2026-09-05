@@ -1,0 +1,1 @@
+{"nodes": [{"id": "server_auth_actions", "label": "Authenticate Server Actions Like API Routes", "file_type": "document", "source_file": ".cursor/skills/react-best-practices/rules/server-auth-actions.md", "rationale": "Critical security requirement to verify auth inside Server Actions because they are public endpoints."}], "edges": [], "hyperedges": []}

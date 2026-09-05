@@ -1,0 +1,1 @@
+{"nodes": [{"id": "codex_skills_react_best_practices_rules_rerender_defer_reads", "label": "Defer State Reads to Usage Point", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/rerender-defer-reads.md", "rationale": "Avoids unnecessary subscriptions to dynamic state."}], "edges": [], "hyperedges": []}

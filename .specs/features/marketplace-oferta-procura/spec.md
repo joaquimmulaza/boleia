@@ -13,7 +13,9 @@ O MVP actual modela boleias como **rota → pedido de vaga → acordo 1:1** (`ro
 - [ ] Faltas: `desconto_kz = valor_mensal_por_passageiro_kz / dias_uteis_mes` — zero literais `/ 4` e zero `total / N_activos`.
 - [ ] Lista de espera quando `N_proposto > vagas_disponiveis` (não fechar anúncio).
 - [ ] Preservar auth/`perfis`, push/notificações, Photon/geo, Layout/Theme, paths principais.
-- [ ] TDD (Vitest) e UI Penpot-first conforme `AGENTS.md`.
+- [ ] Suportar **dois tipos de oferta**: **fixa** (OD + horário + dias + capacidade + preço) e **flexível** (capacidade + disponibilidade + dias + janela + preço, **sem** OD obrigatório; sem zonas/raio residencial no MVP).
+- [ ] Propostas **bidireccionais** (A: passageiro/grupo→motorista; B: motorista→passageiro/grupo) com regra: **só a contraparte** aceita/recusa (`created_by` não pode aceitar a própria proposta).
+- [ ] TDD (Vitest) e UI v0/shadcn-first conforme `AGENTS.md`.
 
 ## Out of Scope
 
@@ -27,6 +29,8 @@ O MVP actual modela boleias como **rota → pedido de vaga → acordo 1:1** (`ro
 | Expand-contract, backfill, dual-write | Dados de teste descartáveis — corte limpo |
 | Quotas desiguais por passageiro | Extensão pós-MVP |
 | Adenda de preço (mês seguinte) UI completa | Serviço pode existir; fluxo UI pode ser P2 |
+| Polígonos / zonas geográficas / raio residencial do motorista | **Fora do MVP** — residência ≠ área de atuação; motorista flexível decide caso a caso |
+| Oferta flexível = «rota OD + flag» | Modelo incorrecto — flexível **sem** OD obrigatório |
 
 ---
 
@@ -37,10 +41,11 @@ O MVP actual modela boleias como **rota → pedido de vaga → acordo 1:1** (`ro
 | Relação | Cardinalidade | Limite / nota |
 |---|---|---|
 | Motorista → passageiros **num acordo aceite** | **1 → N** | `N_contrato` ≤ `vagas_disponiveis` no momento da aceitação |
-| Procura/grupo → **propostas** de motoristas | **1 → M** | Uma procura/grupo pode receber **múltiplas** propostas em paralelo |
+| Procura/grupo → **propostas** (de qualquer sentido) | **1 → M** | Várias propostas abertas em paralelo; **nunca** «1 procura = 1 motorista» |
 | Proposta aceite → acordo | **1 → 1** | Aceitar uma proposta cria **um** acordo: 1 motorista + N passageiros |
 | Acordo | **1 cabeçalho** + **N** `acordos_passageiros` | N = `N_contrato` na aceitação |
 
+- Cadeia canónica: **Procura/grupo → M propostas → 1 aceite → 1 acordo 1:N**.
 - Matching e negociação: **oferta ↔ procura/grupo**, nunca «um negócio = um motorista + um passageiro».
 - N = 1 é apenas o caso degenerado (procura individual), **não** a regra de domínio.
 - Vários acordos activos do mesmo motorista só se a soma de `N_activos` em todos os seus acordos ≤ `vagas_totais` da oferta.
@@ -78,9 +83,33 @@ O grupo **não** é um «pacote fechado» que precisa de estar cheio para negoci
 
 **Necessidade do grupo** (procura colectiva): `N_actual`, `n_maximo` (capacidade pretendida pelo criador), OD, horários, dias, pontos preferenciais, demais condições. **Sem** preço próprio obrigatório.
 
-**Proposta:** captura `N_proposto` (+ modo/ask do motorista) no instante da negociação. Vários motoristas podem ter propostas abertas em paralelo (1:M). Aceitar uma → 1 acordo 1:N; restantes abertas da mesma procura → canceladas/rejeitadas conforme máquina de estados.
+### Oferta fixa vs oferta flexível (MVP)
 
-**Exemplo canónico:** grupo 2/4 (`N_actual=2`, `n_maximo=4`); motorista propõe `TOTAL_ACORDO` 100.000 Kz com `N_proposto=2` → 50.000 Kz/passageiro. Entra um 3.º membro → proposta existente **inalterada** (ainda N=2 / 50k). Nova negociação a 3 → nova proposta (`N_proposto=3`, resto 33334+33333+33333).
+| Tipo | `flexibilidade_rota` | Campos obrigatórios | Matching |
+|---|---|---|---|
+| **Fixa** | `false` | OD (coords) + horário + dias + capacidade + preço | Geo OD + tempo + capacidade (haversine; sem routing) |
+| **Flexível** | `true` | Capacidade + disponibilidade + dias + janela/horário + preço | **Sem** OD da oferta; **sem** exclusão por residência; horário/janela + dias + capacidade; motorista decide caso a caso |
+
+**Proibido no MVP:** tratar flexível como «rota OD + flag»; polígonos; zonas; raio a partir da residência do motorista; bloquear procuras por distância residência↔recolha.
+
+### Propostas bidireccionais (obrigatório)
+
+| Sentido | Quem cria | Quem aceita/recusa |
+|---|---|---|
+| **A** | Owner da procura/grupo | Motorista da oferta |
+| **B** | Motorista da oferta | Owner da procura/grupo |
+
+- Campos mínimos da proposta: `created_by`, oferta, procura (e grupo se aplicável), `N_proposto`, preço da proposta, `estado`.
+- `auth.uid() = created_by` ⇒ **proibido** aceitar ou rejeitar.
+- Mudança de `N_actual` **não** altera propostas existentes.
+
+**Proposta:** captura `N_proposto` (+ modo/ask) no instante da negociação. Sentidos permitidos:
+- **A)** Passageiro/grupo cria proposta → **só o motorista** (contraparte) aceita/recusa.
+- **B)** Motorista cria proposta → **só o owner da procura/grupo** (contraparte) aceita/recusa.
+
+`created_by` identifica o iniciador. **Quem criou a proposta NÃO pode aceitá-la nem rejeitá-la** — apenas a contraparte. Vários motoristas / várias propostas abertas em paralelo (1:M). Aceitar uma → 1 acordo 1:N; restantes abertas da mesma procura → canceladas/rejeitadas conforme máquina de estados.
+
+**Exemplo canónico:** grupo 2/4 (`N_actual=2`, `n_maximo=4`); proposta `TOTAL_ACORDO` 100.000 Kz com `N_proposto=2` → 50.000 Kz/passageiro. Entra um 3.º membro → proposta existente **inalterada** (ainda N=2 / 50k). Nova negociação a 3 → nova proposta (`N_proposto=3`, resto 33334+33333+33333).
 
 ### Preço
 
@@ -138,7 +167,7 @@ Aceitar proposta só se `N_proposto <= vagas_disponiveis` no momento da aceitaç
 
 ### P1: Publicar oferta de capacidade com modo de preço ⭐ MVP
 
-**User Story**: Como motorista, quero publicar uma oferta de capacidade (rota fixa ou flexível) com `POR_PASSAGEIRO` ou `TOTAL_ACORDO` e vagas do veículo, para que passageiros/grupos possam propor acordos multi-passageiro.
+**User Story**: Como motorista, quero publicar uma oferta de capacidade — **fixa** (OD) ou **flexível** (sem rota OD obrigatória) — com `POR_PASSAGEIRO` ou `TOTAL_ACORDO` e vagas do veículo.
 
 **Why P1**: Sem oferta não há marketplace.
 
@@ -147,10 +176,12 @@ Aceitar proposta só se `N_proposto <= vagas_disponiveis` no momento da aceitaç
 1. WHEN o motorista cria uma oferta com veículo válido THEN o sistema SHALL gravar `vagas_totais` a partir de `vagas_passageiros` do veículo e `vagas_disponiveis = vagas_totais`.
 2. WHEN o motorista escolhe `modo_preco = POR_PASSAGEIRO` THEN `valor_mensal_ask_kz` SHALL ser interpretado como ask individual.
 3. WHEN o motorista escolhe `modo_preco = TOTAL_ACORDO` THEN `valor_mensal_ask_kz` SHALL ser interpretado como ask total do acordo.
-4. WHEN `flexibilidade_rota = false` THEN a oferta SHALL exigir origem/destino (rota fixa); WHEN `true` THEN SHALL aceitar zonas + janelas.
-5. WHEN a oferta é criada THEN `estado` SHALL ser `disponivel` (ou `inactiva` se o motorista a desactivar).
+4. WHEN `flexibilidade_rota = false` (**oferta fixa**) THEN a oferta SHALL exigir origem e destino com coordenadas + horário + dias + capacidade + preço.
+5. WHEN `flexibilidade_rota = true` (**oferta flexível**) THEN a oferta SHALL **não** exigir OD fixo; SHALL gravar capacidade, disponibilidade, dias, janela/horário e preço. A residência do motorista **não** define área de atuação.
+6. WHEN `flexibilidade_rota = true` THEN o MVP SHALL **não** usar polígonos, zonas geográficas, raio residencial nem exclusão de procuras por distância à residência do motorista.
+7. WHEN a oferta é criada THEN `estado` SHALL ser `disponivel` (ou `inactiva` se o motorista a desactivar).
 
-**Independent Test**: Criar oferta com modo `TOTAL_ACORDO` e 3 vagas; ler da BD e verificar campos e interpretação do ask.
+**Independent Test**: Oferta fixa com OD; oferta flexível sem OD; ambas com `TOTAL_ACORDO` e vagas correctas.
 
 ---
 
@@ -176,7 +207,7 @@ Aceitar proposta só se `N_proposto <= vagas_disponiveis` no momento da aceitaç
 
 ### P1: Proposta e aceitação atómica → acordo 1:N ⭐ MVP
 
-**User Story**: Como motorista (ou fluxo de aceitação), quero aceitar uma proposta compatível e criar um acordo com N passageiros e preços congelados numa única transacção.
+**User Story**: Como participante na negociação (motorista ou passageiro/grupo), quero que a contraparte possa aceitar uma proposta compatível e criar um acordo com N passageiros e preços congelados numa única transacção.
 
 **Why P1**: Objecto final do produto; substitui `requestSeat`.
 
@@ -190,9 +221,11 @@ Aceitar proposta só se `N_proposto <= vagas_disponiveis` no momento da aceitaç
 6. WHEN dois aceites concorrentes excedem vagas THEN no máximo um SHALL ter sucesso; o outro SHALL falhar ou ir para waitlist (sem overbooking).
 7. WHEN uma proposta é aceite THEN outras propostas **abertas** da mesma procura/grupo SHALL ser canceladas (default conservador); o acordo criado é sempre 1 motorista + N passageiros — nunca um vínculo 1:1 implícito.
 8. WHEN o grupo tem `N_actual > N_proposto` na aceitação THEN o sistema SHALL incluir apenas os primeiros `N_proposto` membros activos por `ordem_insercao` (composição alinhada ao snapshot da proposta). WHEN `N_actual < N_proposto` THEN a aceitação SHALL falhar.
-9. WHEN se cria uma proposta THEN `n_passageiros_propostos` SHALL = `N_actual` no instante da criação (não o `n_maximo`).
+9. WHEN se cria uma proposta THEN `n_passageiros_propostos` SHALL = `N_actual` no instante da criação (não o `n_maximo`); mudança posterior de `N_actual` **não** muta propostas abertas.
+10. WHEN `auth.uid() = created_by` THEN o sistema SHALL **recusar** aceite e rejeição da proposta (só a **contraparte** pode aceitar/recusar).
+11. WHEN o iniciador é o owner da procura (**sentido A**) THEN o aceitador SHALL ser o motorista da oferta; WHEN o iniciador é o motorista (**sentido B**) THEN o aceitador SHALL ser o owner da procura.
 
-**Independent Test**: TOTAL 120.000 / N=4 → 30.000×4; TOTAL 100.000 / N=3 → quotas 33334+33333+33333; `vagas_disponiveis` decrementa `N_contrato`.
+**Independent Test**: TOTAL 120.000 / N=4 → 30.000×4; TOTAL 100.000 / N=3 → quotas 33334+33333+33333; `vagas_disponiveis` decrementa `N_contrato`; criador não consegue aceitar a própria proposta.
 
 ---
 
@@ -247,22 +280,24 @@ Aceitar proposta só se `N_proposto <= vagas_disponiveis` no momento da aceitaç
 
 ### P1: Matching oferta ↔ procura/grupo ⭐ MVP
 
-**User Story**: Como passageiro, quero ver ofertas compatíveis com a minha procura/grupo (horário, geo, capacidade ≥ `N_actual`).
+**User Story**: Como passageiro ou motorista, quero descobrir anúncios compatíveis (horário, capacidade, e geo **quando aplicável**) sem routing.
 
-**Why P1**: Substitui listagem de `routes` no dashboard.
+**Why P1**: Substitui listagem de `routes`; serve oferta fixa e flexível.
 
 **Acceptance Criteria**:
 
-1. WHEN se lista matches THEN uma oferta SHALL ser compatível só se **todas** as condições MVP forem verdadeiras:
-   - **Horário:** diferença absoluta entre horário da oferta e da procura ≤ tolerância configurável (default **±15 minutos**);
-   - **Geo origem:** distância haversine entre origem da oferta e origem da procura ≤ raio configurável (default a fixar em design/config, ex. km);
-   - **Geo destino:** idem para destino (mesmo parâmetro de raio ou parâmetros separados origem/destino — ambos configuráveis);
-   - **Capacidade para aceite directo:** `N_actual` ≤ `vagas_disponiveis` (usa `N_actual`, não `N_contrato` nem `N_activos` de outro acordo).
-2. WHEN `N_actual > vagas_disponiveis` THEN a oferta SHALL ser elegível para waitlist, não para aceitação directa.
-3. WHEN o motorista revê uma proposta de grupo THEN a UI/dados SHALL expor os pontos preferenciais dos membros cobertos por essa proposta (`N_proposto` / snapshot).
-4. WHEN se avalia matching no MVP THEN o sistema SHALL **não** calcular routing por estrada, ETA, nem matriz de distâncias rodoviárias.
+1. WHEN a oferta é **fixa** (`flexibilidade_rota = false`) THEN o match SHALL exigir:
+   - **Horário:** |oferta − procura| ≤ tolerância (default ±15 min);
+   - **Geo origem e destino:** haversine ≤ raio configurável;
+   - **Capacidade directa:** `N_actual` ≤ `vagas_disponiveis`.
+2. WHEN a oferta é **flexível** (`flexibilidade_rota = true`) THEN o match SHALL **não** exigir OD da oferta nem excluir procuras por distância à residência/localização do motorista. Critérios MVP: horário/janela + dias + capacidade (+ filtros suaves de preço se existirem). O motorista decide caso a caso se a procura é conveniente.
+3. WHEN `N_actual > vagas_disponiveis` THEN a oferta SHALL ser elegível para waitlist, não para aceitação directa.
+4. WHEN o motorista com oferta flexível descobre procuras/grupos THEN a UI/dados SHALL permitir seleccionar uma procura e criar proposta (**sentido B**).
+5. WHEN o passageiro lista matches THEN ofertas fixas e flexíveis compatíveis SHALL poder aparecer (flexível sem filtro OD oferta).
+6. WHEN o motorista revê uma proposta de grupo THEN a UI/dados SHALL expor os pontos preferenciais dos membros cobertos pelo snapshot (`N_proposto`).
+7. WHEN se avalia matching no MVP THEN o sistema SHALL **não** calcular routing por estrada, ETA, polígonos de zona, nem raio residencial do motorista.
 
-**Independent Test**: Procura com `N_actual`=3 só aceita directamente ofertas com ≥3 vagas; oferta a 20 min de diferença com tolerância 15 min é excluída; sem chamadas a motor de rotas.
+**Independent Test**: Oferta fixa incompatível por OD; oferta flexível sem OD casa por horário/capacidade; procura N=3 só direct se ≥3 vagas.
 
 ---
 
@@ -283,7 +318,22 @@ Aceitar proposta só se `N_proposto <= vagas_disponiveis` no momento da aceitaç
 
 ---
 
-### P2: Adenda / renegociação de preço (mês seguinte)
+### P1: Propostas bidireccionais (criar + inbox da contraparte) ⭐ MVP
+
+**User Story**: Como passageiro/grupo **ou** motorista, quero criar uma proposta e que **só a contraparte** a aceite ou rejeite.
+
+**Why P1**: Negociação real em Luanda é bidireccional; o criador não se auto-aceita.
+
+**Acceptance Criteria**:
+
+1. WHEN o owner da procura cria proposta sobre uma oferta (**sentido A**) THEN `created_by` SHALL ser o owner e o motorista SHALL ver a proposta no hub para aceitar/recusar.
+2. WHEN o motorista cria proposta sobre uma procura/grupo (**sentido B**) THEN `created_by` SHALL ser o motorista e o passageiro/grupo SHALL ver a proposta para aceitar/recusar.
+3. WHEN `auth.uid() = propostas.created_by` THEN `accept_proposal` / rejeição SHALL falhar com erro de negócio claro.
+4. WHEN a contraparte aceita THEN o fluxo atómico de acordo 1:N SHALL aplicar-se (mesmas regras MKT de aceitação).
+5. WHEN a notificação de proposta chega THEN o deep link SHALL abrir o inbox da **contraparte** (não sempre `/motorista`).
+6. WHEN `N_actual` do grupo muda AFTER criar a proposta THEN a proposta existente SHALL permanecer com o mesmo `N_proposto` e preço.
+
+**Independent Test**: Motorista cria proposta → owner aceita; owner cria → motorista aceita; criador tenta aceitar → erro; N_actual sobe → proposta antiga intacta.
 
 **User Story**: Como partes do acordo, quero renegociar preços / N só via adenda explícita para o mês seguinte.
 
@@ -358,9 +408,9 @@ Aceitar proposta só se `N_proposto <= vagas_disponiveis` no momento da aceitaç
 | MKT-10 | P1: Migração limpa + preservar infra | Design | Pending |
 | MKT-11 | P1: RLS tabelas novas | Design | Pending |
 | MKT-12 | P1: Notificações/push alinhados | Design | Pending |
-| MKT-13 | P2: Adenda renegociação | - | Pending |
+| MKT-13 | P2: Adenda renegociação | Design | Done |
 | MKT-14 | P2: Shell / deep links | - | Pending |
-| MKT-15 | P3: Mapa N pontos | - | Pending |
+| MKT-15 | P3: Mapa N pontos | T30 | Done |
 | MKT-16 | P1: Actualizar AGENTS.md (fonte de verdade) | - | Pending |
 
 **Coverage:** 18 total, 0 mapped to tasks, 18 unmapped ⚠️ (mapeamento na fase Tasks)

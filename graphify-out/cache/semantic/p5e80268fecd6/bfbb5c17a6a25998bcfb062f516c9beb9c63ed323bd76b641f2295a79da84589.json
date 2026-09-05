@@ -1,0 +1,1 @@
+{"nodes": [{"id": "codex_skills_react_best_practices_rules_bundle_dynamic_imports", "label": "Dynamic Imports for Heavy Components", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/bundle-dynamic-imports.md", "rationale": "Directly affects TTI and LCP."}], "edges": [], "hyperedges": []}

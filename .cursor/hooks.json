@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "hooks": {
+    "subagentStop": [
+      {
+        "type": "command",
+        "command": "node .cursor/hooks/subagent-verdict-loop.js",
+        "loop_limit": 2
+      }
+    ],
+    "stop": [
+      {
+        "type": "prompt",
+        "prompt": "Antes de terminar: se houve implementação, confirma se npm run lint e npm run test:run foram considerados; não faças commit sem pedido explícito do utilizador. Se VERDICT REJECT ficou por resolver, resume o próximo papel. Input: $ARGUMENTS",
+        "loop_limit": 1
+      }
+    ]
+  }
+}

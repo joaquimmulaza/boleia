@@ -16,7 +16,7 @@ vi.mock('react-router-dom', async () => {
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation((query) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -28,68 +28,80 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
-describe('LandingPage Component', () => {
+/**
+ * @param {React.ReactElement} [ui]
+ */
+function renderLanding(ui = <LandingPage />) {
+  return render(
+    <ThemeProvider>
+      <BrowserRouter>{ui}</BrowserRouter>
+    </ThemeProvider>
+  );
+}
+
+describe('LandingPage', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
   });
 
-  it('renders Hero text correctly', () => {
-    render(
-      <ThemeProvider>
-        <BrowserRouter>
-          <LandingPage />
-        </BrowserRouter>
-      </ThemeProvider>
-    );
+  it('renderiza hero marketplace (sem copy legado de rotas)', () => {
+    renderLanding();
 
-    expect(screen.getByText('A tua rota diária, mais simples e barata.')).toBeInTheDocument();
-    expect(screen.getByText(/Ligamos-te a motoristas para trajetos fixos e acordos mensais/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/casa e trabalho/i);
+    expect(screen.queryByText('A tua rota diária, mais simples e barata.')).not.toBeInTheDocument();
+    expect(document.body.textContent).toMatch(/procura|oferta/i);
+    expect(document.body.textContent).toMatch(/Kz/i);
   });
 
-  it('navigates to /auth?role=passenger when clicking "Sou Passageiro"', () => {
-    render(
-      <ThemeProvider>
-        <BrowserRouter>
-          <LandingPage />
-        </BrowserRouter>
-      </ThemeProvider>
-    );
+  it('navega para /auth?role=passenger ao clicar Sou Passageiro', () => {
+    renderLanding();
 
-    const passengerButton = screen.getByText('Sou Passageiro');
-    fireEvent.click(passengerButton);
-
+    fireEvent.click(screen.getAllByRole('button', { name: 'Sou Passageiro' })[0]);
     expect(mockNavigate).toHaveBeenCalledWith('/auth?mode=register&role=passenger');
   });
 
-  it('navigates to /auth?role=driver when clicking "Sou Motorista"', () => {
-    render(
-      <ThemeProvider>
-        <BrowserRouter>
-          <LandingPage />
-        </BrowserRouter>
-      </ThemeProvider>
-    );
+  it('navega para /auth?role=driver ao clicar Sou Motorista', () => {
+    renderLanding();
 
-    const driverButton = screen.getByText('Sou Motorista');
-    fireEvent.click(driverButton);
-
+    fireEvent.click(screen.getAllByRole('button', { name: 'Sou Motorista' })[0]);
     expect(mockNavigate).toHaveBeenCalledWith('/auth?mode=register&role=driver');
   });
 
-  it('renders official boleia-logo.png images in header and footer', () => {
-    render(
-      <ThemeProvider>
-        <BrowserRouter>
-          <LandingPage />
-        </BrowserRouter>
-      </ThemeProvider>
-    );
+  it('renderiza logos oficiais boleia-logo.png', () => {
+    renderLanding();
 
     const logos = screen.getAllByAltText(/Boleia Certa/i);
     expect(logos.length).toBeGreaterThanOrEqual(1);
-    logos.forEach(logo => {
+    logos.forEach((logo) => {
       expect(logo).toHaveAttribute('src', '/boleia-logo.png');
     });
+  });
+
+  it('expõe âncoras das secções e menu mobile funcional', () => {
+    renderLanding();
+
+    expect(document.getElementById('como-funciona')).toBeInTheDocument();
+    expect(document.getElementById('vantagens')).toBeInTheDocument();
+    expect(document.getElementById('seguranca')).toBeInTheDocument();
+
+    const menuButton = screen.getByRole('button', { name: /abrir menu/i });
+    fireEvent.click(menuButton);
+    expect(menuButton).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByTestId('landing-menu-overlay')).toBeInTheDocument();
+  });
+
+  it('não inclui stock googleusercontent nem Blog', () => {
+    const { container } = renderLanding();
+
+    expect(container.innerHTML).not.toMatch(/googleusercontent/i);
+    expect(screen.queryByRole('link', { name: /blog/i })).not.toBeInTheDocument();
+  });
+
+  it('mostra soft claim no CTA sem números inventados', () => {
+    renderLanding();
+
+    expect(screen.getByText(/junta-te ao boleia certa/i)).toBeInTheDocument();
+    expect(screen.queryByText(/centenas de pessoas/i)).not.toBeInTheDocument();
   });
 });

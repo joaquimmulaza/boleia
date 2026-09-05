@@ -1,0 +1,1 @@
+{"nodes": [{"id": "codex_skills_react_best_practices_rules_server_serialization", "label": "Minimize Serialization at RSC Boundaries", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/server-serialization.md", "rationale": "Reduces page weight and load time."}], "edges": [], "hyperedges": []}

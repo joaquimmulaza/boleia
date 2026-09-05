@@ -1,0 +1,1 @@
+{"nodes": [{"id": "golang_general_backend_security", "label": "Go Security Spec", "file_type": "document", "source_file": ".cursor/skills/security-best-practices/references/golang-general-backend-security.md", "rationale": "Normative requirements for securing Go backends, covering toolchains, HTTP servers, and injection prevention."}], "edges": [], "hyperedges": []}

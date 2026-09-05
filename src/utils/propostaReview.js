@@ -7,8 +7,24 @@ import { listMembrosGrupo } from '../services/GrupoService.js';
  *   nome: string,
  *   telefone: string | null | undefined,
  *   pickup_name: string | null | undefined,
+ *   pickup_lat: number | null,
+ *   pickup_lng: number | null,
+ *   dropoff_name: string | null | undefined,
+ *   dropoff_lat: number | null,
+ *   dropoff_lng: number | null,
  *   quota_mensal_kz: number,
  * }} PropostaReviewMembro
+ */
+
+/**
+ * @typedef {{
+ *   id: string,
+ *   label: string,
+ *   kind: 'recolha' | 'desembarque',
+ *   lat: number,
+ *   lng: number,
+ *   memberIndex: number,
+ * }} PreferentialMapPoint
  */
 
 /**
@@ -62,6 +78,30 @@ function resolveTelefone(membro) {
 }
 
 /**
+ * @param {unknown} value
+ * @returns {number | null}
+ */
+function resolveCoord(value) {
+  if (value == null || value === '') {
+    return null;
+  }
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * @param {unknown} value
+ * @returns {string | null}
+ */
+function resolveOptionalName(value) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
+/**
  * Constrói a vista de revisão de uma proposta para o hub do motorista.
  * Usa os primeiros `n_passageiros_propostos` membros (já ordenados por `ordem_insercao`).
  *
@@ -92,6 +132,11 @@ export function buildPropostaReview(proposta, membrosActivos = []) {
     nome: resolveNome(membro),
     telefone: resolveTelefone(membro),
     pickup_name: membro?.pickup_name ?? null,
+    pickup_lat: resolveCoord(membro?.pickup_lat),
+    pickup_lng: resolveCoord(membro?.pickup_lng),
+    dropoff_name: membro?.dropoff_name ?? null,
+    dropoff_lat: resolveCoord(membro?.dropoff_lat),
+    dropoff_lng: resolveCoord(membro?.dropoff_lng),
     quota_mensal_kz: resolved.quotas[i],
   }));
 
@@ -114,6 +159,50 @@ export function buildPropostaReview(proposta, membrosActivos = []) {
     },
     avisoComposicao,
   };
+}
+
+/**
+ * Pontos válidos para o mapa preferencial (recolha + desembarque).
+ * Aceita membros do DTO de revisão (ou linhas equivalentes com coords).
+ *
+ * @param {Array<Partial<PropostaReviewMembro> | null | undefined>} membros
+ * @returns {PreferentialMapPoint[]}
+ */
+export function buildPreferentialMapPoints(membros = []) {
+  const list = Array.isArray(membros) ? membros : [];
+  /** @type {PreferentialMapPoint[]} */
+  const points = [];
+
+  list.forEach((membro, index) => {
+    const idBase = membro?.passenger_id || String(index);
+    const pickupLat = resolveCoord(membro?.pickup_lat);
+    const pickupLng = resolveCoord(membro?.pickup_lng);
+    if (pickupLat != null && pickupLng != null) {
+      points.push({
+        id: `${idBase}-recolha`,
+        label: resolveOptionalName(membro?.pickup_name) || 'Recolha',
+        kind: 'recolha',
+        lat: pickupLat,
+        lng: pickupLng,
+        memberIndex: index + 1,
+      });
+    }
+
+    const dropoffLat = resolveCoord(membro?.dropoff_lat);
+    const dropoffLng = resolveCoord(membro?.dropoff_lng);
+    if (dropoffLat != null && dropoffLng != null) {
+      points.push({
+        id: `${idBase}-desembarque`,
+        label: resolveOptionalName(membro?.dropoff_name) || 'Desembarque',
+        kind: 'desembarque',
+        lat: dropoffLat,
+        lng: dropoffLng,
+        memberIndex: index + 1,
+      });
+    }
+  });
+
+  return points;
 }
 
 /**

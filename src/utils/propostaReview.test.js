@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { buildPropostaReview, loadPropostaReview } from './propostaReview.js';
+import {
+  buildPropostaReview,
+  buildPreferentialMapPoints,
+  loadPropostaReview,
+} from './propostaReview.js';
 import { listMembrosGrupo } from '../services/GrupoService.js';
 
 vi.mock('../services/GrupoService.js', () => ({
@@ -19,6 +23,11 @@ const membrosTres = [
     passenger_id: 'pax-1',
     ordem_insercao: 0,
     pickup_name: 'Talatona',
+    pickup_lat: -8.92,
+    pickup_lng: 13.18,
+    dropoff_name: 'Mutamba',
+    dropoff_lat: -8.81,
+    dropoff_lng: 13.23,
     telefone: '+244923000001',
     perfis: { nome_completo: 'Ana Silva', telefone: '+244923000001' },
   },
@@ -26,6 +35,11 @@ const membrosTres = [
     passenger_id: 'pax-2',
     ordem_insercao: 1,
     pickup_name: 'Benfica',
+    pickup_lat: -8.85,
+    pickup_lng: 13.2,
+    dropoff_name: null,
+    dropoff_lat: null,
+    dropoff_lng: null,
     telefone: '+244923000002',
     perfis: { nome_completo: 'Bruno Costa', telefone: '+244923000002' },
   },
@@ -33,6 +47,11 @@ const membrosTres = [
     passenger_id: 'pax-3',
     ordem_insercao: 2,
     pickup_name: null,
+    pickup_lat: null,
+    pickup_lng: null,
+    dropoff_name: null,
+    dropoff_lat: null,
+    dropoff_lng: null,
     telefone: '+244923000003',
     perfis: { nome_completo: 'Carla Dias', telefone: '+244923000003' },
   },
@@ -49,10 +68,29 @@ describe('buildPropostaReview', () => {
       nome: 'Ana Silva',
       telefone: '+244923000001',
       pickup_name: 'Talatona',
+      pickup_lat: -8.92,
+      pickup_lng: 13.18,
+      dropoff_name: 'Mutamba',
+      dropoff_lat: -8.81,
+      dropoff_lng: 13.23,
       quota_mensal_kz: 33334,
     });
-    expect(review.membros[1].quota_mensal_kz).toBe(33333);
-    expect(review.membros[2].quota_mensal_kz).toBe(33333);
+    expect(review.membros[1]).toMatchObject({
+      pickup_lat: -8.85,
+      pickup_lng: 13.2,
+      dropoff_name: null,
+      dropoff_lat: null,
+      dropoff_lng: null,
+      quota_mensal_kz: 33333,
+    });
+    expect(review.membros[2]).toMatchObject({
+      pickup_lat: null,
+      pickup_lng: null,
+      dropoff_name: null,
+      dropoff_lat: null,
+      dropoff_lng: null,
+      quota_mensal_kz: 33333,
+    });
     expect(review.pricing.valor_mensal_total_kz).toBe(100000);
     expect(review.pricing.valor_mensal_por_passageiro_kz).toBe(33333);
     expect(review.pricing.temResto).toBe(true);
@@ -165,6 +203,129 @@ describe('buildPropostaReview', () => {
     );
 
     expect(review.pricing.temResto).toBe(false);
+  });
+
+  it('mapeia coords null-safe quando campos em falta na linha', () => {
+    const review = buildPropostaReview(
+      {
+        ...propostaGrupo,
+        n_passageiros_propostos: 1,
+        valor_mensal_ask_kz: 40000,
+        modo_preco: 'POR_PASSAGEIRO',
+      },
+      [{ passenger_id: 'pax-z', ordem_insercao: 0, perfis: { nome_completo: 'Zé' } }],
+    );
+
+    expect(review.membros[0]).toMatchObject({
+      pickup_name: null,
+      pickup_lat: null,
+      pickup_lng: null,
+      dropoff_name: null,
+      dropoff_lat: null,
+      dropoff_lng: null,
+    });
+  });
+});
+
+describe('buildPreferentialMapPoints', () => {
+  it('inclui recolha e desembarque com coords válidas e ids estáveis', () => {
+    const review = buildPropostaReview(propostaGrupo, membrosTres);
+    const points = buildPreferentialMapPoints(review.membros);
+
+    expect(points).toEqual([
+      {
+        id: 'pax-1-recolha',
+        label: 'Talatona',
+        kind: 'recolha',
+        lat: -8.92,
+        lng: 13.18,
+        memberIndex: 1,
+      },
+      {
+        id: 'pax-1-desembarque',
+        label: 'Mutamba',
+        kind: 'desembarque',
+        lat: -8.81,
+        lng: 13.23,
+        memberIndex: 1,
+      },
+      {
+        id: 'pax-2-recolha',
+        label: 'Benfica',
+        kind: 'recolha',
+        lat: -8.85,
+        lng: 13.2,
+        memberIndex: 2,
+      },
+    ]);
+  });
+
+  it('filtra coords inválidas e usa fallbacks de label', () => {
+    const points = buildPreferentialMapPoints([
+      {
+        passenger_id: 'pax-a',
+        pickup_name: null,
+        pickup_lat: -8.9,
+        pickup_lng: 13.1,
+        dropoff_name: null,
+        dropoff_lat: Number.NaN,
+        dropoff_lng: 13.2,
+      },
+      {
+        passenger_id: null,
+        pickup_name: 'X',
+        pickup_lat: Infinity,
+        pickup_lng: 13.1,
+        dropoff_name: null,
+        dropoff_lat: -8.8,
+        dropoff_lng: 13.25,
+      },
+      {
+        passenger_id: 'pax-c',
+        pickup_name: 'Y',
+        pickup_lat: null,
+        pickup_lng: 13.1,
+        dropoff_name: 'Z',
+        dropoff_lat: -8.7,
+        dropoff_lng: undefined,
+      },
+    ]);
+
+    expect(points).toEqual([
+      {
+        id: 'pax-a-recolha',
+        label: 'Recolha',
+        kind: 'recolha',
+        lat: -8.9,
+        lng: 13.1,
+        memberIndex: 1,
+      },
+      {
+        id: '1-desembarque',
+        label: 'Desembarque',
+        kind: 'desembarque',
+        lat: -8.8,
+        lng: 13.25,
+        memberIndex: 2,
+      },
+    ]);
+  });
+
+  it('devolve array vazio quando membros sem coords ou lista vazia', () => {
+    expect(buildPreferentialMapPoints([])).toEqual([]);
+    expect(
+      buildPreferentialMapPoints([
+        {
+          passenger_id: 'pax-x',
+          pickup_name: 'Só nome',
+          pickup_lat: null,
+          pickup_lng: null,
+          dropoff_name: null,
+          dropoff_lat: null,
+          dropoff_lng: null,
+        },
+      ]),
+    ).toEqual([]);
   });
 });
 

@@ -1,0 +1,1 @@
+{"nodes": [{"id": "rendering_usetransition_loading", "label": "Use useTransition Over Manual Loading States", "file_type": "document", "source_file": ".cursor/skills/react-best-practices/rules/rendering-usetransition-loading.md", "rationale": "Leveraging React's built-in transition API to manage pending states and improve UI responsiveness."}], "edges": [], "hyperedges": []}

@@ -1,13 +1,13 @@
 # Boleia Certa — Cursor Rules
 
 Regras obrigatórias para agentes e editores neste repositório.
-Complementam `AGENTS.md` (arquitetura, Penpot/UX, TDD, commits). Em conflito de estilo de código, prevalece este ficheiro + o código em `src/`.
+Complementam `AGENTS.md` (arquitetura, UI v0/shadcn, TDD, commits, loop multi-agente). Em conflito de estilo de código, prevalece este ficheiro + o código em `src/`.
 
 ---
 
 ## 1. Stack e linguagem
 
-- Stack: React 19 + Vite 8 + Tailwind CSS 4 (`@tailwindcss/vite`) + Lucide React + Supabase + Vitest + react-router-dom 7 + Sentry.
+- Stack: React 19 + Vite 8 + Tailwind CSS 4 (`@tailwindcss/vite`) + Lucide React + shadcn/ui (JSX) + Supabase + Vitest + react-router-dom 7 + Sentry.
 - Módulos ESM (`"type": "module"` no `package.json`).
 - Linguagem da UI e das mensagens de teste: **português (PT-PT)**.
 - Domínio: mobilidade urbana / boleias diárias (casa–trabalho) em Luanda, Angola. Moeda: **sempre Kz (Kwanza)**.
@@ -65,12 +65,13 @@ Fonte de verdade: `eslint.config.js` (flat config ESLint 9).
 src/
   pages/          → páginas de rota
   components/     → UI reutilizável
+  components/ui/  → primitivos shadcn (JSX)
   layouts/        → shell autenticado (Layout.jsx)
   hooks/          → hooks custom
   services/       → Supabase / API
   contexts/       → providers
   utils/          → helpers
-  lib/            → clientes (supabase.js)
+  lib/            → clientes (supabase.js, utils.js para `cn`)
   test/           → helpers de teste partilhados
   App.jsx, main.jsx, index.css, sw.js, setupTests.js
 ```
@@ -119,8 +120,9 @@ ThemeProvider → AuthProvider → BrowserRouter
 4. Shell mobile-first: `max-w-md` / `max-w-[480px]`. Tokens e tema em `src/index.css` (`primary`, `background-light`/`dark`, emerald/amber/coral). Preferir classes do design system; dark mode com `dark:`.
 5. Forms: estado local controlado; handlers `handleSubmit` / `handleChange`.
 6. Modais: props `isOpen` + callbacks (`onConfirm` / `onCancel`), padrão `ConfirmationModal`.
-7. Ícones: `import { Home, Car } from 'lucide-react'`. Material Symbols (`material-symbols-outlined`) só quando o design Penpot o exigir.
-8. **Penpot-first (UI):** Penpot = fonte de verdade. Antes de criar/alterar UI, consultar no Penpot componentes, estilos e tokens existentes e privilegiar reutilização. Não inventar layouts nem estilos Tailwind. Fluxo: análise UX → [opcional Superdesign] → consolidar Penpot → gate “design pronto” (user flow + estados principais + componentes identificados + telas no Penpot) → TDD → implementar no `src/` → Visual QA. Skills Stitch descontinuadas. Ver `AGENTS.md` §4.
+7. Ícones: `import { Home, Car } from 'lucide-react'`. Preferir Lucide; Material Symbols só se o design v0 o exigir explicitamente.
+8. **v0-first (UI):** fonte de verdade visual = **v0 via One MCP** + tokens em `src/index.css` + primitivos `src/components/ui/` (shadcn JSX). Em tarefas UI/UX: UI Skills MCP + shadcn MCP + Mobbin free-safe (`mode: standard`, `limit` ≤ 5; degradar se plano free bloquear MCP). Fluxo: `tlc-spec-driven` → UX → referências (Mobbin/UI Skills) → v0 (One) → shadcn → gate “design pronto” → TDD → implementar no `src/` → UI QA + Code Reviewer. Penpot/Superdesign/Stitch **descontinuados** como SoT. Ver `AGENTS.md` §4 e `.cursor/skills/boleia-agent-loop/`.
+9. **Tarefa nova:** ler e seguir `.cursor/skills/tlc-spec-driven` antes de Designer/Implementer. Com ≥2 tasks independentes: `.cursor/skills/subagent-creator` + `Task` em paralelo (scopes de ficheiros disjuntos).
 
 ### Imports
 
@@ -222,7 +224,10 @@ try {
 | Tabela `routes` / `rotas_diarias` | `ofertas_capacidade` (+ procuras/propostas) |
 | Toast library | `setMessage` / `useNotifications` |
 | Pasta `__tests__/` ou `src/types/` | Testes colocados; JSDoc inline |
-| Inventar Tailwind / UX | Penpot (SoT) + consulta a componentes/tokens; Superdesign só exploração |
+| Inventar Tailwind / UX | v0 (One) + UI Skills + shadcn + tokens `index.css`; Mobbin free-safe |
+| Penpot / Superdesign como gate | Stack v0 + shadcn (Penpot descontinuado como SoT) |
+| Saltar `tlc-spec-driven` em tarefa nova | Spec/Quick em `.specs/` antes de código |
+| Mobbin `deep` / limites altos | `standard`, `limit` ≤ 5; degradar se MCP free falhar |
 | Hardcode secrets | `.env` / `VITE_*` |
 | Seguir `.agents/rules/frontend.md` | Este ficheiro + `AGENTS.md` + código em `src/` |
 
@@ -235,6 +240,7 @@ try {
 - [ ] Página nova registada em `App.jsx` (+ BottomBar se necessário)
 - [ ] Serviço: `if (error) throw`; UI: `try/catch` + `getFriendlyErrorMessage`
 - [ ] Sem secrets hardcoded; sem TS/Prettier/toast inventados
-- [ ] UI: design pronto no Penpot (flow + estados + componentes + telas) e alinhada ao SoT (se for interface nova)
+- [ ] Tarefa nova: `tlc-spec-driven` (artefacto `.specs/` ou `quick/`) antes de implementação
+- [ ] UI: design pronto (flow + estados + shadcn/v0) e alinhada ao SoT (se for interface nova)
 - [ ] `npm run lint` e `npm run test:run` limpos quando aplicável
-`)
+

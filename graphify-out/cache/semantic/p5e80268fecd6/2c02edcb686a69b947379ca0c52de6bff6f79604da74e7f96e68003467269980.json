@@ -1,0 +1,1 @@
+{"nodes": [{"id": "codex_skills_react_best_practices_rules_js_tosorted_immutable", "label": "Use toSorted() for Immutability", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/js-tosorted-immutable.md", "rationale": "Prevents mutation bugs in React state."}], "edges": [], "hyperedges": []}

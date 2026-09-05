@@ -71,4 +71,38 @@ describe('ConfirmationModal', () => {
     fireEvent.click(document.querySelector('[aria-hidden="true"]'));
     expect(onCancel).toHaveBeenCalledTimes(2);
   });
+
+  it('variant destructive (default): botão confirmar usa vermelho', () => {
+    render(
+      <ConfirmationModal
+        isOpen
+        title="Sair?"
+        message="Confirma?"
+        confirmText="Sair"
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    const confirmBtn = screen.getByRole('button', { name: /^Sair$/i });
+    expect(confirmBtn.className).toMatch(/bg-red-600/);
+  });
+
+  it('variant primary: botão confirmar usa primary/emerald', () => {
+    render(
+      <ConfirmationModal
+        isOpen
+        variant="primary"
+        title="Confirmar novo preço?"
+        message="Aplica-se a partir do próximo mês."
+        confirmText="Confirmar"
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    const confirmBtn = screen.getByRole('button', { name: /^Confirmar$/i });
+    expect(confirmBtn.className).toMatch(/bg-primary/);
+    expect(confirmBtn.className).not.toMatch(/bg-red-600/);
+  });
 });

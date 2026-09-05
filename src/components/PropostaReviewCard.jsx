@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { MapPin } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
+import PreferentialPointsMap from './PreferentialPointsMap';
 import { formatKwanza } from '../utils/formatKwanza';
+import { buildPreferentialMapPoints } from '../utils/propostaReview';
 
 /**
  * @typedef {{
@@ -9,6 +11,11 @@ import { formatKwanza } from '../utils/formatKwanza';
  *   nome: string,
  *   telefone?: string | null,
  *   pickup_name?: string | null,
+ *   pickup_lat?: number | null,
+ *   pickup_lng?: number | null,
+ *   dropoff_name?: string | null,
+ *   dropoff_lat?: number | null,
+ *   dropoff_lng?: number | null,
  *   quota_mensal_kz?: number | null,
  *   ordem_insercao?: number,
  * }} PropostaReviewMembro
@@ -41,6 +48,23 @@ import { formatKwanza } from '../utils/formatKwanza';
  */
 
 /**
+ * Conta membros com pickup_lat + pickup_lng finitos (null/'' não contam).
+ *
+ * @param {PropostaReviewMembro[]} membros
+ * @returns {number}
+ */
+function countMembrosComPickup(membros) {
+  return membros.filter((m) => {
+    if (m?.pickup_lat == null || m?.pickup_lng == null || m.pickup_lat === '' || m.pickup_lng === '') {
+      return false;
+    }
+    const lat = Number(m.pickup_lat);
+    const lng = Number(m.pickup_lng);
+    return Number.isFinite(lat) && Number.isFinite(lng);
+  }).length;
+}
+
+/**
  * Card de revisão de proposta multi-passageiro (hub motorista).
  *
  * @param {{
@@ -56,12 +80,29 @@ function PropostaReviewCard({ review, busy = false, onAceitar, onRecusar }) {
   const modoLabel =
     review.proposta.modo_preco === 'TOTAL_ACORDO' ? 'Total do acordo' : 'Por passageiro';
   const { pricing, membros, titulo, avisoComposicao } = review;
+  const points = buildPreferentialMapPoints(membros);
+  const totalMembros = membros.length;
+  const comPickup = countMembrosComPickup(membros);
+  const mostraNotaParcial = totalMembros > 0 && comPickup > 0 && comPickup < totalMembros;
 
   return (
     <section className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
       <h3 className="text-base font-bold text-slate-900 dark:text-white text-balance">
         {titulo}
       </h3>
+
+      <div className="space-y-2">
+        {totalMembros > 0 ? (
+          <>
+            <PreferentialPointsMap points={points} />
+            {mostraNotaParcial ? (
+              <p className="text-xs text-slate-500 text-pretty">
+                {comPickup} de {totalMembros} com localização
+              </p>
+            ) : null}
+          </>
+        ) : null}
+      </div>
 
       <ul className="space-y-3">
         {membros.map((m, index) => (

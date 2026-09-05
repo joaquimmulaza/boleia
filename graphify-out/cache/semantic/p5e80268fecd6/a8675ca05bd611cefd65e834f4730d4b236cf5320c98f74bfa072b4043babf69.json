@@ -1,0 +1,1 @@
+{"nodes": [{"id": "tlc_spec_driven_specify", "label": "Specify Phase", "file_type": "concept", "source_file": ".cursor/skills/tlc-spec-driven/references/specify.md", "rationale": "Mandatory phase to capture requirements with traceable IDs."}], "edges": [], "hyperedges": []}

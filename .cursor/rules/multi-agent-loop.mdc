@@ -1,0 +1,37 @@
+---
+description: Loop multi-agente — tlc-spec-driven, subagent-creator, papéis boleia-agent-loop e contrato VERDICT.
+alwaysApply: true
+---
+
+# Multi-agent loop (Boleia Certa)
+
+## Ordem obrigatória em tarefa nova
+
+1. Ler e seguir `.cursor/skills/tlc-spec-driven/SKILL.md` (auto-size → `.specs/` ou `quick/`).
+2. Se arquitectura ambígua e `graphify-out/graph.json` existir: `graphify query`.
+3. Se `tasks.md` (ou passos) tiverem **≥2 tasks independentes**: ler `.cursor/skills/subagent-creator/SKILL.md` e lançar `Task` em **paralelo** só com ficheiros disjuntos.
+4. Despachar papéis via `.cursor/skills/boleia-agent-loop/`:
+   - UI → `ui-designer` → gate design → `implementer` → `ui-qa` + `code-reviewer`
+   - Não-UI → `implementer` → `code-reviewer`
+5. Orquestração detalhada: `.cursor/skills/boleia-agent-loop/orchestrator/SKILL.md`.
+
+## Excepções (sem Spec completo)
+
+- Pergunta de leitura / “só explica” sem mudar código.
+- Follow-up micro da mesma task já especificada na sessão (continua Execute).
+
+## Contrato VERDICT (revisores)
+
+```text
+VERDICT: APPROVE | REJECT
+ISSUES:
+- ...
+NEXT: (se REJECT) instruções concretas para o agente seguinte
+```
+
+- Máx. **2** ciclos Designer↔UI QA e **2** ciclos Implementer↔Code Reviewer; depois escalar ao utilizador.
+- Hook `subagentStop` pode reenviar follow-up em REJECT (`loop_limit: 2`).
+
+## Commit
+
+Não fazer commit automático. Preparar mensagem + status; só commit se o utilizador pedir e testes verdes.

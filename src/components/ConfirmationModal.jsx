@@ -11,6 +11,7 @@ import React from 'react';
  *   confirmText?: string,
  *   cancelText?: string,
  *   busy?: boolean,
+ *   variant?: 'destructive' | 'primary',
  * }} props
  */
 const ConfirmationModal = ({
@@ -22,6 +23,7 @@ const ConfirmationModal = ({
   confirmText = 'Confirmar',
   cancelText = 'Voltar',
   busy = false,
+  variant = 'destructive',
 }) => {
   if (!isOpen) return null;
 
@@ -29,6 +31,11 @@ const ConfirmationModal = ({
     if (busy) return;
     onCancel();
   };
+
+  const confirmClass =
+    variant === 'primary'
+      ? 'w-full py-3.5 px-4 bg-primary hover:bg-primary/90 active:bg-primary/80 text-white font-bold rounded-2xl transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-slate-900 disabled:opacity-60 disabled:cursor-not-allowed disabled:pointer-events-none'
+      : 'w-full py-3.5 px-4 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold rounded-2xl transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 disabled:opacity-60 disabled:cursor-not-allowed disabled:pointer-events-none';
 
   return (
     <div className="fixed inset-0 z-modal flex items-center justify-center p-4">
@@ -61,7 +68,7 @@ const ConfirmationModal = ({
             type="button"
             onClick={onConfirm}
             disabled={busy}
-            className="w-full py-3.5 px-4 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold rounded-2xl transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 disabled:opacity-60 disabled:cursor-not-allowed disabled:pointer-events-none"
+            className={confirmClass}
           >
             {confirmText}
           </button>

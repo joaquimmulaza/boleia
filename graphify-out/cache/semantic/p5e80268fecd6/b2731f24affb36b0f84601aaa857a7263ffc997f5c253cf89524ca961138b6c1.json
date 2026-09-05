@@ -1,0 +1,1 @@
+{"nodes": [{"id": "rerender_use_ref_transient_values", "label": "Use useRef for Transient Values", "file_type": "document", "source_file": ".cursor/skills/react-best-practices/rules/rerender-use-ref-transient-values.md", "rationale": "Storing frequently changing values that don't require UI updates in refs to avoid re-renders."}], "edges": [], "hyperedges": []}

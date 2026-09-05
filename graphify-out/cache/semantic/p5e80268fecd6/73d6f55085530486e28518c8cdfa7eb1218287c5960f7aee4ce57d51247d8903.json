@@ -1,0 +1,1 @@
+{"nodes": [{"id": "codex_skills_react_best_practices_rules_bundle_defer_third_party", "label": "Defer Non-Critical Third-Party Libraries", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/bundle-defer-third-party.md", "rationale": "Loads analytics/logging after hydration."}], "edges": [], "hyperedges": []}

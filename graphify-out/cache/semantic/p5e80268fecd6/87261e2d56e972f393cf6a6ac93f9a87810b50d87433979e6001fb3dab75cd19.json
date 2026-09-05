@@ -1,0 +1,1 @@
+{"nodes": [{"id": "codex_skills_react_best_practices_rules_js_cache_storage", "label": "Cache Storage API Calls", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/js-cache-storage.md", "rationale": "Reduces expensive synchronous I/O."}], "edges": [], "hyperedges": []}

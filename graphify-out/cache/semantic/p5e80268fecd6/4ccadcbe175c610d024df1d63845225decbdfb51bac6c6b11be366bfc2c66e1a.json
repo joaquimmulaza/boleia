@@ -1,0 +1,1 @@
+{"nodes": [{"id": "python_django_web_server_security_django_sql_001", "label": "DJANGO-SQL-001: SQL Injection Prevention", "file_type": "document", "source_file": ".cursor/skills/security-best-practices/references/python-django-web-server-security.md", "rationale": "Mandates ORM or parameterized queries to prevent SQL injection."}], "edges": [], "hyperedges": []}
