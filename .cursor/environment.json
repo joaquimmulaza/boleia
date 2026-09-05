@@ -1,0 +1,11 @@
+{
+  "name": "Boleia Certa",
+  "install": "pnpm install --frozen-lockfile && bash .cursor/setup-local-env.sh",
+  "terminals": [
+    {
+      "name": "dev",
+      "command": "pnpm dev"
+    }
+  ],
+  "ports": [5173]
+}
