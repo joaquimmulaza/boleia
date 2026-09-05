@@ -14,12 +14,18 @@ vi.mock('../lib/supabase', () => ({
   supabase: {
     from: vi.fn(),
     rpc: vi.fn(),
+    auth: {
+      getSession: vi.fn().mockResolvedValue({
+        data: { session: { access_token: 'jwt-test' } },
+      }),
+    },
   },
 }));
 
 describe('AgreementService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
   });
 
   describe('createAgreementFromProposal', () => {
@@ -98,10 +104,16 @@ describe('AgreementService', () => {
 
       const result = await leavePassenger('acordo-1', 'pax-1');
 
-      expect(supabase.rpc).toHaveBeenCalledWith('leave_passenger', {
-        p_acordo_id: 'acordo-1',
-        p_passenger_id: 'pax-1',
-      });
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        'leave_passenger',
+        expect.objectContaining({
+          p_acordo_id: 'acordo-1',
+          p_passenger_id: 'pax-1',
+          p_idempotency_key: expect.stringMatching(
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+          ),
+        }),
+      );
       expect(result.valor_mensal_por_passageiro_kz).toBe(30000);
       expect(result.valor_mensal_total_kz).toBe(120000);
       expect(result.n_passageiros_contrato).toBe(4);

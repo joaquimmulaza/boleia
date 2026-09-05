@@ -1,5 +1,7 @@
+import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../lib/supabase';
 import { loadPropostaReview } from '../utils/propostaReview.js';
+import { enqueueRpc, isNetworkFailure } from './offlineQueue.js';
 
 export { buildPropostaReview, loadPropostaReview } from '../utils/propostaReview.js';
 
@@ -120,22 +122,63 @@ export async function rejectProposta(propostaId) {
 /**
  * Cancela proposta aberta via RPC (só o criador; contraparte usa `rejectProposta`).
  * Não usa UPDATE client — P0 preservado.
+ * Em falha de rede, enfileira offline com idempotency_key.
+ *
  * @param {string} propostaId
+ * @param {{ idempotencyKey?: string, forceQueue?: boolean }} [options]
  */
-export async function cancelProposta(propostaId) {
+export async function cancelProposta(propostaId, options = {}) {
   if (!propostaId) {
     throw new Error('ID da proposta é obrigatório.');
   }
 
-  const { data, error } = await supabase.rpc('cancel_proposal', {
+  const idempotencyKey = options.idempotencyKey || uuidv4();
+  const rpcArgs = {
     p_proposta_id: propostaId,
-  });
+    p_idempotency_key: idempotencyKey,
+  };
 
-  if (error) {
-    throw new Error(error.message || 'Falha ao cancelar proposta.');
+  const queueCancel = async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+    if (!accessToken) {
+      throw new Error('Sessão necessária para guardar o cancelamento offline.');
+    }
+    await enqueueRpc({
+      rpc: 'cancel_proposal',
+      args: rpcArgs,
+      accessToken,
+      idempotencyKey,
+    });
+    return {
+      id: propostaId,
+      estado: 'cancelada',
+      offlineQueued: true,
+      idempotency_key: idempotencyKey,
+    };
+  };
+
+  if (options.forceQueue || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
+    return queueCancel();
   }
 
-  return data;
+  try {
+    const { data, error } = await supabase.rpc('cancel_proposal', rpcArgs);
+
+    if (error) {
+      if (isNetworkFailure(error)) {
+        return queueCancel();
+      }
+      throw new Error(error.message || 'Falha ao cancelar proposta.');
+    }
+
+    return data;
+  } catch (err) {
+    if (isNetworkFailure(err)) {
+      return queueCancel();
+    }
+    throw err;
+  }
 }
 
 /**

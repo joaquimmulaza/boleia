@@ -16,12 +16,18 @@ vi.mock('../lib/supabase', () => ({
   supabase: {
     from: vi.fn(),
     rpc: vi.fn(),
+    auth: {
+      getSession: vi.fn().mockResolvedValue({
+        data: { session: { access_token: 'jwt-test' } },
+      }),
+    },
   },
 }));
 
 describe('Marketplace audit — cenários G1–G4', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
   });
 
   /**
@@ -170,10 +176,14 @@ describe('Marketplace audit — cenários G1–G4', () => {
 
       const result = await leavePassenger('acordo-1', 'pax-sair');
 
-      expect(supabase.rpc).toHaveBeenCalledWith('leave_passenger', {
-        p_acordo_id: 'acordo-1',
-        p_passenger_id: 'pax-sair',
-      });
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        'leave_passenger',
+        expect.objectContaining({
+          p_acordo_id: 'acordo-1',
+          p_passenger_id: 'pax-sair',
+          p_idempotency_key: expect.any(String),
+        }),
+      );
       // Promote waitlist é best-effort dentro da RPC leave_passenger — cliente não chama promote_waitlist.
       expect(supabase.rpc).toHaveBeenCalledTimes(1);
       expect(supabase.rpc.mock.calls.map(([n]) => n)).not.toContain('promote_waitlist');

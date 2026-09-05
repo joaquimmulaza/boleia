@@ -1,5 +1,7 @@
+import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../lib/supabase';
 import { resolveAgreementPricing } from '../utils/resolveAgreementPricing.js';
+import { enqueueRpc, isNetworkFailure } from './offlineQueue.js';
 
 /**
  * Normaliza acordo: expõe `adenda_pendente` (não aplicada / não supersedida).
@@ -68,34 +70,83 @@ export async function createAgreementFromProposal(propostaId) {
  * Passageiro sai via RPC atómica: marca `saiu`, reconta vagas da oferta,
  * promove waitlist (best-effort no servidor). Preços / quotas dos restantes
  * não são recalculados.
+ * Em falha de rede, enfileira em IndexedDB com idempotency_key e devolve
+ * `{ offlineQueued: true, … }` (sincroniza via Background Sync / online).
+ *
  * @param {string} acordoId
  * @param {string} passengerId
+ * @param {{ idempotencyKey?: string, forceQueue?: boolean }} [options]
  */
-export async function leavePassenger(acordoId, passengerId) {
+export async function leavePassenger(acordoId, passengerId, options = {}) {
   if (!acordoId || !passengerId) {
     throw new Error('acordoId e passengerId são obrigatórios.');
   }
 
-  const { data: acordoIdOut, error: rpcError } = await supabase.rpc('leave_passenger', {
+  const idempotencyKey = options.idempotencyKey || uuidv4();
+  const rpcArgs = {
     p_acordo_id: acordoId,
     p_passenger_id: passengerId,
-  });
+    p_idempotency_key: idempotencyKey,
+  };
 
-  if (rpcError) {
-    throw new Error(rpcError.message || 'Falha ao sair do acordo.');
+  const queueLeave = async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+    if (!accessToken) {
+      throw new Error('Sessão necessária para guardar a saída offline.');
+    }
+    await enqueueRpc({
+      rpc: 'leave_passenger',
+      args: rpcArgs,
+      accessToken,
+      idempotencyKey,
+    });
+    return {
+      id: acordoId,
+      offlineQueued: true,
+      idempotency_key: idempotencyKey,
+    };
+  };
+
+  if (options.forceQueue || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
+    return queueLeave();
   }
 
-  const id = acordoIdOut ?? acordoId;
-  const { data, error } = await supabase
-    .from('acordos')
-    .select(
-      'id, oferta_id, valor_mensal_por_passageiro_kz, valor_mensal_total_kz, n_passageiros_contrato',
-    )
-    .eq('id', id)
-    .single();
+  try {
+    const { data: acordoIdOut, error: rpcError } = await supabase.rpc(
+      'leave_passenger',
+      rpcArgs,
+    );
 
-  if (error) throw error;
-  return data;
+    if (rpcError) {
+      if (isNetworkFailure(rpcError)) {
+        return queueLeave();
+      }
+      throw new Error(rpcError.message || 'Falha ao sair do acordo.');
+    }
+
+    const id = acordoIdOut ?? acordoId;
+    const { data, error } = await supabase
+      .from('acordos')
+      .select(
+        'id, oferta_id, valor_mensal_por_passageiro_kz, valor_mensal_total_kz, n_passageiros_contrato',
+      )
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      if (isNetworkFailure(error)) {
+        return queueLeave();
+      }
+      throw error;
+    }
+    return data;
+  } catch (err) {
+    if (isNetworkFailure(err)) {
+      return queueLeave();
+    }
+    throw err;
+  }
 }
 
 /**

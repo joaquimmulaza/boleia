@@ -17,12 +17,18 @@ vi.mock('../lib/supabase', () => ({
   supabase: {
     from: vi.fn(),
     rpc: vi.fn(),
+    auth: {
+      getSession: vi.fn().mockResolvedValue({
+        data: { session: { access_token: 'jwt-test' } },
+      }),
+    },
   },
 }));
 
 describe('Agreements marketplace E2E (T25)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
   });
 
   describe('TOTAL_ACORDO — resolução de preço (N_contrato)', () => {
@@ -88,10 +94,14 @@ describe('Agreements marketplace E2E (T25)', () => {
 
       const result = await leavePassenger('acordo-1', 'pax-1');
 
-      expect(supabase.rpc).toHaveBeenCalledWith('leave_passenger', {
-        p_acordo_id: 'acordo-1',
-        p_passenger_id: 'pax-1',
-      });
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        'leave_passenger',
+        expect.objectContaining({
+          p_acordo_id: 'acordo-1',
+          p_passenger_id: 'pax-1',
+          p_idempotency_key: expect.any(String),
+        }),
+      );
       expect(result.valor_mensal_por_passageiro_kz).toBe(30000);
       expect(result.valor_mensal_total_kz).toBe(120000);
       expect(result.n_passageiros_contrato).toBe(4);
@@ -266,10 +276,14 @@ describe('Agreements marketplace E2E (T25)', () => {
 
       const afterLeave = await leavePassenger('acordo-1', 'pax-1');
 
-      expect(supabase.rpc).toHaveBeenCalledWith('leave_passenger', {
-        p_acordo_id: 'acordo-1',
-        p_passenger_id: 'pax-1',
-      });
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        'leave_passenger',
+        expect.objectContaining({
+          p_acordo_id: 'acordo-1',
+          p_passenger_id: 'pax-1',
+          p_idempotency_key: expect.any(String),
+        }),
+      );
       expect(afterLeave.valor_mensal_total_kz).toBe(120000);
       expect(afterLeave.n_passageiros_contrato).toBe(4);
     });

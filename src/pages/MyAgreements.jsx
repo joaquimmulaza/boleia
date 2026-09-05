@@ -192,8 +192,13 @@ const MyAgreements = () => {
     if (!selected || !user?.id || leaveBusy) return;
     setLeaveBusy(true);
     try {
-      await leavePassenger(selected.id, user.id);
-      setMessage({ type: 'success', text: 'Saíste do acordo. A quota do mês mantém-se.' });
+      const result = await leavePassenger(selected.id, user.id);
+      setMessage({
+        type: 'success',
+        text: result?.offlineQueued
+          ? 'Saída guardada. Sincronizamos quando a rede voltar.'
+          : 'Saíste do acordo. A quota do mês mantém-se.',
+      });
       setLeaveModalOpen(false);
       setSelected(null);
       await carregar();

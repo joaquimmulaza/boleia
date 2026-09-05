@@ -134,4 +134,6 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
 
  * **Beta Done (R1 + R3):** matching por `dias_semana` em `procuras` + intersecção obrigatória; consentimento de adenda (`acordos_adendas.estado` `pendente_passageiro`|`aceite`, RPC `accept_agreement_adenda`, CTA em `/acordos`). Migrações MCP: `procuras_dias_semana`, `adenda_consentimento_passageiro`.
 
-**Próximo:** Phase 7 **completa** (T32–T35). **Fora do MVP:** zonas/polígonos/raio residencial. Commits T29/T30/T32–T35 / Beta só se o utilizador pedir.
+ * **Wave 3 PWA Offline-First (2026-09-05):** VitePWA `src/sw.js` — SWR GET `acordos`/`grupos`; fila IndexedDB `offline_write_queue` (`db.js` + `offlineQueue.js`); Background Sync `sync-offline-actions` + fallback `online` via `useNetworkStatus`; banner `OfflineBanner` em `App.jsx`; RPCs `leave_passenger` / `cancel_proposal` com `p_idempotency_key` + tabela `rpc_idempotency`. Spec: `.specs/features/pwa-offline-first/`.
+
+**Próximo:** Idempotência nas restantes RPCs; optimistic UI «Saída Pendente». **Fora do MVP:** zonas/polígonos/raio residencial. Commits T29/T30/T32–T35 / Beta / Wave 3 PWA só se o utilizador pedir.

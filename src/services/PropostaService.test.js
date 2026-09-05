@@ -14,7 +14,12 @@ vi.mock('../lib/supabase', () => ({
   supabase: {
     from: vi.fn(),
     rpc: vi.fn(),
-    auth: { getUser: vi.fn() },
+    auth: {
+      getUser: vi.fn(),
+      getSession: vi.fn().mockResolvedValue({
+        data: { session: { access_token: 'jwt-test' } },
+      }),
+    },
   },
 }));
 
@@ -25,6 +30,7 @@ vi.mock('./GrupoService.js', () => ({
 describe('PropostaService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
   });
 
   it('createProposta cria proposta aberta 1:M com snapshot N', async () => {
@@ -154,9 +160,15 @@ describe('PropostaService', () => {
 
     const result = await cancelProposta('prop-1');
 
-    expect(supabase.rpc).toHaveBeenCalledWith('cancel_proposal', {
-      p_proposta_id: 'prop-1',
-    });
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      'cancel_proposal',
+      expect.objectContaining({
+        p_proposta_id: 'prop-1',
+        p_idempotency_key: expect.stringMatching(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+        ),
+      }),
+    );
     expect(result.estado).toBe('cancelada');
   });
 

@@ -14,6 +14,8 @@ import Profile from './pages/Profile';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import UpdatePrompt from './components/UpdatePrompt';
+import OfflineBanner from './components/OfflineBanner';
+import { useNetworkStatus } from './hooks/useNetworkStatus';
 
 const RootRoute = () => {
   const { session, loading, tipoPerfil } = useAuth();
@@ -27,43 +29,54 @@ const RootRoute = () => {
   return <LandingPage />;
 };
 
+function AppShell() {
+  const { isOffline } = useNetworkStatus();
+
+  return (
+    <>
+      <OfflineBanner isOffline={isOffline} />
+      <Routes>
+        {/* Rotas públicas */}
+        <Route path="/" element={<RootRoute />} />
+        <Route path="/auth" element={<Auth />} />
+
+        {/* Rotas protegidas envolvidas pelo Layout global (com BottomBar) */}
+        <Route element={<Layout />}>
+          {/* Rotas exclusivas do Passageiros */}
+          <Route element={<ProtectedRoute allowedRole="Passageiro" />}>
+            <Route path="/passageiro" element={<PassengerDashboard />} />
+          </Route>
+
+          {/* Rotas exclusivas do Motorista */}
+          <Route element={<ProtectedRoute allowedRole="Motorista" />}>
+            <Route path="/motorista" element={<DriverDashboard />} />
+            <Route path="/veiculo" element={<VehicleSetup />} />
+            <Route path="/publicar-trajeto" element={<PublishRoute />} />
+          </Route>
+
+          {/* Rotas partilhadas (qualquer utilizador autenticado) */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/acordos" element={<MyAgreements />} />
+            <Route path="/faltas" element={<AbsenceTracker />} />
+            <Route path="/faltas/:acordoId" element={<AbsenceTracker />} />
+            <Route path="/perfil" element={<Profile />} />
+          </Route>
+        </Route>
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      <UpdatePrompt />
+    </>
+  );
+}
+
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
-          <Routes>
-            {/* Rotas públicas */}
-            <Route path="/" element={<RootRoute />} />
-            <Route path="/auth" element={<Auth />} />
-
-            {/* Rotas protegidas envolvidas pelo Layout global (com BottomBar) */}
-            <Route element={<Layout />}>
-              {/* Rotas exclusivas do Passageiros */}
-              <Route element={<ProtectedRoute allowedRole="Passageiro" />}>
-                <Route path="/passageiro" element={<PassengerDashboard />} />
-              </Route>
-
-              {/* Rotas exclusivas do Motorista */}
-              <Route element={<ProtectedRoute allowedRole="Motorista" />}>
-                <Route path="/motorista" element={<DriverDashboard />} />
-                <Route path="/veiculo" element={<VehicleSetup />} />
-                <Route path="/publicar-trajeto" element={<PublishRoute />} />
-              </Route>
-
-              {/* Rotas partilhadas (qualquer utilizador autenticado) */}
-              <Route element={<ProtectedRoute />}>
-                <Route path="/acordos" element={<MyAgreements />} />
-                <Route path="/faltas" element={<AbsenceTracker />} />
-                <Route path="/faltas/:acordoId" element={<AbsenceTracker />} />
-                <Route path="/perfil" element={<Profile />} />
-              </Route>
-            </Route>
-
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-          <UpdatePrompt />
+          <AppShell />
         </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>
