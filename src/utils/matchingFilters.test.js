@@ -4,6 +4,7 @@ import {
   isOriginWithinRadius,
   isDestinationWithinRadius,
   canAcceptDirectly,
+  isDaysCompatible,
   evaluateMatch,
 } from './matchingFilters';
 import {
@@ -89,6 +90,32 @@ describe('canAcceptDirectly', () => {
   });
 });
 
+describe('isDaysCompatible', () => {
+  it('aceita quando um dos lados não tem dias (MVP sem dias na procura)', () => {
+    expect(isDaysCompatible([1, 2, 3, 4, 5], null)).toBe(true);
+    expect(isDaysCompatible(undefined, [1, 2])).toBe(true);
+    expect(isDaysCompatible([], [1])).toBe(true);
+  });
+
+  it('aceita quando há intersecção de dias', () => {
+    expect(isDaysCompatible([1, 2, 3], [3, 4])).toBe(true);
+  });
+
+  it('rejeita quando ambos têm dias e não há intersecção', () => {
+    expect(isDaysCompatible([1, 2], [4, 5])).toBe(false);
+  });
+
+  it('aceita quando ambos os lados estão vazios', () => {
+    expect(isDaysCompatible([], [])).toBe(true);
+    expect(isDaysCompatible(null, undefined)).toBe(true);
+  });
+
+  it('normaliza dias vindos como string (JSON/BD) na intersecção', () => {
+    expect(isDaysCompatible(['1', '2'], [2, 3])).toBe(true);
+    expect(isDaysCompatible(['1'], ['4'])).toBe(false);
+  });
+});
+
 describe('evaluateMatch', () => {
   const baseOferta = {
     departure_time: '07:00',
@@ -97,6 +124,7 @@ describe('evaluateMatch', () => {
     destination_lat: -8.85,
     destination_lng: 13.25,
     vagas_disponiveis: 3,
+    flexibilidade_rota: false,
   };
   const baseProcura = {
     preferred_time: '07:10',
@@ -136,7 +164,7 @@ describe('evaluateMatch', () => {
     ).toBe('incompatible');
   });
 
-  it('devolve incompatible quando origem está fora do raio', () => {
+  it('devolve incompatible quando origem está fora do raio (oferta fixa)', () => {
     expect(
       evaluateMatch({
         oferta: baseOferta,
@@ -149,5 +177,208 @@ describe('evaluateMatch', () => {
         n_candidato: 1,
       }),
     ).toBe('incompatible');
+  });
+
+  it('oferta flexível: casa por tempo+capacidade sem OD (mesmo com procura longe)', () => {
+    expect(
+      evaluateMatch({
+        oferta: {
+          departure_time: '07:00',
+          flexibilidade_rota: true,
+          vagas_disponiveis: 3,
+          dias_semana: [1, 2, 3, 4, 5],
+          origin_lat: null,
+          origin_lng: null,
+          destination_lat: null,
+          destination_lng: null,
+        },
+        procura: {
+          preferred_time: '07:10',
+          origin_lat: -8.95,
+          origin_lng: 13.1,
+          destination_lat: -8.9,
+          destination_lng: 13.15,
+        },
+        n_candidato: 2,
+      }),
+    ).toBe('direct');
+  });
+
+  it('oferta flexível: waitlist quando N > vagas (sem filtro geo)', () => {
+    expect(
+      evaluateMatch({
+        oferta: {
+          departure_time: '07:00',
+          flexibilidade_rota: true,
+          vagas_disponiveis: 1,
+          dias_semana: [1, 2, 3, 4, 5],
+        },
+        procura: {
+          preferred_time: '07:05',
+          origin_lat: -8.95,
+          origin_lng: 13.1,
+          destination_lat: -8.9,
+          destination_lng: 13.15,
+        },
+        n_candidato: 3,
+      }),
+    ).toBe('waitlist');
+  });
+
+  it('oferta flexível: incompatible se horário fora da tolerância', () => {
+    expect(
+      evaluateMatch({
+        oferta: {
+          departure_time: '07:00',
+          flexibilidade_rota: true,
+          vagas_disponiveis: 4,
+        },
+        procura: {
+          preferred_time: '08:00',
+          origin_lat: -8.85,
+          origin_lng: 13.23,
+          destination_lat: -8.86,
+          destination_lng: 13.24,
+        },
+        n_candidato: 1,
+      }),
+    ).toBe('incompatible');
+  });
+
+  it('oferta flexível: incompatible se dias sem intersecção', () => {
+    expect(
+      evaluateMatch({
+        oferta: {
+          departure_time: '07:00',
+          flexibilidade_rota: true,
+          vagas_disponiveis: 4,
+          dias_semana: [1, 2],
+        },
+        procura: {
+          preferred_time: '07:05',
+          dias_semana: [5, 6],
+          origin_lat: -8.85,
+          origin_lng: 13.23,
+          destination_lat: -8.86,
+          destination_lng: 13.24,
+        },
+        n_candidato: 1,
+      }),
+    ).toBe('incompatible');
+  });
+
+  it('oferta fixa continua a exigir geo mesmo com dias ok', () => {
+    expect(
+      evaluateMatch({
+        oferta: {
+          ...baseOferta,
+          flexibilidade_rota: false,
+          dias_semana: [1, 2, 3, 4, 5],
+        },
+        procura: {
+          ...baseProcura,
+          preferred_time: '07:05',
+          origin_lat: -8.8833,
+          origin_lng: 13.2344,
+          dias_semana: [1, 2, 3],
+        },
+        n_candidato: 1,
+      }),
+    ).toBe('incompatible');
+  });
+
+  it('oferta fixa: incompatible quando OD da oferta está incompleto (evita falso positivo em 0,0)', () => {
+    expect(
+      evaluateMatch({
+        oferta: {
+          ...baseOferta,
+          origin_lat: null,
+          origin_lng: null,
+          destination_lat: null,
+          destination_lng: null,
+        },
+        procura: baseProcura,
+        n_candidato: 1,
+      }),
+    ).toBe('incompatible');
+  });
+
+  it('oferta fixa: incompatible quando só o destino está fora do raio', () => {
+    expect(
+      evaluateMatch({
+        oferta: baseOferta,
+        procura: {
+          ...baseProcura,
+          preferred_time: '07:05',
+          destination_lat: -8.92,
+          destination_lng: 13.25,
+        },
+        n_candidato: 1,
+      }),
+    ).toBe('incompatible');
+  });
+
+  it('oferta fixa: incompatible quando dias sem intersecção (mesmo com tempo+geo ok)', () => {
+    expect(
+      evaluateMatch({
+        oferta: { ...baseOferta, dias_semana: [1, 2] },
+        procura: { ...baseProcura, dias_semana: [6, 7] },
+        n_candidato: 1,
+      }),
+    ).toBe('incompatible');
+  });
+
+  it('oferta fixa: procura sem dias continua compatível (MVP)', () => {
+    expect(
+      evaluateMatch({
+        oferta: { ...baseOferta, dias_semana: [1, 2, 3, 4, 5] },
+        procura: { ...baseProcura, dias_semana: null },
+        n_candidato: 2,
+      }),
+    ).toBe('direct');
+  });
+
+  it('capacidade: N_actual igual a vagas → direct; N_actual = vagas+1 → waitlist', () => {
+    expect(
+      evaluateMatch({
+        oferta: { ...baseOferta, vagas_disponiveis: 3 },
+        procura: baseProcura,
+        n_candidato: 3,
+      }),
+    ).toBe('direct');
+    expect(
+      evaluateMatch({
+        oferta: { ...baseOferta, vagas_disponiveis: 3 },
+        procura: baseProcura,
+        n_candidato: 4,
+      }),
+    ).toBe('waitlist');
+  });
+
+  it('oferta flexível: ignora OD/residência mesmo com coords longe na oferta (sem falso negativo)', () => {
+    expect(
+      evaluateMatch({
+        oferta: {
+          departure_time: '07:00',
+          flexibilidade_rota: true,
+          vagas_disponiveis: 3,
+          dias_semana: [1, 2, 3, 4, 5],
+          // coords residuais / legado — NÃO devem restringir
+          origin_lat: -9.5,
+          origin_lng: 13.0,
+          destination_lat: -9.6,
+          destination_lng: 13.1,
+        },
+        procura: {
+          preferred_time: '07:10',
+          origin_lat: -8.8383,
+          origin_lng: 13.2344,
+          destination_lat: -8.85,
+          destination_lng: 13.25,
+          dias_semana: [1, 3],
+        },
+        n_candidato: 2,
+      }),
+    ).toBe('direct');
   });
 });

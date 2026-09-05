@@ -437,6 +437,22 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
   });
 
   it('sucesso mostra mensagem e fecha o formulário de adenda', async () => {
+    const apósAdenda = {
+      ...acordoMotorista,
+      adenda_pendente: {
+        effective_from: '2026-10-01',
+        modo_preco: 'POR_PASSAGEIRO',
+        valor_mensal_por_passageiro_kz: 45000,
+        valor_mensal_total_kz: 90000,
+        n_passageiros_contrato: 2,
+        applied_at: null,
+      },
+    };
+    renegotiateAgreementPricing.mockResolvedValue(apósAdenda);
+    getAgreementsForDriver
+      .mockResolvedValueOnce([acordoMotorista])
+      .mockResolvedValueOnce([apósAdenda]);
+
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
@@ -460,6 +476,33 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
     // Leave CTA / fluxo do passageiro permanece coberto pelos testes T28 existentes
     expect(within(dialog).getByRole('button', { name: /Registar falta/i })).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: /Renegociar preço/i })).toBeInTheDocument();
+  });
+
+  it('com adenda_pendente mostra aviso do próximo mês e mantém preço corrente', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        adenda_pendente: {
+          effective_from: '2026-10-01',
+          modo_preco: 'POR_PASSAGEIRO',
+          valor_mensal_por_passageiro_kz: 45000,
+          valor_mensal_total_kz: 90000,
+          n_passageiros_contrato: 2,
+          applied_at: null,
+        },
+      },
+    ]);
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByText(/Preço combinado/i)).toBeInTheDocument();
+    expect(within(dialog).getByTestId('quota-destaque')).toHaveTextContent(/40/);
+    const pendente = within(dialog).getByTestId('adenda-pendente');
+    expect(pendente).toHaveTextContent(/Novo preço a partir de/i);
+    expect(pendente).toHaveTextContent(/45/);
   });
 
   it('erro de renegociação mostra role=alert junto ao form', async () => {

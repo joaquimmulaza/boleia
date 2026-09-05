@@ -1,12 +1,16 @@
 /**
  * T25 — E2E marketplace: TOTAL_ACORDO N=3/4 + leave sem recalcular quotas.
+ * Adenda temporal — effective_from = próximo mês; contrato original auditável.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveAgreementPricing } from '../utils/resolveAgreementPricing.js';
-import { leavePassenger } from '../services/AgreementService.js';
+import {
+  leavePassenger,
+  renegotiateAgreementPricing,
+} from '../services/AgreementService.js';
 import { supabase } from '../lib/supabase';
 
 vi.mock('../lib/supabase', () => ({
@@ -60,7 +64,7 @@ describe('Agreements marketplace E2E (T25)', () => {
     });
   });
 
-  describe('leavePassenger — invariante de quota', () => {
+  describe('leavePassenger — invariante de quota (RPC atómica)', () => {
     const cabecalho = {
       id: 'acordo-1',
       oferta_id: 'of-1',
@@ -70,171 +74,54 @@ describe('Agreements marketplace E2E (T25)', () => {
     };
 
     /**
-     * Acordo 120k / 4 × 30k; pax-1 sai → cabeçalho e quotas dos 3 restantes intactos.
+     * Acordo 120k / 4 × 30k; pax-1 sai → cabeçalho intacto (servidor não recalcula).
      */
-    it('não altera valor_mensal_* do cabeçalho nem quota_mensal_kz dos restantes', async () => {
-      const restantesAntes = [
-        { passenger_id: 'pax-2', quota_mensal_kz: 30000, estado: 'activo' },
-        { passenger_id: 'pax-3', quota_mensal_kz: 30000, estado: 'activo' },
-        { passenger_id: 'pax-4', quota_mensal_kz: 30000, estado: 'activo' },
-      ];
-      const activosAntes = [
-        { passenger_id: 'pax-1', quota_mensal_kz: 30000, estado: 'activo' },
-        ...restantesAntes,
-      ];
-
-      let selectPassageirosCalls = 0;
-      let updatePassageirosPayload = null;
-      let acordosUpdateCalled = false;
-
-      supabase.from.mockImplementation((table) => {
-        if (table === 'acordos') {
-          return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({ data: { ...cabecalho }, error: null }),
-              }),
-            }),
-            update: vi.fn().mockImplementation(() => {
-              acordosUpdateCalled = true;
-              return { eq: vi.fn().mockResolvedValue({ error: null }) };
-            }),
-          };
-        }
-        if (table === 'acordos_passageiros') {
-          return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                eq: vi.fn().mockImplementation(() => {
-                  selectPassageirosCalls += 1;
-                  const rows =
-                    selectPassageirosCalls === 1 ? activosAntes : restantesAntes;
-                  return Promise.resolve({ data: rows, error: null });
-                }),
-              }),
-            }),
-            update: vi.fn().mockImplementation((payload) => {
-              updatePassageirosPayload = payload;
-              return {
-                eq: vi.fn().mockReturnValue({
-                  eq: vi.fn().mockResolvedValue({ error: null }),
-                }),
-              };
-            }),
-          };
-        }
-        if (table === 'ofertas_capacidade') {
-          return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({
-                  data: { id: 'of-1', vagas_totais: 4, vagas_disponiveis: 0 },
-                  error: null,
-                }),
-              }),
-            }),
-            update: vi.fn().mockReturnValue({
-              eq: vi.fn().mockResolvedValue({ error: null }),
-            }),
-          };
-        }
-        return {};
+    it('não altera valor_mensal_* do cabeçalho após leave_passenger', async () => {
+      supabase.rpc.mockResolvedValue({ data: 'acordo-1', error: null });
+      supabase.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: { ...cabecalho }, error: null }),
+          }),
+        }),
       });
 
       const result = await leavePassenger('acordo-1', 'pax-1');
 
+      expect(supabase.rpc).toHaveBeenCalledWith('leave_passenger', {
+        p_acordo_id: 'acordo-1',
+        p_passenger_id: 'pax-1',
+      });
       expect(result.valor_mensal_por_passageiro_kz).toBe(30000);
       expect(result.valor_mensal_total_kz).toBe(120000);
       expect(result.n_passageiros_contrato).toBe(4);
-      expect(updatePassageirosPayload).toEqual({ estado: 'saiu' });
-      expect(updatePassageirosPayload).not.toHaveProperty('quota_mensal_kz');
-      expect(acordosUpdateCalled).toBe(false);
-      expect(selectPassageirosCalls).toBeGreaterThanOrEqual(2);
     });
 
-    it('falha se quotas dos restantes mudarem após saída (sem UPDATE de preço)', async () => {
-      const activosAntes = [
-        { passenger_id: 'pax-1', quota_mensal_kz: 30000, estado: 'activo' },
-        { passenger_id: 'pax-2', quota_mensal_kz: 30000, estado: 'activo' },
-        { passenger_id: 'pax-3', quota_mensal_kz: 30000, estado: 'activo' },
-        { passenger_id: 'pax-4', quota_mensal_kz: 30000, estado: 'activo' },
-      ];
-      // Simula recálculo errado por COUNT(activos)=3 → 40000
-      const restantesRecalculados = [
-        { passenger_id: 'pax-2', quota_mensal_kz: 40000, estado: 'activo' },
-        { passenger_id: 'pax-3', quota_mensal_kz: 40000, estado: 'activo' },
-        { passenger_id: 'pax-4', quota_mensal_kz: 40000, estado: 'activo' },
-      ];
-
-      let selectPassageirosCalls = 0;
-
-      supabase.from.mockImplementation((table) => {
-        if (table === 'acordos') {
-          return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({ data: { ...cabecalho }, error: null }),
-              }),
-            }),
-          };
-        }
-        if (table === 'acordos_passageiros') {
-          return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                eq: vi.fn().mockImplementation(() => {
-                  selectPassageirosCalls += 1;
-                  const rows =
-                    selectPassageirosCalls === 1
-                      ? activosAntes
-                      : restantesRecalculados;
-                  return Promise.resolve({ data: rows, error: null });
-                }),
-              }),
-            }),
-            update: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                eq: vi.fn().mockResolvedValue({ error: null }),
-              }),
-            }),
-          };
-        }
-        if (table === 'ofertas_capacidade') {
-          return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({
-                  data: { id: 'of-1', vagas_totais: 4, vagas_disponiveis: 0 },
-                  error: null,
-                }),
-              }),
-            }),
-            update: vi.fn().mockReturnValue({
-              eq: vi.fn().mockResolvedValue({ error: null }),
-            }),
-          };
-        }
-        return {};
+    it('propaga falha da RPC sem mutar preço no cliente', async () => {
+      supabase.rpc.mockResolvedValue({
+        data: null,
+        error: { message: 'Passageiro não está activo neste acordo.' },
       });
 
       await expect(leavePassenger('acordo-1', 'pax-1')).rejects.toThrow(
-        /não pode alterar quotas dos restantes/i,
+        /não está activo/i,
       );
     });
   });
 
   describe('anti-padrões de preço / leave', () => {
-    it('AgreementService não recalcula por COUNT(activos) nem usa / 4', () => {
+    it('AgreementService leave usa RPC leave_passenger e não recalcula quotas no cliente', () => {
       const dir = dirname(fileURLToPath(import.meta.url));
       const src = readFileSync(
         join(dir, '../services/AgreementService.js'),
         'utf8',
       );
 
-      expect(src).not.toMatch(/COUNT\s*\(\s*activos\s*\)/i);
+      expect(src).toMatch(/leave_passenger/);
       expect(src).not.toMatch(/\/\s*4(\.0)?\b/);
       expect(src).not.toMatch(/valor_mensal.*=.*N_activos/i);
       expect(src).not.toMatch(/quota_mensal_kz\s*:/);
+      expect(src).not.toMatch(/vagas_disponiveis/);
     });
 
     it('resolveAgreementPricing divide por N_contrato (n_passageiros), nunca por vagas', () => {
@@ -250,6 +137,157 @@ describe('Agreements marketplace E2E (T25)', () => {
       expect(code).not.toMatch(/vagas/);
       expect(code).not.toMatch(/N_activos/);
       expect(code).not.toMatch(/\/\s*4(\.0)?\b/);
+    });
+  });
+
+  describe('adenda temporal — effective_from próximo mês', () => {
+    /**
+     * Mock: count activos + RPC + select com live intacto + adenda_pendente.
+     */
+    function mockAdendaTemporal() {
+      const pricing = resolveAgreementPricing({
+        modo_preco: 'TOTAL_ACORDO',
+        valor_ask_kz: 90000,
+        n_passageiros: 3,
+      });
+      const live = {
+        id: 'acordo-1',
+        modo_preco: 'TOTAL_ACORDO',
+        n_passageiros_contrato: 4,
+        valor_mensal_total_kz: 120000,
+        valor_mensal_por_passageiro_kz: 30000,
+        estado: 'activo',
+        adenda_pendente: {
+          effective_from: '2026-10-01',
+          modo_preco: 'TOTAL_ACORDO',
+          n_passageiros_contrato: 3,
+          valor_mensal_total_kz: pricing.valor_mensal_total_kz,
+          valor_mensal_por_passageiro_kz: pricing.valor_mensal_por_passageiro_kz,
+          previo_modo_preco: 'TOTAL_ACORDO',
+          previo_n_passageiros_contrato: 4,
+          previo_valor_mensal_total_kz: 120000,
+          previo_valor_mensal_por_passageiro_kz: 30000,
+          previo_quotas: [
+            { passenger_id: 'pax-1', quota_mensal_kz: 30000 },
+            { passenger_id: 'pax-2', quota_mensal_kz: 30000 },
+            { passenger_id: 'pax-3', quota_mensal_kz: 30000 },
+            { passenger_id: 'pax-4', quota_mensal_kz: 30000 },
+          ],
+          applied_at: null,
+        },
+      };
+
+      supabase.rpc.mockResolvedValue({ data: 'acordo-1', error: null });
+      supabase.from.mockImplementation((table) => {
+        if (table === 'acordos_passageiros') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue({
+                  count: 3,
+                  data: null,
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        if (table === 'acordos') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({ data: live, error: null }),
+              }),
+            }),
+          };
+        }
+        return {};
+      });
+
+      return { live, pricing };
+    }
+
+    it('renegotiate NÃO altera cabeçalho live; novo preço só em adenda_pendente', async () => {
+      const { live, pricing } = mockAdendaTemporal();
+
+      const result = await renegotiateAgreementPricing('acordo-1', {
+        modo_preco: 'TOTAL_ACORDO',
+        valor_ask_kz: 90000,
+      });
+
+      expect(result.valor_mensal_total_kz).toBe(live.valor_mensal_total_kz);
+      expect(result.valor_mensal_por_passageiro_kz).toBe(live.valor_mensal_por_passageiro_kz);
+      expect(result.n_passageiros_contrato).toBe(4);
+      expect(result.adenda_pendente.valor_mensal_total_kz).toBe(pricing.valor_mensal_total_kz);
+      expect(result.adenda_pendente.n_passageiros_contrato).toBe(3);
+      expect(result.adenda_pendente.effective_from).toBe('2026-10-01');
+    });
+
+    it('contrato original fica auditável em previo_* da adenda', async () => {
+      mockAdendaTemporal();
+
+      const result = await renegotiateAgreementPricing('acordo-1', {
+        modo_preco: 'TOTAL_ACORDO',
+        valor_ask_kz: 90000,
+        n_passageiros: 3,
+      });
+
+      expect(result.adenda_pendente.previo_valor_mensal_total_kz).toBe(120000);
+      expect(result.adenda_pendente.previo_n_passageiros_contrato).toBe(4);
+      expect(result.adenda_pendente.previo_quotas).toHaveLength(4);
+      expect(result.adenda_pendente.applied_at).toBeNull();
+    });
+
+    it('leave após adenda pendente continua sem recalcular quotas (RPC leave_passenger)', async () => {
+      mockAdendaTemporal();
+      await renegotiateAgreementPricing('acordo-1', {
+        modo_preco: 'TOTAL_ACORDO',
+        valor_ask_kz: 90000,
+        n_passageiros: 3,
+      });
+
+      supabase.rpc.mockResolvedValue({ data: 'acordo-1', error: null });
+      supabase.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: {
+                id: 'acordo-1',
+                oferta_id: 'of-1',
+                valor_mensal_por_passageiro_kz: 30000,
+                valor_mensal_total_kz: 120000,
+                n_passageiros_contrato: 4,
+              },
+              error: null,
+            }),
+          }),
+        }),
+      });
+
+      const afterLeave = await leavePassenger('acordo-1', 'pax-1');
+
+      expect(supabase.rpc).toHaveBeenCalledWith('leave_passenger', {
+        p_acordo_id: 'acordo-1',
+        p_passenger_id: 'pax-1',
+      });
+      expect(afterLeave.valor_mensal_total_kz).toBe(120000);
+      expect(afterLeave.n_passageiros_contrato).toBe(4);
+    });
+
+    it('serviço de adenda não faz UPDATE directo a quotas no cliente', () => {
+      const dir = dirname(fileURLToPath(import.meta.url));
+      const src = readFileSync(
+        join(dir, '../services/AgreementService.js'),
+        'utf8',
+      );
+      const renegotiateBlock = src.slice(
+        src.indexOf('renegotiateAgreementPricing'),
+        src.indexOf('getAgreementsForDriver'),
+      );
+
+      expect(renegotiateBlock).toMatch(/renegotiate_agreement_pricing/);
+      expect(renegotiateBlock).not.toMatch(/\.update\(/);
+      expect(renegotiateBlock).not.toMatch(/quota_mensal_kz/);
     });
   });
 });

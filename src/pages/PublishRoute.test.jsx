@@ -75,7 +75,7 @@ describe('PublishRoute — Publicar oferta', () => {
     expect(screen.getByRole('button', { name: /Publicar oferta/i })).toBeInTheDocument();
   });
 
-  it('mostra dias Seg–Sex seleccionados por omissão e toggle Rota flexível', async () => {
+  it('mostra dias Seg–Sex seleccionados por omissão e toggle Oferta flexível', async () => {
     await act(async () => {
       renderWithRouter(<PublishRoute />);
     });
@@ -87,7 +87,7 @@ describe('PublishRoute — Publicar oferta', () => {
     expect(screen.getByRole('button', { name: 'Sáb' })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('button', { name: 'Dom' })).toHaveAttribute('aria-pressed', 'false');
 
-    const flexToggle = screen.getByRole('checkbox', { name: /Rota flexível/i });
+    const flexToggle = screen.getByRole('checkbox', { name: /Oferta flexível/i });
     expect(flexToggle).not.toBeChecked();
   });
 
@@ -129,9 +129,14 @@ describe('PublishRoute — Publicar oferta', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Sex' }));
     fireEvent.click(screen.getByRole('button', { name: 'Sáb' }));
-    fireEvent.click(screen.getByRole('checkbox', { name: /Rota flexível/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Oferta flexível/i }));
 
-    fillRequiredFields();
+    fireEvent.change(document.querySelector('input[name="departure_time"]'), {
+      target: { value: '07:15' },
+    });
+    fireEvent.change(document.querySelector('input[name="valor_mensal_ask_kz"]'), {
+      target: { value: '40000' },
+    });
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Publicar oferta/i }));
@@ -142,6 +147,58 @@ describe('PublishRoute — Publicar oferta', () => {
         expect.objectContaining({
           dias_semana: [1, 2, 3, 4, 6],
           flexibilidade_rota: true,
+          origin_name: null,
+          origin_lat: null,
+          destination_name: null,
+          destination_lat: null,
+        }),
+      );
+    });
+  });
+
+  it('oferta fixa sem OD mostra erro; flexível publica sem origem/destino', async () => {
+    createOferta.mockResolvedValue({ id: 'of-flex' });
+
+    await act(async () => {
+      renderWithRouter(<PublishRoute />);
+    });
+
+    fireEvent.change(document.querySelector('input[name="departure_time"]'), {
+      target: { value: '07:15' },
+    });
+    fireEvent.change(document.querySelector('input[name="valor_mensal_ask_kz"]'), {
+      target: { value: '40000' },
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Publicar oferta/i }));
+    });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /Seleccione origem e destino/i,
+    );
+    expect(createOferta).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /Oferta flexível/i }));
+    expect(screen.queryByLabelText(/Origem/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Destino/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/capacidade, dias e horário — sem rota origem\/destino fixa/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/residência não limita/i)).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Publicar oferta/i }));
+    });
+
+    await waitFor(() => {
+      expect(createOferta).toHaveBeenCalledWith(
+        expect.objectContaining({
+          flexibilidade_rota: true,
+          origin_name: null,
+          destination_name: null,
+          departure_time: '07:15',
+          valor_mensal_ask_kz: 40000,
         }),
       );
     });

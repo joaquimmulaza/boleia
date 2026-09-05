@@ -6,11 +6,18 @@ export { buildPropostaReview, loadPropostaReview } from '../utils/propostaReview
 const MODOS_PRECO = new Set(['POR_PASSAGEIRO', 'TOTAL_ACORDO']);
 
 /**
+ * @typedef {'POR_PASSAGEIRO' | 'TOTAL_ACORDO'} ModoPreco
+ */
+
+/**
+ * Cria proposta sentido A (passageiro→motorista) ou B (motorista→passageiro).
+ * `created_by` = utilizador autenticado; aceite/rejeição só pela contraparte.
+ *
  * @param {{
  *   oferta_id: string,
  *   procura_id: string,
  *   grupo_id?: string | null,
- *   modo_preco: 'POR_PASSAGEIRO' | 'TOTAL_ACORDO',
+ *   modo_preco: ModoPreco,
  *   valor_mensal_ask_kz: number,
  *   n_passageiros_propostos: number,
  * }} input
@@ -91,17 +98,43 @@ export async function listPropostasByOferta(ofertaId) {
 }
 
 /**
+ * Rejeita proposta via RPC (só a contraparte; `created_by` bloqueado).
  * @param {string} propostaId
  */
 export async function rejectProposta(propostaId) {
-  const { data, error } = await supabase
-    .from('propostas')
-    .update({ estado: 'rejeitada', updated_at: new Date().toISOString() })
-    .eq('id', propostaId)
-    .select()
-    .single();
+  if (!propostaId) {
+    throw new Error('ID da proposta é obrigatório.');
+  }
 
-  if (error) throw error;
+  const { data, error } = await supabase.rpc('reject_proposal', {
+    p_proposta_id: propostaId,
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Falha ao rejeitar proposta.');
+  }
+
+  return data;
+}
+
+/**
+ * Cancela proposta aberta via RPC (só o criador; contraparte usa `rejectProposta`).
+ * Não usa UPDATE client — P0 preservado.
+ * @param {string} propostaId
+ */
+export async function cancelProposta(propostaId) {
+  if (!propostaId) {
+    throw new Error('ID da proposta é obrigatório.');
+  }
+
+  const { data, error } = await supabase.rpc('cancel_proposal', {
+    p_proposta_id: propostaId,
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Falha ao cancelar proposta.');
+  }
+
   return data;
 }
 

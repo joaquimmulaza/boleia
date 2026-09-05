@@ -328,10 +328,11 @@ Inalteradas na forma (oferta / procura / proposta / acordo), com a nuance:
 
 ## Matching
 
-1. Compatibilidade horária e geográfica oferta ↔ procura/grupo.
-2. Capacidade: `vagas_disponiveis >= N_actual` (para aceite directo com proposta a `N_proposto = N_actual`); senão waitlist. Grupo incompleto vs `n_maximo` **não** bloqueia matching.
-3. Preço: comparar ask (interpretado pelo `modo_preco`) com teto da procura — filtro suave. Preço vem do motorista, não do grupo.
-4. Mapa com pontos preferenciais dos membros cobertos pelo `N_proposto` antes do aceite.
+1. **Oferta fixa:** compatibilidade horária **e** geográfica (raio OD) oferta ↔ procura/grupo.
+2. **Oferta flexível:** horário/janela + dias + capacidade — **sem** OD da oferta, **sem** zona/raio residencial; matching ajuda a descobrir; motorista decide caso a caso. API `findCompatibleProcuras(oferta)`.
+3. Capacidade: `vagas_disponiveis >= N_actual` (aceite directo com `N_proposto = N_actual`); senão waitlist. Grupo incompleto vs `n_maximo` **não** bloqueia matching.
+4. Preço: comparar ask (interpretado pelo `modo_preco`) com teto da procura — filtro suave. Preço vem do motorista, não do grupo.
+5. Mapa com pontos preferenciais dos membros cobertos pelo `N_proposto` antes do aceite (quando houver coords na procura/membros).
 
 ---
 
@@ -363,11 +364,20 @@ Dados actuais são de teste e podem ser apagados. **Sem** expand-contract, backf
 1. Spec de domínio em `.specs/features/marketplace-oferta-procura`
 2. Migração Supabase limpa: dropar `routes`/RPCs/triggers legados; criar ofertas/procuras/grupos/propostas/`acordos`+`acordos_passageiros`/waitlist; `veiculos` com capacidade; faltas sem `/4`; `vagas_disponiveis >= 0`; RPC atómica de aceitação
 3. Serviços + TDD (preço, acordo N, matching, waitlist, faltas)
-4. UI (Penpot-first): análise UX → [opcional Superdesign] → consolidar no Penpot (consultar componentes/tokens; privilegiar reutilização) → gate “design pronto” (user flow + estados principais + componentes identificados + telas no Penpot) → implementar no `src/` → Visual QA (selector de modo de preço; multi-passageiro; waitlist)
+4. UI (**v0-first** + shadcn; Penpot descontinuado como SoT): gate design → TDD → `src/` → Visual QA (selector de modo de preço; multi-passageiro; waitlist; Phase 7: flexível + propostas A/B)
 5. Actualizar `AGENTS.md` quando o schema estiver estável
 
 Verificação de dependências essenciais: [`.cursor/plans/mapa_impacto_marketplace_e95dd649.plan.md`](mapa_impacto_marketplace_e95dd649.plan.md).
 
+## Phase 7 (docs 2026-09-05 — **não** implementar até pedido)
+
+**Re-verificado vs decisão final:** flexível sem OD/zona; propostas bidireccionais; aceite só contraparte; Procura → M propostas → 1 acordo 1:N.
+
+Ordem: **T32** aceite só contraparte → **T33** propostas B + inbox + deep links → **T34** oferta flexível sem OD → **T35** matching dual + `findCompatibleProcuras`.
+
+Débito actual (código): T27 grava `flexibilidade_rota` mas ainda exige OD e matching ignora o tipo («flex = OD + flag» — **incorrecto**). Copy UI ainda pode dizer «Rota flexível» / «zona» em ecrãs legados — corrigir em T34/T35.
+
 ## Fora de âmbito
 
 - Gateway de pagamento; substituto automático; routing turn-by-turn; TypeScript; toast; `rotas_diarias`.
+- **Polígonos / zonas / raio residencial** do motorista (MVP). Residência ≠ área de atuação.

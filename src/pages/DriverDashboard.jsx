@@ -2,13 +2,17 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { MapPin, AlertCircle, ArrowRight, Clock, Users, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { listOfertasByDriver } from '../services/OfertaService';
+import { listOfertasByDriver, isOfertaFlexivel, labelOfertaRota } from '../services/OfertaService';
 import {
   listPropostasByOferta,
   rejectProposta,
+  cancelProposta,
   enrichPropostasForReview,
+  createProposta,
 } from '../services/PropostaService';
 import { createAgreementFromProposal } from '../services/AgreementService';
+import { findCompatibleProcuras } from '../services/MatchingService';
+import { getGrupoByProcura } from '../services/GrupoService';
 import { supabase } from '../lib/supabase';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
@@ -17,6 +21,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import PropostaReviewCard from '../components/PropostaReviewCard';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
+import { filterPropostasParaInbox, filterPropostasEnviadas } from '../utils/propostaInbox';
 
 function estadoChip(estado) {
   const map = {
@@ -32,8 +37,35 @@ function labelModo(modo) {
   return modo === 'TOTAL_ACORDO' ? 'Total do acordo' : 'Por passageiro';
 }
 
+function labelProcuraN(n) {
+  if (n === 1) return 'Individual';
+  return `Grupo · ${n} pessoas`;
+}
+
 /**
- * Hub motorista — ofertas + rever/aceitar propostas.
+ * Título da oferta na lista — flexível sem OD fictício.
+ * @param {object} oferta
+ */
+function OfertaRotaTitulo({ oferta }) {
+  const flexLabel = labelOfertaRota(oferta);
+  if (flexLabel) {
+    return (
+      <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold">
+        <span>{flexLabel}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold">
+      <span>{oferta.origin_name}</span>
+      <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
+      <span>{oferta.destination_name}</span>
+    </div>
+  );
+}
+
+/**
+ * Hub motorista — ofertas + rever/aceitar propostas (A) + propor a procuras (B).
  */
 const DriverDashboard = () => {
   const navigate = useNavigate();
@@ -42,8 +74,12 @@ const DriverDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [ofertas, setOfertas] = useState([]);
   const [reviews, setReviews] = useState([]);
+  const [enviadas, setEnviadas] = useState([]);
   const [selectedOfertaId, setSelectedOfertaId] = useState(null);
+  const [panel, setPanel] = useState(null); // 'propostas' | 'procuras' | null
+  const [procurasMatch, setProcurasMatch] = useState([]);
   const [loadingPropostas, setLoadingPropostas] = useState(false);
+  const [loadingProcuras, setLoadingProcuras] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', text: '' });
   const [busyId, setBusyId] = useState(null);
 
@@ -75,20 +111,83 @@ const DriverDashboard = () => {
     carregar();
   }, [carregar]);
 
+  const ofertaSeleccionada = ofertas.find((o) => o.id === selectedOfertaId) || null;
+
   const handleVerPropostas = async (ofertaId) => {
     setSelectedOfertaId(ofertaId);
+    setPanel('propostas');
     setReviews([]);
+    setEnviadas([]);
+    setProcurasMatch([]);
     setLoadingPropostas(true);
     setFeedback({ type: '', text: '' });
     try {
       const lista = await listPropostasByOferta(ofertaId);
-      const abertas = lista.filter((p) => p.estado === 'aberta');
-      const enriched = await enrichPropostasForReview(abertas);
-      setReviews(enriched);
+      const inbox = filterPropostasParaInbox(lista, user?.id);
+      const minhas = filterPropostasEnviadas(lista, user?.id);
+      const [enrichedInbox, enrichedEnviadas] = await Promise.all([
+        enrichPropostasForReview(inbox),
+        enrichPropostasForReview(minhas),
+      ]);
+      setReviews(enrichedInbox);
+      setEnviadas(enrichedEnviadas);
     } catch (err) {
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
     } finally {
       setLoadingPropostas(false);
+    }
+  };
+
+  const handleVerProcuras = async (oferta) => {
+    setSelectedOfertaId(oferta.id);
+    setPanel('procuras');
+    setReviews([]);
+    setEnviadas([]);
+    setProcurasMatch([]);
+    setLoadingProcuras(true);
+    setFeedback({ type: '', text: '' });
+    try {
+      const result = await findCompatibleProcuras(oferta);
+      setProcurasMatch([...(result.direct || []), ...(result.waitlist || [])]);
+    } catch (err) {
+      setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
+    } finally {
+      setLoadingProcuras(false);
+    }
+  };
+
+  const handleProporB = async (procura) => {
+    if (!ofertaSeleccionada) return;
+    setBusyId(procura.id);
+    setFeedback({ type: '', text: '' });
+    try {
+      const nProposto = procura.n_candidato ?? 1;
+      let grupoId = null;
+      if (nProposto > 1) {
+        const grupo = await getGrupoByProcura(procura.id);
+        if (!grupo?.id) {
+          setFeedback({
+            type: 'error',
+            text: 'Esta procura precisa de um grupo para propor com mais de uma pessoa.',
+          });
+          return;
+        }
+        grupoId = grupo.id;
+      }
+
+      await createProposta({
+        oferta_id: ofertaSeleccionada.id,
+        procura_id: procura.id,
+        grupo_id: grupoId,
+        modo_preco: ofertaSeleccionada.modo_preco,
+        valor_mensal_ask_kz: ofertaSeleccionada.valor_mensal_ask_kz,
+        n_passageiros_propostos: nProposto,
+      });
+      setFeedback({ type: 'success', text: 'Proposta enviada ao passageiro.' });
+    } catch (err) {
+      setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -114,6 +213,21 @@ const DriverDashboard = () => {
       setReviews((prev) => prev.filter((r) => r.proposta.id !== propostaId));
     } catch (err) {
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleCancelarEnviada = async (propostaId) => {
+    setBusyId(propostaId);
+    setFeedback({ type: '', text: '' });
+    try {
+      await cancelProposta(propostaId);
+      setEnviadas((prev) => prev.filter((r) => r.proposta.id !== propostaId));
+      setFeedback({ type: 'success', text: 'Proposta cancelada.' });
+      await carregar();
+    } catch (err) {
+      setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
     } finally {
       setBusyId(null);
     }
@@ -189,11 +303,7 @@ const DriverDashboard = () => {
                 </span>
                 <span className="text-xs text-slate-400">{labelModo(oferta.modo_preco)}</span>
               </div>
-              <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold">
-                <span>{oferta.origin_name || 'Origem'}</span>
-                <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
-                <span>{oferta.destination_name || 'Destino'}</span>
-              </div>
+              <OfertaRotaTitulo oferta={oferta} />
               <div className="flex items-center gap-3 text-sm text-slate-500">
                 <span className="flex items-center gap-1">
                   <Clock size={15} aria-hidden="true" /> {time}
@@ -204,26 +314,93 @@ const DriverDashboard = () => {
                   {oferta.vagas_disponiveis === 1 ? 'lugar disponível' : 'lugares disponíveis'}
                 </span>
               </div>
-              <div className="flex items-center justify-between pt-2 border-t border-slate-50 dark:border-slate-800">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-50 dark:border-slate-800">
                 <strong className="text-primary tabular-nums">
                   {formatKwanza(oferta.valor_mensal_ask_kz)} Kz
                 </strong>
-                <button
-                  type="button"
-                  onClick={() => handleVerPropostas(oferta.id)}
-                  className="text-sm font-bold text-primary flex items-center gap-1"
-                >
-                  Ver propostas <ChevronRight size={16} aria-hidden="true" />
-                </button>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleVerProcuras(oferta)}
+                    className="text-sm font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1"
+                  >
+                    Procuras compatíveis <ChevronRight size={16} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleVerPropostas(oferta.id)}
+                    className="text-sm font-bold text-primary flex items-center gap-1"
+                  >
+                    Ver propostas <ChevronRight size={16} aria-hidden="true" />
+                  </button>
+                </div>
               </div>
             </section>
           );
         })}
       </div>
 
-      {selectedOfertaId && (
+      {selectedOfertaId && panel === 'propostas' && (
+        <div className="mt-8 space-y-6">
+          <div className="space-y-3">
+            <h2 className="text-lg font-bold text-balance">Rever propostas</h2>
+            {feedback.text && (
+              <div
+                role="alert"
+                className={`rounded-xl px-4 py-3 text-sm font-medium ${
+                  feedback.type === 'success'
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : 'bg-red-50 text-red-700 border border-red-200'
+                }`}
+              >
+                {feedback.text}
+              </div>
+            )}
+            {loadingPropostas ? (
+              <LoadingSkeleton />
+            ) : reviews.length === 0 ? (
+              <p className="text-sm text-slate-500">Não há propostas para rever nesta oferta.</p>
+            ) : (
+              reviews.map((review) => (
+                <PropostaReviewCard
+                  key={review.proposta.id}
+                  review={review}
+                  busy={busyId === review.proposta.id || loadingPropostas}
+                  onAceitar={() => handleAceitar(review.proposta.id)}
+                  onRecusar={() => handleRecusar(review.proposta.id)}
+                />
+              ))
+            )}
+          </div>
+
+          {!loadingPropostas && enviadas.length > 0 ? (
+            <div className="space-y-3">
+              <h2 className="text-lg font-bold text-balance">Propostas enviadas</h2>
+              <p className="text-sm text-slate-500 text-pretty">
+                Propostas que enviaste aos passageiros. Podes cancelar enquanto estiverem abertas.
+              </p>
+              {enviadas.map((review) => (
+                <PropostaReviewCard
+                  key={review.proposta.id}
+                  review={review}
+                  modo="criador"
+                  busy={busyId === review.proposta.id || loadingPropostas}
+                  onCancelar={() => handleCancelarEnviada(review.proposta.id)}
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {selectedOfertaId && panel === 'procuras' && (
         <div className="mt-8 space-y-3">
-          <h2 className="text-lg font-bold text-balance">Rever propostas</h2>
+          <h2 className="text-lg font-bold text-balance">Procuras compatíveis</h2>
+          <p className="text-sm text-slate-500 text-pretty">
+            {isOfertaFlexivel(ofertaSeleccionada)
+              ? 'Oferta flexível: procuras compatíveis por horário, dias e lugares. Propõe com o preço da tua oferta — o passageiro aceita ou recusa.'
+              : 'Propõe um acordo com o preço da tua oferta. O passageiro aceita ou recusa.'}
+          </p>
           {feedback.text && (
             <div
               role="alert"
@@ -236,19 +413,52 @@ const DriverDashboard = () => {
               {feedback.text}
             </div>
           )}
-          {loadingPropostas ? (
+          {loadingProcuras ? (
             <LoadingSkeleton />
-          ) : reviews.length === 0 ? (
-            <p className="text-sm text-slate-500">Não há propostas abertas nesta oferta.</p>
+          ) : procurasMatch.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              Ainda não há procuras compatíveis com esta oferta.
+            </p>
           ) : (
-            reviews.map((review) => (
-              <PropostaReviewCard
-                key={review.proposta.id}
-                review={review}
-                busy={busyId === review.proposta.id || loadingPropostas}
-                onAceitar={() => handleAceitar(review.proposta.id)}
-                onRecusar={() => handleRecusar(review.proposta.id)}
-              />
+            procurasMatch.map((procura) => (
+              <section
+                key={procura.id}
+                className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
+              >
+                <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+                  <span>{procura.origin_name || 'Origem'}</span>
+                  <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
+                  <span>{procura.destination_name || 'Destino'}</span>
+                </div>
+                <div className="flex gap-3 text-sm text-slate-500">
+                  <span className="flex items-center gap-1">
+                    <Clock size={14} aria-hidden="true" />
+                    {String(procura.preferred_time || '').slice(0, 5)}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Users size={14} aria-hidden="true" />
+                    {labelProcuraN(procura.n_candidato ?? 1)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <div>
+                    <strong className="text-primary tabular-nums">
+                      {formatKwanza(ofertaSeleccionada?.valor_mensal_ask_kz)} Kz
+                    </strong>
+                    <p className="text-xs text-slate-400">
+                      {labelModo(ofertaSeleccionada?.modo_preco)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={busyId === procura.id}
+                    onClick={() => handleProporB(procura)}
+                    className="bg-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl disabled:opacity-60"
+                  >
+                    Propor acordo
+                  </button>
+                </div>
+              </section>
             ))
           )}
         </div>

@@ -4,14 +4,27 @@
  *
  * Cada tipo de notificação (baseado na coluna metadata.type do DB) tem uma função
  * que recebe o objeto metadata inteiro e retorna a URL correspondente (em string).
+ *
+ * Propostas A/B — `proposal_received`:
+ * - inbox `passageiro` → sentido B (motorista criou) → hub /passageiro
+ * - inbox `motorista` → sentido A (passageiro/grupo criou) → hub /motorista
+ * - sem inbox (legado) → /motorista
  */
 
 export const notificationRouteMap = {
   agreement_update: (metadata) => {
     return metadata?.acordo_id ? `/acordos?openAcordoId=${metadata.acordo_id}` : '/acordos';
   },
+  /**
+   * Deep link da contraparte (não do criador).
+   * metadata.inbox: 'passageiro' (sentido B) | 'motorista' (sentido A).
+   * Legado sem inbox → /motorista (era o único hub de propostas).
+   */
   proposal_received: (metadata) => {
-    return metadata?.oferta_id ? '/motorista' : '/motorista';
+    const inbox = typeof metadata?.inbox === 'string' ? metadata.inbox.trim().toLowerCase() : '';
+    if (inbox === 'passageiro') return '/passageiro';
+    if (inbox === 'motorista') return '/motorista';
+    return '/motorista';
   },
   waitlist_promoted: () => '/passageiro',
   match_available: () => '/passageiro',

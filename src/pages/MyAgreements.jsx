@@ -83,6 +83,18 @@ function countActivos(acordo) {
 }
 
 /**
+ * Rótulo do mês de vigência da adenda (ex. «outubro de 2026»).
+ * @param {string | null | undefined} isoDate
+ * @returns {string}
+ */
+function formatMesAdenda(isoDate) {
+  if (!isoDate) return 'próximo mês';
+  const d = new Date(`${String(isoDate).slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return 'próximo mês';
+  return d.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+}
+
+/**
  * Gestão de acordos 1 motorista : N passageiros.
  */
 const MyAgreements = () => {
@@ -403,6 +415,33 @@ const MyAgreements = () => {
                 {formatKwanza(quotaDestaque)} Kz
               </strong>
             </div>
+
+            {selected.adenda_pendente && (
+              <div
+                data-testid="adenda-pendente"
+                className="rounded-xl border border-amber-200/90 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 space-y-1"
+              >
+                <p className="text-sm font-bold text-slate-900 dark:text-white">
+                  Novo preço a partir de{' '}
+                  {formatMesAdenda(selected.adenda_pendente.effective_from)}
+                </p>
+                <p className="text-sm text-slate-600 dark:text-slate-300">
+                  Cada um paga{' '}
+                  <span className="tabular-nums font-semibold">
+                    {formatKwanza(selected.adenda_pendente.valor_mensal_por_passageiro_kz)} Kz
+                  </span>
+                </p>
+                {selected.adenda_pendente.valor_mensal_total_kz != null && (
+                  <p className="text-xs text-slate-500">
+                    Total{' '}
+                    <span className="tabular-nums font-medium">
+                      {formatKwanza(selected.adenda_pendente.valor_mensal_total_kz)} Kz
+                    </span>
+                    . O mês corrente mantém as quotas já combinadas.
+                  </p>
+                )}
+              </div>
+            )}
           </section>
 
           <div className="border-t border-slate-100 dark:border-slate-800" role="separator" />

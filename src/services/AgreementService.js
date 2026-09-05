@@ -1,9 +1,44 @@
 import { supabase } from '../lib/supabase';
 import { resolveAgreementPricing } from '../utils/resolveAgreementPricing.js';
-import { promoteWaitlist } from './WaitlistService.js';
+
+/**
+ * Normaliza acordo: expõe `adenda_pendente` (não aplicada / não supersedida).
+ * @param {object | null | undefined} acordo
+ * @returns {object | null | undefined}
+ */
+function withPendingAdenda(acordo) {
+  if (!acordo) return acordo;
+  const { acordos_adendas, adenda_pendente, ...rest } = acordo;
+  if (adenda_pendente !== undefined) {
+    return { ...rest, adenda_pendente };
+  }
+  const rows = Array.isArray(acordos_adendas) ? acordos_adendas : [];
+  const pending =
+    rows.find((a) => a && a.applied_at == null && a.superseded_at == null) || null;
+  return { ...rest, adenda_pendente: pending };
+}
+
+/**
+ * Aplica adendas com effective_from já atingido (lazy). Best-effort —
+ * não bloqueia listagens se a RPC falhar.
+ * @param {string | null} [acordoId]
+ */
+async function applyDueAdendasBestEffort(acordoId = null) {
+  try {
+    const res = await supabase.rpc('apply_due_agreement_adendas', {
+      p_acordo_id: acordoId,
+    });
+    if (res?.error) {
+      console.warn('Falha ao aplicar adendas devidas:', res.error.message);
+    }
+  } catch (err) {
+    console.warn('Falha ao aplicar adendas devidas:', err);
+  }
+}
 
 /**
  * Aceita proposta via RPC atómica (cria acordo 1:N + congela preços).
+ * Só a contraparte pode aceitar (`created_by` bloqueado na RPC).
  * @param {string} propostaId
  */
 export async function createAgreementFromProposal(propostaId) {
@@ -30,8 +65,9 @@ export async function createAgreementFromProposal(propostaId) {
 }
 
 /**
- * Passageiro sai: liberta 1 vaga; preços do cabeçalho e quotas dos restantes
- * ficam intactos (sem recálculo por N_activos).
+ * Passageiro sai via RPC atómica: marca `saiu`, reconta vagas da oferta,
+ * promove waitlist (best-effort no servidor). Preços / quotas dos restantes
+ * não são recalculados.
  * @param {string} acordoId
  * @param {string} passengerId
  */
@@ -40,113 +76,33 @@ export async function leavePassenger(acordoId, passengerId) {
     throw new Error('acordoId e passengerId são obrigatórios.');
   }
 
-  const { data: antes, error: antesError } = await supabase
+  const { data: acordoIdOut, error: rpcError } = await supabase.rpc('leave_passenger', {
+    p_acordo_id: acordoId,
+    p_passenger_id: passengerId,
+  });
+
+  if (rpcError) {
+    throw new Error(rpcError.message || 'Falha ao sair do acordo.');
+  }
+
+  const id = acordoIdOut ?? acordoId;
+  const { data, error } = await supabase
     .from('acordos')
     .select(
       'id, oferta_id, valor_mensal_por_passageiro_kz, valor_mensal_total_kz, n_passageiros_contrato',
     )
-    .eq('id', acordoId)
+    .eq('id', id)
     .single();
 
-  if (antesError) throw antesError;
-
-  const { data: activosAntes, error: quotasAntesError } = await supabase
-    .from('acordos_passageiros')
-    .select('passenger_id, quota_mensal_kz, estado')
-    .eq('acordo_id', acordoId)
-    .eq('estado', 'activo');
-
-  if (quotasAntesError) throw quotasAntesError;
-
-  /** @type {Record<string, number>} */
-  const quotasRestantesAntes = {};
-  for (const row of activosAntes || []) {
-    if (row.passenger_id !== passengerId) {
-      quotasRestantesAntes[row.passenger_id] = row.quota_mensal_kz;
-    }
-  }
-
-  const { error: leaveError } = await supabase
-    .from('acordos_passageiros')
-    .update({ estado: 'saiu' })
-    .eq('acordo_id', acordoId)
-    .eq('passenger_id', passengerId);
-
-  if (leaveError) throw leaveError;
-
-  const { data: oferta, error: ofertaError } = await supabase
-    .from('ofertas_capacidade')
-    .select('id, vagas_totais, vagas_disponiveis')
-    .eq('id', antes.oferta_id)
-    .single();
-
-  if (ofertaError) throw ofertaError;
-
-  const disponiveis = Math.min(oferta.vagas_totais, (oferta.vagas_disponiveis ?? 0) + 1);
-  const estadoOferta =
-    disponiveis <= 0
-      ? 'cheia'
-      : disponiveis < oferta.vagas_totais
-        ? 'parcial'
-        : 'disponivel';
-
-  const { error: updateOfertaError } = await supabase
-    .from('ofertas_capacidade')
-    .update({
-      vagas_disponiveis: disponiveis,
-      estado: estadoOferta,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', oferta.id);
-
-  if (updateOfertaError) throw updateOfertaError;
-
-  const { data: depois, error: depoisError } = await supabase
-    .from('acordos')
-    .select(
-      'id, oferta_id, valor_mensal_por_passageiro_kz, valor_mensal_total_kz, n_passageiros_contrato',
-    )
-    .eq('id', acordoId)
-    .single();
-
-  if (depoisError) throw depoisError;
-
-  if (
-    depois.valor_mensal_por_passageiro_kz !== antes.valor_mensal_por_passageiro_kz ||
-    depois.valor_mensal_total_kz !== antes.valor_mensal_total_kz ||
-    depois.n_passageiros_contrato !== antes.n_passageiros_contrato
-  ) {
-    throw new Error('Invariante violado: saída não pode alterar preços do acordo.');
-  }
-
-  const { data: activosDepois, error: quotasDepoisError } = await supabase
-    .from('acordos_passageiros')
-    .select('passenger_id, quota_mensal_kz, estado')
-    .eq('acordo_id', acordoId)
-    .eq('estado', 'activo');
-
-  if (quotasDepoisError) throw quotasDepoisError;
-
-  for (const row of activosDepois || []) {
-    if (quotasRestantesAntes[row.passenger_id] !== row.quota_mensal_kz) {
-      throw new Error(
-        'Invariante violado: saída não pode alterar quotas dos restantes.',
-      );
-    }
-  }
-
-  // Promoção waitlist = notificação (sem auto-aceitar); best-effort após leave.
-  try {
-    await promoteWaitlist(antes.oferta_id);
-  } catch (promoteError) {
-    console.error('Erro ao promover lista de espera:', promoteError);
-  }
-
-  return depois;
+  if (error) throw error;
+  return data;
 }
 
 /**
  * Adenda: único caminho de serviço para mutar preços / n_passageiros_contrato.
+ * Agenda para o 1.º dia do mês seguinte (`effective_from`); o mês corrente
+ * mantém cabeçalho e quotas congelados. Contrato prévio fica em
+ * `adenda_pendente.previo_*` (auditável).
  * Default de n_passageiros = COUNT de passageiros activos; se passado, deve
  * coincidir com esse COUNT (MVP — evita fantasmas).
  *
@@ -156,6 +112,7 @@ export async function leavePassenger(acordoId, passengerId) {
  *   valor_ask_kz: number,
  *   n_passageiros?: number,
  * }} input
+ * @returns {Promise<object>} acordo live + `adenda_pendente`
  */
 export async function renegotiateAgreementPricing(acordoId, input) {
   if (!acordoId) {
@@ -201,38 +158,49 @@ export async function renegotiateAgreementPricing(acordoId, input) {
   const id = acordoIdOut ?? acordoId;
   const { data, error } = await supabase
     .from('acordos')
-    .select('*')
+    .select('*, acordos_adendas(*)')
     .eq('id', id)
     .single();
 
   if (error) throw error;
-  return data;
+  return withPendingAdenda(data);
 }
 
 /**
  * @param {string} driverId
  */
 export async function getAgreementsForDriver(driverId) {
+  await applyDueAdendasBestEffort(null);
+
   const { data, error } = await supabase
     .from('acordos')
-    .select('*, acordos_passageiros(*), ofertas_capacidade(origin_name, destination_name, departure_time)')
+    .select(
+      '*, acordos_passageiros(*), ofertas_capacidade(origin_name, destination_name, departure_time), acordos_adendas(*)',
+    )
     .eq('driver_id', driverId)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data || [];
+  return (data || []).map(withPendingAdenda);
 }
 
 /**
  * @param {string} passengerId
  */
 export async function getAgreementsForPassenger(passengerId) {
+  await applyDueAdendasBestEffort(null);
+
   const { data, error } = await supabase
     .from('acordos_passageiros')
-    .select('acordo_id, estado, acordos(*, ofertas_capacidade(origin_name, destination_name, departure_time))')
+    .select(
+      'acordo_id, estado, acordos(*, ofertas_capacidade(origin_name, destination_name, departure_time), acordos_adendas(*))',
+    )
     .eq('passenger_id', passengerId)
     .eq('estado', 'activo');
 
   if (error) throw error;
-  return (data || []).map((row) => row.acordos).filter(Boolean);
+  return (data || [])
+    .map((row) => row.acordos)
+    .filter(Boolean)
+    .map(withPendingAdenda);
 }

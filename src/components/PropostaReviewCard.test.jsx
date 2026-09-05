@@ -246,6 +246,32 @@ describe('PropostaReviewCard', () => {
     expect(onRecusar).toHaveBeenCalledTimes(1);
   });
 
+  it('modo criador mostra Cancelar e chama onCancelar após confirmação', () => {
+    const onCancelar = vi.fn();
+    const onAceitar = vi.fn();
+    const onRecusar = vi.fn();
+
+    render(
+      <PropostaReviewCard
+        review={buildReview()}
+        busy={false}
+        modo="criador"
+        onCancelar={onCancelar}
+        onAceitar={onAceitar}
+        onRecusar={onRecusar}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: /Aceitar proposta/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Recusar/i })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Cancelar proposta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Confirmar cancelamento/i }));
+    expect(onCancelar).toHaveBeenCalledTimes(1);
+    expect(onAceitar).not.toHaveBeenCalled();
+    expect(onRecusar).not.toHaveBeenCalled();
+  });
+
   it('mostra nota suave quando pricing.temResto', () => {
     render(
       <PropostaReviewCard

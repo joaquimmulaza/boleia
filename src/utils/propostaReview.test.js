@@ -141,7 +141,7 @@ describe('buildPropostaReview', () => {
     expect(review.avisoComposicao).toBeNull();
   });
 
-  it('corta aos primeiros n_passageiros_propostos membros', () => {
+  it('corta aos primeiros n_passageiros_propostos membros e avisa se o grupo cresceu', () => {
     const review = buildPropostaReview(
       { ...propostaGrupo, n_passageiros_propostos: 2, valor_mensal_ask_kz: 80000 },
       membrosTres,
@@ -150,6 +150,26 @@ describe('buildPropostaReview', () => {
     expect(review.membros).toHaveLength(2);
     expect(review.membros.map((m) => m.nome)).toEqual(['Ana Silva', 'Bruno Costa']);
     expect(review.titulo).toBe('Grupo · 2 pessoas');
+    expect(review.avisoComposicao).toMatch(/mais pessoas|nova proposta/i);
+    expect(review.avisoComposicao).not.toMatch(/N_/);
+    expect(review.avisoComposicao).not.toMatch(/incompleto/i);
+  });
+
+  it('avisoComposicao quando N_actual > N_proposto sem mutar o tamanho da proposta', () => {
+    const review = buildPropostaReview(propostaGrupo, [
+      ...membrosTres,
+      {
+        passenger_id: 'pax-4',
+        ordem_insercao: 3,
+        pickup_name: null,
+        perfis: { nome_completo: 'Diana' },
+      },
+    ]);
+
+    expect(review.membros).toHaveLength(3);
+    expect(review.titulo).toBe('Grupo · 3 pessoas');
+    expect(review.avisoComposicao).toMatch(/3 de 4|nova proposta/i);
+    expect(review.avisoComposicao).not.toMatch(/N_proposto|N_actual/);
   });
 
   it('fallback de nome «Passageiro» quando perfil sem nome_completo', () => {

@@ -8,16 +8,57 @@ import EmptyState from '../components/EmptyState';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import GrupoProcuraPanel from '../components/GrupoProcuraPanel';
 import GrupoDescobertaPanel from '../components/GrupoDescobertaPanel';
+import OfertaMatchCard from '../components/OfertaMatchCard';
+import PropostaReviewCard from '../components/PropostaReviewCard';
 import { createProcura, listProcurasByOwner } from '../services/ProcuraService';
 import { findCompatibleOfertas } from '../services/MatchingService';
-import { createProposta } from '../services/PropostaService';
+import {
+  createProposta,
+  listPropostasByProcura,
+  enrichPropostasForReview,
+  rejectProposta,
+  cancelProposta,
+} from '../services/PropostaService';
+import { createAgreementFromProposal } from '../services/AgreementService';
 import { enqueueWaitlist, listWaitlistByProcura } from '../services/WaitlistService';
 import { getGrupoByProcura, listMembrosGrupo } from '../services/GrupoService';
-import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
+import {
+  filterPropostasParaInbox,
+  filterPropostasEnviadas,
+} from '../utils/propostaInbox';
 
 /**
- * Hub passageiro — procura, matches e lista de espera.
+ * Copy humana do tamanho da procura (lista = resumo).
+ * @param {{ n: number, nMaximo?: number | null, temGrupo?: boolean }} args
+ */
+function labelTamanhoProcura({ n, nMaximo = null, temGrupo = false }) {
+  if (temGrupo && nMaximo != null) {
+    return `Grupo · ${n} de ${nMaximo}`;
+  }
+  if (n === 1) return 'Individual';
+  return `Grupo · ${n} pessoas`;
+}
+
+/**
+ * @param {string} estado
+ */
+function chipEstadoProcura(estado) {
+  const e = String(estado || '').toLowerCase();
+  if (e === 'em_negociacao') {
+    return {
+      label: 'Em negociação',
+      className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+    };
+  }
+  return {
+    label: 'Activa',
+    className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+  };
+}
+
+/**
+ * Hub passageiro — procura, matches, inbox (B), enviadas + cancel, lista de espera.
  * Grupo = procura colectiva viva: N_proposto = N_actual no instante da proposta
  * (não exige «grupo completo» vs capacidade pretendida).
  */
@@ -29,6 +70,9 @@ const PassengerDashboard = () => {
   const [membrosCount, setMembrosCount] = useState(0);
   const [matches, setMatches] = useState({ direct: [], waitlist: [] });
   const [waitlistEntries, setWaitlistEntries] = useState([]);
+  const [inboxReviews, setInboxReviews] = useState([]);
+  const [enviadasReviews, setEnviadasReviews] = useState([]);
+  const [loadingInbox, setLoadingInbox] = useState(false);
   const [view, setView] = useState('hub'); // hub | form | matches
   const [feedback, setFeedback] = useState({ type: '', text: '' });
   const [busyId, setBusyId] = useState(null);
@@ -53,32 +97,49 @@ const PassengerDashboard = () => {
       const activa = lista.find((p) => p.estado === 'activa' || p.estado === 'em_negociacao') || null;
       setProcura(activa);
       if (activa) {
-        const [g, enrolled] = await Promise.all([
-          getGrupoByProcura(activa.id),
-          listWaitlistByProcura(activa.id),
-        ]);
-        setGrupo(g);
-        setWaitlistEntries(enrolled);
-        if (g) {
-          const membros = await listMembrosGrupo(g.id);
-          setMembrosCount(membros.length);
-        } else {
-          setMembrosCount(0);
+        setLoadingInbox(true);
+        try {
+          const [g, enrolled, propostas] = await Promise.all([
+            getGrupoByProcura(activa.id),
+            listWaitlistByProcura(activa.id),
+            listPropostasByProcura(activa.id),
+          ]);
+          setGrupo(g);
+          setWaitlistEntries(enrolled);
+          if (g) {
+            const membros = await listMembrosGrupo(g.id);
+            setMembrosCount(membros.length);
+          } else {
+            setMembrosCount(0);
+          }
+          const inbox = filterPropostasParaInbox(propostas, user.id);
+          const enviadas = filterPropostasEnviadas(propostas, user.id);
+          const [enrichedInbox, enrichedEnviadas] = await Promise.all([
+            enrichPropostasForReview(inbox),
+            enrichPropostasForReview(enviadas),
+          ]);
+          setInboxReviews(enrichedInbox);
+          setEnviadasReviews(enrichedEnviadas);
+          const result = await findCompatibleOfertas({
+            preferred_time: String(activa.preferred_time).slice(0, 5),
+            origin_lat: Number(activa.origin_lat),
+            origin_lng: Number(activa.origin_lng),
+            destination_lat: Number(activa.destination_lat),
+            destination_lng: Number(activa.destination_lng),
+            n_candidato: activa.n_candidato,
+          });
+          setMatches({ direct: result.direct, waitlist: result.waitlist });
+        } finally {
+          setLoadingInbox(false);
         }
-        const result = await findCompatibleOfertas({
-          preferred_time: String(activa.preferred_time).slice(0, 5),
-          origin_lat: Number(activa.origin_lat),
-          origin_lng: Number(activa.origin_lng),
-          destination_lat: Number(activa.destination_lat),
-          destination_lng: Number(activa.destination_lng),
-          n_candidato: activa.n_candidato,
-        });
-        setMatches({ direct: result.direct, waitlist: result.waitlist });
       } else {
         setGrupo(null);
         setMembrosCount(0);
         setWaitlistEntries([]);
         setMatches({ direct: [], waitlist: [] });
+        setInboxReviews([]);
+        setEnviadasReviews([]);
+        setLoadingInbox(false);
       }
     } catch (err) {
       console.error(err);
@@ -167,6 +228,7 @@ const PassengerDashboard = () => {
         n_passageiros_propostos: nProposto,
       });
       setFeedback({ type: 'success', text: 'Proposta enviada ao motorista.' });
+      await carregar();
     } catch (err) {
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
     } finally {
@@ -193,13 +255,57 @@ const PassengerDashboard = () => {
     }
   };
 
-  const labelModo = (modo) =>
-    modo === 'TOTAL_ACORDO' ? 'Total do acordo' : 'Por passageiro';
+  const handleAceitarInbox = async (propostaId) => {
+    setBusyId(propostaId);
+    setFeedback({ type: '', text: '' });
+    try {
+      await createAgreementFromProposal(propostaId);
+      setFeedback({ type: 'success', text: 'Proposta aceite. Acordo criado.' });
+      setInboxReviews((prev) => prev.filter((r) => r.proposta.id !== propostaId));
+      await carregar();
+    } catch (err) {
+      setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleRecusarInbox = async (propostaId) => {
+    setBusyId(propostaId);
+    try {
+      await rejectProposta(propostaId);
+      setInboxReviews((prev) => prev.filter((r) => r.proposta.id !== propostaId));
+    } catch (err) {
+      setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleCancelarEnviada = async (propostaId) => {
+    setBusyId(propostaId);
+    setFeedback({ type: '', text: '' });
+    try {
+      await cancelProposta(propostaId);
+      setEnviadasReviews((prev) => prev.filter((r) => r.proposta.id !== propostaId));
+      setFeedback({ type: 'success', text: 'Proposta cancelada.' });
+      await carregar();
+    } catch (err) {
+      setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   const waitlistEstadoOferta = (ofertaId) =>
     waitlistEntries.find((e) => e.oferta_id === ofertaId)?.estado ?? null;
 
   const temPromocaoWaitlist = waitlistEntries.some((e) => e.estado === 'notificada');
+
+  const nDisplayGrupo = grupo
+    ? (membrosCount > 0 ? membrosCount : procura?.n_candidato ?? 1)
+    : (procura?.n_candidato ?? 1);
+  const chipProcura = procura ? chipEstadoProcura(procura.estado) : null;
 
   return (
     <PageShell>
@@ -282,7 +388,14 @@ const PassengerDashboard = () => {
 
       {!loading && procura && (view === 'hub' || view === 'matches') && (
         <div className="space-y-4">
-          <section className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 shadow-sm space-y-2">
+          <section className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              {chipProcura && (
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipProcura.className}`}>
+                  {chipProcura.label}
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
               <span>{procura.origin_name}</span>
               <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
@@ -295,11 +408,11 @@ const PassengerDashboard = () => {
               </span>
               <span className="flex items-center gap-1 tabular-nums">
                 <Users size={14} aria-hidden="true" />
-                {grupo?.n_maximo != null && procura.n_candidato >= 1
-                  ? `Grupo · ${procura.n_candidato} de ${grupo.n_maximo}`
-                  : procura.n_candidato === 1
-                    ? 'Individual'
-                    : `Grupo · ${procura.n_candidato} pessoas`}
+                {labelTamanhoProcura({
+                  n: nDisplayGrupo,
+                  nMaximo: grupo?.n_maximo ?? null,
+                  temGrupo: Boolean(grupo),
+                })}
               </span>
             </div>
             <button
@@ -322,6 +435,48 @@ const PassengerDashboard = () => {
             excludeGrupoId={grupo?.id ?? null}
           />
 
+          <section className="space-y-3">
+            <h2 className="text-lg font-bold text-balance">Propostas recebidas</h2>
+            {loadingInbox ? (
+              <LoadingSkeleton />
+            ) : inboxReviews.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                Ainda sem propostas do motorista.
+              </p>
+            ) : (
+              inboxReviews.map((review) => (
+                <PropostaReviewCard
+                  key={review.proposta.id}
+                  review={review}
+                  busy={busyId === review.proposta.id}
+                  onAceitar={() => handleAceitarInbox(review.proposta.id)}
+                  onRecusar={() => handleRecusarInbox(review.proposta.id)}
+                />
+              ))
+            )}
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-lg font-bold text-balance">Propostas enviadas</h2>
+            {loadingInbox ? (
+              <LoadingSkeleton />
+            ) : enviadasReviews.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                Ainda sem propostas enviadas a motoristas.
+              </p>
+            ) : (
+              enviadasReviews.map((review) => (
+                <PropostaReviewCard
+                  key={review.proposta.id}
+                  review={review}
+                  modo="criador"
+                  busy={busyId === review.proposta.id}
+                  onCancelar={() => handleCancelarEnviada(review.proposta.id)}
+                />
+              ))
+            )}
+          </section>
+
           {(view === 'matches' || view === 'hub') && (
             <>
               <p className="text-sm font-semibold text-slate-500">
@@ -332,47 +487,13 @@ const PassengerDashboard = () => {
               </p>
 
               {matches.direct.map((oferta) => (
-                <section
+                <OfertaMatchCard
                   key={oferta.id}
-                  className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 shadow-sm space-y-3"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="font-bold flex items-center gap-2">
-                      {oferta.origin_name}
-                      <ArrowRight size={14} className="text-slate-400" aria-hidden="true" />
-                      {oferta.destination_name}
-                    </div>
-                    <span className="text-xs font-bold px-2 py-1 rounded-full bg-emerald-100 text-emerald-800">
-                      Disponível
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm text-slate-500">
-                    <span className="flex items-center gap-1">
-                      <Clock size={14} aria-hidden="true" />
-                      {String(oferta.departure_time).slice(0, 5)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Users size={14} aria-hidden="true" />
-                      {oferta.vagas_disponiveis} lugares
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <strong className="text-primary tabular-nums">
-                        {formatKwanza(oferta.valor_mensal_ask_kz)} Kz
-                      </strong>
-                      <p className="text-xs text-slate-400">{labelModo(oferta.modo_preco)}</p>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={busyId === oferta.id}
-                      onClick={() => handlePropor(oferta)}
-                      className="bg-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl disabled:opacity-60"
-                    >
-                      Propor acordo
-                    </button>
-                  </div>
-                </section>
+                  oferta={oferta}
+                  variant="direct"
+                  busy={busyId === oferta.id}
+                  onPropor={() => handlePropor(oferta)}
+                />
               ))}
 
               {temPromocaoWaitlist && (
@@ -390,52 +511,17 @@ const PassengerDashboard = () => {
                   <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide">
                     Lista de espera
                   </h3>
-                  {matches.waitlist.map((oferta) => {
-                    const estadoEspera = waitlistEstadoOferta(oferta.id);
-                    return (
-                      <section
-                        key={oferta.id}
-                        className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-5 border border-slate-100 space-y-3"
-                      >
-                        <div className="font-bold flex items-center gap-2">
-                          {oferta.origin_name}
-                          <ArrowRight size={14} className="text-slate-400" aria-hidden="true" />
-                          {oferta.destination_name}
-                        </div>
-                        <p className="text-sm text-slate-500">
-                          Sem lugares suficientes agora ({oferta.vagas_disponiveis} disponíveis).
-                        </p>
-                        {estadoEspera === 'notificada' ? (
-                          <>
-                            <p className="text-sm font-medium text-amber-800">
-                              Há uma vaga — podes propor acordo.
-                            </p>
-                            <button
-                              type="button"
-                              disabled={busyId === oferta.id}
-                              onClick={() => handlePropor(oferta)}
-                              className="bg-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl disabled:opacity-60"
-                            >
-                              Propor acordo
-                            </button>
-                          </>
-                        ) : estadoEspera === 'activa' ? (
-                          <p className="text-sm font-medium text-slate-600">
-                            Estás na lista de espera.
-                          </p>
-                        ) : (
-                          <button
-                            type="button"
-                            disabled={busyId === oferta.id}
-                            onClick={() => handleWaitlist(oferta)}
-                            className="text-sm font-bold text-primary"
-                          >
-                            Entrar na lista de espera
-                          </button>
-                        )}
-                      </section>
-                    );
-                  })}
+                  {matches.waitlist.map((oferta) => (
+                    <OfertaMatchCard
+                      key={oferta.id}
+                      oferta={oferta}
+                      variant="waitlist"
+                      waitlistEstado={waitlistEstadoOferta(oferta.id)}
+                      busy={busyId === oferta.id}
+                      onPropor={() => handlePropor(oferta)}
+                      onWaitlist={() => handleWaitlist(oferta)}
+                    />
+                  ))}
                 </>
               )}
 

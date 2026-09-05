@@ -335,7 +335,36 @@ export async function listPedidosPendentes(grupoId) {
 }
 
 /**
+ * Garante que o utilizador autenticado é o owner da procura do grupo.
+ * @param {string} grupoId
+ * @returns {Promise<string>} owner_id
+ */
+async function assertOwnerDoGrupo(grupoId) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('Não autenticado.');
+  }
+
+  const { data: grupo, error: grupoError } = await supabase
+    .from('grupos')
+    .select('id, procura_id, procuras!inner(owner_id)')
+    .eq('id', grupoId)
+    .single();
+
+  if (grupoError) throw grupoError;
+
+  const ownerId = grupo?.procuras?.owner_id;
+  if (user.id !== ownerId) {
+    throw new Error('Só o organizador do grupo pode gerir pedidos de entrada.');
+  }
+  return ownerId;
+}
+
+/**
  * Aceita pedido: activa membro + sync N_actual. Não toca propostas abertas.
+ * Só o owner da procura (reforço cliente; RLS bloqueia auto-aprovação).
  * @param {string} membroId
  */
 export async function aprovarEntrada(membroId) {
@@ -355,6 +384,7 @@ export async function aprovarEntrada(membroId) {
     throw new Error('Este pedido já não está pendente.');
   }
 
+  await assertOwnerDoGrupo(pedido.grupo_id);
   await assertTemVaga(pedido.grupo_id);
 
   const { data, error } = await supabase
@@ -372,6 +402,7 @@ export async function aprovarEntrada(membroId) {
 
 /**
  * Recusa pedido sem alterar N_actual nem propostas.
+ * Só o owner da procura.
  * @param {string} membroId
  */
 export async function rejeitarEntrada(membroId) {
@@ -381,7 +412,7 @@ export async function rejeitarEntrada(membroId) {
 
   const { data: pedido, error: getError } = await supabase
     .from('membros_grupo')
-    .select('id, estado')
+    .select('id, grupo_id, estado')
     .eq('id', membroId)
     .single();
 
@@ -391,6 +422,8 @@ export async function rejeitarEntrada(membroId) {
     throw new Error('Este pedido já não está pendente.');
   }
 
+  await assertOwnerDoGrupo(pedido.grupo_id);
+
   const { data, error } = await supabase
     .from('membros_grupo')
     .update({ estado: 'rejeitado' })
@@ -399,5 +432,32 @@ export async function rejeitarEntrada(membroId) {
     .single();
 
   if (error) throw error;
+  return data;
+}
+
+/**
+ * Saída de membro activo via RPC SECURITY DEFINER (`leave_grupo_membro`):
+ * `activo`→`saiu` + sync N_actual. RLS cliente só permite self reabrir `pendente`.
+ * Não invalida nem muta propostas abertas (N_proposto permanece snapshot).
+ * @param {string} grupoId
+ * @param {string} passengerId
+ */
+export async function sairDoGrupo(grupoId, passengerId) {
+  if (!grupoId) {
+    throw new Error('ID do grupo é obrigatório.');
+  }
+  if (!passengerId) {
+    throw new Error('ID do passageiro é obrigatório.');
+  }
+
+  const { data, error: rpcError } = await supabase.rpc('leave_grupo_membro', {
+    p_grupo_id: grupoId,
+    p_passenger_id: passengerId,
+  });
+
+  if (rpcError) {
+    throw new Error(rpcError.message || 'Falha ao sair do grupo.');
+  }
+
   return data;
 }

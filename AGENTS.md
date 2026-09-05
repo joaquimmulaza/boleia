@@ -85,7 +85,7 @@ SoT visual = **v0 (One MCP)** + shadcn JSX + tokens `src/index.css`. Em UI/UX: U
 
 🏛️ Relatório de Estado da Arquitetura: Boleia Certa
 **Última Atualização:** 5 de Setembro de 2026
-**Fase Atual:** Marketplace Oferta/Procura (Phase 6: **T22–T31 Done**; T29+T30 uncommitted) + **Phase 7 Planned** (T32–T35: flexível + propostas bidireccionais — **só docs 2026-09-05**) + **Landing refresh** + **Agent loop Cursor**. Spec: `.specs/features/marketplace-oferta-procura/`. Checkpoint: `CHECKPOINT.md`.
+**Fase Atual:** Marketplace Oferta/Procura (Phase 6: **T22–T31 Done**; T29+T30 uncommitted) + **Phase 7 completa** (**T32–T35 Done** uncommitted) + **Landing refresh** + **Agent loop Cursor**. Spec: `.specs/features/marketplace-oferta-procura/`. Checkpoint: `CHECKPOINT.md`.
 
 **O que já está implementado e validado:**
 1. **Infraestrutura e Backend (Supabase):**
@@ -95,6 +95,7 @@ SoT visual = **v0 (One MCP)** + shadcn JSX + tokens `src/index.css`. Em UI/UX: U
  * **Grupo vivo:** pode estar abaixo de `n_maximo` e continuar negociável; propostas capturam `N_proposto` snapshot; preço na oferta/proposta do motorista (não no grupo).
  * **Faltas:** `desconto_kz` por dia útil do mês a partir da quota congelada — **sem** divisor `/ 4`.
  * **Adenda (T29):** RPC `renegotiate_agreement_pricing` — único caminho para mutar preços / `n_passageiros_contrato` + quotas dos activos; auth só motorista; leave **não** recalcula.
+ * **P0 hardening (2026-09-05):** RPC `leave_passenger` (saiu + vagas + waitlist); sem UPDATE client em `propostas`/`acordos`/`acordos_passageiros`/`lista_espera`; membros: owner gere; self só reabre `pendente`.
  * **Auth/Push PRESERVE:** `perfis`, `notificacoes`, `push_subscriptions`, Edge `send-push` (VAPID).
 2. **Frontend e Interface (React / Vite):**
  * **Layout & paths:** `/` Landing (refresh: `src/components/landing/*` — hero CSS sem stock, menu mobile `createPortal`, copy marketplace), `/auth`, `/passageiro` (procura/matches/waitlist + **grupo** via `GrupoProcuraPanel`), `/motorista` (ofertas + propostas), `/veiculo`, `/publicar-trajeto` («Publicar oferta»), `/acordos` (`MyAgreements` 1:N + **adenda**), `/faltas`, `/perfil`.
@@ -104,19 +105,19 @@ SoT visual = **v0 (One MCP)** + shadcn JSX + tokens `src/index.css`. Em UI/UX: U
  * **Hub motorista (T24):** `PropostaReviewCard` + `enrichPropostasForReview` / `propostaReview` — lista snapshot + pickup + preço resolvido (copy humana); Aceitar → RPC `accept_proposal`.
  * **E2E quotas (T25):** TOTAL_ACORDO N=3/4 + resto; `leavePassenger` não altera cabeçalho nem `quota_mensal_kz` dos restantes (`AgreementsE2E.test.jsx`).
  * **Waitlist promoção (T26):** `promoteWaitlist` → RPC `promote_waitlist` (1º FIFO → `notificada` + notif `waitlist_promoted`); hook em `leavePassenger` (best-effort); UI hub com estados activa/notificada; **sem** auto-aceitar.
- * **Publicar oferta (T27):** `PublishRoute` — dias + toggle «Rota flexível» grava `flexibilidade_rota` (**débito:** ainda exige OD; decisão 2026-09-05 → T34: flexível **sem** OD; sem zonas).
+ * **Publicar oferta (T27+T34):** `PublishRoute` — dias + «Oferta flexível»; flexível **sem** OD (campos OD escondidos); fixa exige OD; `OfertaService.resolveOdFields`.
  * **Detalhe acordo (T28):** `MyAgreements` — bloco «Preço combinado»/congelado; lista N pax; destaque quota passageiro; falta só se activo; `ConfirmationModal` `busy`.
  * **Adenda (T29):** motorista activo → «Renegociar preço» (form inline + preview); `ConfirmationModal` `variant="primary"`; copy «próximo mês».
- * **Deep linking:** `notificationRouter.js` — tipos `proposal_received`, `waitlist_promoted`, `match_available`, etc. (**débito T33:** deep link sempre `/motorista` — corrigir para contraparte).
+ * **Deep linking:** `notificationRouter.js` — `proposal_received` → hub da **contraparte** (`metadata.inbox`: `passageiro`|`motorista`); `waitlist_promoted`, `match_available`, etc.
  * **AuthContext:** `{ session, user, loading, tipoPerfil, profile, refreshProfile }`.
  * **Design SoT:** v0 via One + shadcn (`src/components/ui/`) + UI Skills + Mobbin free-safe. **Regra v0:** se o chat devolver só plano, Send Message a mandar construir; gate design só com código/preview. Penpot descontinuado como SoT.
  * **Agent loop:** `.cursor/skills/boleia-agent-loop/`, `.cursor/rules/ui-stack.mdc`, `.cursor/rules/multi-agent-loop.mdc`, hooks `subagentStop`.
- * **Produto (2026-09-05, docs only):** oferta fixa vs flexível (sem OD/zona no flex); propostas A/B; aceite só contraparte; Procura→M propostas→1 acordo 1:N. Tasks **T32–T35 Planned**.
+ * **Produto (2026-09-05):** oferta fixa vs flexível (sem OD/zona no flex); propostas A/B; aceite só contraparte; Procura→M propostas→1 acordo 1:N. **T32–T35 Done** (Phase 7 completa).
 3. **Serviços canónicos (`src/services/`):**
- * `OfertaService`, `ProcuraService`, `GrupoService` (`createGrupo`, `getGrupoByProcura`, `listMembrosGrupo`, `addMembroGrupo`, `syncNCandidato`), `PropostaService`, `AgreementService` (`createAgreementFromProposal`, `leavePassenger`, **`renegotiateAgreementPricing`**), `MatchingService`, `WaitlistService` (`enqueueWaitlist`, `promoteWaitlist`, listagens), `AbsenceService`, `LocationService` (Photon), `ProfileService.findPassageiroByTelefone`.
+ * `OfertaService`, `ProcuraService`, `GrupoService` (`createGrupo`, `getGrupoByProcura`, `listMembrosGrupo`, `addMembroGrupo`, `syncNCandidato`), `PropostaService`, `AgreementService` (`createAgreementFromProposal`, `leavePassenger`, **`renegotiateAgreementPricing`**), `MatchingService` (`findCompatibleOfertas`, **`findCompatibleProcuras`** dual fixa/flex), `WaitlistService` (`enqueueWaitlist`, `promoteWaitlist`, listagens), `AbsenceService`, `LocationService` (Photon), `ProfileService.findPassageiroByTelefone`.
  * **Removido:** `RouteService`, `AgreementsService` (`requestSeat`), cards `Acordo*` acoplados a `routes`.
-4. **Utils:** `pricing.js`, `geo.js`, `matchingConfig.js`, `matchingFilters.js`, `resolveAgreementPricing.js`.
+4. **Utils:** `pricing.js`, `geo.js`, `matchingConfig.js`, `matchingFilters.js`, `resolveAgreementPricing.js`, `propostaInbox.js`, `notificationRouter.js`.
 5. **Geocoding OSM (mantido):** Photon `countrycode=ao`; Autocomplete «Powered by OpenStreetMap».
 6. **UI copy:** nunca expor jargon (`N_actual`, `N_proposto`, `N_candidato`, `POR_PASSAGEIRO`) — só labels humanas («Grupo · 2 pessoas», «Por passageiro», «Total do acordo»).
 
-**Próximo:** Phase 7 (T32–T35) **quando pedido** — P0 aceite-contraparte → P1 propostas B + notifs → P1 oferta flexível sem OD + matching dual. **Fora do MVP:** zonas/polígonos/raio residencial. Commits T29/T30 só se o utilizador pedir.
+**Próximo:** Phase 7 **completa** (T32–T35). **Fora do MVP:** zonas/polígonos/raio residencial. Commits T29/T30/T32–T35 só se o utilizador pedir.

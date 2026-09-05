@@ -1,5 +1,9 @@
 # Marketplace Oferta / Procura — Specification
 
+> **Re-verificação (2026-09-05):** alinhada à decisão final «Motorista flexível» + propostas bidireccionais.  
+> Flexível = **sem** OD obrigatório; **sem** zonas/polígonos/raio residencial; aceite só pela contraparte; cadeia Procura → M propostas → 1 acordo 1:N.  
+> **Não implementar** Phase 7 (T32–T35) até pedido explícito — código de produção intacto nesta etapa.
+
 ## Problem Statement
 
 O MVP actual modela boleias como **rota → pedido de vaga → acordo 1:1** (`routes` + `requestSeat` + `acordos.passenger_id`). Isso não reflecte o negócio real em Luanda: um motorista oferece **capacidade** (1→N passageiros), passageiros formam **procura** (individual ou grupo), e o preço pode ser negociado como **por passageiro** ou **total do acordo**. Triggers de faltas com divisor hardcoded (`/ 4`) e quotas que “seguem” o N actual distorcem o contrato. Os dados actuais são de teste e podem ser descartados — reconstrução limpa do domínio, preservando auth, push, geo e shell.
@@ -85,10 +89,12 @@ O grupo **não** é um «pacote fechado» que precisa de estar cheio para negoci
 
 ### Oferta fixa vs oferta flexível (MVP)
 
-| Tipo | `flexibilidade_rota` | Campos obrigatórios | Matching |
+| Tipo | Flag BD `flexibilidade_rota` | Campos obrigatórios | Matching |
 |---|---|---|---|
 | **Fixa** | `false` | OD (coords) + horário + dias + capacidade + preço | Geo OD + tempo + capacidade (haversine; sem routing) |
 | **Flexível** | `true` | Capacidade + disponibilidade + dias + janela/horário + preço | **Sem** OD da oferta; **sem** exclusão por residência; horário/janela + dias + capacidade; motorista decide caso a caso |
+
+Nota: o nome da coluna `flexibilidade_rota` é legado de schema; o **modelo de produto** é tipo de oferta (fixa | flexível), **não** «rota fixa com flag». Copy UI: «Oferta flexível» / «Oferta fixa».
 
 **Proibido no MVP:** tratar flexível como «rota OD + flag»; polígonos; zonas; raio a partir da residência do motorista; bloquear procuras por distância residência↔recolha.
 
@@ -402,7 +408,7 @@ Aceitar proposta só se `N_proposto <= vagas_disponiveis` no momento da aceitaç
 | MKT-06 | P1: Capacidade = soma pax activos | Design | Pending |
 | MKT-07 | P1: Faltas sem /4 | Design | Pending |
 | MKT-08 | P1: Lista de espera | Design | Pending |
-| MKT-09 | P1: Matching ±15min + raio + N_actual (sem routing) | Design | Pending |
+| MKT-09 | P1: Matching dual — fixa: ±15min + raio OD; flexível: tempo/dias/capacidade sem OD/zona (sem routing) | Design | Done |
 | MKT-17 | P1: Quatro Ns (actual/proposto/contrato/activos) + grupo vivo | Design | Pending |
 | MKT-18 | P1: Procura 1:M propostas; aceite → 1 acordo 1:N | Design | Pending |
 | MKT-10 | P1: Migração limpa + preservar infra | Design | Pending |
@@ -422,10 +428,12 @@ Aceitar proposta só se `N_proposto <= vagas_disponiveis` no momento da aceitaç
 - [ ] Zero referências operacionais a `routes` / `requestSeat` no caminho feliz do produto
 - [ ] Aceitar proposta N=4 com `TOTAL_ACORDO` 120.000 Kz persiste 30.000×4 e decrementa 4 vagas; caso 100.000/3 soma exacta com resto
 - [ ] Sair 1 passageiro: quotas restantes inalteradas; `N_contrato` intacto; teste de regressão verde
-- [ ] Matching usa ±15 min + raio + `N_candidato`; sem routing/ETA
+- [x] Matching **fixa:** ±15 min + raio OD + `N_actual`; matching **flexível:** tempo/dias/capacidade **sem** OD/zona/residência; sem routing/ETA
+- [ ] Oferta flexível publicável **sem** OD; residência do motorista **não** exclui procuras
+- [ ] Aceite/rejeição só pela contraparte (`created_by` bloqueado); propostas A e B
 - [ ] `logAbsence` / trigger: desconto = mensal_pax / dias_uteis; grep sem `/ 4` no caminho de faltas
 - [ ] Signup + push continuam a funcionar após migração
-- [ ] Suite Vitest verde; UI alinhada a Penpot (gate design cumprido antes de ecrãs novos)
+- [ ] Suite Vitest verde; UI alinhada a v0/shadcn (gate design cumprido antes de ecrãs novos)
 - [ ] `AGENTS.md` deixa de afirmar `routes` como fonte de verdade
 
 ---

@@ -293,14 +293,14 @@ T29 (P2), T30 (P3)
 - **Verify:** Sair pax → notif waitlist; sem auto-aceitar
 - **Ficheiros:** `WaitlistService.js` (`promoteWaitlist` → RPC `promote_waitlist`); `AgreementService.leavePassenger` hook best-effort; UI `PassengerDashboard` estados `activa`/`notificada`; migração MCP `promote_waitlist_rpc`
 
-### T27: Publicar oferta — dias_semana + flexibilidade (mínimo)
+### T27: Publicar oferta — dias_semana + flag flexível (mínimo / legado)
 
 - **ID:** MKT-01  
-- **Do:** UI `/publicar-trajeto`: selector Seg–Sex (default) + toggle «Rota flexível» → `flexibilidade_rota` / `dias_semana` (já no `OfertaService`)  
+- **Do:** UI `/publicar-trajeto`: selector Seg–Sex (default) + toggle (copy legado «Rota flexível») → `flexibilidade_rota` / `dias_semana`  
 - **Deps:** T15, T8  
 - **Status:** Done *(parcial face à decisão 2026-09-05: flag gravada, mas OD ainda obrigatório e matching ignora flex — ver T34)*  
 - **Verify:** Oferta gravada com flags; copy humana  
-- **Débito:** Modelo «flex = OD + flag» **incorrecto** pós-decisão; completar em T34 (oferta flexível sem OD)
+- **Débito:** Modelo «flex = OD + flag» **incorrecto**; T34 = oferta flexível **sem** OD + copy «Oferta flexível» (não «Rota flexível»); sem zonas
 
 ### T28: Detalhe acordo 1:N (lista passageiros + preço congelado)
 
@@ -349,39 +349,45 @@ T29 (P2), T30 (P3)
 
 ---
 
-## Phase 7 — Motorista flexível + propostas bidireccionais (docs 2026-09-05; **não** implementar até pedido explícito)
+## Phase 7 — Motorista flexível + propostas bidireccionais (docs 2026-09-05; implementação sob pedido)
 
 ### T32 (P0): Aceite/rejeição só pela contraparte
 
 - **ID:** MKT-03 (extensão), propostas bidireccionais  
 - **Do:** RPC `accept_proposal` (+ rejeição) recusa se `auth.uid() = created_by`; mensagem PT; alinhar RLS/serviço  
 - **Deps:** T11  
-- **Status:** Planned  
-- **Verify:** Criador não aceita própria proposta; contraparte sim; testes RPC/serviço
+- **Status:** Done  
+- **Verify:** Criador não aceita própria proposta; contraparte sim; testes RPC/serviço  
+- **Migration:** `marketplace_t32_accept_reject_contraparte` (`accept_proposal` gate + RPC `reject_proposal` + RLS UPDATE exclui `created_by`)  
+- **Nota:** Mensagem PT «Só a contraparte pode aceitar ou rejeitar esta proposta.»; `rejectProposta` → RPC; 27 testes serviço verdes; code-review APPROVE
 
 ### T33 (P1): Propostas sentido B + inbox passageiro + deep links
 
 - **ID:** propostas bidireccionais  
 - **Do:** UI motorista cria proposta sobre procura/grupo; inbox no hub passageiro; `notificationRouter` / notifs abrem a contraparte (não sempre `/motorista`)  
 - **Deps:** T32, T24, T17  
-- **Status:** Planned  
-- **Verify:** Fluxo B completo; deep link correcto; snapshot `N_proposto` intacto se N muda
+- **Status:** Done  
+- **Verify:** Fluxo B completo; deep link correcto; snapshot `N_proposto` intacto se N muda  
+- **Migration:** `marketplace_t33_proposta_notify_contraparte` (trigger AFTER INSERT → notif `proposal_received` + `inbox`)  
+- **Nota:** `findCompatibleProcuras` (fixa geo+tempo; flex sem OD → [] até T35); 32 testes T33 verdes; code-review APPROVE
 
 ### T34 (P1): Oferta flexível real (sem OD obrigatório)
 
 - **ID:** MKT-01  
 - **Do:** `PublishRoute` / `OfertaService`: se flexível, OD opcional/ausente; validação; copy humana; **não** zonas/raio residencial  
 - **Deps:** T27 (débito), T8  
-- **Status:** Planned  
-- **Verify:** Criar oferta flexível sem OD; fixa continua a exigir OD
+- **Status:** Done  
+- **Verify:** Criar oferta flexível sem OD; fixa continua a exigir OD  
+- **Nota:** Schema OD já nullable (sem DDL); copy «Oferta flexível»; UI esconde OD quando flex; 15 testes OfertaService+PublishRoute verdes
 
 ### T35 (P1): Matching dual + descoberta motorista flexível
 
 - **ID:** MKT-09  
 - **Do:** Matching: fixa = geo+tempo; flexível = tempo/dias/capacidade **sem** OD/residência; `findCompatibleProcuras`; UI hub motorista listar procuras compatíveis  
 - **Deps:** T34, T3, T12  
-- **Status:** Planned  
-- **Verify:** Flexível não filtrada por geo OD da oferta; residência não exclui; testes unitários matching
+- **Status:** Done  
+- **Verify:** Flexível não filtrada por geo OD da oferta; residência não exclui; testes unitários matching  
+- **Nota:** `evaluateMatch` dual + `isDaysCompatible`; hub motorista já listava (T33) — serviço passa a devolver matches flex; 28 testes matching verdes; code-review APPROVE; **sem** zonas/DDL
 
 ---
 

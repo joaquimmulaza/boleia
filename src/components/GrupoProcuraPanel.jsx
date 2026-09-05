@@ -9,6 +9,7 @@ import {
   listPedidosPendentes,
   aprovarEntrada,
   rejeitarEntrada,
+  sairDoGrupo,
 } from '../services/GrupoService';
 import { findPassageiroByTelefone } from '../services/ProfileService';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
@@ -137,7 +138,9 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
       setPickup({ pickup_name: '', pickup_lat: null, pickup_lng: null });
       setFeedback({
         type: 'success',
-        text: `${perfil.nome_completo || 'Colega'} adicionado ao grupo.`,
+        text:
+          `${perfil.nome_completo || 'Colega'} adicionado ao grupo. ` +
+          'Propostas já enviadas mantêm o tamanho anterior — para o novo tamanho, cria uma nova proposta.',
       });
       await carregar();
       onGrupoChange?.();
@@ -156,7 +159,12 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
     setFeedback({ type: '', text: '' });
     try {
       await aprovarEntrada(membroId);
-      setFeedback({ type: 'success', text: 'Pedido aceite. O grupo cresceu.' });
+      setFeedback({
+        type: 'success',
+        text:
+          'Pedido aceite. O grupo cresceu. Propostas já enviadas mantêm o tamanho anterior — ' +
+          'para o novo tamanho, cria uma nova proposta.',
+      });
       await carregar();
       onGrupoChange?.();
     } catch (err) {
@@ -180,6 +188,25 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
     }
   };
 
+  const handleSair = async () => {
+    if (!grupo) return;
+    setBusy(true);
+    setFeedback({ type: '', text: '' });
+    try {
+      await sairDoGrupo(grupo.id, userId);
+      setFeedback({
+        type: 'success',
+        text: 'Saíste do grupo. Propostas abertas mantêm o tamanho com que foram enviadas.',
+      });
+      await carregar();
+      onGrupoChange?.();
+    } catch (err) {
+      setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handlePickupChange = (e) => {
     setPickup((prev) => ({ ...prev, pickup_name: e.target.value }));
   };
@@ -195,6 +222,8 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
   const tamanho = membros.length > 0 ? membros.length : procura.n_candidato ?? 1;
   const max = grupo?.n_maximo ?? null;
   const cheio = max != null && tamanho >= max;
+  const incompleto = grupo && max != null && tamanho < max;
+  const podeSair = membros.length > 1 && membros.some((m) => m.passenger_id === userId);
 
   return (
     <section className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 shadow-sm space-y-4">
@@ -260,6 +289,13 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
         </div>
       ) : (
         <div className="space-y-4">
+          {incompleto ? (
+            <p className="text-sm text-slate-500 text-pretty">
+              Ainda há vagas. Podes propor ou negociar com o tamanho actual — não é preciso
+              encher o grupo.
+            </p>
+          ) : null}
+
           <ul className="space-y-2" aria-label="Membros do grupo">
             {membros.map((m) => (
               <li
@@ -284,6 +320,17 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
               </li>
             ))}
           </ul>
+
+          {podeSair ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={handleSair}
+              className="text-sm font-semibold text-slate-600 dark:text-slate-300 underline-offset-2 hover:underline disabled:opacity-60"
+            >
+              Sair do grupo
+            </button>
+          ) : null}
 
           {pedidos.length > 0 ? (
             <div className="space-y-2 border-t border-slate-100 pt-4">

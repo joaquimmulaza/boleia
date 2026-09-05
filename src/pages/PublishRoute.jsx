@@ -20,9 +20,19 @@ const DIAS_SEMANA = [
 
 const DIAS_UTEIS_DEFAULT = [1, 2, 3, 4, 5];
 
+const OD_VAZIO = {
+  origin_name: '',
+  origin_lat: null,
+  origin_lng: null,
+  destination_name: '',
+  destination_lat: null,
+  destination_lng: null,
+};
+
 /**
  * Publicar oferta de capacidade (substitui publicar trajeto / routes).
- * Copy humana: «Por passageiro» | «Total do acordo» | «Rota flexível».
+ * Copy humana: «Por passageiro» | «Total do acordo» | «Oferta flexível».
+ * Flexível = sem OD obrigatório (não é «rota OD + flag»).
  */
 const PublishRoute = () => {
   const navigate = useNavigate();
@@ -30,15 +40,10 @@ const PublishRoute = () => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [modoPreco, setModoPreco] = useState('POR_PASSAGEIRO');
   const [diasSemana, setDiasSemana] = useState(() => [...DIAS_UTEIS_DEFAULT]);
-  const [rotaFlexivel, setRotaFlexivel] = useState(false);
+  const [ofertaFlexivel, setOfertaFlexivel] = useState(false);
 
   const [formData, setFormData] = useState({
-    origin_name: '',
-    origin_lat: null,
-    origin_lng: null,
-    destination_name: '',
-    destination_lat: null,
-    destination_lng: null,
+    ...OD_VAZIO,
     departure_time: '',
     return_time: '',
     valor_mensal_ask_kz: '',
@@ -67,6 +72,13 @@ const PublishRoute = () => {
     }));
   };
 
+  const handleToggleFlexivel = (checked) => {
+    setOfertaFlexivel(checked);
+    if (checked) {
+      setFormData((prev) => ({ ...prev, ...OD_VAZIO }));
+    }
+  };
+
   const toggleDia = (valor) => {
     setDiasSemana((prev) => {
       if (prev.includes(valor)) {
@@ -83,10 +95,11 @@ const PublishRoute = () => {
     setMessage({ type: '', text: '' });
 
     if (
-      formData.origin_lat == null ||
-      formData.origin_lng == null ||
-      formData.destination_lat == null ||
-      formData.destination_lng == null
+      !ofertaFlexivel &&
+      (formData.origin_lat == null ||
+        formData.origin_lng == null ||
+        formData.destination_lat == null ||
+        formData.destination_lng == null)
     ) {
       setMessage({
         type: 'error',
@@ -107,16 +120,16 @@ const PublishRoute = () => {
       await createOferta({
         modo_preco: modoPreco,
         valor_mensal_ask_kz: valor,
-        origin_name: formData.origin_name,
-        origin_lat: formData.origin_lat,
-        origin_lng: formData.origin_lng,
-        destination_name: formData.destination_name,
-        destination_lat: formData.destination_lat,
-        destination_lng: formData.destination_lng,
+        origin_name: ofertaFlexivel ? null : formData.origin_name,
+        origin_lat: ofertaFlexivel ? null : formData.origin_lat,
+        origin_lng: ofertaFlexivel ? null : formData.origin_lng,
+        destination_name: ofertaFlexivel ? null : formData.destination_name,
+        destination_lat: ofertaFlexivel ? null : formData.destination_lat,
+        destination_lng: ofertaFlexivel ? null : formData.destination_lng,
         departure_time: formData.departure_time,
         return_time: formData.return_time || null,
         dias_semana: diasSemana,
-        flexibilidade_rota: rotaFlexivel,
+        flexibilidade_rota: ofertaFlexivel,
       });
       setMessage({ type: 'success', text: 'Oferta publicada com sucesso!' });
       setTimeout(() => navigate('/motorista'), 1500);
@@ -139,7 +152,9 @@ const PublishRoute = () => {
       <PageHeader title="Publicar oferta" onBack={() => navigate('/motorista')} />
 
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 text-pretty px-1">
-        Partilha a tua rota com pessoas de confiança.
+        {ofertaFlexivel
+          ? 'Oferta flexível: capacidade, dias e horário — sem rota origem/destino fixa. A tua residência não limita a área.'
+          : 'Partilha a tua rota com pessoas de confiança.'}
       </p>
 
       {message.text && (
@@ -186,20 +201,37 @@ const PublishRoute = () => {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full">
         <div className="flex flex-col gap-4 bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm">
-          <AddressInput
-            name="origin_name"
-            label="Origem"
-            value={formData.origin_name}
-            onChange={handleChange}
-            onSelectCoordinates={handleSelectOrigin}
-          />
-          <AddressInput
-            name="destination_name"
-            label="Destino"
-            value={formData.destination_name}
-            onChange={handleChange}
-            onSelectCoordinates={handleSelectDestination}
-          />
+          <label className="flex items-center justify-between gap-3 rounded-lg bg-light-gray dark:bg-slate-800 px-3 py-3 cursor-pointer">
+            <span className="text-sm font-semibold text-charcoal dark:text-slate-300">
+              Oferta flexível
+            </span>
+            <input
+              type="checkbox"
+              checked={ofertaFlexivel}
+              onChange={(e) => handleToggleFlexivel(e.target.checked)}
+              className="h-5 w-5 accent-primary rounded"
+              aria-label="Oferta flexível"
+            />
+          </label>
+
+          {!ofertaFlexivel && (
+            <>
+              <AddressInput
+                name="origin_name"
+                label="Origem"
+                value={formData.origin_name}
+                onChange={handleChange}
+                onSelectCoordinates={handleSelectOrigin}
+              />
+              <AddressInput
+                name="destination_name"
+                label="Destino"
+                value={formData.destination_name}
+                onChange={handleChange}
+                onSelectCoordinates={handleSelectDestination}
+              />
+            </>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1.5 text-sm font-semibold text-charcoal dark:text-slate-300">
@@ -258,19 +290,6 @@ const PublishRoute = () => {
               })}
             </div>
           </div>
-
-          <label className="flex items-center justify-between gap-3 rounded-lg bg-light-gray dark:bg-slate-800 px-3 py-3 cursor-pointer">
-            <span className="text-sm font-semibold text-charcoal dark:text-slate-300">
-              Rota flexível
-            </span>
-            <input
-              type="checkbox"
-              checked={rotaFlexivel}
-              onChange={(e) => setRotaFlexivel(e.target.checked)}
-              className="h-5 w-5 accent-primary rounded"
-              aria-label="Rota flexível"
-            />
-          </label>
 
           <label className="flex flex-col gap-1.5 text-sm font-semibold text-charcoal dark:text-slate-300">
             <span className="flex items-center gap-1.5">

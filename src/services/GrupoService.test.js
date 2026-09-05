@@ -9,11 +9,16 @@ import {
   listPedidosPendentes,
   aprovarEntrada,
   rejeitarEntrada,
+  sairDoGrupo,
 } from './GrupoService';
 
 vi.mock('../lib/supabase', () => ({
   supabase: {
     from: vi.fn(),
+    rpc: vi.fn(),
+    auth: {
+      getUser: vi.fn(),
+    },
   },
 }));
 
@@ -217,109 +222,45 @@ describe('GrupoService T31 — n_maximo e pedidos de entrada', () => {
   });
 
   it('aprovarEntrada activa membro, sincroniza N e não toca propostas', async () => {
-    const mockUpdateEq = vi.fn().mockResolvedValue({
-      data: {
-        id: 'm-p',
-        grupo_id: 'g-1',
-        passenger_id: 'pax-2',
-        estado: 'activo',
-      },
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'owner-1' } },
       error: null,
     });
 
+    let membrosCalls = 0;
     supabase.from.mockImplementation((table) => {
       if (table === 'membros_grupo') {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({
-                data: {
-                  id: 'm-p',
-                  grupo_id: 'g-1',
-                  passenger_id: 'pax-2',
-                  estado: 'pendente',
-                },
-                error: null,
-              }),
-              eq: vi.fn().mockResolvedValue({ count: 1, error: null }),
-            }),
-          }),
-          update: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              select: vi.fn().mockReturnValue({ single: mockUpdateEq }),
-            }),
-          }),
-        };
-      }
-      if (table === 'grupos') {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({
-                data: { id: 'g-1', n_maximo: 4, procura_id: 'pr-1' },
-                error: null,
+        membrosCalls += 1;
+        if (membrosCalls === 1) {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: {
+                    id: 'm-p',
+                    grupo_id: 'g-1',
+                    passenger_id: 'pax-2',
+                    estado: 'pendente',
+                    ordem_insercao: 1,
+                  },
+                  error: null,
+                }),
               }),
             }),
-          }),
-        };
-      }
-      if (table === 'procuras') {
-        return {
-          update: vi.fn().mockReturnValue({
-            eq: vi.fn().mockResolvedValue({ error: null }),
-          }),
-        };
-      }
-      return {};
-    });
-
-    // Simpler dedicated mock chain for approve
-    let step = 0;
-    supabase.from.mockImplementation((table) => {
-      if (table === 'membros_grupo' && step === 0) {
-        step = 1;
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({
-                data: {
-                  id: 'm-p',
-                  grupo_id: 'g-1',
-                  passenger_id: 'pax-2',
-                  estado: 'pendente',
-                  ordem_insercao: 1,
-                },
-                error: null,
+          };
+        }
+        if (membrosCalls === 2 || membrosCalls === 4) {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue({
+                  count: membrosCalls === 2 ? 1 : 2,
+                  error: null,
+                }),
               }),
             }),
-          }),
-        };
-      }
-      if (table === 'grupos') {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({
-                data: { id: 'g-1', n_maximo: 4, procura_id: 'pr-1' },
-                error: null,
-              }),
-            }),
-          }),
-        };
-      }
-      if (table === 'membros_grupo' && step === 1) {
-        // count activos
-        step = 2;
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              eq: vi.fn().mockResolvedValue({ count: 1, error: null }),
-            }),
-          }),
-        };
-      }
-      if (table === 'membros_grupo' && step === 2) {
-        step = 3;
+          };
+        }
         return {
           update: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnValue({
@@ -338,12 +279,19 @@ describe('GrupoService T31 — n_maximo e pedidos de entrada', () => {
           }),
         };
       }
-      // syncNCandidato
-      if (table === 'membros_grupo') {
+      if (table === 'grupos') {
         return {
           select: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnValue({
-              eq: vi.fn().mockResolvedValue({ count: 2, error: null }),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  id: 'g-1',
+                  n_maximo: 4,
+                  procura_id: 'pr-1',
+                  procuras: { owner_id: 'owner-1' },
+                },
+                error: null,
+              }),
             }),
           }),
         };
@@ -364,34 +312,104 @@ describe('GrupoService T31 — n_maximo e pedidos de entrada', () => {
     expect(propostasCalls).toHaveLength(0);
   });
 
-  it('rejeitarEntrada marca pedido como rejeitado sem sync N', async () => {
-    let step = 0;
-    supabase.from.mockImplementation(() => {
-      if (step === 0) {
-        step = 1;
+  it('aprovarEntrada rejeita se o utilizador não é o organizador', async () => {
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'intruso' } },
+      error: null,
+    });
+
+    supabase.from.mockImplementation((table) => {
+      if (table === 'membros_grupo') {
         return {
           select: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnValue({
               single: vi.fn().mockResolvedValue({
-                data: { id: 'm-p', estado: 'pendente' },
+                data: {
+                  id: 'm-p',
+                  grupo_id: 'g-1',
+                  passenger_id: 'intruso',
+                  estado: 'pendente',
+                },
                 error: null,
               }),
             }),
           }),
         };
       }
-      return {
-        update: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            select: vi.fn().mockReturnValue({
+      if (table === 'grupos') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
               single: vi.fn().mockResolvedValue({
-                data: { id: 'm-p', estado: 'rejeitado', grupo_id: 'g-1' },
+                data: {
+                  id: 'g-1',
+                  procura_id: 'pr-1',
+                  procuras: { owner_id: 'owner-1' },
+                },
                 error: null,
               }),
             }),
           }),
-        }),
-      };
+        };
+      }
+      return {};
+    });
+
+    await expect(aprovarEntrada('m-p')).rejects.toThrow(/organizador/i);
+  });
+
+  it('rejeitarEntrada marca pedido como rejeitado sem sync N', async () => {
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'owner-1' } },
+      error: null,
+    });
+
+    let membrosStep = 0;
+    supabase.from.mockImplementation((table) => {
+      if (table === 'membros_grupo') {
+        membrosStep += 1;
+        if (membrosStep === 1) {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: { id: 'm-p', grupo_id: 'g-1', estado: 'pendente' },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        return {
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: { id: 'm-p', estado: 'rejeitado', grupo_id: 'g-1' },
+                  error: null,
+                }),
+              }),
+            }),
+          }),
+        };
+      }
+      if (table === 'grupos') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  id: 'g-1',
+                  procura_id: 'pr-1',
+                  procuras: { owner_id: 'owner-1' },
+                },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      return {};
     });
 
     const rej = await rejeitarEntrada('m-p');
@@ -450,5 +468,93 @@ describe('GrupoService T31 — n_maximo e pedidos de entrada', () => {
 
     const n = await syncNCandidato('g-1');
     expect(n).toBe(2);
+  });
+
+  it('sairDoGrupo chama RPC leave_grupo_membro (saiu + sync N_actual no servidor) e não toca propostas', async () => {
+    supabase.rpc.mockResolvedValue({
+      data: {
+        id: 'm-2',
+        grupo_id: 'g-1',
+        passenger_id: 'pax-2',
+        estado: 'saiu',
+      },
+      error: null,
+    });
+
+    const saiu = await sairDoGrupo('g-1', 'pax-2');
+
+    expect(supabase.rpc).toHaveBeenCalledWith('leave_grupo_membro', {
+      p_grupo_id: 'g-1',
+      p_passenger_id: 'pax-2',
+    });
+    expect(saiu.estado).toBe('saiu');
+    expect(supabase.from).not.toHaveBeenCalled();
+    const propostasCalls = supabase.from.mock.calls.filter((c) => c[0] === 'propostas');
+    expect(propostasCalls).toHaveLength(0);
+  });
+
+  it('sairDoGrupo propaga erro da RPC (ex. único membro activo)', async () => {
+    supabase.rpc.mockResolvedValue({
+      data: null,
+      error: { message: 'Não podes sair: és o único membro activo do grupo.' },
+    });
+
+    await expect(sairDoGrupo('g-1', 'pax-1')).rejects.toThrow(/único membro/i);
+    expect(supabase.rpc).toHaveBeenCalledWith('leave_grupo_membro', {
+      p_grupo_id: 'g-1',
+      p_passenger_id: 'pax-1',
+    });
+  });
+
+  it('sairDoGrupo exige grupoId e passengerId', async () => {
+    await expect(sairDoGrupo('', 'pax-1')).rejects.toThrow(/grupo/i);
+    await expect(sairDoGrupo('g-1', '')).rejects.toThrow(/passageiro/i);
+    expect(supabase.rpc).not.toHaveBeenCalled();
+  });
+
+  it('aprovarEntrada nunca auto-aprova sem ser organizador (P0)', async () => {
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'pax-2' } },
+      error: null,
+    });
+
+    supabase.from.mockImplementation((table) => {
+      if (table === 'membros_grupo') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  id: 'm-p',
+                  grupo_id: 'g-1',
+                  passenger_id: 'pax-2',
+                  estado: 'pendente',
+                },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      if (table === 'grupos') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  id: 'g-1',
+                  procura_id: 'pr-1',
+                  procuras: { owner_id: 'owner-1' },
+                },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      return {};
+    });
+
+    await expect(aprovarEntrada('m-p')).rejects.toThrow(/organizador/i);
   });
 });

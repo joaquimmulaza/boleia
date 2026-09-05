@@ -4,6 +4,8 @@ import {
   listOfertasByDriver,
   getOferta,
   updateOferta,
+  isOfertaFlexivel,
+  labelOfertaRota,
 } from './OfertaService.js';
 import { supabase } from '../lib/supabase';
 
@@ -17,6 +19,18 @@ vi.mock('../lib/supabase', () => ({
 describe('OfertaService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe('isOfertaFlexivel / labelOfertaRota', () => {
+    it('identifica oferta flexível e devolve label humana sem OD fictício', () => {
+      expect(isOfertaFlexivel({ flexibilidade_rota: true })).toBe(true);
+      expect(isOfertaFlexivel({ flexibilidade_rota: false })).toBe(false);
+      expect(isOfertaFlexivel({})).toBe(false);
+      expect(labelOfertaRota({ flexibilidade_rota: true })).toBe('Oferta flexível');
+      expect(labelOfertaRota({ flexibilidade_rota: false, origin_name: 'A', destination_name: 'B' })).toBe(
+        null,
+      );
+    });
   });
 
   describe('createOferta', () => {
@@ -108,8 +122,92 @@ describe('OfertaService', () => {
           modo_preco: 'TOTAL_ACORDO',
           valor_mensal_ask_kz: 120000,
           departure_time: '07:00',
+          origin_name: 'Talatona',
+          origin_lat: -8.9,
+          origin_lng: 13.2,
+          destination_name: 'Maianga',
+          destination_lat: -8.8,
+          destination_lng: 13.23,
         }),
       ).rejects.toThrow('veículo');
+    });
+
+    it('cria oferta flexível sem OD', async () => {
+      supabase.auth.getUser.mockResolvedValue({
+        data: { user: { id: 'driver-1' } },
+      });
+
+      const mockInsert = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: {
+              id: 'of-flex',
+              flexibilidade_rota: true,
+              origin_name: null,
+              destination_name: null,
+            },
+            error: null,
+          }),
+        }),
+      });
+
+      supabase.from.mockImplementation((table) => {
+        if (table === 'veiculos') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: { id: 'vei-1', vagas_passageiros: 3 },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        if (table === 'ofertas_capacidade') {
+          return { insert: mockInsert };
+        }
+        return {};
+      });
+
+      const result = await createOferta({
+        modo_preco: 'POR_PASSAGEIRO',
+        valor_mensal_ask_kz: 40000,
+        departure_time: '07:00',
+        flexibilidade_rota: true,
+        dias_semana: [1, 2, 3, 4, 5],
+      });
+
+      expect(result.flexibilidade_rota).toBe(true);
+      expect(mockInsert).toHaveBeenCalledWith([
+        expect.objectContaining({
+          flexibilidade_rota: true,
+          origin_name: null,
+          origin_lat: null,
+          origin_lng: null,
+          destination_name: null,
+          destination_lat: null,
+          destination_lng: null,
+          departure_time: '07:00',
+        }),
+      ]);
+    });
+
+    it('rejeita oferta fixa sem origem/destino com coordenadas', async () => {
+      supabase.auth.getUser.mockResolvedValue({
+        data: { user: { id: 'driver-1' } },
+      });
+
+      await expect(
+        createOferta({
+          modo_preco: 'POR_PASSAGEIRO',
+          valor_mensal_ask_kz: 40000,
+          departure_time: '07:00',
+          flexibilidade_rota: false,
+        }),
+      ).rejects.toThrow(/origem e destino/i);
+
+      expect(supabase.from).not.toHaveBeenCalled();
     });
   });
 

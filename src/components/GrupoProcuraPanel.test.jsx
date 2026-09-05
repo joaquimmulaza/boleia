@@ -9,6 +9,7 @@ import {
   listMembrosGrupo,
   listPedidosPendentes,
   aprovarEntrada,
+  sairDoGrupo,
 } from '../services/GrupoService';
 
 vi.mock('../services/GrupoService', () => ({
@@ -19,6 +20,7 @@ vi.mock('../services/GrupoService', () => ({
   listPedidosPendentes: vi.fn(),
   aprovarEntrada: vi.fn(),
   rejeitarEntrada: vi.fn(),
+  sairDoGrupo: vi.fn(),
 }));
 
 vi.mock('../services/ProfileService', () => ({
@@ -175,5 +177,145 @@ describe('GrupoProcuraPanel T31', () => {
 
     expect(await screen.findByText(/Ou convidar por telefone/i)).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/N_actual|n_maximo|POR_PASSAGEIRO|pendente/i);
+  });
+
+  it('grupo incompleto: copy a explicar que já se pode negociar', async () => {
+    getGrupoByProcura.mockResolvedValue({
+      id: 'g-1',
+      procura_id: 'pr-1',
+      n_maximo: 4,
+    });
+    listMembrosGrupo.mockResolvedValue([
+      {
+        id: 'm-1',
+        passenger_id: 'pax-1',
+        estado: 'activo',
+        ordem_insercao: 0,
+        perfis: { nome_completo: 'Ana' },
+      },
+      {
+        id: 'm-2',
+        passenger_id: 'pax-2',
+        estado: 'activo',
+        ordem_insercao: 1,
+        perfis: { nome_completo: 'Bruno' },
+      },
+    ]);
+
+    render(<GrupoProcuraPanel procura={procura} userId="pax-1" onGrupoChange={vi.fn()} />);
+
+    expect(await screen.findByText(/Grupo · 2 de 4/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/propor|negociar|tamanho actual|sem o grupo cheio/i),
+    ).toBeInTheDocument();
+  });
+
+  it('após aceitar pedido avisa que propostas anteriores mantêm o tamanho', async () => {
+    getGrupoByProcura.mockResolvedValue({
+      id: 'g-1',
+      procura_id: 'pr-1',
+      n_maximo: 4,
+    });
+    listMembrosGrupo.mockResolvedValue([
+      {
+        id: 'm-1',
+        passenger_id: 'pax-1',
+        estado: 'activo',
+        ordem_insercao: 0,
+        perfis: { nome_completo: 'Ana' },
+      },
+    ]);
+    listPedidosPendentes
+      .mockResolvedValueOnce([
+        {
+          id: 'm-p',
+          passenger_id: 'pax-2',
+          estado: 'pendente',
+          perfis: { nome_completo: 'Bruno' },
+        },
+      ])
+      .mockResolvedValue([]);
+    aprovarEntrada.mockResolvedValue({ id: 'm-p', estado: 'activo' });
+    listMembrosGrupo
+      .mockResolvedValueOnce([
+        {
+          id: 'm-1',
+          passenger_id: 'pax-1',
+          estado: 'activo',
+          ordem_insercao: 0,
+          perfis: { nome_completo: 'Ana' },
+        },
+      ])
+      .mockResolvedValue([
+        {
+          id: 'm-1',
+          passenger_id: 'pax-1',
+          estado: 'activo',
+          ordem_insercao: 0,
+          perfis: { nome_completo: 'Ana' },
+        },
+        {
+          id: 'm-p',
+          passenger_id: 'pax-2',
+          estado: 'activo',
+          ordem_insercao: 1,
+          perfis: { nome_completo: 'Bruno' },
+        },
+      ]);
+
+    render(<GrupoProcuraPanel procura={procura} userId="pax-1" onGrupoChange={vi.fn()} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /Aceitar/i }));
+
+    expect(
+      await screen.findByText(/propostas.*mantêm|nova proposta|tamanho anterior/i),
+    ).toBeInTheDocument();
+  });
+
+  it('permite sair do grupo quando há mais de um membro', async () => {
+    getGrupoByProcura.mockResolvedValue({
+      id: 'g-1',
+      procura_id: 'pr-1',
+      n_maximo: 4,
+    });
+    listMembrosGrupo
+      .mockResolvedValueOnce([
+        {
+          id: 'm-1',
+          passenger_id: 'pax-1',
+          estado: 'activo',
+          ordem_insercao: 0,
+          perfis: { nome_completo: 'Ana' },
+        },
+        {
+          id: 'm-2',
+          passenger_id: 'pax-2',
+          estado: 'activo',
+          ordem_insercao: 1,
+          perfis: { nome_completo: 'Bruno' },
+        },
+      ])
+      .mockResolvedValue([
+        {
+          id: 'm-1',
+          passenger_id: 'pax-1',
+          estado: 'activo',
+          ordem_insercao: 0,
+          perfis: { nome_completo: 'Ana' },
+        },
+      ]);
+    sairDoGrupo.mockResolvedValue({ id: 'm-2', estado: 'saiu' });
+
+    const onGrupoChange = vi.fn();
+    render(
+      <GrupoProcuraPanel procura={procura} userId="pax-2" onGrupoChange={onGrupoChange} />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Sair do grupo/i }));
+
+    await waitFor(() => {
+      expect(sairDoGrupo).toHaveBeenCalledWith('g-1', 'pax-2');
+      expect(onGrupoChange).toHaveBeenCalled();
+    });
   });
 });

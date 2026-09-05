@@ -2,7 +2,55 @@ import { describe, it, expect } from 'vitest';
 import { resolveNotificationRoute, notificationRouteMap } from './notificationRouter';
 
 describe('notificationRouter', () => {
+  describe('proposal_received (contraparte)', () => {
+    it('sentido B (inbox passageiro) abre /passageiro', () => {
+      expect(
+        notificationRouteMap.proposal_received({
+          inbox: 'passageiro',
+          oferta_id: 'of-1',
+          procura_id: 'pr-1',
+        }),
+      ).toBe('/passageiro');
+    });
+
+    it('sentido A (inbox motorista) abre /motorista', () => {
+      expect(
+        notificationRouteMap.proposal_received({
+          inbox: 'motorista',
+          oferta_id: 'of-1',
+          procura_id: 'pr-1',
+        }),
+      ).toBe('/motorista');
+    });
+
+    it('sem inbox (legado) mantém /motorista', () => {
+      expect(
+        notificationRouteMap.proposal_received({ oferta_id: 'of-1' }),
+      ).toBe('/motorista');
+    });
+
+    it('normaliza inbox com maiúsculas / espaços', () => {
+      expect(
+        notificationRouteMap.proposal_received({ inbox: ' Passageiro ' }),
+      ).toBe('/passageiro');
+      expect(
+        notificationRouteMap.proposal_received({ inbox: 'MOTORISTA' }),
+      ).toBe('/motorista');
+    });
+  });
+
   describe('resolveNotificationRoute', () => {
+    it('proposal_received com inbox passageiro resolve /passageiro', () => {
+      const route = resolveNotificationRoute({
+        metadata: {
+          type: 'proposal_received',
+          inbox: 'passageiro',
+          proposta_id: 'prop-1',
+        },
+      });
+      expect(route).toBe('/passageiro');
+    });
+
     it('deve usar o strategy de metadata se type estiver presente e validado', () => {
       const notif = {
         metadata: {

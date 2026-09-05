@@ -5,7 +5,8 @@ import { MemoryRouter } from 'react-router-dom';
 import PassengerDashboard from './PassengerDashboard';
 import { listProcurasByOwner } from '../services/ProcuraService';
 import { findCompatibleOfertas } from '../services/MatchingService';
-import { createProposta } from '../services/PropostaService';
+import { createProposta, listPropostasByProcura, enrichPropostasForReview, cancelProposta } from '../services/PropostaService';
+import { createAgreementFromProposal } from '../services/AgreementService';
 import { getGrupoByProcura, listMembrosGrupo } from '../services/GrupoService';
 import { listWaitlistByProcura } from '../services/WaitlistService';
 
@@ -24,6 +25,14 @@ vi.mock('../services/MatchingService', () => ({
 
 vi.mock('../services/PropostaService', () => ({
   createProposta: vi.fn(),
+  listPropostasByProcura: vi.fn().mockResolvedValue([]),
+  enrichPropostasForReview: vi.fn().mockResolvedValue([]),
+  rejectProposta: vi.fn(),
+  cancelProposta: vi.fn(),
+}));
+
+vi.mock('../services/AgreementService', () => ({
+  createAgreementFromProposal: vi.fn(),
 }));
 
 vi.mock('../services/WaitlistService', () => ({
@@ -86,6 +95,8 @@ describe('PassengerDashboard — marketplace', () => {
     listMembrosGrupo.mockResolvedValue([]);
     listWaitlistByProcura.mockResolvedValue([]);
     findCompatibleOfertas.mockResolvedValue({ direct: [], waitlist: [], incompatible: [] });
+    listPropostasByProcura.mockResolvedValue([]);
+    enrichPropostasForReview.mockResolvedValue([]);
   });
 
   it('mostra empty state para criar procura', async () => {
@@ -239,5 +250,183 @@ describe('PassengerDashboard — marketplace', () => {
     expect(screen.getByText(/Há uma vaga — podes propor acordo/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Propor acordo/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Entrar na lista de espera/i })).not.toBeInTheDocument();
+  });
+
+  it('mostra Grupo · X de Y e chip Activa na procura com grupo', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 2, estado: 'activa' }]);
+    getGrupoByProcura.mockResolvedValue({
+      id: 'g-1',
+      procura_id: 'pr-1',
+      nome: 'Colegas',
+      n_maximo: 4,
+    });
+    listMembrosGrupo.mockResolvedValue([
+      { id: 'm-1', passenger_id: 'pax-1', estado: 'activo', ordem_insercao: 0, perfis: { nome_completo: 'Ana' } },
+      { id: 'm-2', passenger_id: 'pax-2', estado: 'activo', ordem_insercao: 1, perfis: { nome_completo: 'Bruno' } },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Grupo · 2 de 4')).toBeInTheDocument();
+    expect(screen.getByText('Activa')).toBeInTheDocument();
+    expect(screen.queryByText(/N_actual/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/n_candidato/i)).not.toBeInTheDocument();
+  });
+
+  it('cards de oferta directa usam «lugares disponíveis» e modo humano', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    findCompatibleOfertas.mockResolvedValue({
+      direct: [{ ...ofertaDirect, modo_preco: 'POR_PASSAGEIRO', valor_mensal_ask_kz: 40000, vagas_disponiveis: 2 }],
+      waitlist: [],
+      incompatible: [],
+    });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('2 lugares disponíveis')).toBeInTheDocument();
+    expect(screen.getByText('Por passageiro')).toBeInTheDocument();
+    expect(screen.getByText('Disponível')).toBeInTheDocument();
+    expect(screen.queryByText('POR_PASSAGEIRO')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^\d+ lugares$/)).not.toBeInTheDocument();
+  });
+
+  it('waitlist mostra o mesmo bloco de preço/modo que a oferta directa', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    findCompatibleOfertas.mockResolvedValue({
+      direct: [],
+      waitlist: [
+        {
+          id: 'of-w',
+          origin_name: 'Kilamba',
+          destination_name: 'Maianga',
+          departure_time: '07:00:00',
+          vagas_disponiveis: 0,
+          valor_mensal_ask_kz: 80000,
+          modo_preco: 'POR_PASSAGEIRO',
+        },
+      ],
+      incompatible: [],
+    });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Lista de espera')).toBeInTheDocument();
+    expect(screen.getByText('Por passageiro')).toBeInTheDocument();
+    expect(screen.getByText(/80[\s.]?000/)).toBeInTheDocument();
+    expect(screen.getAllByText('0 lugares disponíveis').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText('POR_PASSAGEIRO')).not.toBeInTheDocument();
+  });
+
+  it('mostra propostas enviadas e permite cancelar pelo criador', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    listPropostasByProcura.mockResolvedValue([
+      {
+        id: 'prop-out',
+        estado: 'aberta',
+        created_by: 'pax-1',
+        modo_preco: 'TOTAL_ACORDO',
+        valor_mensal_ask_kz: 100000,
+        n_passageiros_propostos: 1,
+      },
+    ]);
+    enrichPropostasForReview.mockImplementation(async (lista) =>
+      (lista || []).map((p) => ({
+        proposta: p,
+        titulo: 'Individual',
+        membros: [{ passenger_id: 'pax-1', nome: 'Tu', quota_mensal_kz: 100000 }],
+        pricing: {
+          valor_mensal_total_kz: 100000,
+          valor_mensal_por_passageiro_kz: 100000,
+          quotas: [100000],
+          temResto: false,
+        },
+        avisoComposicao: null,
+      })),
+    );
+    cancelProposta.mockImplementation(async (id) => {
+      listPropostasByProcura.mockResolvedValue([]);
+      return { id, estado: 'cancelada' };
+    });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Propostas enviadas')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Cancelar proposta/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Aceitar proposta/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Cancelar proposta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Confirmar cancelamento/i }));
+
+    await waitFor(() => {
+      expect(cancelProposta).toHaveBeenCalledWith('prop-out');
+    });
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Proposta cancelada/i);
+  });
+
+  it('mostra inbox de propostas do motorista e permite aceitar (sentido B)', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    listPropostasByProcura.mockResolvedValue([
+      {
+        id: 'prop-b',
+        estado: 'aberta',
+        created_by: 'driver-1',
+        modo_preco: 'TOTAL_ACORDO',
+        valor_mensal_ask_kz: 120000,
+        n_passageiros_propostos: 1,
+      },
+    ]);
+    enrichPropostasForReview.mockImplementation(async (lista) =>
+      (lista || []).map((p) => ({
+        proposta: p,
+        titulo: 'Individual',
+        membros: [
+          {
+            passenger_id: 'pax-1',
+            nome: 'Tu',
+            quota_mensal_kz: 120000,
+          },
+        ],
+        pricing: {
+          valor_mensal_total_kz: 120000,
+          valor_mensal_por_passageiro_kz: 120000,
+          quotas: [120000],
+          temResto: false,
+        },
+        avisoComposicao: null,
+      })),
+    );
+    createAgreementFromProposal.mockResolvedValue({ id: 'ac-b' });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Propostas recebidas')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Aceitar proposta/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Aceitar proposta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
+
+    await waitFor(() => {
+      expect(createAgreementFromProposal).toHaveBeenCalledWith('prop-b');
+    });
   });
 });

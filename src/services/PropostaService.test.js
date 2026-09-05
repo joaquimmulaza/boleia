@@ -4,6 +4,7 @@ import {
   listPropostasByProcura,
   listPropostasByOferta,
   rejectProposta,
+  cancelProposta,
   enrichPropostasForReview,
 } from './PropostaService.js';
 import { supabase } from '../lib/supabase';
@@ -12,6 +13,7 @@ import { listMembrosGrupo } from './GrupoService.js';
 vi.mock('../lib/supabase', () => ({
   supabase: {
     from: vi.fn(),
+    rpc: vi.fn(),
     auth: { getUser: vi.fn() },
   },
 }));
@@ -114,20 +116,64 @@ describe('PropostaService', () => {
     expect(result).toHaveLength(1);
   });
 
-  it('rejectProposta marca rejeitada', async () => {
-    const mockSingle = vi.fn().mockResolvedValue({
-      data: { id: 'prop-1', estado: 'rejeitada' },
+  it('rejectProposta chama RPC reject_proposal e devolve proposta rejeitada', async () => {
+    supabase.rpc.mockResolvedValue({
+      data: { id: 'prop-1', estado: 'rejeitada', created_by: 'pax-1' },
       error: null,
     });
-    supabase.from.mockReturnValue({
-      update: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnValue({ single: mockSingle }),
-        }),
-      }),
-    });
+
     const result = await rejectProposta('prop-1');
+
+    expect(supabase.rpc).toHaveBeenCalledWith('reject_proposal', {
+      p_proposta_id: 'prop-1',
+    });
     expect(result.estado).toBe('rejeitada');
+  });
+
+  it('rejectProposta propaga erro quando o criador tenta rejeitar a própria proposta', async () => {
+    supabase.rpc.mockResolvedValue({
+      data: null,
+      error: {
+        message: 'Só a contraparte pode aceitar ou rejeitar esta proposta.',
+      },
+    });
+
+    await expect(rejectProposta('prop-1')).rejects.toThrow(/só a contraparte/i);
+  });
+
+  it('rejectProposta exige ID da proposta', async () => {
+    await expect(rejectProposta('')).rejects.toThrow(/proposta/i);
+    expect(supabase.rpc).not.toHaveBeenCalled();
+  });
+
+  it('cancelProposta chama RPC cancel_proposal e devolve proposta cancelada', async () => {
+    supabase.rpc.mockResolvedValue({
+      data: { id: 'prop-1', estado: 'cancelada', created_by: 'pax-1' },
+      error: null,
+    });
+
+    const result = await cancelProposta('prop-1');
+
+    expect(supabase.rpc).toHaveBeenCalledWith('cancel_proposal', {
+      p_proposta_id: 'prop-1',
+    });
+    expect(result.estado).toBe('cancelada');
+  });
+
+  it('cancelProposta propaga erro quando a contraparte tenta cancelar', async () => {
+    supabase.rpc.mockResolvedValue({
+      data: null,
+      error: {
+        message: 'Só o criador pode cancelar esta proposta.',
+      },
+    });
+
+    await expect(cancelProposta('prop-1')).rejects.toThrow(/só o criador/i);
+  });
+
+  it('cancelProposta exige ID da proposta', async () => {
+    await expect(cancelProposta('')).rejects.toThrow(/proposta/i);
+    expect(supabase.rpc).not.toHaveBeenCalled();
   });
 
   it('enrichPropostasForReview anexa review a cada proposta em paralelo', async () => {

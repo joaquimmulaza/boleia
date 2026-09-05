@@ -1,9 +1,18 @@
 # Checkpoint — Marketplace Oferta / Procura
 
-**Data:** 2026-09-05 (~09:15 UTC+1)  
-**Branch:** `main` (T29 + **T30 uncommitted**; T31 already on `origin/main`)  
-**Chat:** T30 Done (design + TDD paralelo A/B/C + UI QA + code-review **APPROVE** ×2 ciclos).  
+**Data:** 2026-09-05 (~12:45 UTC+1)  
+**Branch:** `main` (T29 + T30 + T32–**T35 uncommitted**; T31 on `origin/main`; **P0 hardening** + **wave paralela** uncommitted)  
+**Chat:** Phase 7 Done + P0 hardening + **wave paralela GREEN** (ver `WAVE_PARALLEL_REPORT.md`).  
 **Usar este ficheiro** para retomar sem perder contexto.
+
+### Wave paralelismo (2026-09-05) ← **GREEN · uncommitted**
+
+- Agentes: Matching, Group (+ follow-up `leave_grupo_membro`), Proposal, Agreement, Flex UX, UI, Test observer.
+- Suite: **413 passed / 0 failed** (60 ficheiros). Baseline mid-wave era 378/19 failed.
+- P0: `leave_passenger` + `leave_grupo_membro`; sem UPDATE client em propostas/acordos/acordos_passageiros/lista_espera; join sem auto-aprovação.
+- Relatório: `.specs/features/marketplace-oferta-procura/WAVE_PARALLEL_REPORT.md`
+- Gaps cobertura (não bloqueantes): `AUDIT_GAPS_WAVE.md` G1–G12.
+- **Commit só se o utilizador pedir.**
 
 **Commits relevantes:**
 - `178cd50` — T24 hub motorista multi-pax  
@@ -11,7 +20,12 @@
 - `8a0111e` — **T31** n_maximo + grupo público / pedir entrada (**pushed**)  
 - `443d149` — sync CHECKPOINT pós-push T31  
 - *(uncommitted)* **T29** adenda / `renegotiateAgreementPricing`  
-- *(uncommitted)* **T30** mapa N pontos preferenciais (MapLibre)
+- *(uncommitted)* **T30** mapa N pontos preferenciais (MapLibre)  
+- *(uncommitted)* **T32** aceite/rejeição só pela contraparte (`reject_proposal` + gate `created_by`)  
+- *(uncommitted)* **T33** propostas B + inbox passageiro + deep links + trigger notif  
+- *(uncommitted)* **T34** oferta flexível sem OD + copy «Oferta flexível»  
+- *(uncommitted)* **T35** matching dual (flex sem OD/residência)
+- *(uncommitted)* **P0 hardening** `leave_passenger` RPC; DROP UPDATE client em propostas/acordos/acordos_passageiros/lista_espera; RLS membros owner-only (+ self só reabrir `pendente`); `aprovarEntrada`/`rejeitarEntrada` exigem organizador
 
 ---
 
@@ -21,14 +35,13 @@
 Continua marketplace a partir de:
 .specs/features/marketplace-oferta-procura/CHECKPOINT.md
 
-Phase 6 T22–T31 (+ T29/T30) Done. T29+T30 UNCOMMITTED — commit só se eu pedir
+Phase 6 T22–T31 Done. Phase 7 T32–T35 Done UNCOMMITTED — commit só se eu pedir
 (ficheiros listados no CHECKPOINT; NÃO misturar lixo .cline/.codex/.cursor).
 
-Decisão produto 2026-09-05 (docs): motorista flexível SEM zona/OD obrigatório;
-propostas bidireccionais; aceite só contraparte. Tasks T32–T35 Planned —
-NÃO implementar código até eu pedir.
+Decisão produto 2026-09-05: motorista flexível SEM zona/OD; propostas A/B;
+aceite só contraparte. Phase 7 completa.
 
-Ler CHECKPOINT + AGENTS.md + spec.md (secção flexível / propostas).
+Ler CHECKPOINT + AGENTS.md.
 
 Regras: AGENTS.md + .cursorrules; TDD; JS+JSDoc; sem TS/toast;
 DDL só via Supabase MCP; copy UI humana; invariantes grupo/waitlist/leave/adenda.
@@ -44,11 +57,11 @@ Cardinalidade **1 motorista : N passageiros** no acordo; procura/grupo → **M**
 Preço dual `POR_PASSAGEIRO` | `TOTAL_ACORDO`; lotação do veículo **nunca** divide preço.  
 Quotas **congeladas** na aceitação; saída de pax **não** recalcula mês corrente.  
 Capacidade global = soma `N_activos` nos acordos da oferta.  
-Matching MVP: oferta **fixa** ±15 min + raio OD 2500 m; oferta **flexível** sem OD/zona (docs 2026-09-05; código T34/T35 Planned); waitlist se N > vagas (sem auto-aceitar).  
+Matching MVP: oferta **fixa** ±15 min + raio OD 2500 m; oferta **flexível** tempo/dias/capacidade **sem** OD/zona (**T34 publish + T35 matching Done**); waitlist se N > vagas (sem auto-aceitar).  
 Promoção waitlist = **notificação** (`waitlist_promoted`) + estado `notificada` — **nunca** auto-aceitar.  
 **Adenda (T29 Done):** único caminho para mutar preços / `N_contrato` — copy «mês seguinte»; MVP aplica valores de imediato via RPC.  
 **Mapa (T30 Done):** pins 1-based dos pontos preferenciais do snapshot antes do aceite (MapLibre + OSM).  
-**Produto (2026-09-05, só docs):** motorista flexível sem zona; propostas A/B; aceite só contraparte; cadeia Procura→M propostas→1 acordo 1:N. **Não** implementar até pedido (T32–T35).
+**Produto (2026-09-05):** motorista flexível sem zona/OD; propostas A/B; aceite só contraparte; cadeia Procura→M propostas→1 acordo 1:N. **Phase 7 T32–T35 Done.**
 
 ### Grupo = procura colectiva viva
 
@@ -82,20 +95,145 @@ Alias legado: `N_candidato` = `N_actual`. Coluna BD: `n_candidato`.
 | 4 UI | T14–T19 | **Done** |
 | 5 Docs | T20–T21 | **Done** |
 | 6 Bifurcação | **T22–T31 Done** (incl. T29 + T30) | **Phase 6 completa** |
-| 7 Flexível + propostas bi | T32–T35 Planned | **Só docs** (2026-09-05) — sem código até pedido |
+| 7 Flexível + propostas bi | **T32–T35 Done** | **Phase 7 completa** (uncommitted) |
 
 ### Maturidade (~)
 
 | Camada | % | Nota |
 |---|---|---|
-| Schema + RPC | ~99% | `accept_proposal` + `promote_waitlist` + `renegotiate_agreement_pricing` + `n_maximo` · **débito T32:** bloquear `created_by` |
-| Serviços | ~99% | Adenda + leave + waitlist + grupo · **débito T34/T35:** flex sem OD + `findCompatibleProcuras` |
-| UI produto | ~99% | Adenda + mapa T30 · **débito T33/T34:** inbox B + PublishRoute OD opcional |
+| Schema + RPC | ~100% | `accept_proposal` + `reject_proposal` + trigger notif proposta + `promote_waitlist` + `renegotiate_agreement_pricing` + `n_maximo`; OD ofertas já nullable |
+| Serviços | ~100% MVP | Matching dual T35 + adenda + leave + waitlist + grupo + reject + `createOferta` flex |
+| UI produto | ~100% MVP | Inbox B + PublishRoute OD condicional + descoberta flex via hub |
 | E2E N>1 | ~90% | T25 + T29 testes adenda |
 
 ---
 
-## Feito (não reinventar) — T22–T31 + T29 + T30
+## Feito (não reinventar) — T22–T35 + T29 + T30 + P0 hardening
+
+### P0 hardening (pós-auditoria) ← **Done (uncommitted)**
+
+**MCP:** `marketplace_p0_hardening_leave_rls`
+
+- RPC `leave_passenger` — atómica: `saiu` + recount `vagas_disponiveis` + `promote_waitlist` best-effort; sem mutar preços/quotas
+- DROP UPDATE client: `propostas`, `acordos`, `acordos_passageiros`, `lista_espera` (só SECURITY DEFINER)
+- `membros_grupo`: UPDATE owner **ou** self só para reabrir como `pendente` (não `activo`)
+- JS: `AgreementService.leavePassenger` → RPC; `GrupoService` aprovar/rejeitar exige organizador
+- RPC `leave_grupo_membro` — self `activo`→`saiu` + sync `n_candidato`; bloqueia único activo; sem tocar propostas; `GrupoService.sairDoGrupo` → RPC
+
+**Testes:** AgreementService + GrupoService + AgreementsE2E — 34 verdes no âmbito
+
+### T35 — Matching dual (fixa vs flexível) ← **Done (uncommitted)**
+
+**Gates:** TDD → implementer → code-review **APPROVE**. Sem UI nova (hub T33 já lista «Procuras compatíveis»). Sem DDL / zonas.
+
+**Lógica:**
+- `evaluateMatch`: fixa = tempo + dias + geo OD; flexível = tempo + dias + capacidade (**sem** OD/residência)
+- `isDaysCompatible`: intersecção; se um lado vazio → compatível (procura MVP sem `dias_semana`); normaliza strings JSON/BD
+- Fixa com OD incompleto → `incompatible` (evita falso positivo via `Number(null)=0`)
+- Flex com coords residuais/legado **ignora** OD (sem falso negativo por residência)
+- `findCompatibleProcuras`: flex sem OD deixa de devolver `[]`; consulta procuras activas; fixa sem OD → buckets vazios
+- `findCompatibleOfertas`: passa `flexibilidade_rota` / `dias_semana` (passageiro vê flex por tempo/capacidade)
+- Capacidade: `N_actual` (`n_candidato`) vs `vagas` → `direct` | `waitlist` (nunca auto-aceitar)
+
+**Hardening (matching engine, pós-T35):** testes de falsos +/− (fixa/flex/dias/capacidade/bidireccional) + integração real no `MatchingService` (sem mock cego de `evaluateMatch`).
+
+**Testes:** 41 verdes (`matchingFilters` + `MatchingService` + `matchingConfig`)
+
+**Ficheiros T35 / matching (para commit quando pedido):**
+```
+src/utils/matchingFilters.js
+src/utils/matchingFilters.test.js
+src/services/MatchingService.js
+src/services/MatchingService.test.js
+.agent/subagents/boleia-marketplace-matching.md
+.specs/features/marketplace-oferta-procura/{CHECKPOINT,tasks,spec}.md
+.specs/project/STATE.md
+AGENTS.md
+```
+
+### T34 — Oferta flexível real (sem OD) ← **Done (uncommitted)**
+
+**Gates:** design (design.md flow + copy; Mobbin degradado plano free; reuso PublishRoute) → TDD → implementer → code-review **APPROVE**. Sem DDL (colunas OD já nullable).
+
+**Lógica:**
+- `OfertaService.createOferta` / `resolveOdFields`: fixa exige OD+coords; flexível grava OD `null`
+- Sem zonas / raio residencial
+
+**UI:**
+- `PublishRoute` — copy «Oferta flexível» (não «Rota flexível»); OD escondido quando flex; limpa OD ao activar flex
+- Fixa continua a exigir origem/destino
+
+**Testes:** 15 verdes (`OfertaService` + `PublishRoute`)
+
+**Ficheiros T34 (para commit quando pedido):**
+```
+src/services/OfertaService.js
+src/services/OfertaService.test.js
+src/pages/PublishRoute.jsx
+src/pages/PublishRoute.test.jsx
+.specs/features/marketplace-oferta-procura/{CHECKPOINT,tasks}.md
+.specs/project/STATE.md
+AGENTS.md
+```
+
+### T33 — Propostas B + inbox passageiro + deep links ← **Done (uncommitted)**
+
+**Gates:** TDD → implementer → code-review **APPROVE**. Design: reuso `PropostaReviewCard` + UI Skills baseline; Mobbin degradado (plano free); v0 chat `pbWKgpZagf5` (sem ficheiros gerados — adaptado padrão T24).
+
+**MCP:** `marketplace_t33_proposta_notify_contraparte` — trigger `on_proposta_created_notify` → notif `proposal_received` com `inbox: passageiro|motorista`.
+
+**Lógica:**
+- `notificationRouter.proposal_received` → `/passageiro` ou `/motorista` via `metadata.inbox`
+- `findCompatibleProcuras` (oferta fixa geo+tempo; flex → T35)
+- `filterPropostasParaInbox` — só abertas com `created_by ≠ eu`
+
+**UI:**
+- `DriverDashboard` — «Procuras compatíveis» + Propor (B); inbox «Ver propostas» só A
+- `PassengerDashboard` — «Propostas recebidas» + Aceitar/Recusar (B)
+
+**Testes:** 32 verdes (router + inbox filter + matching + hubs)
+
+**Ficheiros T33 (para commit quando pedido):**
+```
+src/utils/notificationRouter.js
+src/utils/notificationRouter.test.js
+src/utils/propostaInbox.js
+src/utils/propostaInbox.test.js
+src/services/MatchingService.js
+src/services/MatchingService.test.js
+src/pages/DriverDashboard.jsx
+src/pages/DriverDashboard.test.jsx
+src/pages/PassengerDashboard.jsx
+src/pages/PassengerDashboard.test.jsx
+.specs/features/marketplace-oferta-procura/{CHECKPOINT,tasks}.md
+.specs/project/STATE.md
+AGENTS.md
+```
+
+### T32 — Aceite/rejeição só pela contraparte ← **Done (uncommitted)**
+
+**Gates:** TDD → implementer → code-review **APPROVE**. Sem UI nova.
+
+**RPC / RLS (MCP `marketplace_t32_accept_reject_contraparte`):**
+- `accept_proposal`: se `auth.uid() = created_by` → erro PT
+- Nova `reject_proposal` (SECURITY DEFINER): mesmos gates + permissão driver/owner
+- RLS `propostas_update_envolvidos`: UPDATE só se `auth.uid() IS DISTINCT FROM created_by`
+
+**Serviços:**
+- `createAgreementFromProposal` — propaga mensagem RPC
+- `rejectProposta` — chama `reject_proposal` (já não UPDATE directo)
+
+**Testes:** 27 verdes (`AgreementService` + `PropostaService`)
+
+**Ficheiros T32 (para commit quando pedido):**
+```
+src/services/AgreementService.js
+src/services/AgreementService.test.js
+src/services/PropostaService.js
+src/services/PropostaService.test.js
+.specs/features/marketplace-oferta-procura/{CHECKPOINT,tasks}.md
+.specs/project/STATE.md
+```
 
 ### T30 — Mapa N pontos preferenciais ← **Done (uncommitted)**
 
@@ -140,7 +278,7 @@ AGENTS.md
 | T24 | Hub motorista `PropostaReviewCard` | `178cd50` |
 | T25 | E2E quotas + leave imutável | `dc52862` |
 | T26 | `promote_waitlist` (só notif) | `dc52862` |
-| T27 | Oferta dias + rota flexível | `dc52862` |
+| T27 | Oferta dias + flag flex (débito T34: **corrigido**) | `dc52862` + T34 |
 | T28 | Detalhe acordo 1:N | `dc52862` |
 
 ---
@@ -148,8 +286,9 @@ AGENTS.md
 ## O que falta
 
 ```
-Phase 6 marketplace bifurcação — COMPLETA (T22–T31).
-Próximo: Phase 7 T32–T35 **quando o utilizador pedir** (docs já actualizados). Commits T29/T30 só sob pedido.
+Phase 6 — COMPLETA. Phase 7 — COMPLETA (T32–T35 Done, uncommitted).
+Commits T29/T30/T32/T33/T34/T35 só sob pedido (listas separadas).
+Fora do MVP: zonas/polígonos/raio residencial.
 ```
 
 ---
@@ -158,9 +297,10 @@ Próximo: Phase 7 T32–T35 **quando o utilizador pedir** (docs já actualizados
 
 **BD** (`boleia` / `fdclrbcgytnuqcrpsevw`):  
 `ofertas_capacidade`, `procuras`, `grupos` (+`n_maximo`), `membros_grupo` (+pickup/dropoff coords), `propostas`, `lista_espera`, `acordos`, `acordos_passageiros`, `faltas`, `veiculos`.  
-RPCs: `accept_proposal`, `promote_waitlist`, `renegotiate_agreement_pricing`.
+RPCs: `accept_proposal`, `reject_proposal`, `promote_waitlist`, `renegotiate_agreement_pricing`.  
+Triggers: `on_proposta_created_notify` → `proposal_received` (inbox contraparte).
 
-**Serviços:** `OfertaService`, `ProcuraService`, `GrupoService`, `PropostaService`, `AgreementService` (+ `renegotiateAgreementPricing`), `MatchingService`, `WaitlistService`, `AbsenceService`, `LocationService` (Photon), `ProfileService.findPassageiroByTelefone`.  
+**Serviços:** `OfertaService` (flex sem OD), `ProcuraService`, `GrupoService`, `PropostaService`, `AgreementService` (+ `renegotiateAgreementPricing`), `MatchingService` (+ `findCompatibleProcuras` / `findCompatibleOfertas` dual fixa/flex), `WaitlistService`, `AbsenceService`, `LocationService` (Photon), `ProfileService.findPassageiroByTelefone`.  
 **Mapa:** `maplibre-gl` via `PreferentialPointsMap` (hub motorista).
 
 **Removido (não recriar):** `RouteService`, `requestSeat`, cards `Acordo*` com `routes`, Google Maps.
@@ -182,7 +322,7 @@ RPCs: `accept_proposal`, `promote_waitlist`, `renegotiate_agreement_pricing`.
 4. Copy humana; nunca jargon de Ns / `POR_PASSAGEIRO`  
 5. Design SoT: v0/shadcn/UI Skills (Penpot descontinuado)  
 6. Commit / push **só** se o utilizador pedir  
-7. Working tree: T29 + T30 uncommitted — **não** misturar `.cline`/`.codex`/`.cursor` lixo  
+7. Working tree: T29 + T30 + T32–T35 uncommitted — **não** misturar `.cline`/`.codex`/`.cursor` lixo  
 8. Spec/planos prevalecem sobre v0 se houver conflito  
 
 ---
@@ -190,6 +330,11 @@ RPCs: `accept_proposal`, `promote_waitlist`, `renegotiate_agreement_pricing`.
 ## Handoff git (snapshot)
 
 ```
+(uncommitted) wave paralela + leave_grupo_membro + WAVE_PARALLEL_REPORT (GREEN 413)
+(uncommitted) feat(marketplace): T35 matching dual fixa/flex sem OD
+(uncommitted) feat(marketplace): T34 oferta flexível sem OD
+(uncommitted) feat(marketplace): T33 propostas B + inbox + deep links
+(uncommitted) feat(marketplace): T32 aceite/rejeição só pela contraparte
 (uncommitted) feat(marketplace): T30 mapa N pontos preferenciais (MapLibre)
 (uncommitted) feat(marketplace): T29 adenda renegotiateAgreementPricing
 443d149 chore(marketplace): sincronizar CHECKPOINT após push T31
@@ -199,6 +344,22 @@ RPCs: `accept_proposal`, `promote_waitlist`, `renegotiate_agreement_pricing`.
 Mensagens sugeridas (quando pedires — **commits separados** preferível):
 
 ```
+feat(marketplace): T35 matching dual fixa/flex sem OD
+```
+
+```
+feat(marketplace): T34 oferta flexível sem OD
+```
+
+```
+feat(marketplace): T33 propostas B + inbox + deep links
+```
+
+```
+feat(marketplace): T32 aceite/rejeição só pela contraparte
+```
+
+```
 feat(marketplace): T30 mapa N pontos preferenciais
 ```
 
@@ -206,4 +367,4 @@ feat(marketplace): T30 mapa N pontos preferenciais
 feat(marketplace): T29 adenda renegotiateAgreementPricing
 ```
 
-Incluir **só** ficheiros da lista T29 ou T30 — **não** misturar lixo nem o outro task no mesmo commit sem pedido.
+Incluir **só** ficheiros da lista do task — **não** misturar lixo nem outro task no mesmo commit sem pedido.

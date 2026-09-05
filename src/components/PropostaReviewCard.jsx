@@ -65,17 +65,29 @@ function countMembrosComPickup(membros) {
 }
 
 /**
- * Card de revisão de proposta multi-passageiro (hub motorista).
+ * Card de revisão de proposta multi-passageiro.
+ * - `modo="contraparte"` (default): Aceitar / Recusar (inbox A ou B).
+ * - `modo="criador"`: Cancelar proposta enviada (só criador; RPC cancel_proposal).
  *
  * @param {{
  *   review: PropostaReview,
  *   busy?: boolean,
- *   onAceitar: () => void,
- *   onRecusar: () => void,
+ *   modo?: 'contraparte' | 'criador',
+ *   onAceitar?: () => void,
+ *   onRecusar?: () => void,
+ *   onCancelar?: () => void,
  * }} props
  */
-function PropostaReviewCard({ review, busy = false, onAceitar, onRecusar }) {
+function PropostaReviewCard({
+  review,
+  busy = false,
+  modo = 'contraparte',
+  onAceitar,
+  onRecusar,
+  onCancelar,
+}) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const isCriador = modo === 'criador';
 
   const modoLabel =
     review.proposta.modo_preco === 'TOTAL_ACORDO' ? 'Total do acordo' : 'Por passageiro';
@@ -162,34 +174,55 @@ function PropostaReviewCard({ review, busy = false, onAceitar, onRecusar }) {
         <p className="text-xs text-amber-700 dark:text-amber-400 text-pretty">{avisoComposicao}</p>
       ) : null}
 
-      <div className="flex gap-2 pt-1">
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => setConfirmOpen(true)}
-          className="flex-1 bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60"
-        >
-          Aceitar proposta
-        </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={onRecusar}
-          className="flex-1 bg-slate-100 dark:bg-slate-800 font-bold py-3 rounded-xl disabled:opacity-60"
-        >
-          Recusar
-        </button>
-      </div>
+      {isCriador ? (
+        <div className="pt-1">
+          <button
+            type="button"
+            disabled={busy || !onCancelar}
+            onClick={() => setConfirmOpen(true)}
+            className="w-full bg-slate-100 dark:bg-slate-800 font-bold py-3 rounded-xl disabled:opacity-60"
+          >
+            Cancelar proposta
+          </button>
+        </div>
+      ) : (
+        <div className="flex gap-2 pt-1">
+          <button
+            type="button"
+            disabled={busy || !onAceitar}
+            onClick={() => setConfirmOpen(true)}
+            className="flex-1 bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60"
+          >
+            Aceitar proposta
+          </button>
+          <button
+            type="button"
+            disabled={busy || !onRecusar}
+            onClick={onRecusar}
+            className="flex-1 bg-slate-100 dark:bg-slate-800 font-bold py-3 rounded-xl disabled:opacity-60"
+          >
+            Recusar
+          </button>
+        </div>
+      )}
 
       <ConfirmationModal
         isOpen={confirmOpen}
-        title="Aceitar esta proposta?"
-        message="Vais criar um acordo com estes passageiros. Esta acção não se pode desfazer."
-        confirmText="Confirmar"
+        title={isCriador ? 'Cancelar esta proposta?' : 'Aceitar esta proposta?'}
+        message={
+          isCriador
+            ? 'A proposta deixa de ficar disponível para a contraparte. Podes enviar outra mais tarde.'
+            : 'Vais criar um acordo com estes passageiros. Esta acção não se pode desfazer.'
+        }
+        confirmText={isCriador ? 'Confirmar cancelamento' : 'Confirmar'}
         cancelText="Voltar"
         onConfirm={() => {
           setConfirmOpen(false);
-          onAceitar();
+          if (isCriador) {
+            onCancelar?.();
+          } else {
+            onAceitar?.();
+          }
         }}
         onCancel={() => setConfirmOpen(false)}
       />

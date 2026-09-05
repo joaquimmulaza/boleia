@@ -3,6 +3,72 @@ import { supabase } from '../lib/supabase';
 const MODOS_PRECO = new Set(['POR_PASSAGEIRO', 'TOTAL_ACORDO']);
 
 /**
+ * @param {{ flexibilidade_rota?: boolean } | null | undefined} oferta
+ * @returns {boolean}
+ */
+export function isOfertaFlexivel(oferta) {
+  return Boolean(oferta?.flexibilidade_rota);
+}
+
+/**
+ * Label humana para lista — flexível nunca inventa OD.
+ * Fixa devolve `null` (a UI mostra origem → destino).
+ * @param {{ flexibilidade_rota?: boolean } | null | undefined} oferta
+ * @returns {string | null}
+ */
+export function labelOfertaRota(oferta) {
+  if (isOfertaFlexivel(oferta)) return 'Oferta flexível';
+  return null;
+}
+
+/**
+ * Oferta fixa exige OD com coordenadas; flexível grava sem OD (null).
+ * @param {object} formData
+ * @returns {{
+ *   origin_name: string|null,
+ *   origin_lat: number|null,
+ *   origin_lng: number|null,
+ *   destination_name: string|null,
+ *   destination_lat: number|null,
+ *   destination_lng: number|null,
+ * }}
+ */
+function resolveOdFields(formData) {
+  const isFlex = Boolean(formData.flexibilidade_rota);
+  if (isFlex) {
+    return {
+      origin_name: null,
+      origin_lat: null,
+      origin_lng: null,
+      destination_name: null,
+      destination_lat: null,
+      destination_lng: null,
+    };
+  }
+
+  const hasOd =
+    formData.origin_name &&
+    formData.origin_lat != null &&
+    formData.origin_lng != null &&
+    formData.destination_name &&
+    formData.destination_lat != null &&
+    formData.destination_lng != null;
+
+  if (!hasOd) {
+    throw new Error('Oferta fixa exige origem e destino com coordenadas.');
+  }
+
+  return {
+    origin_name: formData.origin_name,
+    origin_lat: formData.origin_lat,
+    origin_lng: formData.origin_lng,
+    destination_name: formData.destination_name,
+    destination_lat: formData.destination_lat,
+    destination_lng: formData.destination_lng,
+  };
+}
+
+/**
  * @param {object} formData
  */
 export async function createOferta(formData) {
@@ -26,6 +92,8 @@ export async function createOferta(formData) {
     throw new Error('Horário de partida é obrigatório.');
   }
 
+  const od = resolveOdFields(formData);
+
   const { data: veiculo, error: veiculoError } = await supabase
     .from('veiculos')
     .select('id, vagas_passageiros')
@@ -48,12 +116,7 @@ export async function createOferta(formData) {
     modo_preco: formData.modo_preco,
     valor_mensal_ask_kz: ask,
     flexibilidade_rota: Boolean(formData.flexibilidade_rota),
-    origin_name: formData.origin_name ?? null,
-    origin_lat: formData.origin_lat ?? null,
-    origin_lng: formData.origin_lng ?? null,
-    destination_name: formData.destination_name ?? null,
-    destination_lat: formData.destination_lat ?? null,
-    destination_lng: formData.destination_lng ?? null,
+    ...od,
     departure_time: formData.departure_time,
     return_time: formData.return_time ?? null,
     dias_semana: formData.dias_semana ?? [1, 2, 3, 4, 5],

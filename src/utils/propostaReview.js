@@ -145,9 +145,16 @@ export function buildPropostaReview(proposta, membrosActivos = []) {
   /** @type {string | null} */
   let avisoComposicao = null;
   // Solo sem grupo: membros vazios é esperado — sem aviso.
-  if (proposta.grupo_id && activos.length < n) {
-    avisoComposicao =
-      'O grupo tem menos pessoas do que as indicadas nesta proposta. A aceitação pode falhar.';
+  if (proposta.grupo_id) {
+    const nActual = activos.length;
+    if (nActual < n) {
+      avisoComposicao =
+        'O grupo tem menos pessoas do que as indicadas nesta proposta. A aceitação pode falhar.';
+    } else if (nActual > n) {
+      avisoComposicao =
+        `O grupo tem mais pessoas do que as cobertas nesta proposta (${n} de ${nActual}). ` +
+        'Só entram as primeiras pessoas listadas; para incluir todos, é preciso uma nova proposta.';
+    }
   }
 
   return {

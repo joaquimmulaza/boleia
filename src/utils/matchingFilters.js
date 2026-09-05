@@ -93,22 +93,75 @@ export function canAcceptDirectly(nCandidato, vagasDisponiveis) {
 }
 
 /**
+ * Intersecção de dias da semana (1=Seg … 7=Dom).
+ * Se um dos lados estiver ausente/vazio → compatível (MVP: procura sem `dias_semana`).
+ * Aceita números ou strings numéricas (JSON/BD).
+ * @param {number[] | string[] | null | undefined} daysA
+ * @param {number[] | string[] | null | undefined} daysB
+ * @returns {boolean}
+ */
+export function isDaysCompatible(daysA, daysB) {
+  const a = normalizeDays(daysA);
+  const b = normalizeDays(daysB);
+  if (a.length === 0 || b.length === 0) return true;
+  const setB = new Set(b);
+  return a.some((d) => setB.has(d));
+}
+
+/**
+ * @param {unknown} days
+ * @returns {number[]}
+ */
+function normalizeDays(days) {
+  if (!Array.isArray(days)) return [];
+  return days
+    .map((d) => Number(d))
+    .filter((d) => Number.isFinite(d));
+}
+
+/**
+ * OD completo (4 coords finitas) — exigido só para oferta fixa.
+ * @param {{
+ *   origin_lat?: number | null,
+ *   origin_lng?: number | null,
+ *   destination_lat?: number | null,
+ *   destination_lng?: number | null,
+ * }} side
+ * @returns {boolean}
+ */
+function hasCompleteOd(side) {
+  const coords = [
+    side?.origin_lat,
+    side?.origin_lng,
+    side?.destination_lat,
+    side?.destination_lng,
+  ];
+  return coords.every((c) => c != null && c !== '' && Number.isFinite(Number(c)));
+}
+
+/**
  * Classifica match oferta ↔ procura/grupo (sem routing).
+ * Fixa: tempo + dias + geo OD + capacidade.
+ * Flexível: tempo + dias + capacidade (**sem** OD / residência).
+ *
  * @param {{
  *   oferta: {
  *     departure_time: string,
- *     origin_lat: number,
- *     origin_lng: number,
- *     destination_lat: number,
- *     destination_lng: number,
+ *     origin_lat?: number | null,
+ *     origin_lng?: number | null,
+ *     destination_lat?: number | null,
+ *     destination_lng?: number | null,
  *     vagas_disponiveis: number,
+ *     flexibilidade_rota?: boolean,
+ *     dias_semana?: number[] | null,
  *   },
  *   procura: {
  *     preferred_time: string,
- *     origin_lat: number,
- *     origin_lng: number,
- *     destination_lat: number,
- *     destination_lng: number,
+ *     origin_lat?: number | null,
+ *     origin_lng?: number | null,
+ *     destination_lat?: number | null,
+ *     destination_lng?: number | null,
+ *     dias_semana?: number[] | null,
  *   },
  *   n_candidato: number,
  * }} input
@@ -119,21 +172,33 @@ export function evaluateMatch({ oferta, procura, n_candidato }) {
     return 'incompatible';
   }
 
-  const originOk = isOriginWithinRadius(
-    oferta.origin_lat,
-    oferta.origin_lng,
-    procura.origin_lat,
-    procura.origin_lng,
-  );
-  const destOk = isDestinationWithinRadius(
-    oferta.destination_lat,
-    oferta.destination_lng,
-    procura.destination_lat,
-    procura.destination_lng,
-  );
-
-  if (!originOk || !destOk) {
+  if (!isDaysCompatible(oferta.dias_semana, procura.dias_semana)) {
     return 'incompatible';
+  }
+
+  const isFlex = Boolean(oferta.flexibilidade_rota);
+
+  if (!isFlex) {
+    if (!hasCompleteOd(oferta) || !hasCompleteOd(procura)) {
+      return 'incompatible';
+    }
+
+    const originOk = isOriginWithinRadius(
+      Number(oferta.origin_lat),
+      Number(oferta.origin_lng),
+      Number(procura.origin_lat),
+      Number(procura.origin_lng),
+    );
+    const destOk = isDestinationWithinRadius(
+      Number(oferta.destination_lat),
+      Number(oferta.destination_lng),
+      Number(procura.destination_lat),
+      Number(procura.destination_lng),
+    );
+
+    if (!originOk || !destOk) {
+      return 'incompatible';
+    }
   }
 
   if (canAcceptDirectly(n_candidato, oferta.vagas_disponiveis)) {

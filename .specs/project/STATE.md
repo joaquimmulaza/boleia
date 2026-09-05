@@ -2,8 +2,8 @@
 
 ## Current Active Milestone
 - **Feature**: Marketplace Oferta / Procura
-- **Status**: Phase 6 **completa** (T1–T31 Done) · T29+T30 **uncommitted** · Checkpoint 2026-09-05 ~09:15
-- **Produto (docs, 2026-09-05):** decisão **Motorista flexível + propostas bidireccionais** — **só especificação**; código de produção **não** alterado nesta etapa
+- **Status**: Phase 6 completa · Phase 7 **T32–T35 Done** (uncommitted) · T29+T30 uncommitted · Checkpoint 2026-09-05 ~11:20
+- **Produto (2026-09-05):** Motorista flexível + propostas bidireccionais — Phase 7 **completa** (T32–T35)
 - **Checkpoint:** [`.specs/features/marketplace-oferta-procura/CHECKPOINT.md`](../features/marketplace-oferta-procura/CHECKPOINT.md)
 
 ## Decisão de domínio (2026-09-04) — Grupo vivo
@@ -16,10 +16,16 @@
 - **T31 Done:** `grupos.n_maximo`; pedidos `pendente`/`rejeitado`; descoberta pública; telefone = fallback
 - **T29 Done:** RPC `renegotiate_agreement_pricing` + UI adenda em `/acordos` (único caminho mutar preços / N_contrato)
 - **T30 Done:** mapa N pontos preferenciais (MapLibre) em `PropostaReviewCard` antes do aceite
+- **T32 Done:** RPC `accept_proposal` / `reject_proposal` + RLS — `created_by` não aceita/rejeita; migration `marketplace_t32_accept_reject_contraparte`
+- **T33 Done:** propostas B (motorista→pax); inbox passageiro; deep links por `metadata.inbox`; trigger `notify_proposta_contraparte`; `findCompatibleProcuras` (fixa)
+- **T34 Done:** oferta flexível sem OD; `OfertaService.resolveOdFields`; copy «Oferta flexível»; PublishRoute esconde OD quando flex
+- **T35 Done:** matching dual — fixa geo+tempo; flex tempo/dias/capacidade sem OD/residência
 
 ## Decisão de produto (2026-09-05) — Motorista flexível + propostas bidireccionais
 
-**Estado:** documentado em `spec.md` / `design.md` / plano marketplace / `tasks.md` (T32+ Planned). **Sem implementação de código nesta etapa.**
+**Estado:** decisão imutável. **Phase 7 (T32–T35) implementada.**
+
+**Checklist decisão ↔ docs:** OK. Residual: copy «zona» no hub passageiro se ainda existir (cosmético).
 
 | Regra | MVP |
 |---|---|
@@ -27,7 +33,7 @@
 | Oferta **flexível** | Capacidade + disponibilidade + dias + janela + preço — **sem** OD obrigatório |
 | Residência do motorista | **Não** define área de atuação; **não** exclui procuras por distância residência↔recolha |
 | Zonas / polígonos / raio residencial | **Fora do MVP** |
-| Flex ≠ «rota OD + flag» | Correcto: flexível **sem** rota fixa obrigatória |
+| Flex ≠ «rota OD + flag» | Correcto: flexível **sem** rota fixa obrigatória; coluna BD `flexibilidade_rota` = flag legado |
 | Propostas | **A** pax/grupo→motorista · **B** motorista→pax/grupo |
 | Aceite | Só a **contraparte** (`created_by` não pode aceitar/rejeitar) |
 | Cadeia | Procura → **M** propostas → 1 aceite → 1 acordo **1:N** (não Procura→Motorista 1:1) |
@@ -38,8 +44,8 @@
 - Negócio = spec/planos (1:N; quatro Ns; preço dual congelado; grupo vivo; flexível sem zona; propostas bidireccionais)
 
 ## Next Steps
-1. Commit T29 e/ou T30 se o utilizador pedir (listas separadas no CHECKPOINT; sem lixo `.cline`/`.codex`)
-2. Implementar Phase 7 (docs T32+) **só quando o utilizador pedir**: P0 aceite-contraparte → P1 propostas B + notifs → P1 oferta flexível real + matching dual
+1. Commit T29 / T30 / T32 / T33 / T34 / T35 se o utilizador pedir (listas separadas no CHECKPOINT; sem lixo `.cline`/`.codex`)
+2. Phase 7 **completa** — sem tasks residual MVP flex
 3. **Não** implementar zonas/polígonos no MVP
 
 ## Key links

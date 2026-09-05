@@ -9,10 +9,11 @@
 
 ## Decisão de produto (2026-09-05) — Motorista flexível + propostas bidireccionais
 
-**Não implementar nesta etapa** — só definição. Código de produção intacto até tasks dedicadas.
+**Não implementar nesta etapa** — só definição. Código de produção intacto até tasks dedicadas (T32–T35).  
+**Re-verificado** vs decisão final (sem zona; flex sem OD; propostas A/B; contraparte; 1:M→1:N).
 
 1. Oferta **fixa** vs **flexível** (sem OD obrigatório na flexível). Flexível ≠ «rota OD + flag».
-2. **Sem** zonas/polígonos/raio residencial no MVP. Residência ≠ área de atuação.
+2. **Sem** zonas/polígonos/raio residencial no MVP. Residência ≠ área de atuação (ex.: Viana → pode servir Talatona/Kilamba/Benfica).
 3. Matching flexível ajuda a descobrir; motorista decide caso a caso.
 4. Propostas **A** (pax→motorista) e **B** (motorista→pax); só a **contraparte** aceita (`created_by` bloqueado).
 5. Cadeia: Procura → M propostas → 1 aceite → 1 acordo 1:N (corrigir residual «Procura→Motorista 1:1»).
@@ -350,6 +351,7 @@ Reutilizar no código: `PageShell`, `PageHeader`, `EstadoBadge`, `ConfirmationMo
 
 ## RPC `accept_proposal` (atómica)
 
+0. Se `auth.uid() = propostas.created_by` → **erro** (só a contraparte aceita; aplica-se a sentidos A e B)  
 1. `SELECT … FOR UPDATE` na oferta  
 2. Recalcular `vagas_ocupadas` / `vagas_disponiveis`  
 3. Se `n_passageiros_propostos > vagas_disponiveis` → erro / waitlist (não insert parcial)  
@@ -376,21 +378,72 @@ Preservar checklist do plano de impacto (não apagar auth/push/VAPID).
 
 ---
 
-## User Flows & States (fase A — pré-Penpot)
+## User Flows & States
 
-### Motorista — publicar oferta
+### Motorista — oferta **fixa**
 
-Estados: form vazio → validação coords → loading → sucesso / erro RLS|rede.  
-Negócio: sem veículo / vagas_passageiros &lt; 1 → bloquear.
+Estados: form → validação OD+coords → loading → sucesso / erro.  
+Negócio: sem veículo / `vagas_passageiros < 1` → bloquear; OD obrigatório.
+
+### Motorista — oferta **flexível** (decisão 2026-09-05)
+
+```mermaid
+flowchart TD
+  A[Motorista /publicar-trajeto] --> B[Tipo: Oferta flexível]
+  B --> C[Capacidade + dias + janela + preço]
+  C --> D{OD preenchido?}
+  D -->|Sim| E[Opcional: ignorar no matching flex]
+  D -->|Não| F[Gravar sem OD]
+  E --> G[Oferta disponível]
+  F --> G
+  G --> H[findCompatibleProcuras]
+  H --> I[Lista procuras/grupos por horário/dias/capacidade]
+  I --> J{Conveniente caso a caso?}
+  J -->|Não| K[Ignorar / recusar]
+  J -->|Sim| L[Criar proposta sentido B]
+  L --> M[Inbox da contraparte passageiro/grupo]
+```
+
+1. Publica **sem** rota OD obrigatória (capacidade, disponibilidade, dias, janela, modalidade/preço).  
+2. Residência **não** limita descoberta nem aceite.  
+3. Matching **sugere** procuras compatíveis (tempo/dias/capacidade) — **não** impõe zona.  
+4. Motorista decide caso a caso → proposta **B** ou ignora.  
+5. **Proibido:** polígonos, zonas, raio residencial, excluir por distância residência↔recolha.
+
+Copy UI alvo (T34): «Oferta flexível» — **não** «Rota flexível» (legado T27).
 
 ### Passageiro — procura + match
 
-Estados: sem procura → criar → lista matches (vazio compatível) → proposta / waitlist.  
-Negócio: `N_candidato > vagas` → CTA waitlist.
+Estados: sem procura → criar → lista matches (fixas geo+tempo; flexíveis tempo/capacidade) → proposta **A** / waitlist.  
+Negócio: `N_actual > vagas` → CTA waitlist. Cadeia: **M propostas** possíveis → 1 aceite → 1 acordo 1:N.
 
-### Aceitar proposta
+### Propostas bidireccionais
 
-Estados: revisão N pontos → confirmar → loading RPC → acordo criado / overbooking / erro.  
+| Sentido | Quem cria | Quem vê inbox / aceita |
+|---|---|---|
+| **A** | Owner procura/grupo | Motorista da oferta |
+| **B** | Motorista | Owner procura/grupo |
+
+```mermaid
+flowchart LR
+  subgraph Aflow [Sentido A]
+    P1[Pax/Grupo] -->|cria proposta| PropA[Proposta created_by=pax]
+    PropA -->|só motorista| AccA[Aceite/Recusa]
+  end
+  subgraph Bflow [Sentido B]
+    M1[Motorista] -->|cria proposta| PropB[Proposta created_by=motorista]
+    PropB -->|só pax/grupo| AccB[Aceite/Recusa]
+  end
+  AccA --> Acordo[1 acordo 1:N]
+  AccB --> Acordo
+```
+
+Regra: `auth.uid() = created_by` ⇒ **bloqueado** em aceite e rejeição.  
+`N_actual` muda ⇒ proposta aberta **intacta** (`N_proposto` snapshot); renegociar = **nova** proposta.
+
+### Aceitar proposta (contraparte)
+
+Estados: revisão snapshot (+ mapa se coords) → confirmar → RPC → acordo / overbooking / «só a contraparte» / erro.
 
 ### Acordo activo — saída / faltas
 
@@ -403,7 +456,8 @@ Estados: lista N pax → sair (confirm) → quotas intactas; registar falta → 
 | Cenário | Handling | UI |
 |---------|----------|-----|
 | Overbooking RPC | throw mensagem PT | feedback local / notification |
-| Proposta invalidada (N mudou) | throw | pedir nova proposta |
+| Criador tenta aceitar/rejeitar | throw («só a contraparte…») | erro junto à acção |
+| `N_actual` mudou após proposta | **não** invalida; snapshot mantém-se | se quiserem outro N → nova proposta |
 | Offline / RLS | `getFriendlyErrorMessage` | erro amigável |
 | Geo Photon falha | `LocationService` devolve `[]` | empty autocomplete |
 
