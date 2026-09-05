@@ -36,6 +36,11 @@ vi.mock('../services/GrupoService', () => ({
   addMembroGrupo: vi.fn(),
   getGrupoByProcura: vi.fn().mockResolvedValue(null),
   listMembrosGrupo: vi.fn().mockResolvedValue([]),
+  listGruposAbertos: vi.fn().mockResolvedValue([]),
+  listPedidosPendentes: vi.fn().mockResolvedValue([]),
+  pedirEntradaGrupo: vi.fn(),
+  aprovarEntrada: vi.fn(),
+  rejeitarEntrada: vi.fn(),
 }));
 
 vi.mock('../services/ProfileService', () => ({

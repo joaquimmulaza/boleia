@@ -730,3 +730,151 @@ ISSUES:
 - (nenhum bloqueante) Mobbin degradado; One refine não gerado — SoT = v0 vista 8 + layout textual acima
 NEXT: Implementer T28 (TDD → MyAgreements detalhe) → UI QA + Code Reviewer
 ```
+
+---
+
+## T31 — Grupo vivo: `n_maximo` + descoberta pública / pedir entrada
+
+**Task:** T31 (MKT-02, MKT-17) · **Gate design:** Ready for Implementer  
+**Paths UI:** `/passageiro` → `GrupoProcuraPanel.jsx` + secção descoberta (`GrupoDescobertaPanel` ou equivalente)  
+**Deps:** T22 · **Não tocar:** `AgreementService` / waitlist auto-aceitar / invalidar propostas por sync N
+
+### Gap actual (código)
+
+| Gap | Hoje | Alvo T31 |
+|-----|------|----------|
+| Capacidade pretendida | Sem coluna `n_maximo` | `grupos.n_maximo` (criador define 2–8); UI «Até quantas pessoas?» |
+| Label tamanho | «Grupo · N pessoas» | «Grupo · N de M» quando há `n_maximo` (ex. «2 de 4») |
+| Entrada | Só telefone (owner adiciona activo) | Fluxo principal: descoberta → **Pedir entrada** → aprovação; telefone = **fallback** |
+| Pedidos | Inexistente | `membros_grupo.estado = pendente` → Aceitar / Recusar |
+| Descoberta | Inexistente | Lista «Grupos abertos» (`N_actual < n_maximo`, procura activa) |
+| Snapshot propostas | syncN não invalida (já) | **Preservar** — aprovar membro **não** muta propostas abertas |
+
+### Schema (DDL — só Supabase MCP)
+
+1. `grupos.n_maximo` `INTEGER NOT NULL DEFAULT 4` + `CHECK (n_maximo BETWEEN 2 AND 8)`.  
+2. Expandir check `membros_grupo.estado`: `'activo' | 'saiu' | 'pendente' | 'rejeitado'`.  
+3. RLS actual já permite SELECT autenticados + INSERT se `passenger_id = auth.uid()` — suficiente para pedir entrada; UPDATE owner/envolvidos para aprovar.
+
+### User flow
+
+```mermaid
+flowchart TD
+  A["/passageiro hub"] --> B{Tem procura activa?}
+  B -->|Não| C[Criar procura primeiro]
+  B -->|Sim| D[GrupoProcuraPanel]
+  D --> E{Tem grupo?}
+  E -->|Não| F["Criar grupo + n_maximo"]
+  F --> G["Membro owner activo · 1 de M"]
+  E -->|Sim owner| H["Lista membros + pedidos pendentes"]
+  H --> I{Pedido?}
+  I -->|Aceitar| J["estado activo + sync N_actual"]
+  I -->|Recusar| K[estado rejeitado]
+  J --> L["Propostas abertas INALTERADAS"]
+  A --> M["Grupos abertos"]
+  M --> N["Pedir entrada"]
+  N --> O[estado pendente]
+  O --> H
+  D --> P["Fallback: convidar por telefone"]
+  P --> Q[addMembro activo directo se caber]
+```
+
+1. Criador define capacidade pretendida ao criar o grupo (`n_maximo`).  
+2. Outros passageiros veem grupos com vagas (`n_candidato < n_maximo`) e pedem entrada.  
+3. Owner aprova → `N_actual` sobe; propostas abertas **mantêm** `N_proposto`.  
+4. Telefone permanece como convite directo (fallback), também sujeito a `n_maximo`.
+
+### Estados UI
+
+| Estado | UI |
+|--------|-----|
+| **Loading** | Skeleton no painel grupo e na lista «Grupos abertos» |
+| **Sem grupo** | Copy vivo + stepper capacidade + CTA «Criar grupo» |
+| **Grupo com vagas** | Badge «Grupo · N de M»; lista membros; pedidos (owner); fallback telefone |
+| **Grupo cheio** | Badge «Grupo · M de M»; sem pedir entrada / sem add; copy «Grupo completo» |
+| **Pedido pendente** (candidato) | Chip «Pedido enviado» no card do grupo; sem double-submit |
+| **Erro** | Banner `role="alert"` junto à acção (`getFriendlyErrorMessage`) |
+| **Busy** | CTAs disabled |
+| **Vazio descoberta** | «Não há grupos abertos nesta altura.» |
+
+### Copy samples (PT-PT)
+
+- «Grupo de viagem» / «Viajas sozinho… mesmo sem o grupo cheio.»  
+- «Até quantas pessoas?» / «Criar grupo»  
+- «Grupo · 2 de 4»  
+- «Grupos abertos» / «Pedir entrada» / «Pedido enviado»  
+- «Pedidos de entrada» / «Aceitar» / «Recusar»  
+- «Ou convidar por telefone» (secundário)  
+- «Este grupo já está completo.» / «Já pediste entrada neste grupo.»  
+- Proibido na UI: `N_actual`, `n_maximo` cru, `pendente` técnico sem label humana
+
+### Componentes
+
+| Peça | Fonte | Notas |
+|------|-------|-------|
+| Painel próprio | `GrupoProcuraPanel.jsx` | Capacidade + pedidos + telefone fallback |
+| Descoberta | Novo `GrupoDescobertaPanel.jsx` (ou secção em hub) | Lista + pedir entrada |
+| Serviços | `GrupoService.js` | `createGrupo(..., nMaximo)`, `listGruposAbertos`, `pedirEntradaGrupo`, `listPedidosPendentes`, `aprovarEntrada`, `rejeitarEntrada`; `addMembroGrupo` respeita `n_maximo` |
+| Shell | `PageShell` / cards Tailwind actuais | Tokens `--color-primary` |
+| CTAs | `button.jsx` ou Tailwind primary | Aceitar = primary; Recusar = outline |
+| Ícones | Lucide `Users`, `UserPlus`, `Clock`, `MapPin` | |
+
+**shadcn (opcional):** `npx shadcn@latest add @shadcn/badge @shadcn/card` — chips/cards Tailwind existentes são OK se não instalar.
+
+### Layout textual (SoT imediato)
+
+```
+── Criar grupo ──
+Grupo de viagem
+Viajas sozinho… podes propor mesmo sem o grupo cheio.
+Até quantas pessoas?   [ 2 ] [ 3 ] [ 4✓ ] … [ 8 ]
+[ Criar grupo ]
+
+── Grupo próprio ──
+Grupo · 2 de 4
+[ membros… ]
+Pedidos de entrada
+  MS  Maria  [Aceitar] [Recusar]
+── Ou convidar por telefone ──
+(telefone + Adicionar)
+
+── Grupos abertos ──
+┌ Talatona → Mutual · 07:15 ┐
+│ Grupo · 2 de 4            │
+│ [ Pedir entrada ]         │
+└───────────────────────────┘
+```
+
+### Referências de design
+
+| Fonte | Resultado |
+|-------|-----------|
+| **UI Skills** | `ibelick/baseline-ui` — text-balance/pretty, skeletons, erro junto à acção, accent único, sem purple/glow |
+| **Mobbin** | **Falhou** (plano free) — degradado; não bloqueia |
+| **v0 canónico** | Chat https://v0.app/chat/cYa4j7gxE0p · «Grupo · N pessoas» na vista procura |
+| **One/v0 T31** | https://v0.app/chat/jo0mXnLQf42 · SoT = chat + layout textual + canónico |
+| **Tokens** | `src/index.css` primary `#10b748` |
+
+### Invariantes (Implementer)
+
+1. `N_proposto` das propostas abertas **não** muda ao aprovar/adicionar membro.  
+2. `syncNCandidato` só conta `estado = 'activo'`.  
+3. Não bloquear propostas por «grupo incompleto».  
+4. Recusar / pendente **não** entra em `N_actual`.  
+5. `addMembroGrupo` / `aprovarEntrada` falham se `N_actual >= n_maximo`.
+
+### Implementer checklist
+
+1. DDL MCP → testes serviço (TDD) → UI painel + descoberta.  
+2. Actualizar `GrupoProcuraPanel` + hub passageiro; telefone como fallback.  
+3. Copy humana; Visual QA vs layout textual / v0 T31.
+
+### VERDICT design (T31)
+
+```text
+VERDICT: APPROVE
+ISSUES:
+- Mobbin degradado (plano free)
+- One/v0 chat T31 em curso ou layout textual como SoT imediato
+NEXT: Implementer T31 (DDL MCP → TDD GrupoService → UI) → UI QA + Code Reviewer
+```

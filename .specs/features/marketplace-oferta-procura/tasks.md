@@ -4,7 +4,7 @@
 **Spec / Context**: `spec.md`, `context.md`  
 **UI visual**: `.specs/features/marketplace-oferta-procura/v0-reference/` (aprovado)  
 **SoT negócio**: planos marketplace + mapa impacto + `spec.md` / `context.md` / `design.md` — **prevalecem sobre o protótipo v0** se houver conflito  
-**Status**: Phase 1–5 Done · Phase 6: **T22–T28 Done** · **T31←** — grupo público / n_maximo
+**Status**: Phase 1–5 Done · Phase 6: **T22–T28 + T31 Done** · **T29←** (P2 adenda) / T30 P3
 **Checkpoint:** [CHECKPOINT.md](./CHECKPOINT.md)
 
 ---
@@ -53,7 +53,7 @@ T26, T27, T28 (após T24)
 T29 (P2), T30 (P3)
 ```
 
-**Status global:** Phase 1–5 **Done**. Phase 6: T22–T28 **Done** · **T31← AQUI**.
+**Status global:** Phase 1–5 **Done**. Phase 6: T22–T28 + **T31 Done** · **T29←** / T30.
 ---
 
 ## Tools por fase
@@ -324,11 +324,12 @@ T29 (P2), T30 (P3)
 
 ### T31: Grupo vivo — `n_maximo` + descoberta pública / pedido de entrada
 
-- **ID:** MKT-02, MKT-17  
-- **Do:** Coluna `n_maximo` em `grupos` (ou procura); UI capacidade pretendida; listagem pública de grupos + fluxo pedir entrada / aprovação (substituir convite só por telefone)  
-- **Deps:** T22  
-- **Status:** Pending  
+- **ID:** MKT-02, MKT-17
+- **Do:** Coluna `n_maximo` em `grupos` (ou procura); UI capacidade pretendida; listagem pública de grupos + fluxo pedir entrada / aprovação (substituir convite só por telefone)
+- **Deps:** T22
+- **Status:** Done
 - **Verify:** Grupo 2/4 visível a outros passageiros; pedido de entrada aumenta `N_actual`; propostas abertas inalteradas
+- **Nota:** DDL `n_maximo` + estados `pendente`/`rejeitado`; `GrupoDescobertaPanel`; telefone = fallback; design gate APPROVE (v0 `jo0mXnLQf42`)
 
 ---
 

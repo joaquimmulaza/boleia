@@ -6,13 +6,18 @@ import {
   addMembroGrupo,
   getGrupoByProcura,
   listMembrosGrupo,
+  listPedidosPendentes,
+  aprovarEntrada,
+  rejeitarEntrada,
 } from '../services/GrupoService';
 import { findPassageiroByTelefone } from '../services/ProfileService';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 
+const CAPACIDADES = [2, 3, 4, 5, 6, 7, 8];
+
 /**
  * Painel para criar/gerir o grupo ligado a uma procura.
- * Copy humana: «Grupo · N pessoas» — nunca jargon de domínio.
+ * Copy humana: «Grupo · N de M» — nunca jargon de domínio.
  *
  * @param {{
  *   procura: {
@@ -32,9 +37,11 @@ import { getFriendlyErrorMessage } from '../utils/errorHandler';
 const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
   const [grupo, setGrupo] = useState(null);
   const [membros, setMembros] = useState([]);
+  const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', text: '' });
+  const [nMaximo, setNMaximo] = useState(4);
   const [telefone, setTelefone] = useState('');
   const [pickup, setPickup] = useState({
     pickup_name: '',
@@ -52,14 +59,19 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
       const g = await getGrupoByProcura(procura.id);
       setGrupo(g);
       if (g) {
-        const lista = await listMembrosGrupo(g.id);
+        const [lista, pendentes] = await Promise.all([
+          listMembrosGrupo(g.id),
+          listPedidosPendentes(g.id),
+        ]);
         setMembros(lista);
+        setPedidos(pendentes);
       } else {
         setMembros([]);
+        setPedidos([]);
       }
     } catch (err) {
       console.error(err);
-      setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
+      setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
     } finally {
       setLoading(false);
     }
@@ -69,8 +81,10 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
     carregar();
   }, [carregar]);
 
-  const labelTamanho = (n) => {
-    if (n <= 1) return n === 1 && grupo ? 'Grupo · 1 pessoa' : 'Individual';
+  const labelTamanho = (n, max) => {
+    if (!grupo && n <= 1) return 'Individual';
+    if (max != null) return `Grupo · ${n} de ${max}`;
+    if (n <= 1) return 'Grupo · 1 pessoa';
     return `Grupo · ${n} pessoas`;
   };
 
@@ -78,7 +92,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
     setBusy(true);
     setFeedback({ type: '', text: '' });
     try {
-      const criado = await createGrupo(procura.id, 'O meu grupo');
+      const criado = await createGrupo(procura.id, 'O meu grupo', nMaximo);
       await addMembroGrupo(criado.id, {
         passenger_id: userId,
         pickup_name: procura.origin_name ?? null,
@@ -93,7 +107,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
       await carregar();
       onGrupoChange?.();
     } catch (err) {
-      setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
+      setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
     } finally {
       setBusy(false);
     }
@@ -137,6 +151,35 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
     }
   };
 
+  const handleAprovar = async (membroId) => {
+    setBusy(true);
+    setFeedback({ type: '', text: '' });
+    try {
+      await aprovarEntrada(membroId);
+      setFeedback({ type: 'success', text: 'Pedido aceite. O grupo cresceu.' });
+      await carregar();
+      onGrupoChange?.();
+    } catch (err) {
+      setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRejeitar = async (membroId) => {
+    setBusy(true);
+    setFeedback({ type: '', text: '' });
+    try {
+      await rejeitarEntrada(membroId);
+      setFeedback({ type: 'success', text: 'Pedido recusado.' });
+      await carregar();
+    } catch (err) {
+      setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handlePickupChange = (e) => {
     setPickup((prev) => ({ ...prev, pickup_name: e.target.value }));
   };
@@ -150,15 +193,19 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
   }
 
   const tamanho = membros.length > 0 ? membros.length : procura.n_candidato ?? 1;
+  const max = grupo?.n_maximo ?? null;
+  const cheio = max != null && tamanho >= max;
 
   return (
     <section className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 shadow-sm space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
           <Users size={18} className="text-primary" aria-hidden="true" />
-          <span>Grupo de viagem</span>
+          <span className="text-balance">Grupo de viagem</span>
         </div>
-        <span className="text-sm font-semibold text-slate-500">{labelTamanho(tamanho)}</span>
+        <span className="text-sm font-semibold text-slate-500 tabular-nums">
+          {labelTamanho(tamanho, max)}
+        </span>
       </div>
 
       {feedback.text ? (
@@ -180,6 +227,27 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
             Viajas sozinho por agora. Cria um grupo para incluir colegas — podes propor
             acordo assim que houver quem queira viajar, mesmo sem o grupo cheio.
           </p>
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              Até quantas pessoas?
+            </legend>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Capacidade pretendida">
+              {CAPACIDADES.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setNMaximo(n)}
+                  className={`size-10 rounded-lg text-sm font-bold tabular-nums ${
+                    nMaximo === n
+                      ? 'bg-primary text-white'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200'
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </fieldset>
           <button
             type="button"
             disabled={busy}
@@ -217,42 +285,90 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
             ))}
           </ul>
 
-          <form onSubmit={handleAdicionarMembro} className="space-y-3 border-t border-slate-100 pt-4">
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-              Adicionar colega
-            </p>
-            <label className="flex flex-col gap-1.5 text-sm font-semibold">
-              Telefone do colega
-              <input
-                type="tel"
-                value={telefone}
-                onChange={(e) => setTelefone(e.target.value)}
-                placeholder="9XXXXXXXX"
-                required
-                className="h-12 rounded-lg bg-light-gray dark:bg-slate-800 px-3 font-normal"
-              />
-            </label>
-            <AddressInput
-              name="pickup_name"
-              label="Ponto de recolha (opcional)"
-              value={pickup.pickup_name}
-              onChange={handlePickupChange}
-              onSelectCoordinates={(c) =>
-                setPickup((prev) => ({
-                  ...prev,
-                  pickup_lat: c.lat,
-                  pickup_lng: c.lng,
-                }))
-              }
-            />
-            <button
-              type="submit"
-              disabled={busy || !telefone.trim()}
-              className="w-full bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60"
+          {pedidos.length > 0 ? (
+            <div className="space-y-2 border-t border-slate-100 pt-4">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                Pedidos de entrada
+              </p>
+              <ul className="space-y-2" aria-label="Pedidos de entrada">
+                {pedidos.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex items-center gap-3 rounded-lg bg-amber-50/80 dark:bg-amber-950/20 px-3 py-2.5"
+                  >
+                    <div className="size-8 rounded-full bg-amber-100 flex items-center justify-center text-xs font-bold text-amber-800 shrink-0">
+                      {(p.perfis?.nome_completo || '?').slice(0, 1).toUpperCase()}
+                    </div>
+                    <p className="text-sm font-semibold flex-1 min-w-0 truncate">
+                      {p.perfis?.nome_completo || 'Passageiro'}
+                    </p>
+                    <div className="flex gap-2 shrink-0">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleAprovar(p.id)}
+                        className="text-xs font-bold bg-primary text-white px-3 py-1.5 rounded-lg disabled:opacity-60"
+                      >
+                        Aceitar
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleRejeitar(p.id)}
+                        className="text-xs font-bold border border-slate-200 px-3 py-1.5 rounded-lg disabled:opacity-60"
+                      >
+                        Recusar
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {cheio ? (
+            <p className="text-sm text-slate-500 text-pretty">Este grupo já está completo.</p>
+          ) : (
+            <form
+              onSubmit={handleAdicionarMembro}
+              className="space-y-3 border-t border-slate-100 pt-4"
             >
-              Adicionar ao grupo
-            </button>
-          </form>
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                Ou convidar por telefone
+              </p>
+              <label className="flex flex-col gap-1.5 text-sm font-semibold">
+                Telefone do colega
+                <input
+                  type="tel"
+                  value={telefone}
+                  onChange={(e) => setTelefone(e.target.value)}
+                  placeholder="9XXXXXXXX"
+                  required
+                  className="h-12 rounded-lg bg-light-gray dark:bg-slate-800 px-3 font-normal"
+                />
+              </label>
+              <AddressInput
+                name="pickup_name"
+                label="Ponto de recolha (opcional)"
+                value={pickup.pickup_name}
+                onChange={handlePickupChange}
+                onSelectCoordinates={(c) =>
+                  setPickup((prev) => ({
+                    ...prev,
+                    pickup_lat: c.lat,
+                    pickup_lng: c.lng,
+                  }))
+                }
+              />
+              <button
+                type="submit"
+                disabled={busy || !telefone.trim()}
+                className="w-full bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60"
+              >
+                Adicionar ao grupo
+              </button>
+            </form>
+          )}
         </div>
       )}
     </section>

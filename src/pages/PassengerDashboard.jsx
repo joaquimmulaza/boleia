@@ -7,6 +7,7 @@ import PageShell from '../components/PageShell';
 import EmptyState from '../components/EmptyState';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import GrupoProcuraPanel from '../components/GrupoProcuraPanel';
+import GrupoDescobertaPanel from '../components/GrupoDescobertaPanel';
 import { createProcura, listProcurasByOwner } from '../services/ProcuraService';
 import { findCompatibleOfertas } from '../services/MatchingService';
 import { createProposta } from '../services/PropostaService';
@@ -292,11 +293,13 @@ const PassengerDashboard = () => {
                 <Clock size={14} aria-hidden="true" />
                 {String(procura.preferred_time).slice(0, 5)}
               </span>
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1 tabular-nums">
                 <Users size={14} aria-hidden="true" />
-                {procura.n_candidato === 1
-                  ? 'Individual'
-                  : `Grupo · ${procura.n_candidato} pessoas`}
+                {grupo?.n_maximo != null && procura.n_candidato >= 1
+                  ? `Grupo · ${procura.n_candidato} de ${grupo.n_maximo}`
+                  : procura.n_candidato === 1
+                    ? 'Individual'
+                    : `Grupo · ${procura.n_candidato} pessoas`}
               </span>
             </div>
             <button
@@ -312,6 +315,11 @@ const PassengerDashboard = () => {
             procura={procura}
             userId={user.id}
             onGrupoChange={carregar}
+          />
+
+          <GrupoDescobertaPanel
+            userId={user.id}
+            excludeGrupoId={grupo?.id ?? null}
           />
 
           {(view === 'matches' || view === 'hub') && (

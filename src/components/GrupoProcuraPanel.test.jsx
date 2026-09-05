@@ -7,14 +7,18 @@ import {
   addMembroGrupo,
   getGrupoByProcura,
   listMembrosGrupo,
+  listPedidosPendentes,
+  aprovarEntrada,
 } from '../services/GrupoService';
-import { findPassageiroByTelefone } from '../services/ProfileService';
 
 vi.mock('../services/GrupoService', () => ({
   createGrupo: vi.fn(),
   addMembroGrupo: vi.fn(),
   getGrupoByProcura: vi.fn(),
   listMembrosGrupo: vi.fn(),
+  listPedidosPendentes: vi.fn(),
+  aprovarEntrada: vi.fn(),
+  rejeitarEntrada: vi.fn(),
 }));
 
 vi.mock('../services/ProfileService', () => ({
@@ -39,164 +43,137 @@ const procura = {
   destination_name: 'Miramar',
 };
 
-describe('GrupoProcuraPanel', () => {
+describe('GrupoProcuraPanel T31', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getGrupoByProcura.mockResolvedValue(null);
     listMembrosGrupo.mockResolvedValue([]);
+    listPedidosPendentes.mockResolvedValue([]);
   });
 
-  it('mostra CTA para criar grupo quando ainda não existe', async () => {
-    render(
-      <GrupoProcuraPanel
-        procura={procura}
-        userId="pax-1"
-        onGrupoChange={vi.fn()}
-      />,
-    );
-
-    expect(await screen.findByRole('button', { name: /Criar grupo/i })).toBeInTheDocument();
-    expect(screen.getByText(/Individual/i)).toBeInTheDocument();
-  });
-
-  it('cria grupo, adiciona o dono e actualiza tamanho do grupo', async () => {
-    const onGrupoChange = vi.fn();
-    createGrupo.mockResolvedValue({ id: 'g-1', procura_id: 'pr-1', nome: 'Colegas' });
+  it('permite escolher capacidade pretendida ao criar grupo', async () => {
+    createGrupo.mockResolvedValue({
+      id: 'g-1',
+      procura_id: 'pr-1',
+      nome: 'O meu grupo',
+      n_maximo: 4,
+    });
     addMembroGrupo.mockResolvedValue({ id: 'm-1', passenger_id: 'pax-1' });
     getGrupoByProcura
       .mockResolvedValueOnce(null)
-      .mockResolvedValue({ id: 'g-1', procura_id: 'pr-1', nome: 'Colegas' });
+      .mockResolvedValue({ id: 'g-1', procura_id: 'pr-1', n_maximo: 4 });
     listMembrosGrupo.mockResolvedValue([
       {
         id: 'm-1',
         passenger_id: 'pax-1',
-        pickup_name: 'Talatona',
         estado: 'activo',
         ordem_insercao: 0,
-        perfis: { nome_completo: 'Tu', telefone: '+244923000001' },
+        perfis: { nome_completo: 'Tu' },
       },
     ]);
 
-    render(
-      <GrupoProcuraPanel
-        procura={procura}
-        userId="pax-1"
-        onGrupoChange={onGrupoChange}
-      />,
-    );
+    render(<GrupoProcuraPanel procura={procura} userId="pax-1" onGrupoChange={vi.fn()} />);
 
-    fireEvent.click(await screen.findByRole('button', { name: /Criar grupo/i }));
+    expect(await screen.findByText(/Até quantas pessoas/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^4$/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Criar grupo/i }));
 
     await waitFor(() => {
-      expect(createGrupo).toHaveBeenCalledWith('pr-1', expect.any(String));
-      expect(addMembroGrupo).toHaveBeenCalledWith(
-        'g-1',
-        expect.objectContaining({
-          passenger_id: 'pax-1',
-          pickup_name: 'Talatona',
-        }),
-      );
+      expect(createGrupo).toHaveBeenCalledWith('pr-1', expect.any(String), 4);
     });
 
-    expect(await screen.findByText(/Grupo · 1 pessoa/i)).toBeInTheDocument();
-    expect(onGrupoChange).toHaveBeenCalled();
+    expect(await screen.findByText(/Grupo · 1 de 4/i)).toBeInTheDocument();
   });
 
-  it('adiciona membro por telefone com ponto de recolha opcional', async () => {
-    getGrupoByProcura.mockResolvedValue({ id: 'g-1', procura_id: 'pr-1', nome: 'Colegas' });
+  it('mostra pedidos pendentes e permite aceitar', async () => {
+    getGrupoByProcura.mockResolvedValue({
+      id: 'g-1',
+      procura_id: 'pr-1',
+      n_maximo: 4,
+    });
+    listMembrosGrupo.mockResolvedValue([
+      {
+        id: 'm-1',
+        passenger_id: 'pax-1',
+        estado: 'activo',
+        ordem_insercao: 0,
+        perfis: { nome_completo: 'Ana' },
+      },
+    ]);
+    listPedidosPendentes
+      .mockResolvedValueOnce([
+        {
+          id: 'm-p',
+          passenger_id: 'pax-2',
+          estado: 'pendente',
+          perfis: { nome_completo: 'Bruno' },
+        },
+      ])
+      .mockResolvedValue([]);
+    aprovarEntrada.mockResolvedValue({ id: 'm-p', estado: 'activo' });
     listMembrosGrupo
       .mockResolvedValueOnce([
         {
           id: 'm-1',
           passenger_id: 'pax-1',
-          pickup_name: 'Talatona',
           estado: 'activo',
           ordem_insercao: 0,
-          perfis: { nome_completo: 'Ana', telefone: '+244923000001' },
+          perfis: { nome_completo: 'Ana' },
         },
       ])
       .mockResolvedValue([
         {
           id: 'm-1',
           passenger_id: 'pax-1',
-          pickup_name: 'Talatona',
           estado: 'activo',
           ordem_insercao: 0,
-          perfis: { nome_completo: 'Ana', telefone: '+244923000001' },
+          perfis: { nome_completo: 'Ana' },
         },
         {
-          id: 'm-2',
+          id: 'm-p',
           passenger_id: 'pax-2',
-          pickup_name: 'Benfica',
           estado: 'activo',
           ordem_insercao: 1,
-          perfis: { nome_completo: 'Bruno', telefone: '+244923456789' },
+          perfis: { nome_completo: 'Bruno' },
         },
       ]);
-    findPassageiroByTelefone.mockResolvedValue({
-      id: 'pax-2',
-      nome_completo: 'Bruno',
-      telefone: '+244923456789',
-    });
-    addMembroGrupo.mockResolvedValue({ id: 'm-2', passenger_id: 'pax-2' });
 
     const onGrupoChange = vi.fn();
     render(
-      <GrupoProcuraPanel
-        procura={{ ...procura, n_candidato: 1 }}
-        userId="pax-1"
-        onGrupoChange={onGrupoChange}
-      />,
+      <GrupoProcuraPanel procura={procura} userId="pax-1" onGrupoChange={onGrupoChange} />,
     );
 
-    expect(await screen.findByText(/Ana/i)).toBeInTheDocument();
-
-    fireEvent.change(screen.getByLabelText(/Telefone do colega/i), {
-      target: { value: '923456789' },
-    });
-    fireEvent.change(screen.getByLabelText(/Ponto de recolha/i), {
-      target: { value: 'Benfica' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: /Adicionar ao grupo/i }));
+    expect(await screen.findByText(/Pedidos de entrada/i)).toBeInTheDocument();
+    expect(screen.getByText(/Bruno/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Aceitar/i }));
 
     await waitFor(() => {
-      expect(findPassageiroByTelefone).toHaveBeenCalledWith('923456789');
-      expect(addMembroGrupo).toHaveBeenCalledWith(
-        'g-1',
-        expect.objectContaining({
-          passenger_id: 'pax-2',
-          pickup_name: 'Benfica',
-          ordem_insercao: 1,
-        }),
-      );
+      expect(aprovarEntrada).toHaveBeenCalledWith('m-p');
+      expect(onGrupoChange).toHaveBeenCalled();
     });
-
-    expect(await screen.findByText(/Grupo · 2 pessoas/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Bruno/i).length).toBeGreaterThanOrEqual(1);
-    expect(onGrupoChange).toHaveBeenCalled();
   });
 
-  it('não expõe jargon de domínio na UI', async () => {
-    getGrupoByProcura.mockResolvedValue({ id: 'g-1', procura_id: 'pr-1', nome: null });
+  it('mantém telefone como fallback e não expõe jargon', async () => {
+    getGrupoByProcura.mockResolvedValue({
+      id: 'g-1',
+      procura_id: 'pr-1',
+      n_maximo: 4,
+    });
     listMembrosGrupo.mockResolvedValue([
       {
         id: 'm-1',
         passenger_id: 'pax-1',
         estado: 'activo',
         ordem_insercao: 0,
-        perfis: { nome_completo: 'Ana', telefone: '+244923000001' },
+        perfis: { nome_completo: 'Ana' },
       },
     ]);
 
     const { container } = render(
-      <GrupoProcuraPanel
-        procura={{ ...procura, n_candidato: 1 }}
-        userId="pax-1"
-        onGrupoChange={vi.fn()}
-      />,
+      <GrupoProcuraPanel procura={procura} userId="pax-1" onGrupoChange={vi.fn()} />,
     );
 
-    await screen.findByText(/Ana/i);
-    expect(container.textContent).not.toMatch(/N_candidato|POR_PASSAGEIRO|n_candidato/i);
+    expect(await screen.findByText(/Ou convidar por telefone/i)).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/N_actual|n_maximo|POR_PASSAGEIRO|pendente/i);
   });
 });

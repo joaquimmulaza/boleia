@@ -85,7 +85,7 @@ SoT visual = **v0 (One MCP)** + shadcn JSX + tokens `src/index.css`. Em UI/UX: U
 
 🏛️ Relatório de Estado da Arquitetura: Boleia Certa
 **Última Atualização:** 4 de Setembro de 2026
-**Fase Atual:** Marketplace Oferta/Procura (Phase 6: **T22–T28 Done**; **T31←**) + **Agent loop Cursor** (v0/shadcn/UI Skills/Mobbin free-safe + tlc-spec-driven). Spec: `.specs/features/marketplace-oferta-procura/`. Checkpoint: `CHECKPOINT.md`.
+**Fase Atual:** Marketplace Oferta/Procura (Phase 6: **T22–T28 + T31 Done**; **T29←** P2) + **Agent loop Cursor** (v0/shadcn/UI Skills/Mobbin free-safe + tlc-spec-driven). Spec: `.specs/features/marketplace-oferta-procura/`. Checkpoint: `CHECKPOINT.md`.
 
 **O que já está implementado e validado:**
 1. **Infraestrutura e Backend (Supabase):**
@@ -97,7 +97,7 @@ SoT visual = **v0 (One MCP)** + shadcn JSX + tokens `src/index.css`. Em UI/UX: U
  * **Auth/Push PRESERVE:** `perfis`, `notificacoes`, `push_subscriptions`, Edge `send-push` (VAPID).
 2. **Frontend e Interface (React / Vite):**
  * **Layout & paths:** `/` Landing, `/auth`, `/passageiro` (procura/matches/waitlist + **grupo** via `GrupoProcuraPanel`), `/motorista` (ofertas + propostas), `/veiculo`, `/publicar-trajeto` («Publicar oferta»), `/acordos` (`MyAgreements` 1:N), `/faltas`, `/perfil`.
- * **Grupo (T22–T23):** criar grupo; membros (telefone = fallback até T31); pickup opcional; sync `N_actual`; `createProposta` com `grupo_id` + `N_proposto = N_actual`; **não** bloquear por «grupo incompleto»; sync **não** invalida propostas abertas.
+ * **Grupo (T22–T23 + T31):** criar grupo com `n_maximo`; membros activos; descoberta pública + pedir entrada / aprovação; telefone = fallback; pickup opcional; sync `N_actual`; `createProposta` com `grupo_id` + `N_proposto = N_actual`; **não** bloquear por «grupo incompleto»; sync **não** invalida propostas abertas.
  * **Hub motorista (T24):** `PropostaReviewCard` + `enrichPropostasForReview` / `propostaReview` — lista snapshot + pickup + preço resolvido (copy humana); Aceitar → RPC `accept_proposal`.
  * **E2E quotas (T25):** TOTAL_ACORDO N=3/4 + resto; `leavePassenger` não altera cabeçalho nem `quota_mensal_kz` dos restantes (`AgreementsE2E.test.jsx`).
  * **Waitlist promoção (T26):** `promoteWaitlist` → RPC `promote_waitlist` (1º FIFO → `notificada` + notif `waitlist_promoted`); hook em `leavePassenger` (best-effort); UI hub com estados activa/notificada; **sem** auto-aceitar.
@@ -114,4 +114,4 @@ SoT visual = **v0 (One MCP)** + shadcn JSX + tokens `src/index.css`. Em UI/UX: U
 5. **Geocoding OSM (mantido):** Photon `countrycode=ao`; Autocomplete «Powered by OpenStreetMap».
 6. **UI copy:** nunca expor jargon (`N_actual`, `N_proposto`, `N_candidato`, `POR_PASSAGEIRO`) — só labels humanas («Grupo · 2 pessoas», «Por passageiro», «Total do acordo»).
 
-**Próximo (Phase 6):** T31 — `n_maximo` + grupo público / pedir entrada; depois T29 P2 / T30 P3.
+**Próximo (Phase 6):** T29 P2 — adenda / `renegotiateAgreementPricing`; depois T30 P3.

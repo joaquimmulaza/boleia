@@ -109,73 +109,44 @@ describe('GrupoService', () => {
       error: null,
     });
     const mockGrupoSingle = vi.fn().mockResolvedValue({
-      data: { id: 'g-1', procura_id: 'pr-1' },
+      data: { id: 'g-1', procura_id: 'pr-1', n_maximo: 4 },
       error: null,
     });
-    const mockCount = vi.fn().mockResolvedValue({ count: 2, error: null });
-    const mockUpdateEq = vi.fn().mockResolvedValue({ error: null });
-    const mockInvalidate = vi.fn().mockResolvedValue({ error: null });
 
+    let membrosFromCalls = 0;
     supabase.from.mockImplementation((table) => {
-      if (table === 'membros_grupo') {
+      if (table === 'grupos') {
         return {
-          insert: vi.fn().mockReturnValue({
-            select: vi.fn().mockReturnValue({ single: mockMembroSingle }),
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({ single: mockGrupoSingle }),
           }),
+        };
+      }
+      if (table === 'membros_grupo') {
+        membrosFromCalls += 1;
+        if (membrosFromCalls === 1) {
+          // assertTemVaga: count activos
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue({ count: 1, error: null }),
+              }),
+            }),
+          };
+        }
+        if (membrosFromCalls === 2) {
+          return {
+            insert: vi.fn().mockReturnValue({
+              select: vi.fn().mockReturnValue({ single: mockMembroSingle }),
+            }),
+          };
+        }
+        // syncNCandidato count
+        return {
           select: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue(mockCount()),
-            }),
-          }),
-        };
-      }
-      if (table === 'grupos') {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({ single: mockGrupoSingle }),
-          }),
-        };
-      }
-      if (table === 'procuras') {
-        return {
-          update: vi.fn().mockReturnValue({ eq: mockUpdateEq }),
-        };
-      }
-      if (table === 'propostas') {
-        return {
-          update: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({ eq: mockInvalidate }),
-          }),
-        };
-      }
-      return {};
-    });
-
-    // Simpler path: mock syncNCandidato internals carefully via addMembro
-    // Re-mock with clearer chain for count
-    let callCount = 0;
-    supabase.from.mockImplementation((table) => {
-      if (table === 'membros_grupo' && callCount === 0) {
-        callCount += 1;
-        return {
-          insert: vi.fn().mockReturnValue({
-            select: vi.fn().mockReturnValue({ single: mockMembroSingle }),
-          }),
-        };
-      }
-      if (table === 'grupos') {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({ single: mockGrupoSingle }),
-          }),
-        };
-      }
-      if (table === 'membros_grupo') {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockImplementation(() => ({
               eq: vi.fn().mockResolvedValue({ count: 2, error: null }),
-            })),
+            }),
           }),
         };
       }
@@ -183,15 +154,6 @@ describe('GrupoService', () => {
         return {
           update: vi.fn().mockReturnValue({
             eq: vi.fn().mockResolvedValue({ error: null }),
-          }),
-        };
-      }
-      if (table === 'propostas') {
-        return {
-          update: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              eq: vi.fn().mockResolvedValue({ error: null }),
-            }),
           }),
         };
       }
