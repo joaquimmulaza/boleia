@@ -1,11 +1,12 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import OfertaMatchCard, {
+import OfertaMatchCard from './OfertaMatchCard';
+import {
   labelCapacidade,
   labelModoPreco,
   labelRotaOferta,
-} from './OfertaMatchCard';
+} from '../utils/ofertaLabels';
 
 const ofertaBase = {
   id: 'of-1',

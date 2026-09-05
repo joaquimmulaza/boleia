@@ -7,7 +7,7 @@ import VehicleSetup from './VehicleSetup';
 // ---------------------------------------------------------------------------
 // Mocks — apenas o cliente Supabase; a lógica de conflito vive na BD.
 // ---------------------------------------------------------------------------
-const { mockGetUser, mockUpsert, mockEq, mockSelect } = vi.hoisted(() => {
+const { mockGetUser } = vi.hoisted(() => {
   const mockUpsert = vi.fn();
   const mockEq = vi.fn();
   const mockSelect = vi.fn(() => ({ eq: mockEq }));

@@ -2,7 +2,6 @@ import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import Layout from './Layout';
-import { supabase } from '../lib/supabase';
 import { ThemeProvider } from '../contexts/ThemeContext';
 
 // Mock do supabase

@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCircle, Info, AlertCircle, X, BellRing, BellOff, Trash2 } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
-import { supabase } from '../lib/supabase';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { resolveNotificationRoute } from '../utils/notificationRouter';
 import { useAuth } from '../contexts/AuthContext';

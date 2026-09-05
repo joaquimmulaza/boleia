@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import OnboardingPermissions from './OnboardingPermissions';
-import { supabaseLocal, createTestUser, deleteTestUser } from '../test/supabaseTestUtils';
+import { createTestUser, deleteTestUser } from '../test/supabaseTestUtils';
 
 // Mocks das APIs nativas do browser
 Object.defineProperty(global, 'Notification', {
