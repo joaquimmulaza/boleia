@@ -93,9 +93,9 @@ export function canAcceptDirectly(nCandidato, vagasDisponiveis) {
 }
 
 /**
- * Intersecção de dias da semana (1=Seg … 7=Dom).
- * Se um dos lados estiver ausente/vazio → compatível (MVP: procura sem `dias_semana`).
- * Aceita números ou strings numéricas (JSON/BD).
+ * Intersecção real de dias da semana (1=Seg … 7=Dom).
+ * Ambos os lados têm de ter pelo menos um dia; vazio/ausente → incompatível.
+ * Compatível só com intersecção não-vazia. Aceita números ou strings (JSON/BD).
  * @param {number[] | string[] | null | undefined} daysA
  * @param {number[] | string[] | null | undefined} daysB
  * @returns {boolean}
@@ -103,7 +103,7 @@ export function canAcceptDirectly(nCandidato, vagasDisponiveis) {
 export function isDaysCompatible(daysA, daysB) {
   const a = normalizeDays(daysA);
   const b = normalizeDays(daysB);
-  if (a.length === 0 || b.length === 0) return true;
+  if (a.length === 0 || b.length === 0) return false;
   const setB = new Set(b);
   return a.some((d) => setB.has(d));
 }
@@ -143,6 +143,7 @@ function hasCompleteOd(side) {
  * Classifica match oferta ↔ procura/grupo (sem routing).
  * Fixa: tempo + dias + geo OD + capacidade.
  * Flexível: tempo + dias + capacidade (**sem** OD / residência).
+ * Dias: intersecção real; vazio/ausente num lado → incompatível.
  *
  * @param {{
  *   oferta: {

@@ -101,8 +101,10 @@ export async function leavePassenger(acordoId, passengerId) {
 /**
  * Adenda: único caminho de serviço para mutar preços / n_passageiros_contrato.
  * Agenda para o 1.º dia do mês seguinte (`effective_from`); o mês corrente
- * mantém cabeçalho e quotas congelados. Contrato prévio fica em
- * `adenda_pendente.previo_*` (auditável).
+ * mantém cabeçalho e quotas congelados. A adenda fica `pendente_passageiro`
+ * até um passageiro activo aceitar (`acceptAgreementAdenda`); só então
+ * passa a `aceite` e pode ser aplicada em `effective_from`.
+ * Contrato prévio fica em `adenda_pendente.previo_*` (auditável).
  * Default de n_passageiros = COUNT de passageiros activos; se passado, deve
  * coincidir com esse COUNT (MVP — evita fantasmas).
  *
@@ -164,6 +166,39 @@ export async function renegotiateAgreementPricing(acordoId, input) {
 
   if (error) throw error;
   return withPendingAdenda(data);
+}
+
+/**
+ * Passageiro activo aceita adenda pendente (`pendente_passageiro` → `aceite`).
+ * Não aplica preços antes de `effective_from` (lazy `apply_due_agreement_adendas`).
+ * Motorista / criador da adenda não pode aceitar.
+ *
+ * @param {string} adendaId
+ * @returns {Promise<object>} linha `acordos_adendas` actualizada
+ */
+export async function acceptAgreementAdenda(adendaId) {
+  if (!adendaId) {
+    throw new Error('ID da adenda é obrigatório.');
+  }
+
+  const { data: adendaIdOut, error: rpcError } = await supabase.rpc(
+    'accept_agreement_adenda',
+    { p_adenda_id: adendaId },
+  );
+
+  if (rpcError) {
+    throw new Error(rpcError.message || 'Falha ao aceitar a adenda.');
+  }
+
+  const id = adendaIdOut ?? adendaId;
+  const { data, error } = await supabase
+    .from('acordos_adendas')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) throw error;
+  return data;
 }
 
 /**

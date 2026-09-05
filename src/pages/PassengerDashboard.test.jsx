@@ -113,6 +113,22 @@ describe('PassengerDashboard — marketplace', () => {
     });
   });
 
+  it('empty de matches fala em horário e trajeto — sem «zona»', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase }]);
+    findCompatibleOfertas.mockResolvedValue({ direct: [], waitlist: [], incompatible: [] });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByText(/Ainda não há ofertas compatíveis com o teu horário e trajeto/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/zona/i)).not.toBeInTheDocument();
+  });
+
   it('com procura activa mostra painel para criar grupo', async () => {
     listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
 

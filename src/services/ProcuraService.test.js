@@ -29,14 +29,22 @@ describe('ProcuraService', () => {
     supabase.auth.getUser.mockResolvedValue({
       data: { user: { id: 'pax-1' } },
     });
-    const mockSingle = vi.fn().mockResolvedValue({
-      data: { id: 'pr-1', owner_id: 'pax-1', n_candidato: 1, estado: 'activa' },
-      error: null,
+    const mockInsert = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({
+          data: {
+            id: 'pr-1',
+            owner_id: 'pax-1',
+            n_candidato: 1,
+            estado: 'activa',
+            dias_semana: [1, 2, 3, 4, 5],
+          },
+          error: null,
+        }),
+      }),
     });
     supabase.from.mockReturnValue({
-      insert: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({ single: mockSingle }),
-      }),
+      insert: mockInsert,
     });
 
     const result = await createProcura({
@@ -50,7 +58,41 @@ describe('ProcuraService', () => {
     });
 
     expect(supabase.from).toHaveBeenCalledWith('procuras');
+    expect(mockInsert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        n_candidato: 1,
+        dias_semana: [1, 2, 3, 4, 5],
+      }),
+    ]);
     expect(result.n_candidato).toBe(1);
+  });
+
+  it('createProcura grava dias_semana fornecidos (não só o default Seg–Sex)', async () => {
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'pax-1' } },
+    });
+    const mockInsert = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({
+          data: {
+            id: 'pr-2',
+            owner_id: 'pax-1',
+            dias_semana: [1, 3, 5],
+          },
+          error: null,
+        }),
+      }),
+    });
+    supabase.from.mockReturnValue({ insert: mockInsert });
+
+    await createProcura({
+      preferred_time: '07:00',
+      dias_semana: [1, 3, 5],
+    });
+
+    expect(mockInsert).toHaveBeenCalledWith([
+      expect.objectContaining({ dias_semana: [1, 3, 5] }),
+    ]);
   });
 
   it('createProcura rejeita sem autenticação', async () => {

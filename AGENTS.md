@@ -25,29 +25,29 @@ Stack: React + Vite, Tailwind CSS, Lucide React, shadcn/ui (JSX), Supabase (Back
 * **Sem Confirmações Cegas:** Se te deparares com uma ambiguidade arquitetónica, para e pergunta. Não tomes o caminho de menor resistência se isso comprometer a qualidade.
 * **Refatoração Contínua:** Constantemente procura código morto, duplicações ou lógicas pesadas e sugere melhorias.
 * **Integração de Rotas Contínua:** Sempre que criares uma nova página (`.jsx`), tens OBRIGATORIAMENTE de ir ao ficheiro `src/App.jsx` e registar a nova rota correspondente dentro do `react-router-dom`. Além disso, deves verificar se os links de navegação (como os do `Layout.jsx`) precisam de ser atualizados para apontar para a nova página.
-* **REGRA DE OURO UI:** A fonte de verdade visual é **v0 via One MCP** + tokens em `src/index.css` + primitivos shadcn em `src/components/ui/`. Em tarefas UI/UX usar sempre UI Skills MCP, shadcn MCP e Mobbin free-safe. É proibido inventar ecrãs novos sem passar pelo fluxo §4. Penpot/Superdesign/Stitch estão **descontinuados** como SoT.
+* **REGRA DE OURO UI:** Gerador SoT = **Stitch MCP** + sincronia obrigatória com **UI Skills MCP** (antes do prompt e no QA) + tokens em `src/index.css` + primitivos shadcn em `src/components/ui/`. Mobbin free-safe opcional. **v0/One só fallback.** É proibido inventar ecrãs novos sem passar pelo fluxo §4. Penpot/Superdesign **não** são SoT. Ponte: `.cursor/skills/boleia-stitch` + `skills/`.
 
 ## 3. Como a IA deve atuar
 Lê este documento antes de iniciares qualquer nova funcionalidade. Tarefa nova → `tlc-spec-driven` primeiro. Se eu te pedir para criar um componente X, após o Spec/Quick a primeira entrega de código DEVE ser o ficheiro de teste para esse componente X (TDD).
 
-## 4. Design workflow (v0 + UI Skills + shadcn + Mobbin + Cursor)
+## 4. Design workflow (Stitch + UI Skills + shadcn + Mobbin + Cursor)
 
-* **Papéis:** v0 (One) = SoT de design · UI Skills / Mobbin = referências e polish · shadcn = primitivos no repo · Cursor = Spec, orquestração, implementação, Visual QA.
-* **MCP:** `user-one` (platform `v0`: Create Chat → Send Message → Get Chat Files); `user-UI Skills MCP` (`list_skills` / `get_skill`); `plugin-shadcn-shadcn`; `plugin-mobbin-mobbin` (só free-safe). **Não** usar `user-penpot` como gate. Skills vendor Stitch descontinuadas.
-* **Mobbin free-safe:** `mode: "standard"` (nunca `deep`), `limit` ≤ 5, `platform: "web"`. Se MCP falhar por plano free → degradar sem bloquear (UI Skills + v0 + tokens locais).
-* **One / v0:** `list_one_integrations` → `search_one_platform_actions` → `get_one_action_knowledge` → `execute_one_action`. Confirmar com o utilizador antes de criar/deploy projectos Vercel. Preferir referência visual + estrutura, não substituir a app. **Regra anti-plano-só:** se o v0 devolver apenas um plano sem JSX/preview, enviar imediatamente Send Message a mandar **construir** a interface; o gate design só fecha com código/preview gerado.
+* **Papéis:** Stitch = gerador SoT de ecrãs · UI Skills = constraints + polish (obrigatório sync) · Mobbin = referências free-safe opcionais · shadcn = primitivos no repo · Cursor = Spec, orquestração, implementação, Visual QA · v0/One = **fallback** apenas.
+* **MCP:** `user-stitch` (generate/edit/get screens); `user-UI Skills MCP` (`list_skills` / `get_skill`); `plugin-shadcn-shadcn`; `plugin-mobbin-mobbin` (só free-safe). Skills vendor em `skills/` (`stitch-loop`, `design-md`, `enhance-prompt`, `react-components`, `shadcn-ui`) via ponte `.cursor/skills/boleia-stitch` (**JSX only**, sem TypeScript). **Não** usar `user-penpot` como gate.
+* **Mobbin free-safe:** `mode: "standard"` (nunca `deep`), `limit` ≤ 5, `platform: "web"`. Se MCP falhar por plano free → degradar sem bloquear (UI Skills + Stitch + tokens locais).
+* **Stitch:** `list_projects` / `create_project` → `generate_screen_from_text` / `edit_screens` → `get_screen` / `list_screens`. Artefactos: `.stitch/DESIGN.md`, `.stitch/SITE.md`, `.stitch/metadata.json`, `.stitch/designs/`. Confirmar com o utilizador antes de criar projectos Stitch órfãos em massa.
+* **v0 fallback:** só se Stitch down ou pedido explícito; anti-plano-só se usado. Confirmar antes de create/deploy Vercel.
 * **Contexto Visual Imutável:** mobilidade urbana, boleias diárias casa-trabalho em Luanda, Angola. Moeda SEMPRE Kz. Tom urbano, utilitário, de confiança — nunca turismo/férias.
-* **Reutilização:** privilegiar componentes em `src/components/ui/` e padrões já no `src/`; novos só via shadcn registry + adaptação JSX.
+* **Reutilização:** privilegiar componentes em `src/components/ui/` e padrões já no `src/`; novos só via shadcn registry + adaptação JSX. **Proibido** dump cego do HTML Stitch.
 * **Fluxo canónico (A–F):**
   1. **0 — Spec:** `tlc-spec-driven` (artefacto `.specs/` ou `quick/`).
   2. **A — UX:** requisitos, user flow, estados (vazio, loading, erro, sucesso).
-  3. **B — Referências:** Mobbin free-safe (se MCP ok) + UI Skills (ex. `ibelick/baseline-ui`).
-  4. **C — Design v0:** One/v0 com briefing Boleia; obter ficheiros do chat.
+  3. **B — UI Skills (+ Mobbin opcional):** `list_skills` / `get_skill` (ex. `ibelick/baseline-ui`); constraints no prompt.
+  4. **C — Design Stitch:** `enhance-prompt` + `DESIGN.md` → generate/edit via `user-stitch`; opcional `design-md`.
   5. **D — shadcn:** search → add command → instalar JSX; mapear tokens `--color-primary`, etc.
-  6. **Gate — design pronto:** flow + estados + componentes shadcn + artefactos v0.
-  7. **E — Implementation:** TDD → `src/` alinhado à arquitectura (não dump cego do v0).
-  8. **F — QA:** UI QA (browser + UI Skills) + Code Reviewer; `VERDICT` APPROVE/REJECT (máx. 2 ciclos).
-
+  6. **Gate — design pronto:** flow + estados + componentes shadcn + ecrã/artefacto Stitch + notas UI Skills.
+  7. **E — Implementation:** TDD → `src/` alinhado à arquitectura (react-components **adaptado JSX**).
+  8. **F — QA:** UI QA (browser + UI Skills + fidelidade Stitch) + Code Reviewer; `VERDICT` APPROVE/REJECT (máx. 2 ciclos).
 ## 5. Master Version Control (Commit)
 * Seguimos "Commit Often, With Clear Messages".
 * O orquestrador **não** faz commit automático: prepara mensagem + `git status` e só faz commit quando o utilizador pedir explicitamente (e testes verdes).
@@ -87,15 +87,15 @@ A aplicação usa um componente `<Layout>` global que envolve todas as páginas 
 
 ## Diretrizes de Desenvolvimento e UI/UX
 
-REGRA ABSOLUTA DE DESIGN (v0-FIRST):
-SoT visual = **v0 (One MCP)** + shadcn JSX + tokens `src/index.css`. Em UI/UX: UI Skills MCP + shadcn MCP + Mobbin free-safe. Só implementar depois do gate “design pronto”. Não inventar ecrãs novos sem o fluxo §4. Penpot deixou de ser SoT.
+REGRA ABSOLUTA DE DESIGN (STITCH + UI SKILLS SYNC):
+Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JSX + tokens `src/index.css`. v0/One só fallback. Só implementar depois do gate “design pronto”. Não inventar ecrãs novos sem o fluxo §4. Penpot não é SoT. Ver `.cursor/rules/ui-stack.mdc` e `.cursor/skills/boleia-stitch`.
 
 ## 9. Manutenção do Contexto (DRY)
 **REGRA ABSOLUTA:** Esta secção do documento (`CONTEXT.md` e `AGENTS.md`) tem de ser **obrigatoriamente atualizada** sempre que uma nova funcionalidade for implementada, refatorada ou corrigida. O objetivo central é garantir que qualquer Agente de IA que leia este ficheiro saiba com exatidão o ponto de situação do projeto, evitando redundâncias, reinvenção da roda ou duplicação de lógicas já existentes (DRY - Don't Repeat Yourself). Antes de iniciar qualquer tarefa, o agente deve assumir este relatório como a única fonte de verdade arquitetónica.
 
 🏛️ Relatório de Estado da Arquitetura: Boleia Certa
 **Última Atualização:** 5 de Setembro de 2026  
-**Fase Atual:** Marketplace Oferta/Procura (Phase 6: **T22–T31 Done**; T29+T30 uncommitted) + **Phase 7 completa** (**T32–T35 Done** uncommitted) + **Landing refresh** + **Agent loop Cursor** + **Gamma Done** (R2 hub motorista waitlist CTA + R4 copy sem zona) + **Graphify/Graphlore governance** (regra always-on + §1.1). Spec: `.specs/features/marketplace-oferta-procura/`. Checkpoint: `CHECKPOINT.md`.
+**Fase Atual:** Marketplace Oferta/Procura (Phase 6: **T22–T31 Done**; T29+T30 uncommitted) + **Phase 7 completa** (**T32–T35 Done** uncommitted) + **Landing refresh** + **Agent loop Cursor** + **Gamma Done** (R2 hub motorista waitlist CTA + R4 copy sem zona) + **Graphify/Graphlore governance** + **Stitch + UI Skills sync** (SoT UI). Spec: `.specs/features/marketplace-oferta-procura/`. Checkpoint: `CHECKPOINT.md`.
 
 **O que já está implementado e validado:**
 1. **Infraestrutura e Backend (Supabase):**
@@ -120,7 +120,7 @@ SoT visual = **v0 (One MCP)** + shadcn JSX + tokens `src/index.css`. Em UI/UX: U
  * **Adenda (T29 + R3):** motorista → «Renegociar preço»; passageiro → CTA «Aceitar adenda» quando `pendente_passageiro`; após aceite, banner «Novo preço a partir de …».
  * **Deep linking:** `notificationRouter.js` — `proposal_received` → hub da **contraparte** (`metadata.inbox`: `passageiro`|`motorista`); `waitlist_promoted`, `match_available`, etc.
  * **AuthContext:** `{ session, user, loading, tipoPerfil, profile, refreshProfile }`.
- * **Design SoT:** v0 via One + shadcn (`src/components/ui/`) + UI Skills + Mobbin free-safe. **Regra v0:** se o chat devolver só plano, Send Message a mandar construir; gate design só com código/preview. Penpot descontinuado como SoT.
+ * **Design SoT:** Stitch MCP + UI Skills sync + shadcn (`src/components/ui/`) + Mobbin free-safe; v0/One só fallback. Ponte `.cursor/skills/boleia-stitch` + `skills/`. Penpot não é SoT.
  * **Agent loop:** `.cursor/skills/boleia-agent-loop/`, `.cursor/rules/ui-stack.mdc`, `.cursor/rules/multi-agent-loop.mdc`, `.cursor/rules/graphify.mdc` (grafo antes de Grep), hooks `subagentStop`.
  * **Produto (2026-09-05):** oferta fixa vs flexível (sem OD/zona no flex); propostas A/B; aceite só contraparte; Procura→M propostas→1 acordo 1:N. **T32–T35 Done** (Phase 7 completa).
 3. **Serviços canónicos (`src/services/`):**

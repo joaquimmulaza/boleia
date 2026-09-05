@@ -78,6 +78,7 @@ function toProcuraMatchInput(procura) {
  * Encontra ofertas compatíveis com uma procura/grupo (sem routing).
  * Fixa: tempo ±15 + dias + geo OD 2500 m + capacidade (`N_actual`/`n_candidato`).
  * Flexível: tempo + dias + capacidade — **sem** OD / residência.
+ * Dias: intersecção real obrigatória; lado vazio/ausente → incompatível.
  * Capacidade: N ≤ vagas → `direct`; N > vagas → `waitlist` (nunca auto-aceitar).
  * @param {{
  *   preferred_time: string,
@@ -126,6 +127,7 @@ export async function findCompatibleOfertas(procura) {
  * Encontra procuras compatíveis com uma oferta (sentido B — motorista propõe).
  * Fixa: geo + tempo via `evaluateMatch`.
  * Flexível: tempo/dias/capacidade **sem** OD/residência.
+ * Dias: intersecção real obrigatória; lado vazio/ausente → incompatível.
  *
  * @param {{
  *   departure_time: string,

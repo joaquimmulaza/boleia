@@ -395,6 +395,78 @@ describe('DriverDashboard — marketplace', () => {
     expect(await screen.findByText(/Proposta enviada ao passageiro/i)).toBeInTheDocument();
   });
 
+  it('separa direct e waitlist: só direct tem «Propor acordo»', async () => {
+    findCompatibleProcuras.mockResolvedValue({
+      direct: [
+        {
+          id: 'pr-direct',
+          origin_name: 'Benfica',
+          destination_name: 'Baixa',
+          preferred_time: '07:00:00',
+          n_candidato: 1,
+        },
+      ],
+      waitlist: [
+        {
+          id: 'pr-wait',
+          origin_name: 'Viana',
+          destination_name: 'Miramar',
+          preferred_time: '07:05:00',
+          n_candidato: 4,
+        },
+      ],
+      incompatible: [],
+    });
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Talatona');
+    fireEvent.click(screen.getByRole('button', { name: /Procuras compatíveis/i }));
+
+    expect(await screen.findByText('Benfica')).toBeInTheDocument();
+    expect(screen.getByText('Viana')).toBeInTheDocument();
+    expect(screen.getByText(/Lista de espera/i)).toBeInTheDocument();
+    expect(screen.getByText(/Grupo maior que os lugares disponíveis/i)).toBeInTheDocument();
+
+    const proporButtons = screen.getAllByRole('button', { name: /Propor acordo/i });
+    expect(proporButtons).toHaveLength(1);
+  });
+
+  it('waitlist sem direct: não mostra CTA «Propor acordo»', async () => {
+    findCompatibleProcuras.mockResolvedValue({
+      direct: [],
+      waitlist: [
+        {
+          id: 'pr-wait-only',
+          origin_name: 'Cacuaco',
+          destination_name: 'Mutamba',
+          preferred_time: '07:20:00',
+          n_candidato: 5,
+        },
+      ],
+      incompatible: [],
+    });
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Talatona');
+    fireEvent.click(screen.getByRole('button', { name: /Procuras compatíveis/i }));
+
+    expect(await screen.findByText('Cacuaco')).toBeInTheDocument();
+    expect(screen.getByText(/Lista de espera/i)).toBeInTheDocument();
+    expect(screen.getByText(/Sem lugares suficientes agora/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Propor acordo/i })).not.toBeInTheDocument();
+    expect(createProposta).not.toHaveBeenCalled();
+  });
+
   it('oferta flexível mostra «Oferta flexível» sem Origem/Destino fictícios', async () => {
     listOfertasByDriver.mockResolvedValue([
       {

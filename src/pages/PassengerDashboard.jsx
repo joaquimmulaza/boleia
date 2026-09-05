@@ -527,7 +527,7 @@ const PassengerDashboard = () => {
 
               {matches.direct.length === 0 && matches.waitlist.length === 0 && (
                 <p className="text-sm text-slate-500 text-pretty">
-                  Ainda não há ofertas compatíveis com o teu horário e zona.
+                  Ainda não há ofertas compatíveis com o teu horário e trajeto.
                 </p>
               )}
             </>

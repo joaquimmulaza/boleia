@@ -1,7 +1,7 @@
 # Boleia Certa — Cursor Rules
 
 Regras obrigatórias para agentes e editores neste repositório.
-Complementam `AGENTS.md` (arquitetura, UI v0/shadcn, TDD, commits, loop multi-agente). Em conflito de estilo de código, prevalece este ficheiro + o código em `src/`.
+Complementam `AGENTS.md` (arquitetura, UI Stitch+UI Skills/shadcn, TDD, commits, loop multi-agente). Em conflito de estilo de código, prevalece este ficheiro + o código em `src/`.
 
 ---
 
@@ -120,8 +120,8 @@ ThemeProvider → AuthProvider → BrowserRouter
 4. Shell mobile-first: `max-w-md` / `max-w-[480px]`. Tokens e tema em `src/index.css` (`primary`, `background-light`/`dark`, emerald/amber/coral). Preferir classes do design system; dark mode com `dark:`.
 5. Forms: estado local controlado; handlers `handleSubmit` / `handleChange`.
 6. Modais: props `isOpen` + callbacks (`onConfirm` / `onCancel`), padrão `ConfirmationModal`.
-7. Ícones: `import { Home, Car } from 'lucide-react'`. Preferir Lucide; Material Symbols só se o design v0 o exigir explicitamente.
-8. **v0-first (UI):** fonte de verdade visual = **v0 via One MCP** + tokens em `src/index.css` + primitivos `src/components/ui/` (shadcn JSX). Em tarefas UI/UX: UI Skills MCP + shadcn MCP + Mobbin free-safe (`mode: standard`, `limit` ≤ 5; degradar se plano free bloquear MCP). Fluxo: `tlc-spec-driven` → UX → referências (Mobbin/UI Skills) → v0 (One) → shadcn → gate “design pronto” → TDD → implementar no `src/` → UI QA + Code Reviewer. Penpot/Superdesign/Stitch **descontinuados** como SoT. Ver `AGENTS.md` §4 e `.cursor/skills/boleia-agent-loop/`.
+7. Ícones: `import { Home, Car } from 'lucide-react'`. Preferir Lucide; Material Symbols só se o design Stitch o exigir explicitamente.
+8. **Stitch + UI Skills sync (UI):** gerador SoT = **Stitch MCP** (`user-stitch`); sincronia obrigatória com **UI Skills MCP** (antes do prompt e no QA). Tokens em `src/index.css` + primitivos `src/components/ui/` (shadcn JSX). Mobbin free-safe opcional (`mode: standard`, `limit` ≤ 5). **v0/One só fallback.** Fluxo: `tlc-spec-driven` → UI Skills → enhance-prompt/`DESIGN.md` → Stitch → shadcn → gate “design pronto” → TDD → `src/` → UI QA + Code Reviewer. Penpot/Superdesign **não** são SoT. Ver `AGENTS.md` §4, `.cursor/rules/ui-stack.mdc`, `.cursor/skills/boleia-stitch`.
 9. **Tarefa nova:** ler e seguir `.cursor/skills/tlc-spec-driven` antes de Designer/Implementer. Com ≥2 tasks independentes: `.cursor/skills/subagent-creator` + `Task` em paralelo (scopes de ficheiros disjuntos).
 
 ### Imports
@@ -224,8 +224,10 @@ try {
 | Tabela `routes` / `rotas_diarias` | `ofertas_capacidade` (+ procuras/propostas) |
 | Toast library | `setMessage` / `useNotifications` |
 | Pasta `__tests__/` ou `src/types/` | Testes colocados; JSDoc inline |
-| Inventar Tailwind / UX | v0 (One) + UI Skills + shadcn + tokens `index.css`; Mobbin free-safe |
-| Penpot / Superdesign como gate | Stack v0 + shadcn (Penpot descontinuado como SoT) |
+| Inventar Tailwind / UX | Stitch + UI Skills + shadcn + tokens `index.css`; Mobbin free-safe |
+| Penpot / Superdesign como gate | Stitch + UI Skills + shadcn (Penpot não é SoT) |
+| Dump cego HTML Stitch / TypeScript do vendor | Adaptar a JSX + `src/components/ui/`; ver `boleia-stitch` |
+| Gerar UI só com Stitch (sem UI Skills) | Sempre UI Skills antes do prompt e no QA |
 | Saltar `tlc-spec-driven` em tarefa nova | Spec/Quick em `.specs/` antes de código |
 | Mobbin `deep` / limites altos | `standard`, `limit` ≤ 5; degradar se MCP free falhar |
 | Hardcode secrets | `.env` / `VITE_*` |
@@ -241,6 +243,6 @@ try {
 - [ ] Serviço: `if (error) throw`; UI: `try/catch` + `getFriendlyErrorMessage`
 - [ ] Sem secrets hardcoded; sem TS/Prettier/toast inventados
 - [ ] Tarefa nova: `tlc-spec-driven` (artefacto `.specs/` ou `quick/`) antes de implementação
-- [ ] UI: design pronto (flow + estados + shadcn/v0) e alinhada ao SoT (se for interface nova)
+- [ ] UI: design pronto (flow + estados + shadcn/Stitch + UI Skills) e alinhada ao SoT (se for interface nova)
 - [ ] `npm run lint` e `npm run test:run` limpos quando aplicável
 

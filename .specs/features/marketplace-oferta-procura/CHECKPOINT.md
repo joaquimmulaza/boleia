@@ -12,6 +12,8 @@
 - P0: `leave_passenger` + `leave_grupo_membro`; sem UPDATE client em propostas/acordos/acordos_passageiros/lista_espera; join sem auto-aprovação.
 - Relatório: `.specs/features/marketplace-oferta-procura/WAVE_PARALLEL_REPORT.md`
 - Gaps cobertura (não bloqueantes): `AUDIT_GAPS_WAVE.md` G1–G12.
+- **Alpha (TDD Guard):** `src/pages/MarketplaceAuditScenarios.test.jsx` — **G1–G4 Done** (cascata irmãs, N_actual < N_proposto, overbooking, leave+promote RPC); G5–G12 em `describe.skip`/`it.todo`.
+- **Gamma Done (UI R2+R4):** hub motorista `direct`/`waitlist` separados (só direct «Propor acordo»); PassengerDashboard empty sem «zona» → horário/trajeto.
 - **Commit só se o utilizador pedir.**
 
 **Commits relevantes:**
@@ -128,7 +130,8 @@ Alias legado: `N_candidato` = `N_actual`. Coluna BD: `n_candidato`.
 
 **Lógica:**
 - `evaluateMatch`: fixa = tempo + dias + geo OD; flexível = tempo + dias + capacidade (**sem** OD/residência)
-- `isDaysCompatible`: intersecção; se um lado vazio → compatível (procura MVP sem `dias_semana`); normaliza strings JSON/BD
+- `isDaysCompatible`: intersecção real; lado vazio/ausente → incompatível; normaliza strings JSON/BD
+- `procuras.dias_semana` (`integer[]`, default Seg–Sex) alinhado a `ofertas_capacidade`
 - Fixa com OD incompleto → `incompatible` (evita falso positivo via `Number(null)=0`)
 - Flex com coords residuais/legado **ignora** OD (sem falso negativo por residência)
 - `findCompatibleProcuras`: flex sem OD deixa de devolver `[]`; consulta procuras activas; fixa sem OD → buckets vazios
@@ -261,11 +264,24 @@ AGENTS.md
 ```
 (+ `spec.md` se MKT-15 marcado Done no mesmo commit)
 
-### T29 — Adenda / `renegotiateAgreementPricing` ← **Done (uncommitted)**
+### Beta Done (R1 + R3) ← **Done (uncommitted)**
+
+| Item | Detalhe |
+|------|---------|
+| R1 Matching dias | MCP `procuras_dias_semana`; `isDaysCompatible` estrito; `ProcuraService` persiste dias |
+| R3 Consentimento | MCP `adenda_consentimento_passageiro`; RPC `accept_agreement_adenda`; CTA «Aceitar adenda» |
+
+### T29 — Adenda / `renegotiateAgreementPricing` ← **Done (uncommitted)** + **R3 consentimento**
 
 **Gates:** design · UI QA · code-review APPROVE.  
-**RPC:** `renegotiate_agreement_pricing` · **UI:** `MyAgreements` «Renegociar preço».  
-**Ficheiros:** ver lista anterior no CHECKPOINT T29 (AgreementService, MyAgreements, ConfirmationModal, specs…).
+**RPC:** `renegotiate_agreement_pricing` (estado `pendente_passageiro`) · `accept_agreement_adenda` · `apply_due_agreement_adendas` (só `aceite`).  
+**UI:** `MyAgreements` «Renegociar preço» + «Aceitar adenda».  
+**Migração MCP:** `adenda_consentimento_passageiro`.
+
+### R1 — Matching dias ← **Done (uncommitted)**
+
+**Migração MCP:** `procuras_dias_semana` (`integer[]` default Seg–Sex).  
+**Regra:** `isDaysCompatible` exige intersecção real (vazio → incompatível).
 
 ### T31 — `n_maximo` + grupo público ← **Done (`8a0111e`, pushed)**
 

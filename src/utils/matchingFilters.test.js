@@ -91,10 +91,10 @@ describe('canAcceptDirectly', () => {
 });
 
 describe('isDaysCompatible', () => {
-  it('aceita quando um dos lados não tem dias (MVP sem dias na procura)', () => {
-    expect(isDaysCompatible([1, 2, 3, 4, 5], null)).toBe(true);
-    expect(isDaysCompatible(undefined, [1, 2])).toBe(true);
-    expect(isDaysCompatible([], [1])).toBe(true);
+  it('rejeita quando um dos lados não tem dias (exige intersecção real)', () => {
+    expect(isDaysCompatible([1, 2, 3, 4, 5], null)).toBe(false);
+    expect(isDaysCompatible(undefined, [1, 2])).toBe(false);
+    expect(isDaysCompatible([], [1])).toBe(false);
   });
 
   it('aceita quando há intersecção de dias', () => {
@@ -105,9 +105,9 @@ describe('isDaysCompatible', () => {
     expect(isDaysCompatible([1, 2], [4, 5])).toBe(false);
   });
 
-  it('aceita quando ambos os lados estão vazios', () => {
-    expect(isDaysCompatible([], [])).toBe(true);
-    expect(isDaysCompatible(null, undefined)).toBe(true);
+  it('rejeita quando ambos os lados estão vazios ou ausentes', () => {
+    expect(isDaysCompatible([], [])).toBe(false);
+    expect(isDaysCompatible(null, undefined)).toBe(false);
   });
 
   it('normaliza dias vindos como string (JSON/BD) na intersecção', () => {
@@ -125,6 +125,7 @@ describe('evaluateMatch', () => {
     destination_lng: 13.25,
     vagas_disponiveis: 3,
     flexibilidade_rota: false,
+    dias_semana: [1, 2, 3, 4, 5],
   };
   const baseProcura = {
     preferred_time: '07:10',
@@ -132,6 +133,7 @@ describe('evaluateMatch', () => {
     origin_lng: 13.2344,
     destination_lat: -8.855,
     destination_lng: 13.255,
+    dias_semana: [1, 2, 3, 4, 5],
   };
 
   it('devolve direct quando tempo, geo e capacidade passam', () => {
@@ -198,6 +200,7 @@ describe('evaluateMatch', () => {
           origin_lng: 13.1,
           destination_lat: -8.9,
           destination_lng: 13.15,
+          dias_semana: [1, 2, 3, 4, 5],
         },
         n_candidato: 2,
       }),
@@ -219,6 +222,7 @@ describe('evaluateMatch', () => {
           origin_lng: 13.1,
           destination_lat: -8.9,
           destination_lng: 13.15,
+          dias_semana: [1, 2, 3, 4, 5],
         },
         n_candidato: 3,
       }),
@@ -328,14 +332,24 @@ describe('evaluateMatch', () => {
     ).toBe('incompatible');
   });
 
-  it('oferta fixa: procura sem dias continua compatível (MVP)', () => {
+  it('oferta fixa: procura sem dias é incompatível (exige intersecção real)', () => {
     expect(
       evaluateMatch({
         oferta: { ...baseOferta, dias_semana: [1, 2, 3, 4, 5] },
         procura: { ...baseProcura, dias_semana: null },
         n_candidato: 2,
       }),
-    ).toBe('direct');
+    ).toBe('incompatible');
+  });
+
+  it('oferta fixa: oferta sem dias é incompatível', () => {
+    expect(
+      evaluateMatch({
+        oferta: { ...baseOferta, dias_semana: [] },
+        procura: { ...baseProcura, dias_semana: [1, 2, 3, 4, 5] },
+        n_candidato: 1,
+      }),
+    ).toBe('incompatible');
   });
 
   it('capacidade: N_actual igual a vagas → direct; N_actual = vagas+1 → waitlist', () => {

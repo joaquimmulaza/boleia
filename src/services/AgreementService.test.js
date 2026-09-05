@@ -3,6 +3,7 @@ import {
   createAgreementFromProposal,
   leavePassenger,
   renegotiateAgreementPricing,
+  acceptAgreementAdenda,
   getAgreementsForDriver,
   getAgreementsForPassenger,
 } from './AgreementService.js';
@@ -408,6 +409,87 @@ describe('AgreementService', () => {
         /acordo/i,
       );
       await expect(renegotiateAgreementPricing('acordo-1', null)).rejects.toThrow();
+    });
+
+    it('adenda criada fica pendente_passageiro até consentimento', async () => {
+      mockRenegotiateFlow({
+        activosCount: 2,
+        acordo: {
+          id: 'acordo-1',
+          modo_preco: 'POR_PASSAGEIRO',
+          n_passageiros_contrato: 2,
+          valor_mensal_total_kz: 80000,
+          valor_mensal_por_passageiro_kz: 40000,
+          estado: 'activo',
+          acordos_adendas: [
+            {
+              id: 'adenda-new',
+              estado: 'pendente_passageiro',
+              effective_from: '2026-10-01',
+              valor_mensal_por_passageiro_kz: 45000,
+              valor_mensal_total_kz: 90000,
+              applied_at: null,
+              superseded_at: null,
+            },
+          ],
+        },
+      });
+
+      const result = await renegotiateAgreementPricing('acordo-1', {
+        modo_preco: 'POR_PASSAGEIRO',
+        valor_ask_kz: 45000,
+        n_passageiros: 2,
+      });
+
+      expect(result.adenda_pendente.estado).toBe('pendente_passageiro');
+      expect(result.adenda_pendente.applied_at).toBeNull();
+    });
+  });
+
+  describe('acceptAgreementAdenda', () => {
+    it('chama RPC accept_agreement_adenda e devolve adenda aceite', async () => {
+      supabase.rpc.mockResolvedValue({ data: 'adenda-1', error: null });
+      supabase.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: {
+                id: 'adenda-1',
+                acordo_id: 'acordo-1',
+                estado: 'aceite',
+                effective_from: '2026-10-01',
+                applied_at: null,
+                aceite_em: '2026-09-05T16:00:00Z',
+              },
+              error: null,
+            }),
+          }),
+        }),
+      });
+
+      const result = await acceptAgreementAdenda('adenda-1');
+
+      expect(supabase.rpc).toHaveBeenCalledWith('accept_agreement_adenda', {
+        p_adenda_id: 'adenda-1',
+      });
+      expect(result.estado).toBe('aceite');
+      expect(result.applied_at).toBeNull();
+      expect(result.aceite_em).toBeTruthy();
+    });
+
+    it('propaga erro da RPC (ex. motorista a tentar aceitar)', async () => {
+      supabase.rpc.mockResolvedValue({
+        data: null,
+        error: { message: 'Apenas um passageiro activo do acordo pode aceitar a adenda.' },
+      });
+
+      await expect(acceptAgreementAdenda('adenda-1')).rejects.toThrow(
+        /passageiro activo/i,
+      );
+    });
+
+    it('exige id da adenda', async () => {
+      await expect(acceptAgreementAdenda('')).rejects.toThrow(/adenda/i);
     });
   });
 

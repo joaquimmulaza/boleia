@@ -1,7 +1,20 @@
 import { supabase } from '../lib/supabase';
 
 /**
- * @param {object} formData
+ * Cria procura individual (N_candidato = 1).
+ * Persiste `dias_semana` (1=Seg…7=Dom); default Seg–Sex se omitido/vazio.
+ * @param {{
+ *   preferred_time: string,
+ *   return_time?: string | null,
+ *   origin_name?: string | null,
+ *   origin_lat?: number | null,
+ *   origin_lng?: number | null,
+ *   destination_name?: string | null,
+ *   destination_lat?: number | null,
+ *   destination_lng?: number | null,
+ *   teto_mensal_kz?: number | null,
+ *   dias_semana?: number[] | null,
+ * }} formData
  */
 export async function createProcura(formData) {
   const {
@@ -27,6 +40,10 @@ export async function createProcura(formData) {
     destination_lng: formData.destination_lng ?? null,
     n_candidato: 1,
     teto_mensal_kz: formData.teto_mensal_kz ?? null,
+    /** Dias 1=Seg … 7=Dom; default Seg–Sex (alinhado a ofertas_capacidade). */
+    dias_semana: Array.isArray(formData.dias_semana) && formData.dias_semana.length > 0
+      ? formData.dias_semana.map((d) => Number(d)).filter((d) => Number.isFinite(d))
+      : [1, 2, 3, 4, 5],
     estado: 'activa',
   };
 

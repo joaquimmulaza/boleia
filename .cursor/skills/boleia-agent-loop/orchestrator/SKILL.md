@@ -19,15 +19,15 @@ description: Orquestra tarefas Boleia Certa — Spec-Driven, paralelismo e papé
 
 | Tipo | Sequência |
 |------|-----------|
-| UI/UX | ui-designer → gate design → implementer → ui-qa + code-reviewer (paralelo se scopes OK) |
+| UI/UX | ui-designer (UI Skills → Stitch/`boleia-stitch`) → gate design → implementer → ui-qa + code-reviewer (paralelo se scopes OK) |
 | Só lógica/serviço | implementer → code-reviewer |
 | Exploração / arquitectura | **Graphlore primeiro:** `graphlore_overview` ou `graphlore_freshness`, depois `search` → `subgraph`/`neighbors`/`node_details`. Grep só se o mapa não bastar (`.cursor/rules/graphify.mdc`). Sem Spec se não houver mudança. |
 
-Ler o `SKILL.md` do papel correspondente em `.cursor/skills/boleia-agent-loop/<papel>/` e incluir as instruções no prompt do `Task`.
+Ler o `SKILL.md` do papel correspondente em `.cursor/skills/boleia-agent-loop/<papel>/` e incluir as instruções no prompt do `Task`. Em UI, incluir também `.cursor/skills/boleia-stitch/SKILL.md`.
 
 ## Gates
 
-- **Design pronto:** flow + estados + componentes shadcn/v0 identificados.
+- **Design pronto:** flow + estados + componentes shadcn + ecrã/artefacto Stitch + consulta UI Skills documentada. (v0 só se fallback.)
 - **Código:** `VERDICT: APPROVE` de code-reviewer (+ ui-qa se UI) e `npm run test:run` / lint quando aplicável.
 - REJECT → reenviar ao papel indicado em `NEXT` (máx. 2 ciclos); depois perguntar ao utilizador.
 

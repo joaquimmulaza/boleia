@@ -7,6 +7,7 @@ import {
   getAgreementsForPassenger,
   leavePassenger,
   renegotiateAgreementPricing,
+  acceptAgreementAdenda,
 } from '../services/AgreementService';
 import EmptyState from '../components/EmptyState';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -228,7 +229,7 @@ const MyAgreements = () => {
       });
       setMessage({
         type: 'success',
-        text: 'Preço actualizado. Aplica-se a partir do próximo mês.',
+        text: 'Proposta de novo preço enviada. Fica à espera da aceitação do passageiro.',
       });
       const acordoId = selected.id;
       closeAdendaForm();
@@ -239,6 +240,28 @@ const MyAgreements = () => {
       console.error('Erro ao renegociar preço:', err);
       setAdendaError(err.message || getFriendlyErrorMessage(err));
       setAdendaModalOpen(false);
+    } finally {
+      setAdendaBusy(false);
+    }
+  };
+
+  const handleAcceptAdenda = async () => {
+    const adendaId = selected?.adenda_pendente?.id;
+    if (!adendaId || adendaBusy) return;
+    setAdendaBusy(true);
+    try {
+      await acceptAgreementAdenda(adendaId);
+      setMessage({
+        type: 'success',
+        text: 'Adenda aceite. O novo preço aplica-se a partir do próximo mês.',
+      });
+      const acordoId = selected.id;
+      const refreshed = await carregar();
+      const updated = refreshed.find((a) => a.id === acordoId);
+      if (updated) setSelected(updated);
+    } catch (err) {
+      console.error('Erro ao aceitar adenda:', err);
+      setMessage({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
     } finally {
       setAdendaBusy(false);
     }
@@ -421,24 +444,57 @@ const MyAgreements = () => {
                 data-testid="adenda-pendente"
                 className="rounded-xl border border-amber-200/90 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 space-y-1"
               >
-                <p className="text-sm font-bold text-slate-900 dark:text-white">
-                  Novo preço a partir de{' '}
-                  {formatMesAdenda(selected.adenda_pendente.effective_from)}
-                </p>
-                <p className="text-sm text-slate-600 dark:text-slate-300">
-                  Cada um paga{' '}
-                  <span className="tabular-nums font-semibold">
-                    {formatKwanza(selected.adenda_pendente.valor_mensal_por_passageiro_kz)} Kz
-                  </span>
-                </p>
-                {selected.adenda_pendente.valor_mensal_total_kz != null && (
-                  <p className="text-xs text-slate-500">
-                    Total{' '}
-                    <span className="tabular-nums font-medium">
-                      {formatKwanza(selected.adenda_pendente.valor_mensal_total_kz)} Kz
-                    </span>
-                    . O mês corrente mantém as quotas já combinadas.
-                  </p>
+                {String(selected.adenda_pendente.estado || '').toLowerCase() ===
+                'pendente_passageiro' ? (
+                  <>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">
+                      {isPassageiro
+                        ? 'Proposta de novo preço'
+                        : 'À espera da aceitação do passageiro'}
+                    </p>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">
+                      Cada um pagaria{' '}
+                      <span className="tabular-nums font-semibold">
+                        {formatKwanza(selected.adenda_pendente.valor_mensal_por_passageiro_kz)} Kz
+                      </span>
+                      {selected.adenda_pendente.effective_from
+                        ? ` a partir de ${formatMesAdenda(selected.adenda_pendente.effective_from)}`
+                        : ' a partir do próximo mês'}
+                      .
+                    </p>
+                    {isPassageiro && (
+                      <Button
+                        type="button"
+                        className="mt-2 w-full"
+                        disabled={adendaBusy}
+                        onClick={handleAcceptAdenda}
+                      >
+                        Aceitar adenda
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">
+                      Novo preço a partir de{' '}
+                      {formatMesAdenda(selected.adenda_pendente.effective_from)}
+                    </p>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">
+                      Cada um paga{' '}
+                      <span className="tabular-nums font-semibold">
+                        {formatKwanza(selected.adenda_pendente.valor_mensal_por_passageiro_kz)} Kz
+                      </span>
+                    </p>
+                    {selected.adenda_pendente.valor_mensal_total_kz != null && (
+                      <p className="text-xs text-slate-500">
+                        Total{' '}
+                        <span className="tabular-nums font-medium">
+                          {formatKwanza(selected.adenda_pendente.valor_mensal_total_kz)} Kz
+                        </span>
+                        . O mês corrente mantém as quotas já combinadas.
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -754,7 +810,7 @@ const MyAgreements = () => {
         busy={adendaBusy}
         variant="primary"
         title="Confirmar novo preço?"
-        message="Aplica-se a partir do próximo mês. O mês corrente mantém as quotas já combinadas."
+        message="A proposta fica à espera da aceitação do passageiro. Depois, aplica-se a partir do próximo mês; o mês corrente mantém as quotas já combinadas."
         confirmText="Confirmar"
         onConfirm={handleConfirmAdenda}
         onCancel={() => {

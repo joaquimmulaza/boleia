@@ -77,7 +77,7 @@ const DriverDashboard = () => {
   const [enviadas, setEnviadas] = useState([]);
   const [selectedOfertaId, setSelectedOfertaId] = useState(null);
   const [panel, setPanel] = useState(null); // 'propostas' | 'procuras' | null
-  const [procurasMatch, setProcurasMatch] = useState([]);
+  const [procurasMatch, setProcurasMatch] = useState({ direct: [], waitlist: [] });
   const [loadingPropostas, setLoadingPropostas] = useState(false);
   const [loadingProcuras, setLoadingProcuras] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', text: '' });
@@ -118,7 +118,7 @@ const DriverDashboard = () => {
     setPanel('propostas');
     setReviews([]);
     setEnviadas([]);
-    setProcurasMatch([]);
+    setProcurasMatch({ direct: [], waitlist: [] });
     setLoadingPropostas(true);
     setFeedback({ type: '', text: '' });
     try {
@@ -143,12 +143,15 @@ const DriverDashboard = () => {
     setPanel('procuras');
     setReviews([]);
     setEnviadas([]);
-    setProcurasMatch([]);
+    setProcurasMatch({ direct: [], waitlist: [] });
     setLoadingProcuras(true);
     setFeedback({ type: '', text: '' });
     try {
       const result = await findCompatibleProcuras(oferta);
-      setProcurasMatch([...(result.direct || []), ...(result.waitlist || [])]);
+      setProcurasMatch({
+        direct: result.direct || [],
+        waitlist: result.waitlist || [],
+      });
     } catch (err) {
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
     } finally {
@@ -415,51 +418,90 @@ const DriverDashboard = () => {
           )}
           {loadingProcuras ? (
             <LoadingSkeleton />
-          ) : procurasMatch.length === 0 ? (
+          ) : procurasMatch.direct.length === 0 && procurasMatch.waitlist.length === 0 ? (
             <p className="text-sm text-slate-500">
               Ainda não há procuras compatíveis com esta oferta.
             </p>
           ) : (
-            procurasMatch.map((procura) => (
-              <section
-                key={procura.id}
-                className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
-              >
-                <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
-                  <span>{procura.origin_name || 'Origem'}</span>
-                  <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
-                  <span>{procura.destination_name || 'Destino'}</span>
-                </div>
-                <div className="flex gap-3 text-sm text-slate-500">
-                  <span className="flex items-center gap-1">
-                    <Clock size={14} aria-hidden="true" />
-                    {String(procura.preferred_time || '').slice(0, 5)}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Users size={14} aria-hidden="true" />
-                    {labelProcuraN(procura.n_candidato ?? 1)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between pt-1">
-                  <div>
-                    <strong className="text-primary tabular-nums">
-                      {formatKwanza(ofertaSeleccionada?.valor_mensal_ask_kz)} Kz
-                    </strong>
-                    <p className="text-xs text-slate-400">
-                      {labelModo(ofertaSeleccionada?.modo_preco)}
-                    </p>
+            <>
+              {procurasMatch.direct.map((procura) => (
+                <section
+                  key={procura.id}
+                  className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
+                >
+                  <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+                    <span>{procura.origin_name || 'Origem'}</span>
+                    <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
+                    <span>{procura.destination_name || 'Destino'}</span>
                   </div>
-                  <button
-                    type="button"
-                    disabled={busyId === procura.id}
-                    onClick={() => handleProporB(procura)}
-                    className="bg-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl disabled:opacity-60"
-                  >
-                    Propor acordo
-                  </button>
+                  <div className="flex gap-3 text-sm text-slate-500">
+                    <span className="flex items-center gap-1">
+                      <Clock size={14} aria-hidden="true" />
+                      {String(procura.preferred_time || '').slice(0, 5)}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Users size={14} aria-hidden="true" />
+                      {labelProcuraN(procura.n_candidato ?? 1)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between pt-1">
+                    <div>
+                      <strong className="text-primary tabular-nums">
+                        {formatKwanza(ofertaSeleccionada?.valor_mensal_ask_kz)} Kz
+                      </strong>
+                      <p className="text-xs text-slate-400">
+                        {labelModo(ofertaSeleccionada?.modo_preco)}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={busyId === procura.id}
+                      onClick={() => handleProporB(procura)}
+                      className="bg-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl disabled:opacity-60"
+                    >
+                      Propor acordo
+                    </button>
+                  </div>
+                </section>
+              ))}
+
+              {procurasMatch.waitlist.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide">
+                    Lista de espera
+                  </h3>
+                  <p className="text-sm text-slate-500 text-pretty">
+                    Sem lugares suficientes agora. O grupo é maior que os lugares disponíveis
+                    nesta oferta — não podes propor acordo directo.
+                  </p>
+                  {procurasMatch.waitlist.map((procura) => (
+                    <section
+                      key={procura.id}
+                      className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
+                    >
+                      <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+                        <span>{procura.origin_name || 'Origem'}</span>
+                        <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
+                        <span>{procura.destination_name || 'Destino'}</span>
+                      </div>
+                      <div className="flex gap-3 text-sm text-slate-500">
+                        <span className="flex items-center gap-1">
+                          <Clock size={14} aria-hidden="true" />
+                          {String(procura.preferred_time || '').slice(0, 5)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Users size={14} aria-hidden="true" />
+                          {labelProcuraN(procura.n_candidato ?? 1)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">
+                        Grupo maior que os lugares disponíveis
+                      </p>
+                    </section>
+                  ))}
                 </div>
-              </section>
-            ))
+              )}
+            </>
           )}
         </div>
       )}
