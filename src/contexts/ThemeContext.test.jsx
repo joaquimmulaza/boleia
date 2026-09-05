@@ -135,11 +135,7 @@ describe('ThemeContext', () => {
     };
 
     expect(() => {
-      try {
-        render(<Wrapper />);
-      } catch (e) {
-        throw e;
-      }
+      render(<Wrapper />);
     }).toThrow('useTheme must be used within a ThemeProvider');
 
     consoleSpy.mockRestore();

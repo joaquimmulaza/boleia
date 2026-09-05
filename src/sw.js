@@ -26,7 +26,7 @@ self.addEventListener('push', function (event) {
       };
 
       event.waitUntil(self.registration.showNotification(title, options));
-    } catch (e) {
+    } catch {
       // Falha ao processar JSON, tratar como texto simples se possível
       const text = event.data.text();
       event.waitUntil(

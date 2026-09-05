@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(() => {
   // Verifica se a run atual contém ficheiros .integration.test no processo arguments
   const isIntegrationTest = process.argv.some(arg => arg.includes('integration.test'));
   

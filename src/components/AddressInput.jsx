@@ -34,6 +34,8 @@ const AddressInput = ({
   const wrapperRef = useRef(null);
 
   useEffect(() => {
+    // Sincroniza o valor controlado externo com o input interno.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setInputValue(value || '');
   }, [value]);
 

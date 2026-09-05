@@ -23,6 +23,7 @@ const SearchAddressInput = ({
 
   // Sync external value with internal input
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setInputValue(value || '');
   }, [value]);
 
