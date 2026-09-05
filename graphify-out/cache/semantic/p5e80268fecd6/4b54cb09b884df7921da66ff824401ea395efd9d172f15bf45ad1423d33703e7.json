@@ -1,1 +1,0 @@
-{"nodes": [{"id": "tlc_spec_driven_brownfield", "label": "Brownfield Mapping", "file_type": "concept", "source_file": ".agent/skills/tlc-spec-driven/references/brownfield-mapping.md", "rationale": "Process for analyzing existing codebases."}], "edges": [], "hyperedges": []}

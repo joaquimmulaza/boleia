@@ -1,1 +1,0 @@
-{"nodes": [{"id": "best_practices_skill", "label": "Best Practices", "file_type": "code", "source_file": ".gemini/skills/best-practices/SKILL.md", "rationale": "Security and code quality audit tool based on modern web standards."}], "edges": [], "hyperedges": []}

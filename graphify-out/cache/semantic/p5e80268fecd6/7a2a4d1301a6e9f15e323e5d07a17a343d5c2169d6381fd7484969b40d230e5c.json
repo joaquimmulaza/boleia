@@ -1,1 +1,0 @@
-{"nodes": [{"id": "codex_skills_react_best_practices_rules_advanced_event_handler_refs", "label": "Store Event Handlers in Refs", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/advanced-event-handler-refs.md", "rationale": "Prevents unnecessary effect re-subscriptions."}], "edges": [], "hyperedges": []}

@@ -1,1 +1,0 @@
-{"nodes": [{"id": "python_flask_web_server_security_flask_ssti_001", "label": "FLASK-SSTI-001: Server-Side Template Injection", "file_type": "document", "source_file": ".cursor/skills/security-best-practices/references/python-flask-web-server-security.md", "rationale": "Prevents rendering untrusted template strings in Jinja2."}], "edges": [], "hyperedges": []}

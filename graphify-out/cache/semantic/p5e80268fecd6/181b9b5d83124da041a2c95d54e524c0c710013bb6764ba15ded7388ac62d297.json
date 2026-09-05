@@ -1,1 +1,0 @@
-{"nodes": [{"id": "js_early_exit", "label": "Early Return from Functions", "file_type": "concept", "source_file": ".cline/skills/react-best-practices/rules/js-early-exit.md", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null, "rationale": "Skips unnecessary processing once result is determined."}], "edges": [], "hyperedges": []}

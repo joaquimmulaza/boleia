@@ -83,3 +83,6 @@ stitch_auth.html
 CONTEXT.md
 CONTRATO_PARTICULAR_DE_PRESTACAO_DE_SERVICO_DE_TRANSPORTE.md
 bifurcação_de_modelo_de_negocio.md
+# Knowledge graph outputs (rebuild: graphify extract / graphlore_build)
+graphify-out/
+

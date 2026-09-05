@@ -1,1 +1,0 @@
-{"nodes": [{"id": "server_cache_react", "label": "Per-Request Deduplication with React.cache()", "file_type": "document", "source_file": ".cursor/skills/react-best-practices/rules/server-cache-react.md", "rationale": "Deduplicating database queries and heavy computations within a single request tree."}], "edges": [], "hyperedges": []}

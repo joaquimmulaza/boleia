@@ -1,1 +1,0 @@
-{"nodes": [{"id": "rerender_move_effect_to_event", "label": "Put Interaction Logic in Event Handlers", "file_type": "document", "source_file": ".cursor/skills/react-best-practices/rules/rerender-move-effect-to-event.md", "rationale": "Avoiding modeling user actions as state + effect, which leads to redundant re-runs."}], "edges": [], "hyperedges": []}

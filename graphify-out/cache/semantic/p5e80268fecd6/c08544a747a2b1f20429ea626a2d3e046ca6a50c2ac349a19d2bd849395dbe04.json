@@ -1,1 +1,0 @@
-{"nodes": [{"id": "codex_skills_react_best_practices_rules_rendering_animate_svg_wrapper", "label": "Animate SVG Wrapper", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/rendering-animate-svg-wrapper.md", "rationale": "Enables hardware acceleration."}], "edges": [], "hyperedges": []}

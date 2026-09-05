@@ -8,7 +8,7 @@ alwaysApply: true
 ## Ordem obrigatória em tarefa nova
 
 1. Ler e seguir `.cursor/skills/tlc-spec-driven/SKILL.md` (auto-size → `.specs/` ou `quick/`).
-2. Se arquitectura ambígua e `graphify-out/graph.json` existir: `graphify query`.
+2. Arquitectura / “onde está X” / blast radius: **Graphlore primeiro** (`overview` / `search` → `subgraph` / `neighbors` / `node_details`) — ver `.cursor/rules/graphify.mdc`. Grep só se o grafo não bastar.
 3. Se `tasks.md` (ou passos) tiverem **≥2 tasks independentes**: ler `.cursor/skills/subagent-creator/SKILL.md` e lançar `Task` em **paralelo** só com ficheiros disjuntos.
 4. Despachar papéis via `.cursor/skills/boleia-agent-loop/`:
    - UI → `ui-designer` → gate design → `implementer` → `ui-qa` + `code-reviewer`

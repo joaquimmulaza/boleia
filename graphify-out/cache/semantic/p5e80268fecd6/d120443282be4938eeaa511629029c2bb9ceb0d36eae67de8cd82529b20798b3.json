@@ -1,1 +1,0 @@
-{"nodes": [{"id": "codex_skills_react_best_practices_rules_client_localstorage_schema", "label": "Version and Minimize localStorage Data", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/client-localstorage-schema.md", "rationale": "Prevents schema conflicts and reduces storage size."}], "edges": [], "hyperedges": []}

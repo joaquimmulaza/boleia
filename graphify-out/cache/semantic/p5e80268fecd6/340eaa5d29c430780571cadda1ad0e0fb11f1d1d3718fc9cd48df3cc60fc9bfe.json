@@ -1,1 +1,0 @@
-{"nodes": [{"id": "codex_skills_react_best_practices_rules_rerender_memo_with_default_value", "label": "Extract Default Non-primitive Props", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/rerender-memo-with-default-value.md", "rationale": "Restores memoization by using constants for default values."}], "edges": [], "hyperedges": []}

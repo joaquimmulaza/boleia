@@ -1,1 +1,0 @@
-{"nodes": [{"id": "codex_skills_react_best_practices_rules_rerender_use_ref_transient_values", "label": "Use useRef for Transient Values", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/rerender-use-ref-transient-values.md", "rationale": "Avoids re-renders on frequent updates like mouse tracking."}], "edges": [], "hyperedges": []}

@@ -1,1 +1,0 @@
-{"nodes": [{"id": "codex_skills_react_best_practices_rules_server_parallel_fetching", "label": "Parallel Data Fetching with Composition", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/server-parallel-fetching.md", "rationale": "Eliminates server-side waterfalls in RSC."}], "edges": [], "hyperedges": []}

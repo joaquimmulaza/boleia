@@ -1,1 +1,0 @@
-{"nodes": [{"id": "codex_skills_react_best_practices_rules_js_batch_dom_css", "label": "Avoid Layout Thrashing", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/js-batch-dom-css.md", "rationale": "Prevents forced synchronous layouts."}], "edges": [], "hyperedges": []}

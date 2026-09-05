@@ -1,1 +1,0 @@
-{"nodes": [{"id": "codex_skills_react_best_practices_rules_rerender_move_effect_to_event", "label": "Put Interaction Logic in Event Handlers", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/rerender-move-effect-to-event.md", "rationale": "Avoids effect re-runs and duplicate side effects."}], "edges": [], "hyperedges": []}

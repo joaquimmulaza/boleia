@@ -1,1 +1,0 @@
-{"nodes": [{"id": "rerender_simple_expression_in_memo", "label": "Do not wrap simple expressions in useMemo", "file_type": "document", "source_file": ".cursor/skills/react-best-practices/rules/rerender-simple-expression-in-memo.md", "rationale": "Overhead of useMemo and dependency checking can exceed the cost of simple primitive expressions."}], "edges": [], "hyperedges": []}

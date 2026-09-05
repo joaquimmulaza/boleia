@@ -1,1 +1,0 @@
-{"nodes": [{"id": "tlc_spec_driven_state", "label": "State Management", "file_type": "concept", "source_file": ".agent/skills/tlc-spec-driven/references/state-management.md", "rationale": "Persistent memory for decisions, blockers, and learnings."}], "edges": [], "hyperedges": []}

@@ -1,1 +1,0 @@
-{"nodes": [{"id": "codex_skills_react_best_practices_rules_rendering_hydration_no_flicker", "label": "Prevent Hydration Mismatch Without Flickering", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/rendering-hydration-no-flicker.md", "rationale": "Uses inline scripts to update DOM before hydration."}], "edges": [], "hyperedges": []}

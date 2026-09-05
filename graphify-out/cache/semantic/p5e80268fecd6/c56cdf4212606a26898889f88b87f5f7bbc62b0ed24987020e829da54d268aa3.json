@@ -1,1 +1,0 @@
-{"nodes": [{"id": "rerender_defer_reads", "label": "Defer State Reads to Usage Point", "file_type": "document", "source_file": ".cursor/skills/react-best-practices/rules/rerender-defer-reads.md", "rationale": "Avoiding unnecessary subscriptions to dynamic state (like searchParams) by reading on-demand in callbacks."}], "edges": [], "hyperedges": []}

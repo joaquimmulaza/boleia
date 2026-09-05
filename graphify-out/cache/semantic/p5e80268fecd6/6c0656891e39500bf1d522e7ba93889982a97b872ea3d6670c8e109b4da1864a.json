@@ -1,1 +1,0 @@
-{"nodes": [{"id": "references_validate", "label": "Validate & Verify Reference", "file_type": "document", "source_file": ".trae/skills/tlc-spec-driven/references/validate.md", "rationale": "Outlines the verification process for implementation against specs and coding principles, including interactive UAT."}], "edges": [], "hyperedges": []}

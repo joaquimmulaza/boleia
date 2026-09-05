@@ -1,1 +1,0 @@
-{"nodes": [{"id": "references_tasks", "label": "Tasks Reference", "file_type": "document", "source_file": ".trae/skills/tlc-spec-driven/references/tasks.md", "rationale": "Defines the process for breaking down features into granular, atomic tasks with clear dependencies and execution plans."}], "edges": [], "hyperedges": []}

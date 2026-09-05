@@ -1,0 +1,78 @@
+# Boleia Certa â€” produto-first (gitignore syntax)
+# Foco: src/, supabase/, AGENTS.md, .cursorrules, .specs/
+# Excluir skills/agentes/caches para evitar God Nodes
+
+# Agent / AI tooling (nao produto)
+.agent/
+.agents/
+.cursor/
+.claude/
+.codex/
+.gemini/
+.kiro/
+.kilo/
+.hermes/
+.factory/
+.windsurf/
+.vscode/
+.idea/
+
+# Dependencies & build
+node_modules/
+dist/
+build/
+.vite/
+.turbo/
+coverage/
+*.min.js
+*.min.css
+*.map
+
+# Caches & local tooling
+.cache/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# Graphify / generated outputs (evita reindexar HTML gerado)
+graphify-out/
+**/GRAPH_REPORT.md
+**/GRAPH_TREE.html
+**/*-callflow.html
+**/graph.html
+**/graph.svg
+
+# Logs & temp
+*.log
+logs/
+tmp/
+temp/
+.DS_Store
+Thumbs.db
+
+# Test / playwright artifacts
+test-results/
+playwright-report/
+blob-report/
+
+# Large vendor / lock noise (codigo produto ja em src/)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Docs de tooling generico fora do produto (manter .specs/ e AGENTS.md)
+relatorio-v02.md
+graph-doc.md
+# Vendor / Stitch skill packs (nao produto) — evita God Nodes
+skills/
+
+# Manifests de tooling (ruido de communities de deps)
+package.json

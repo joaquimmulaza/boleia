@@ -1,1 +1,0 @@
-{"nodes": [{"id": "codex_skills_react_best_practices_rules_rerender_simple_expression_in_memo", "label": "Avoid useMemo for Simple Expressions", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/rerender-simple-expression-in-memo.md"}], "edges": [], "hyperedges": []}

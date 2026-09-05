@@ -1,1 +1,0 @@
-{"nodes": [{"id": "codex_skills_react_best_practices_rules_rerender_derived_state", "label": "Subscribe to Derived State", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/rerender-derived-state.md", "rationale": "Reduces re-render frequency by using booleans/media queries."}], "edges": [], "hyperedges": []}

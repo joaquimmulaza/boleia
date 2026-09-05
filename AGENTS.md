@@ -2,7 +2,16 @@
 
 ## 1. O Projeto (MVP)
 Plataforma de *matchmaking* para rotas de transporte diário e acordos de pagamento partilhado.
-Stack: React + Vite, Tailwind CSS, Lucide React, shadcn/ui (JSX), Supabase (Backend/Auth/DB). Tudo alojado de forma 100% gratuita.
+Stack: React + Vite, Tailwind CSS, Lucide React, shadcn/ui (JSX), Supabase (Backend/Auth/DB), **Graphify** (extracção AST → `graphify-out/`) + **Graphlore** MCP (navegação no Cursor). Tudo alojado de forma 100% gratuita.
+
+### 1.1 Graphify + Graphlore (navegação de código)
+
+* **Graphify** extrai o grafo de conhecimento (AST local, arestas **EXTRACTED**) para `graphify-out/` (`graph.json`, `GRAPH_REPORT.md`). Ignore: `.graphifyignore`. Install: `uv tool install graphifyy` (PyPI, dois y; CLI = `graphify`).
+* **Graphlore** é o **único** MCP de grafo no Cursor (`.cursor/mcp.json`, `GRAPHLORE_TOOLSET=lean`) — tools: overview / search / neighbors / subgraph / node_details / communities / freshness / build. **Não** instalar dual `code-review-graph` + `graphify.serve`.
+* **Install Graphlore:** não está no PyPI — `uv tool install "graphlore[treesitter]" --from git+https://github.com/yasinyaman/graphlore.git` (recibo local confirma Git URL + extra `treesitter`).
+* **Ordem (lean):** `graphlore_overview` / `freshness` (ou `GRAPH_REPORT.md`) → `graphlore_search` → `subgraph` / `neighbors` / `node_details` → Grep/Read só se o mapa estrutural não bastar. Preferir grafo a Grep para arquitectura e blast radius.
+* **Arestas INFERRED** = hipóteses (verificar). Princípios: `graph-doc.md`; regra always-on: `.cursor/rules/graphify.mdc`.
+* **Freshness:** hooks pós-commit refrescam AST; após docs/specs → `npm run graphify:update` (update semântico).
 
 ## 2. Princípios de "Vibe Coding" com Disciplina (O Método Akita)
 * **TDD Obrigatório (Test-Driven Development):** Todo o código funcional deve ser precedido por testes no Vitest. É estritamente proibido escrever a implementação antes dos testes. O fluxo é: 1. Escrever Testes (e mockar o necessário) -> 2. Executar (vão falhar) -> 3. Escrever Código -> 4. Passar nos Testes.
@@ -50,7 +59,8 @@ Lê este documento antes de iniciares qualquer nova funcionalidade. Tarefa nova 
 * **Geocoding:** `LocationService.js` (Photon API / OpenStreetMap, `countrycode=ao`) — coordenadas OD nas ofertas/procuras. Sem Google Maps / `VITE_GOOGLE_MAPS_API_KEY`.
 * Serviços canónicos: `OfertaService`, `ProcuraService`, `GrupoService`, `PropostaService`, `AgreementService` (RPC `accept_proposal`), `MatchingService`, `WaitlistService`, `AbsenceService`.
 * Testar fluxo de sessão em produção após deploy no Vercel.
-* **Agent loop:** regras em `.cursor/rules/`, skills em `.cursor/skills/boleia-agent-loop/`, hooks em `.cursor/hooks.json`.
+* **Agent loop:** regras em `.cursor/rules/` (incl. `graphify.mdc`), skills em `.cursor/skills/boleia-agent-loop/`, hooks em `.cursor/hooks.json`.
+* **Grafo:** consultar Graphlore **antes** de Grep em massa (ver §1.1).
 
 ## 7. Acordos (Agreements)
 Um Acordo (`acordos`) é **1 motorista : N passageiros** (`acordos_passageiros`). Estados do cabeçalho: `'activo' | 'cancelado'` (e afins); na UI comparar **case-insensitive**. Preços congelados na aceitação (`N_contrato`, `valor_mensal_por_passageiro_kz` / total). Saída de passageiro **não** recalcula quotas do mês. Gestão: **exclusivamente** `MyAgreements.jsx` (`/acordos`). Proibido reintroduzir `requestSeat` / acordo 1:1 com `passenger_id` no cabeçalho.
@@ -84,17 +94,17 @@ SoT visual = **v0 (One MCP)** + shadcn JSX + tokens `src/index.css`. Em UI/UX: U
 **REGRA ABSOLUTA:** Esta secção do documento (`CONTEXT.md` e `AGENTS.md`) tem de ser **obrigatoriamente atualizada** sempre que uma nova funcionalidade for implementada, refatorada ou corrigida. O objetivo central é garantir que qualquer Agente de IA que leia este ficheiro saiba com exatidão o ponto de situação do projeto, evitando redundâncias, reinvenção da roda ou duplicação de lógicas já existentes (DRY - Don't Repeat Yourself). Antes de iniciar qualquer tarefa, o agente deve assumir este relatório como a única fonte de verdade arquitetónica.
 
 🏛️ Relatório de Estado da Arquitetura: Boleia Certa
-**Última Atualização:** 5 de Setembro de 2026
-**Fase Atual:** Marketplace Oferta/Procura (Phase 6: **T22–T31 Done**; T29+T30 uncommitted) + **Phase 7 completa** (**T32–T35 Done** uncommitted) + **Landing refresh** + **Agent loop Cursor**. Spec: `.specs/features/marketplace-oferta-procura/`. Checkpoint: `CHECKPOINT.md`.
+**Última Atualização:** 5 de Setembro de 2026  
+**Fase Atual:** Marketplace Oferta/Procura (Phase 6: **T22–T31 Done**; T29+T30 uncommitted) + **Phase 7 completa** (**T32–T35 Done** uncommitted) + **Landing refresh** + **Agent loop Cursor** + **Gamma Done** (R2 hub motorista waitlist CTA + R4 copy sem zona) + **Graphify/Graphlore governance** (regra always-on + §1.1). Spec: `.specs/features/marketplace-oferta-procura/`. Checkpoint: `CHECKPOINT.md`.
 
 **O que já está implementado e validado:**
 1. **Infraestrutura e Backend (Supabase):**
  * **Domínio marketplace:** `ofertas_capacidade`, `procuras`, `grupos`, `membros_grupo`, `propostas`, `lista_espera`, `acordos` (1:N), `acordos_passageiros`, `faltas`. RPC `accept_proposal` atómica. Sem tabela `routes` / RPCs seats legados.
  * **Veículos:** `capacidade_total` / `vagas_passageiros` (= total − 1). Modo preço: `POR_PASSAGEIRO` | `TOTAL_ACORDO` (copy UI humana: «Por passageiro» / «Total do acordo»).
- * **Matching MVP:** ±15 min, raio OD 2500 m (haversine); `N_actual > vagas` → waitlist. Quatro Ns: `N_actual` · `N_proposto` · `N_contrato` · `N_activos`.
+ * **Matching MVP:** ±15 min, raio OD 2500 m (haversine); `N_actual > vagas` → waitlist. Quatro Ns: `N_actual` · `N_proposto` · `N_contrato` · `N_activos`. Dias: intersecção real (`dias_semana` em oferta **e** procura); vazio/ausente → incompatível.
  * **Grupo vivo:** pode estar abaixo de `n_maximo` e continuar negociável; propostas capturam `N_proposto` snapshot; preço na oferta/proposta do motorista (não no grupo).
  * **Faltas:** `desconto_kz` por dia útil do mês a partir da quota congelada — **sem** divisor `/ 4`.
- * **Adenda (T29):** RPC `renegotiate_agreement_pricing` — único caminho para mutar preços / `n_passageiros_contrato` + quotas dos activos; auth só motorista; leave **não** recalcula.
+ * **Adenda (T29 + R3):** RPC `renegotiate_agreement_pricing` agenda adenda `pendente_passageiro`; passageiro activo confirma via `accept_agreement_adenda` → `aceite`; `apply_due_agreement_adendas` só aplica `aceite` após `effective_from`. Auth renegociar = motorista; leave **não** recalcula.
  * **P0 hardening (2026-09-05):** RPC `leave_passenger` (saiu + vagas + waitlist); sem UPDATE client em `propostas`/`acordos`/`acordos_passageiros`/`lista_espera`; membros: owner gere; self só reabre `pendente`.
  * **Auth/Push PRESERVE:** `perfis`, `notificacoes`, `push_subscriptions`, Edge `send-push` (VAPID).
 2. **Frontend e Interface (React / Vite):**
@@ -107,17 +117,21 @@ SoT visual = **v0 (One MCP)** + shadcn JSX + tokens `src/index.css`. Em UI/UX: U
  * **Waitlist promoção (T26):** `promoteWaitlist` → RPC `promote_waitlist` (1º FIFO → `notificada` + notif `waitlist_promoted`); hook em `leavePassenger` (best-effort); UI hub com estados activa/notificada; **sem** auto-aceitar.
  * **Publicar oferta (T27+T34):** `PublishRoute` — dias + «Oferta flexível»; flexível **sem** OD (campos OD escondidos); fixa exige OD; `OfertaService.resolveOdFields`.
  * **Detalhe acordo (T28):** `MyAgreements` — bloco «Preço combinado»/congelado; lista N pax; destaque quota passageiro; falta só se activo; `ConfirmationModal` `busy`.
- * **Adenda (T29):** motorista activo → «Renegociar preço» (form inline + preview); `ConfirmationModal` `variant="primary"`; copy «próximo mês».
+ * **Adenda (T29 + R3):** motorista → «Renegociar preço»; passageiro → CTA «Aceitar adenda» quando `pendente_passageiro`; após aceite, banner «Novo preço a partir de …».
  * **Deep linking:** `notificationRouter.js` — `proposal_received` → hub da **contraparte** (`metadata.inbox`: `passageiro`|`motorista`); `waitlist_promoted`, `match_available`, etc.
  * **AuthContext:** `{ session, user, loading, tipoPerfil, profile, refreshProfile }`.
  * **Design SoT:** v0 via One + shadcn (`src/components/ui/`) + UI Skills + Mobbin free-safe. **Regra v0:** se o chat devolver só plano, Send Message a mandar construir; gate design só com código/preview. Penpot descontinuado como SoT.
- * **Agent loop:** `.cursor/skills/boleia-agent-loop/`, `.cursor/rules/ui-stack.mdc`, `.cursor/rules/multi-agent-loop.mdc`, hooks `subagentStop`.
+ * **Agent loop:** `.cursor/skills/boleia-agent-loop/`, `.cursor/rules/ui-stack.mdc`, `.cursor/rules/multi-agent-loop.mdc`, `.cursor/rules/graphify.mdc` (grafo antes de Grep), hooks `subagentStop`.
  * **Produto (2026-09-05):** oferta fixa vs flexível (sem OD/zona no flex); propostas A/B; aceite só contraparte; Procura→M propostas→1 acordo 1:N. **T32–T35 Done** (Phase 7 completa).
 3. **Serviços canónicos (`src/services/`):**
- * `OfertaService`, `ProcuraService`, `GrupoService` (`createGrupo`, `getGrupoByProcura`, `listMembrosGrupo`, `addMembroGrupo`, `syncNCandidato`), `PropostaService`, `AgreementService` (`createAgreementFromProposal`, `leavePassenger`, **`renegotiateAgreementPricing`**), `MatchingService` (`findCompatibleOfertas`, **`findCompatibleProcuras`** dual fixa/flex), `WaitlistService` (`enqueueWaitlist`, `promoteWaitlist`, listagens), `AbsenceService`, `LocationService` (Photon), `ProfileService.findPassageiroByTelefone`.
+ * `OfertaService`, `ProcuraService` (`dias_semana` default Seg–Sex), `GrupoService` (`createGrupo`, `getGrupoByProcura`, `listMembrosGrupo`, `addMembroGrupo`, `syncNCandidato`), `PropostaService`, `AgreementService` (`createAgreementFromProposal`, `leavePassenger`, **`renegotiateAgreementPricing`**, **`acceptAgreementAdenda`**), `MatchingService` (`findCompatibleOfertas`, **`findCompatibleProcuras`** dual fixa/flex), `WaitlistService` (`enqueueWaitlist`, `promoteWaitlist`, listagens), `AbsenceService`, `LocationService` (Photon), `ProfileService.findPassageiroByTelefone`.
  * **Removido:** `RouteService`, `AgreementsService` (`requestSeat`), cards `Acordo*` acoplados a `routes`.
 4. **Utils:** `pricing.js`, `geo.js`, `matchingConfig.js`, `matchingFilters.js`, `resolveAgreementPricing.js`, `propostaInbox.js`, `notificationRouter.js`.
 5. **Geocoding OSM (mantido):** Photon `countrycode=ao`; Autocomplete «Powered by OpenStreetMap».
 6. **UI copy:** nunca expor jargon (`N_actual`, `N_proposto`, `N_candidato`, `POR_PASSAGEIRO`) — só labels humanas («Grupo · 2 pessoas», «Por passageiro», «Total do acordo»).
 
-**Próximo:** Phase 7 **completa** (T32–T35). **Fora do MVP:** zonas/polígonos/raio residencial. Commits T29/T30/T32–T35 só se o utilizador pedir.
+ * **Alpha audit G1–G4 Done:** `src/pages/MarketplaceAuditScenarios.test.jsx` — contrato `createAgreementFromProposal` / `leavePassenger` (cascata irmãs via RPC, N_actual < N_proposto, overbooking, leave sem recálculo cliente).
+
+ * **Beta Done (R1 + R3):** matching por `dias_semana` em `procuras` + intersecção obrigatória; consentimento de adenda (`acordos_adendas.estado` `pendente_passageiro`|`aceite`, RPC `accept_agreement_adenda`, CTA em `/acordos`). Migrações MCP: `procuras_dias_semana`, `adenda_consentimento_passageiro`.
+
+**Próximo:** Phase 7 **completa** (T32–T35). **Fora do MVP:** zonas/polígonos/raio residencial. Commits T29/T30/T32–T35 / Beta só se o utilizador pedir.

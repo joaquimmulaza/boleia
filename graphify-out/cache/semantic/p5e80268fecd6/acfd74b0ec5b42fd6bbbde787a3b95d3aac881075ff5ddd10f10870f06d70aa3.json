@@ -1,1 +1,0 @@
-{"nodes": [{"id": "codex_skills_react_best_practices_rules_async_api_routes", "label": "Prevent Waterfall Chains in API Routes", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/async-api-routes.md", "rationale": "Critical for server-side performance; 2-10x improvement."}], "edges": [], "hyperedges": []}

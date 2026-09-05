@@ -1,1 +1,0 @@
-{"nodes": [{"id": "codex_skills_react_best_practices_rules_async_defer_await", "label": "Defer Await Until Needed", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/async-defer-await.md", "rationale": "Avoids blocking unused code paths."}], "edges": [], "hyperedges": []}

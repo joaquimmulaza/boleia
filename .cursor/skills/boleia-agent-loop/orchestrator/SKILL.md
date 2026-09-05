@@ -21,7 +21,7 @@ description: Orquestra tarefas Boleia Certa — Spec-Driven, paralelismo e papé
 |------|-----------|
 | UI/UX | ui-designer → gate design → implementer → ui-qa + code-reviewer (paralelo se scopes OK) |
 | Só lógica/serviço | implementer → code-reviewer |
-| Exploração | explore / graphify; sem Spec se não houver mudança |
+| Exploração / arquitectura | **Graphlore primeiro:** `graphlore_overview` ou `graphlore_freshness`, depois `search` → `subgraph`/`neighbors`/`node_details`. Grep só se o mapa não bastar (`.cursor/rules/graphify.mdc`). Sem Spec se não houver mudança. |
 
 Ler o `SKILL.md` do papel correspondente em `.cursor/skills/boleia-agent-loop/<papel>/` e incluir as instruções no prompt do `Task`.
 

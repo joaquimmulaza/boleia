@@ -1,1 +1,0 @@
-{"nodes": [{"id": "server_parallel_fetching", "label": "Parallel Data Fetching with Component Composition", "file_type": "document", "source_file": ".cursor/skills/react-best-practices/rules/server-parallel-fetching.md", "rationale": "Eliminating server-side waterfalls by restructuring components to fetch data simultaneously."}], "edges": [], "hyperedges": []}

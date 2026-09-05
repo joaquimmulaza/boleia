@@ -1,1 +1,0 @@
-{"nodes": [{"id": "codex_skills_react_best_practices_rules_client_event_listeners", "label": "Deduplicate Global Event Listeners", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/client-event-listeners.md", "rationale": "Uses useSWRSubscription to share listeners."}], "edges": [], "hyperedges": []}

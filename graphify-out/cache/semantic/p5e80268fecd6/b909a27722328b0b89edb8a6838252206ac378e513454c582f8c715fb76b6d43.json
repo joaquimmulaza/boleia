@@ -1,1 +1,0 @@
-{"nodes": [{"id": "codex_skills_react_best_practices_rules_client_passive_event_listeners", "label": "Use Passive Event Listeners", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/client-passive-event-listeners.md", "rationale": "Eliminates scroll delay."}], "edges": [], "hyperedges": []}

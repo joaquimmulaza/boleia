@@ -1,1 +1,0 @@
-{"nodes": [{"id": "codex_skills_react_best_practices_rules_async_parallel", "label": "Promise.all() for Independent Operations", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/async-parallel.md", "rationale": "Reduces sequential round trips."}], "edges": [], "hyperedges": []}

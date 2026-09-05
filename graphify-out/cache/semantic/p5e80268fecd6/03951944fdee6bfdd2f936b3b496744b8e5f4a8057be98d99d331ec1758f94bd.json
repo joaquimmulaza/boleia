@@ -1,1 +1,0 @@
-{"nodes": [{"id": "rerender_memo", "label": "Extract to Memoized Components", "file_type": "document", "source_file": ".cursor/skills/react-best-practices/rules/rerender-memo.md", "rationale": "Enabling early returns and skipping expensive work by isolating logic into React.memo components."}], "edges": [], "hyperedges": []}

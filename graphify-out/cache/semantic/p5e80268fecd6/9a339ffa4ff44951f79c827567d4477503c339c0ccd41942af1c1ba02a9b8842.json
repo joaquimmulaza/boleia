@@ -1,1 +1,0 @@
-{"nodes": [{"id": "codex_skills_react_best_practices_rules_bundle_preload", "label": "Preload Based on User Intent", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/bundle-preload.md", "rationale": "Reduces perceived latency."}], "edges": [], "hyperedges": []}

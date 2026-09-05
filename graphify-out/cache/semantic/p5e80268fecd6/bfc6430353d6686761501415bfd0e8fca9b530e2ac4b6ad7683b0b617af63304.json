@@ -1,1 +1,0 @@
-{"nodes": [{"id": "codex_skills_react_best_practices_rules_server_auth_actions", "label": "Authenticate Server Actions", "file_type": "code", "source_file": ".codex/skills/react-best-practices/rules/server-auth-actions.md", "rationale": "Critical security: Server Actions are public endpoints."}], "edges": [], "hyperedges": []}

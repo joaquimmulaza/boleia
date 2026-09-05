@@ -1,1 +1,0 @@
-{"nodes": [{"id": "server_serialization", "label": "Minimize Serialization at RSC Boundaries", "file_type": "document", "source_file": ".cursor/skills/react-best-practices/rules/server-serialization.md", "rationale": "Reducing page weight by only passing necessary fields across the Server/Client boundary."}], "edges": [], "hyperedges": []}
