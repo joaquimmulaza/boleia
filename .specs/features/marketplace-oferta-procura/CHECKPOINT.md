@@ -8,7 +8,7 @@
 **Commits relevantes:**
 - `178cd50` — T24 hub motorista multi-pax  
 - `dc52862` — **T25–T28** (E2E quotas, waitlist, oferta dias, detalhe acordo 1:N)  
-- **T31 ainda UNCOMMITTED** no working tree — commit pendente se o utilizador pedir  
+- `8a0111e` — **T31** n_maximo + grupo público / pedir entrada (**pushed** `origin/main`)  
 
 ---
 
@@ -21,7 +21,7 @@ Continua marketplace a partir de:
 Próxima task: T29 (P2 — adenda / renegotiateAgreementPricing).
 
 Antes de código:
-0. Se T31 ainda estiver uncommitted no working tree, NÃO reinventar T31 — só commit se eu pedir.
+0. T31 já está em `8a0111e` (pushed) — NÃO reinventar.
 1. Ler este CHECKPOINT.md (verdade dura + feito T22–T31 + o que falta)
 2. tasks.md Phase 6 — secção T29 (e T30 se relevante)
 3. Plano .cursor/plans/marketplace_oferta_procura_74cbb52a.plan.md
@@ -40,7 +40,7 @@ Orquestração: .cursor/skills/tlc-spec-driven + boleia-agent-loop;
 paralelismo com .cursor/skills/subagent-creator quando scopes disjuntos.
 UI SoT: v0 (One) + shadcn JSX + UI Skills + Mobbin free-safe (nunca Penpot como gate).
 
-Git: dc52862 = T25–T28; T31 pode estar uncommitted — não misturar lixo .cline/.codex no commit; push só se eu pedir.
+Git: `8a0111e` = T31 (pushed); `dc52862` = T25–T28; push só se eu pedir.
 ```
 
 ---
@@ -104,7 +104,7 @@ Alias legado: `N_candidato` = `N_actual`. Coluna BD: `n_candidato`.
 
 ## Feito (não reinventar) — T22–T31
 
-### T31 — `n_maximo` + grupo público / pedir entrada ← **Done (uncommitted)**
+### T31 — `n_maximo` + grupo público / pedir entrada ← **Done (`8a0111e`, pushed)**
 
 **Gates:** design APPROVE · UI QA APPROVE · code-review APPROVE (ciclo 2 após fix mensagens).
 
@@ -235,17 +235,12 @@ RPCs: `accept_proposal`, `promote_waitlist`.
 ## Handoff git (snapshot)
 
 ```
-(uncommitted) feat(marketplace): T31 n_maximo + grupo público / pedir entrada
+8a0111e feat(marketplace): T31 n_maximo + grupo público / pedir entrada
 dc52862 feat(marketplace): T25–T28 quotas E2E, waitlist, oferta dias e detalhe 1:N
 178cd50 feat(marketplace): T24 hub motorista rever proposta multi-passageiro
 ```
 
-Mensagem sugerida para commit T31 (quando pedires):
-```
-feat(marketplace): T31 n_maximo + grupo público / pedir entrada
-```
-
-`main` ahead of origin — push pendente se o utilizador quiser.
+`main` = `origin/main` (synced após push de 2026-09-05).
 
 ---
 
