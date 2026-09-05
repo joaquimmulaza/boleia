@@ -1,8 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearQueue, listQueueItems } from './db.js';
 import { drainQueue } from './offlineQueue.js';
-import { leavePassenger } from './AgreementService.js';
+import {
+  acceptAgreementAdenda,
+  createAgreementFromProposal,
+  leavePassenger,
+  renegotiateAgreementPricing,
+} from './AgreementService.js';
 import { cancelProposta } from './PropostaService.js';
+import { sairDoGrupo } from './GrupoService.js';
 import { supabase } from '../lib/supabase';
 
 vi.mock('../lib/supabase', () => ({
@@ -53,6 +59,58 @@ describe('OfflineSyncEngine', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].rpc).toBe('cancel_proposal');
     expect(rows[0].args.p_proposta_id).toBe('prop-1');
+  });
+
+  it('quando a rede falha, accept_proposal fica na fila com p_idempotency_key', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+
+    const result = await createAgreementFromProposal('prop-2');
+    expect(result.offlineQueued).toBe(true);
+
+    const rows = await listQueueItems();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].rpc).toBe('accept_proposal');
+    expect(rows[0].args.p_proposta_id).toBe('prop-2');
+    expect(rows[0].args.p_idempotency_key).toBe(result.idempotency_key);
+  });
+
+  it('quando a rede falha, renegotiate_agreement_pricing fica na fila', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+
+    const result = await renegotiateAgreementPricing('acordo-2', {
+      modo_preco: 'TOTAL_ACORDO',
+      valor_ask_kz: 90000,
+      n_passageiros: 3,
+    });
+    expect(result.offlineQueued).toBe(true);
+
+    const rows = await listQueueItems();
+    expect(rows[0].rpc).toBe('renegotiate_agreement_pricing');
+    expect(rows[0].args.p_acordo_id).toBe('acordo-2');
+    expect(rows[0].args.p_idempotency_key).toBe(result.idempotency_key);
+  });
+
+  it('quando a rede falha, accept_agreement_adenda fica na fila', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+
+    const result = await acceptAgreementAdenda('adenda-9');
+    expect(result.offlineQueued).toBe(true);
+
+    const rows = await listQueueItems();
+    expect(rows[0].rpc).toBe('accept_agreement_adenda');
+    expect(rows[0].args.p_adenda_id).toBe('adenda-9');
+  });
+
+  it('quando a rede falha, leave_grupo_membro fica na fila', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+
+    const result = await sairDoGrupo('g-9', 'pax-9');
+    expect(result.offlineQueued).toBe(true);
+
+    const rows = await listQueueItems();
+    expect(rows[0].rpc).toBe('leave_grupo_membro');
+    expect(rows[0].args.p_grupo_id).toBe('g-9');
+    expect(rows[0].args.p_passenger_id).toBe('pax-9');
   });
 
   it('reconciliação: drainQueue restaura consistência quando a ligação volta', async () => {

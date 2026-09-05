@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowRight, Clock, Users, MapPin } from 'lucide-react';
+import { ArrowRight, Clock, Users, MapPin, Banknote } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AddressInput from '../components/AddressInput';
 import PageHeader from '../components/PageHeader';
@@ -23,10 +23,24 @@ import { createAgreementFromProposal } from '../services/AgreementService';
 import { enqueueWaitlist, listWaitlistByProcura } from '../services/WaitlistService';
 import { getGrupoByProcura, listMembrosGrupo } from '../services/GrupoService';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
+import { formatKwanza } from '../utils/formatKwanza';
 import {
   filterPropostasParaInbox,
   filterPropostasEnviadas,
 } from '../utils/propostaInbox';
+
+/** ISO: 1=Seg … 7=Dom (duplicado de PublishRoute — evitar conflito de ficheiros). */
+const DIAS_SEMANA = [
+  { valor: 1, label: 'Seg' },
+  { valor: 2, label: 'Ter' },
+  { valor: 3, label: 'Qua' },
+  { valor: 4, label: 'Qui' },
+  { valor: 5, label: 'Sex' },
+  { valor: 6, label: 'Sáb' },
+  { valor: 7, label: 'Dom' },
+];
+
+const DIAS_UTEIS_DEFAULT = [1, 2, 3, 4, 5];
 
 /**
  * Copy humana do tamanho da procura (lista = resumo).
@@ -84,6 +98,8 @@ const PassengerDashboard = () => {
     destination_name: '',
     destination_lat: null,
     destination_lng: null,
+    dias_semana: [...DIAS_UTEIS_DEFAULT],
+    teto_mensal_kz: '',
   });
 
   const carregar = useCallback(async () => {
@@ -157,6 +173,19 @@ const PassengerDashboard = () => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  /**
+   * @param {number} valor
+   */
+  const toggleDia = (valor) => {
+    setForm((prev) => {
+      const actual = prev.dias_semana || [];
+      const next = actual.includes(valor)
+        ? actual.filter((d) => d !== valor)
+        : [...actual, valor].sort((a, b) => a - b);
+      return { ...prev, dias_semana: next };
+    });
+  };
+
   const handleCriarProcura = async (e) => {
     e.preventDefault();
     setFeedback({ type: '', text: '' });
@@ -167,8 +196,37 @@ const PassengerDashboard = () => {
       });
       return;
     }
+    if (!form.dias_semana?.length) {
+      setFeedback({
+        type: 'error',
+        text: 'Selecciona pelo menos um dia da semana.',
+      });
+      return;
+    }
+    const tetoRaw = String(form.teto_mensal_kz || '').trim();
+    let tetoNumero = null;
+    if (tetoRaw !== '') {
+      tetoNumero = Number.parseInt(tetoRaw, 10);
+      if (!Number.isFinite(tetoNumero) || tetoNumero <= 0) {
+        setFeedback({
+          type: 'error',
+          text: 'O teto mensal deve ser um valor maior que 0 Kz.',
+        });
+        return;
+      }
+    }
     try {
-      const criada = await createProcura(form);
+      const criada = await createProcura({
+        preferred_time: form.preferred_time,
+        origin_name: form.origin_name,
+        origin_lat: form.origin_lat,
+        origin_lng: form.origin_lng,
+        destination_name: form.destination_name,
+        destination_lat: form.destination_lat,
+        destination_lng: form.destination_lng,
+        dias_semana: form.dias_semana,
+        teto_mensal_kz: tetoNumero,
+      });
       setProcura(criada);
       setView('matches');
       await carregar();
@@ -377,6 +435,59 @@ const PassengerDashboard = () => {
               className="h-12 rounded-lg bg-light-gray dark:bg-slate-800 px-3"
             />
           </label>
+
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-semibold text-charcoal dark:text-slate-300">
+              Dias da semana
+            </span>
+            <div
+              className="flex flex-wrap gap-2"
+              role="group"
+              aria-label="Dias da semana"
+            >
+              {DIAS_SEMANA.map(({ valor, label }) => {
+                const activo = form.dias_semana.includes(valor);
+                return (
+                  <button
+                    key={valor}
+                    type="button"
+                    aria-pressed={activo}
+                    onClick={() => toggleDia(valor)}
+                    className={`min-w-10 h-10 px-2.5 rounded-lg text-sm font-bold transition-all ${
+                      activo
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'bg-light-gray dark:bg-slate-800 text-slate-500'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <label className="flex flex-col gap-1.5 text-sm font-semibold">
+            <span className="flex items-center gap-1.5">
+              <Banknote size={16} aria-hidden="true" />
+              Teto mensal
+            </span>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                inputMode="numeric"
+                name="teto_mensal_kz"
+                min={1}
+                step={1}
+                value={form.teto_mensal_kz}
+                onChange={handleChange}
+                placeholder="Opcional"
+                aria-label="Teto mensal"
+                className="flex-1 h-12 rounded-lg bg-light-gray dark:bg-slate-800 px-3 tabular-nums outline-none focus:ring-2 focus:ring-primary/50"
+              />
+              <span className="text-sm font-medium text-slate-500 shrink-0">Kz</span>
+            </div>
+          </label>
+
           <button
             type="submit"
             className="w-full bg-primary text-white font-bold py-4 rounded-xl"
@@ -401,7 +512,7 @@ const PassengerDashboard = () => {
               <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
               <span>{procura.destination_name}</span>
             </div>
-            <div className="flex gap-3 text-sm text-slate-500">
+            <div className="flex gap-3 text-sm text-slate-500 flex-wrap">
               <span className="flex items-center gap-1">
                 <Clock size={14} aria-hidden="true" />
                 {String(procura.preferred_time).slice(0, 5)}
@@ -414,6 +525,12 @@ const PassengerDashboard = () => {
                   temGrupo: Boolean(grupo),
                 })}
               </span>
+              {procura.teto_mensal_kz != null && Number(procura.teto_mensal_kz) > 0 && (
+                <span className="flex items-center gap-1 tabular-nums">
+                  <Banknote size={14} aria-hidden="true" />
+                  Teto mensal {formatKwanza(procura.teto_mensal_kz)} Kz
+                </span>
+              )}
             </div>
             <button
               type="button"

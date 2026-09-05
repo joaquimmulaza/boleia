@@ -3,7 +3,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import PassengerDashboard from './PassengerDashboard';
-import { listProcurasByOwner } from '../services/ProcuraService';
+import { createProcura, listProcurasByOwner } from '../services/ProcuraService';
 import { findCompatibleOfertas } from '../services/MatchingService';
 import { createProposta, listPropostasByProcura, enrichPropostasForReview, cancelProposta } from '../services/PropostaService';
 import { createAgreementFromProposal } from '../services/AgreementService';
@@ -57,10 +57,18 @@ vi.mock('../services/ProfileService', () => ({
 }));
 
 vi.mock('../components/AddressInput', () => ({
-  default: ({ name, label }) => (
+  default: ({ name, label, value, onChange, onSelectCoordinates }) => (
     <label>
       {label}
-      <input name={name} />
+      <input
+        name={name}
+        aria-label={label}
+        value={value || ''}
+        onChange={(e) => {
+          onChange?.(e);
+          onSelectCoordinates?.({ lat: -8.9, lng: 13.1 });
+        }}
+      />
     </label>
   ),
 }));
@@ -393,6 +401,67 @@ describe('PassengerDashboard — marketplace', () => {
       expect(cancelProposta).toHaveBeenCalledWith('prop-out');
     });
     expect(await screen.findByRole('alert')).toHaveTextContent(/Proposta cancelada/i);
+  });
+
+  it('criar procura envia dias_semana e teto_mensal_kz ao interagir no formulário', async () => {
+    createProcura.mockResolvedValue({
+      ...procuraBase,
+      id: 'pr-nova',
+      dias_semana: [1, 2, 3, 4, 5, 6],
+      teto_mensal_kz: 50000,
+    });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Criar procura/i }));
+
+    fireEvent.change(screen.getByLabelText(/^Origem$/i), {
+      target: { name: 'origin_name', value: 'Talatona' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Destino$/i), {
+      target: { name: 'destination_name', value: 'Miramar' },
+    });
+
+    const sab = screen.getByRole('button', { name: /^Sáb$/i });
+    expect(sab).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(sab);
+    expect(sab).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.change(screen.getByLabelText(/Teto mensal/i), {
+      target: { name: 'teto_mensal_kz', value: '50000' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Guardar procura/i }));
+
+    await waitFor(() => {
+      expect(createProcura).toHaveBeenCalledWith(
+        expect.objectContaining({
+          dias_semana: [1, 2, 3, 4, 5, 6],
+          teto_mensal_kz: 50000,
+          origin_name: 'Talatona',
+          destination_name: 'Miramar',
+        }),
+      );
+    });
+  });
+
+  it('mostra teto mensal formatado no hub quando a procura tem teto_mensal_kz', async () => {
+    listProcurasByOwner.mockResolvedValue([
+      { ...procuraBase, n_candidato: 1, teto_mensal_kz: 50000 },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(/50[\s.]?000\s*Kz/i)).toBeInTheDocument();
+    expect(screen.getByText(/Teto mensal/i)).toBeInTheDocument();
   });
 
   it('mostra inbox de propostas do motorista e permite aceitar (sentido B)', async () => {

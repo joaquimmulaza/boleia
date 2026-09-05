@@ -1,0 +1,32 @@
+-- Wave 4 Epsilon: idempotência client-side para accept_proposal,
+-- leave_grupo_membro, renegotiate_agreement_pricing, accept_agreement_adenda.
+--
+-- BLOCKER: corpos completos destas RPCs NÃO estão no repositório local
+-- (só leave_passenger / cancel_proposal em 20260905230000).
+-- Aplicar via Supabase MCP quando os corpos actuais estiverem disponíveis.
+--
+-- Padrão (igual a leave_passenger / cancel_proposal):
+--   1. Aceitar p_idempotency_key uuid DEFAULT NULL
+--   2. No início: se key NOT NULL e EXISTS em rpc_idempotency → early RETURN
+--      (devolver subject_id / linha existente)
+--   3. Após sucesso da mutação: INSERT INTO rpc_idempotency
+--      (idempotency_key, rpc_name, subject_id, user_id)
+--      ON CONFLICT DO NOTHING
+--
+-- Assinaturas alvo (stubs documentais — NÃO executar DROP sem corpo completo):
+--
+--   accept_proposal(p_proposta_id uuid, p_idempotency_key uuid DEFAULT NULL)
+--   leave_grupo_membro(p_grupo_id uuid, p_passenger_id uuid, p_idempotency_key uuid DEFAULT NULL)
+--   renegotiate_agreement_pricing(
+--     p_acordo_id uuid, p_modo_preco text, p_valor_ask_kz numeric,
+--     p_n_passageiros integer, p_idempotency_key uuid DEFAULT NULL
+--   )
+--   accept_agreement_adenda(p_adenda_id uuid, p_idempotency_key uuid DEFAULT NULL)
+--
+-- TODO (MCP): puxar definição actual de cada função, acrescentar parâmetro
+-- p_idempotency_key, early-return + INSERT, REVOKE/GRANT na assinatura nova.
+--
+-- Tabela rpc_idempotency já criada em 20260905230000_rpc_idempotency_leave_cancel.sql.
+-- Este ficheiro é no-op seguro até o MCP aplicar os CREATE OR REPLACE.
+
+SELECT 1; -- placeholder no-op (documentação Wave 4)

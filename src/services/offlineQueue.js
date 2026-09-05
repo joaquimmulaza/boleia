@@ -25,7 +25,14 @@ export function isNetworkFailure(error) {
 
 /**
  * @param {{
- *   rpc: 'leave_passenger' | 'cancel_proposal' | string,
+ *   rpc:
+ *     | 'leave_passenger'
+ *     | 'cancel_proposal'
+ *     | 'accept_proposal'
+ *     | 'leave_grupo_membro'
+ *     | 'renegotiate_agreement_pricing'
+ *     | 'accept_agreement_adenda'
+ *     | string,
  *   args: Record<string, unknown>,
  *   accessToken: string,
  *   idempotencyKey?: string,

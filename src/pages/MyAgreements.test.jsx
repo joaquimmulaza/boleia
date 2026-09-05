@@ -28,6 +28,15 @@ vi.mock('../services/AgreementService', () => ({
   acceptAgreementAdenda: vi.fn(),
 }));
 
+vi.mock('../services/offlineQueue', () => ({
+  listPending: vi.fn().mockResolvedValue([]),
+  drainQueue: vi.fn().mockResolvedValue({ processed: 0, remaining: 0, conflicts: [] }),
+}));
+
+vi.mock('../hooks/useNetworkStatus', () => ({
+  useNetworkStatus: vi.fn(() => ({ isOnline: true, isOffline: false })),
+}));
+
 import {
   getAgreementsForDriver,
   getAgreementsForPassenger,
@@ -35,6 +44,7 @@ import {
   renegotiateAgreementPricing,
   acceptAgreementAdenda,
 } from '../services/AgreementService';
+import { listPending } from '../services/offlineQueue';
 
 const acordoMotorista = {
   id: 'acordo-1',
@@ -118,6 +128,7 @@ describe('MyAgreements — marketplace 1:N', () => {
     mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
     getAgreementsForDriver.mockResolvedValue([acordoMotorista]);
     getAgreementsForPassenger.mockResolvedValue([]);
+    listPending.mockResolvedValue([]);
   });
 
   it('lista acordos activos com copy humana', async () => {
@@ -262,6 +273,48 @@ describe('MyAgreements — marketplace 1:N', () => {
     expect(
       await screen.findByText(/Saíste do acordo\. A quota do mês mantém-se/i),
     ).toBeInTheDocument();
+  });
+
+  it('leave offlineQueued: mostra Saída Pendente e desactiva Sair no cartão', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    leavePassenger.mockResolvedValue({
+      offlineQueued: true,
+      id: 'acordo-pax',
+      idempotency_key: 'idem-leave-1',
+    });
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Sair do acordo/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Sair$/i }));
+
+    await waitFor(() => {
+      expect(leavePassenger).toHaveBeenCalledWith('acordo-pax', 'pax-viewer');
+    });
+
+    expect(await screen.findByText(/Saída Pendente/i)).toBeInTheDocument();
+    expect(screen.getByText(/A sincronizar/i)).toBeInTheDocument();
+    expect(screen.getByText(/Talatona/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByRole('button', { name: /Sair do acordo/i })).toBeDisabled();
+  });
+
+  it('cartão activo destaca a quota congelada com tipografia forte', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+
+    renderPage();
+
+    const card = await screen.findByRole('button', { name: /Talatona/i });
+    const quota = within(card).getByTestId('card-quota-congelada');
+    expect(quota).toHaveTextContent(/40[\s.]?000/);
+    expect(quota.className).toMatch(/text-lg/);
+    expect(quota.className).toMatch(/font-bold/);
+    expect(quota.className).toMatch(/text-primary/);
   });
 
   it('durante leaveBusy: botões do ConfirmationModal ficam desactivados e overlay não cancela', async () => {

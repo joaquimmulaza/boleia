@@ -1,4 +1,6 @@
+import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../lib/supabase';
+import { enqueueRpc, isNetworkFailure } from './offlineQueue.js';
 
 const N_MAXIMO_MIN = 2;
 const N_MAXIMO_MAX = 8;
@@ -439,10 +441,13 @@ export async function rejeitarEntrada(membroId) {
  * Saída de membro activo via RPC SECURITY DEFINER (`leave_grupo_membro`):
  * `activo`→`saiu` + sync N_actual. RLS cliente só permite self reabrir `pendente`.
  * Não invalida nem muta propostas abertas (N_proposto permanece snapshot).
+ * Em falha de rede, enfileira com idempotency_key.
+ *
  * @param {string} grupoId
  * @param {string} passengerId
+ * @param {{ idempotencyKey?: string, forceQueue?: boolean }} [options]
  */
-export async function sairDoGrupo(grupoId, passengerId) {
+export async function sairDoGrupo(grupoId, passengerId, options = {}) {
   if (!grupoId) {
     throw new Error('ID do grupo é obrigatório.');
   }
@@ -450,14 +455,53 @@ export async function sairDoGrupo(grupoId, passengerId) {
     throw new Error('ID do passageiro é obrigatório.');
   }
 
-  const { data, error: rpcError } = await supabase.rpc('leave_grupo_membro', {
+  const idempotencyKey = options.idempotencyKey || uuidv4();
+  const rpcArgs = {
     p_grupo_id: grupoId,
     p_passenger_id: passengerId,
-  });
+    p_idempotency_key: idempotencyKey,
+  };
 
-  if (rpcError) {
-    throw new Error(rpcError.message || 'Falha ao sair do grupo.');
+  const queueLeaveGrupo = async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+    if (!accessToken) {
+      throw new Error('Sessão necessária para guardar a saída do grupo offline.');
+    }
+    await enqueueRpc({
+      rpc: 'leave_grupo_membro',
+      args: rpcArgs,
+      accessToken,
+      idempotencyKey,
+    });
+    return {
+      grupo_id: grupoId,
+      passenger_id: passengerId,
+      estado: 'saiu',
+      offlineQueued: true,
+      idempotency_key: idempotencyKey,
+    };
+  };
+
+  if (options.forceQueue || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
+    return queueLeaveGrupo();
   }
 
-  return data;
+  try {
+    const { data, error: rpcError } = await supabase.rpc('leave_grupo_membro', rpcArgs);
+
+    if (rpcError) {
+      if (isNetworkFailure(rpcError)) {
+        return queueLeaveGrupo();
+      }
+      throw new Error(rpcError.message || 'Falha ao sair do grupo.');
+    }
+
+    return data;
+  } catch (err) {
+    if (isNetworkFailure(err)) {
+      return queueLeaveGrupo();
+    }
+    throw err;
+  }
 }

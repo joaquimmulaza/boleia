@@ -94,8 +94,8 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
 **REGRA ABSOLUTA:** Esta secção do documento (`CONTEXT.md` e `AGENTS.md`) tem de ser **obrigatoriamente atualizada** sempre que uma nova funcionalidade for implementada, refatorada ou corrigida. O objetivo central é garantir que qualquer Agente de IA que leia este ficheiro saiba com exatidão o ponto de situação do projeto, evitando redundâncias, reinvenção da roda ou duplicação de lógicas já existentes (DRY - Don't Repeat Yourself). Antes de iniciar qualquer tarefa, o agente deve assumir este relatório como a única fonte de verdade arquitetónica.
 
 🏛️ Relatório de Estado da Arquitetura: Boleia Certa
-**Última Atualização:** 5 de Setembro de 2026  
-**Fase Atual:** Marketplace Oferta/Procura (Phase 6: **T22–T31 Done**; T29+T30 uncommitted) + **Phase 7 completa** (**T32–T35 Done** uncommitted) + **Landing refresh** + **Agent loop Cursor** + **Gamma Done** (R2 hub motorista waitlist CTA + R4 copy sem zona) + **Graphify/Graphlore governance** + **Stitch + UI Skills sync** (SoT UI). Spec: `.specs/features/marketplace-oferta-procura/`. Checkpoint: `CHECKPOINT.md`.
+**Última Atualização:** 6 de Setembro de 2026 
+**Fase Atual:** Marketplace Oferta/Procura (Phase 6–7) + **Landing refresh** + **Agent loop Cursor** + **Graphify/Graphlore** + **Stitch + UI Skills** + **PWA Offline Wave 3–4**. Spec Wave 4: `.specs/features/pwa-offline-wave4/`.
 
 **O que já está implementado e validado:**
 1. **Infraestrutura e Backend (Supabase):**
@@ -126,14 +126,16 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
 3. **Serviços canónicos (`src/services/`):**
  * `OfertaService`, `ProcuraService` (`dias_semana` default Seg–Sex), `GrupoService` (`createGrupo`, `getGrupoByProcura`, `listMembrosGrupo`, `addMembroGrupo`, `syncNCandidato`), `PropostaService`, `AgreementService` (`createAgreementFromProposal`, `leavePassenger`, **`renegotiateAgreementPricing`**, **`acceptAgreementAdenda`**), `MatchingService` (`findCompatibleOfertas`, **`findCompatibleProcuras`** dual fixa/flex), `WaitlistService` (`enqueueWaitlist`, `promoteWaitlist`, listagens), `AbsenceService`, `LocationService` (Photon), `ProfileService.findPassageiroByTelefone`.
  * **Removido:** `RouteService`, `AgreementsService` (`requestSeat`), cards `Acordo*` acoplados a `routes`.
-4. **Utils:** `pricing.js`, `geo.js`, `matchingConfig.js`, `matchingFilters.js`, `resolveAgreementPricing.js`, `propostaInbox.js`, `notificationRouter.js`.
+4. **Utils:** `pricing.js`, `geo.js`, `matchingConfig.js`, `matchingFilters.js`, `resolveAgreementPricing.js`, `propostaInbox.js`, `notificationRouter.js`, `faltaDesconto.js` (`computeFaltaDesconto`).
 5. **Geocoding OSM (mantido):** Photon `countrycode=ao`; Autocomplete «Powered by OpenStreetMap».
 6. **UI copy:** nunca expor jargon (`N_actual`, `N_proposto`, `N_candidato`, `POR_PASSAGEIRO`) — só labels humanas («Grupo · 2 pessoas», «Por passageiro», «Total do acordo»).
 
- * **Alpha audit G1–G4 Done:** `src/pages/MarketplaceAuditScenarios.test.jsx` — contrato `createAgreementFromProposal` / `leavePassenger` (cascata irmãs via RPC, N_actual < N_proposto, overbooking, leave sem recálculo cliente).
+ * **Alpha audit G1–G4 + Wave 4 G9/G10 Done:** `src/pages/MarketplaceAuditScenarios.test.jsx` — contrato `createAgreementFromProposal` / `leavePassenger` (cascata, N_actual < N_proposto, overbooking, leave); G9 fórmula faltas; G10 overbooking multi-aceite por mocks.
 
  * **Beta Done (R1 + R3):** matching por `dias_semana` em `procuras` + intersecção obrigatória; consentimento de adenda (`acordos_adendas.estado` `pendente_passageiro`|`aceite`, RPC `accept_agreement_adenda`, CTA em `/acordos`). Migrações MCP: `procuras_dias_semana`, `adenda_consentimento_passageiro`.
 
  * **Wave 3 PWA Offline-First (2026-09-05):** VitePWA `src/sw.js` — SWR GET `acordos`/`grupos`; fila IndexedDB `offline_write_queue` (`db.js` + `offlineQueue.js`); Background Sync `sync-offline-actions` + fallback `online` via `useNetworkStatus`; banner `OfflineBanner` em `App.jsx`; RPCs `leave_passenger` / `cancel_proposal` com `p_idempotency_key` + tabela `rpc_idempotency`. Spec: `.specs/features/pwa-offline-first/`.
 
-**Próximo:** Idempotência nas restantes RPCs; optimistic UI «Saída Pendente». **Fora do MVP:** zonas/polígonos/raio residencial. Commits T29/T30/T32–T35 / Beta / Wave 3 PWA só se o utilizador pedir.
+ * **Wave 4 MVP & PWA (2026-09-06):** Idempotência client + fila para `accept_proposal` / `leave_grupo_membro` / `renegotiate_agreement_pricing` / `accept_agreement_adenda` (`AgreementService`, `GrupoService`, `offlineQueue`); migração documental `20260906010000_rpc_idempotency_wave4.sql` (corpo SQL completo via MCP pendente). Procura: picker `dias_semana` + `teto_mensal_kz` em `PassengerDashboard`. MyAgreements: quota congelada destacada + optimistic «Saída Pendente (A sincronizar...)». Audit G9 (`computeFaltaDesconto`) + G3/G10 mocks overbooking. Spec: `.specs/features/pwa-offline-wave4/`.
+
+**Próximo:** Aplicar corpos SQL Wave 4 no Supabase MCP (assinaturas com `p_idempotency_key` nas RPCs remotas); alinhar trigger faltas remoto sem `/4`; G5/G7/G8/G11/G12 audit restantes. **Fora do MVP:** zonas/polígonos/raio residencial. Commits só se o utilizador pedir.

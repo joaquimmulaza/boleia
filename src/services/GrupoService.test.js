@@ -18,6 +18,9 @@ vi.mock('../lib/supabase', () => ({
     rpc: vi.fn(),
     auth: {
       getUser: vi.fn(),
+      getSession: vi.fn().mockResolvedValue({
+        data: { session: { access_token: 'jwt-test' } },
+      }),
     },
   },
 }));
@@ -25,6 +28,10 @@ vi.mock('../lib/supabase', () => ({
 describe('GrupoService T31 — n_maximo e pedidos de entrada', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+    supabase.auth.getSession.mockResolvedValue({
+      data: { session: { access_token: 'jwt-test' } },
+    });
   });
 
   it('createGrupo persiste n_maximo (capacidade pretendida)', async () => {
@@ -470,7 +477,7 @@ describe('GrupoService T31 — n_maximo e pedidos de entrada', () => {
     expect(n).toBe(2);
   });
 
-  it('sairDoGrupo chama RPC leave_grupo_membro (saiu + sync N_actual no servidor) e não toca propostas', async () => {
+  it('sairDoGrupo chama RPC leave_grupo_membro com p_idempotency_key e não toca propostas', async () => {
     supabase.rpc.mockResolvedValue({
       data: {
         id: 'm-2',
@@ -483,14 +490,32 @@ describe('GrupoService T31 — n_maximo e pedidos de entrada', () => {
 
     const saiu = await sairDoGrupo('g-1', 'pax-2');
 
-    expect(supabase.rpc).toHaveBeenCalledWith('leave_grupo_membro', {
-      p_grupo_id: 'g-1',
-      p_passenger_id: 'pax-2',
-    });
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      'leave_grupo_membro',
+      expect.objectContaining({
+        p_grupo_id: 'g-1',
+        p_passenger_id: 'pax-2',
+        p_idempotency_key: expect.stringMatching(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+        ),
+      }),
+    );
     expect(saiu.estado).toBe('saiu');
     expect(supabase.from).not.toHaveBeenCalled();
     const propostasCalls = supabase.from.mock.calls.filter((c) => c[0] === 'propostas');
     expect(propostasCalls).toHaveLength(0);
+  });
+
+  it('sairDoGrupo em falha de rede enfileira leave_grupo_membro e devolve offlineQueued', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+
+    const result = await sairDoGrupo('g-1', 'pax-2');
+
+    expect(result.offlineQueued).toBe(true);
+    expect(result.idempotency_key).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+    expect(supabase.rpc).not.toHaveBeenCalled();
   });
 
   it('sairDoGrupo propaga erro da RPC (ex. único membro activo)', async () => {
@@ -500,10 +525,14 @@ describe('GrupoService T31 — n_maximo e pedidos de entrada', () => {
     });
 
     await expect(sairDoGrupo('g-1', 'pax-1')).rejects.toThrow(/único membro/i);
-    expect(supabase.rpc).toHaveBeenCalledWith('leave_grupo_membro', {
-      p_grupo_id: 'g-1',
-      p_passenger_id: 'pax-1',
-    });
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      'leave_grupo_membro',
+      expect.objectContaining({
+        p_grupo_id: 'g-1',
+        p_passenger_id: 'pax-1',
+        p_idempotency_key: expect.any(String),
+      }),
+    );
   });
 
   it('sairDoGrupo exige grupoId e passengerId', async () => {

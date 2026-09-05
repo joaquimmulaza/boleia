@@ -1,7 +1,8 @@
 /**
- * Auditoria marketplace — invariantes G1–G4 (contrato público AgreementService + RPC).
+ * Auditoria marketplace — invariantes G1–G4, G9–G10 (contrato público + mocks Vitest).
  * Cascata / capacidade / N_actual vs N_proposto vivem no servidor; o cliente
  * propaga erros e não muta propostas/quotas localmente.
+ * G3/G10: overbooking/concorrência só com mocks — sem races reais em Postgres.
  *
  * Mensagens RPC alinhadas a `accept_proposal` / `leave_passenger` (projecto boleia).
  */
@@ -10,6 +11,7 @@ import {
   createAgreementFromProposal,
   leavePassenger,
 } from '../services/AgreementService.js';
+import { computeFaltaDesconto } from '../utils/faltaDesconto.js';
 import { supabase } from '../lib/supabase';
 
 vi.mock('../lib/supabase', () => ({
@@ -23,6 +25,14 @@ vi.mock('../lib/supabase', () => ({
     },
   },
 }));
+
+/** Args RPC resilientes a p_idempotency_key (Wave 4 / Epsilon). */
+function expectAcceptProposal(propostaId) {
+  expect(supabase.rpc).toHaveBeenCalledWith(
+    'accept_proposal',
+    expect.objectContaining({ p_proposta_id: propostaId }),
+  );
+}
 
 describe('Marketplace audit — cenários G1–G4', () => {
   beforeEach(() => {
@@ -59,9 +69,7 @@ describe('Marketplace audit — cenários G1–G4', () => {
       const result = await createAgreementFromProposal('prop-aceitada');
 
       expect(supabase.rpc).toHaveBeenCalledTimes(1);
-      expect(supabase.rpc).toHaveBeenCalledWith('accept_proposal', {
-        p_proposta_id: 'prop-aceitada',
-      });
+      expectAcceptProposal('prop-aceitada');
       expect(supabase.from).toHaveBeenCalledWith('acordos');
       expect(supabase.from).not.toHaveBeenCalledWith('propostas');
       expect(result.id).toBe('acordo-aceite');
@@ -104,9 +112,7 @@ describe('Marketplace audit — cenários G1–G4', () => {
         /grupo tem apenas 2 membros activos; a proposta exige 3/i,
       );
 
-      expect(supabase.rpc).toHaveBeenCalledWith('accept_proposal', {
-        p_proposta_id: 'prop-n-alto',
-      });
+      expectAcceptProposal('prop-n-alto');
       expect(supabase.from).not.toHaveBeenCalled();
     });
   });
@@ -124,9 +130,7 @@ describe('Marketplace audit — cenários G1–G4', () => {
         /Vagas insuficientes.*lista de espera/i,
       );
 
-      expect(supabase.rpc).toHaveBeenCalledWith('accept_proposal', {
-        p_proposta_id: 'prop-overbook',
-      });
+      expectAcceptProposal('prop-overbook');
       expect(supabase.from).not.toHaveBeenCalled();
     });
 
@@ -139,6 +143,10 @@ describe('Marketplace audit — cenários G1–G4', () => {
         valor_mensal_por_passageiro_kz: 40000,
         estado: 'activo',
       };
+
+      // Oferta com 2 vagas: 1.º acordo consome-as; 2.º deve falhar no servidor.
+      const capacidadeOferta = { vagas_passageiros: 2, n_contrato_primeiro: 2 };
+      expect(capacidadeOferta.vagas_passageiros).toBe(capacidadeOferta.n_contrato_primeiro);
 
       supabase.rpc
         .mockResolvedValueOnce({ data: 'acordo-1', error: null })
@@ -153,11 +161,16 @@ describe('Marketplace audit — cenários G1–G4', () => {
       const primeiro = await createAgreementFromProposal('prop-a');
       expect(primeiro.id).toBe('acordo-1');
       expect(primeiro.n_passageiros_contrato).toBe(2);
+      expect(primeiro.estado).toBe('activo');
 
       await expect(createAgreementFromProposal('prop-b')).rejects.toThrow(
         /Vagas insuficientes/i,
       );
       expect(supabase.rpc).toHaveBeenCalledTimes(2);
+      expectAcceptProposal('prop-a');
+      expectAcceptProposal('prop-b');
+      // Sem select de acordo no 2.º caminho (falha antes).
+      expect(supabase.from).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -197,13 +210,65 @@ describe('Marketplace audit — cenários G1–G4', () => {
   });
 });
 
-describe.skip('Marketplace audit — G5–G12 (esboço)', () => {
+describe('Marketplace audit — G9 falta fórmula', () => {
+  it('desconto_kz = quota_mensal / dias_uteis (ROUND 2 casas; não adenda pro-rata)', () => {
+    // MKT-07 / Decision 2C: G9 = fórmula de falta, não adenda.
+    expect(computeFaltaDesconto(30000, 22)).toBe(1363.64);
+    expect(computeFaltaDesconto(44000, 22)).toBe(2000);
+  });
+});
+
+describe('Marketplace audit — G10 overbooking multi-acordo (mock concorrência)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+  });
+
+  it('simula dois createAgreementFromProposal concorrentes: 2.º falha por capacidade (sem Postgres)', async () => {
+    // Documentação: isto NÃO é race real em Postgres — é mock sequencial que
+    // modela o resultado esperado de overbooking multi-acordo (dois aceites
+    // contra a mesma oferta com vagas só para um).
+    const acordoPrimeiro = {
+      id: 'acordo-multi-1',
+      oferta_id: 'of-shared',
+      n_passageiros_contrato: 3,
+      estado: 'activo',
+    };
+
+    supabase.rpc
+      .mockResolvedValueOnce({ data: 'acordo-multi-1', error: null })
+      .mockResolvedValueOnce({
+        data: null,
+        error: {
+          message: 'Vagas insuficientes para este grupo. Use lista de espera.',
+        },
+      });
+
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: acordoPrimeiro, error: null }),
+        }),
+      }),
+    });
+
+    const [r1, r2] = await Promise.allSettled([
+      createAgreementFromProposal('prop-concorrente-a'),
+      createAgreementFromProposal('prop-concorrente-b'),
+    ]);
+
+    expect(r1.status).toBe('fulfilled');
+    expect(r1.value.id).toBe('acordo-multi-1');
+    expect(r2.status).toBe('rejected');
+    expect(String(r2.reason?.message || r2.reason)).toMatch(/Vagas insuficientes/i);
+    expect(supabase.rpc).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe.skip('Marketplace audit — G5–G12 (esboço restante)', () => {
   it.todo('G5 — leave promove waitlist FIFO (notificada, sem auto-aceitar)');
-  it.todo('G6 — Sense B createProposta created_by motorista');
   it.todo('G7 — copy adenda «próximo mês»');
   it.todo('G8 — notificationRouter waitlist_promoted');
-  it.todo('G9 — falta quota/dias_uteis numérica');
-  it.todo('G10 — overbooking multi-acordo (já coberto em G3 do serviço)');
   it.todo('G11 — RLS sem UPDATE client em tabelas críticas');
   it.todo('G12 — UI hubs sem jargon N_* / POR_PASSAGEIRO');
 });

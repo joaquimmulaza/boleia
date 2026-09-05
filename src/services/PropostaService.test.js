@@ -67,6 +67,44 @@ describe('PropostaService', () => {
     expect(result.n_passageiros_propostos).toBe(3);
   });
 
+  it('G6 — Sense B createProposta como motorista grava created_by do autenticado', async () => {
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'motorista-42' } },
+    });
+    const mockInsert = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({
+          data: {
+            id: 'prop-b',
+            created_by: 'motorista-42',
+            estado: 'aberta',
+            n_passageiros_propostos: 1,
+          },
+          error: null,
+        }),
+      }),
+    });
+    supabase.from.mockReturnValue({ insert: mockInsert });
+
+    const result = await createProposta({
+      oferta_id: 'of-1',
+      procura_id: 'pr-1',
+      modo_preco: 'POR_PASSAGEIRO',
+      valor_mensal_ask_kz: 35000,
+      n_passageiros_propostos: 1,
+    });
+
+    expect(mockInsert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        created_by: 'motorista-42',
+        estado: 'aberta',
+        oferta_id: 'of-1',
+        procura_id: 'pr-1',
+      }),
+    ]);
+    expect(result.created_by).toBe('motorista-42');
+  });
+
   it('createProposta exige grupo_id quando N > 1', async () => {
     supabase.auth.getUser.mockResolvedValue({
       data: { user: { id: 'pax-1' } },

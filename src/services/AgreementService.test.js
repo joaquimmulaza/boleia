@@ -29,7 +29,7 @@ describe('AgreementService', () => {
   });
 
   describe('createAgreementFromProposal', () => {
-    it('chama RPC accept_proposal e devolve acordo', async () => {
+    it('chama RPC accept_proposal com p_idempotency_key e devolve acordo', async () => {
       supabase.rpc.mockResolvedValue({ data: 'acordo-1', error: null });
       supabase.from.mockReturnValue({
         select: vi.fn().mockReturnValue({
@@ -49,11 +49,29 @@ describe('AgreementService', () => {
 
       const result = await createAgreementFromProposal('prop-1');
 
-      expect(supabase.rpc).toHaveBeenCalledWith('accept_proposal', {
-        p_proposta_id: 'prop-1',
-      });
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        'accept_proposal',
+        expect.objectContaining({
+          p_proposta_id: 'prop-1',
+          p_idempotency_key: expect.stringMatching(
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+          ),
+        }),
+      );
       expect(result.id).toBe('acordo-1');
       expect(result.valor_mensal_por_passageiro_kz).toBe(40000);
+    });
+
+    it('em falha de rede enfileira accept_proposal e devolve offlineQueued', async () => {
+      Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+
+      const result = await createAgreementFromProposal('prop-1');
+
+      expect(result.offlineQueued).toBe(true);
+      expect(result.idempotency_key).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      );
+      expect(supabase.rpc).not.toHaveBeenCalled();
     });
 
     it('propaga erro da RPC (ex. vagas insuficientes)', async () => {
@@ -231,12 +249,18 @@ describe('AgreementService', () => {
         valor_ask_kz: 90000,
       });
 
-      expect(supabase.rpc).toHaveBeenCalledWith('renegotiate_agreement_pricing', {
-        p_acordo_id: 'acordo-1',
-        p_modo_preco: 'TOTAL_ACORDO',
-        p_valor_ask_kz: 90000,
-        p_n_passageiros: 3,
-      });
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        'renegotiate_agreement_pricing',
+        expect.objectContaining({
+          p_acordo_id: 'acordo-1',
+          p_modo_preco: 'TOTAL_ACORDO',
+          p_valor_ask_kz: 90000,
+          p_n_passageiros: 3,
+          p_idempotency_key: expect.stringMatching(
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+          ),
+        }),
+      );
       // Live (mês corrente) intacto
       expect(result.n_passageiros_contrato).toBe(4);
       expect(result.valor_mensal_total_kz).toBe(120000);
@@ -456,10 +480,26 @@ describe('AgreementService', () => {
       expect(result.adenda_pendente.estado).toBe('pendente_passageiro');
       expect(result.adenda_pendente.applied_at).toBeNull();
     });
+
+    it('em falha de rede enfileira renegotiate_agreement_pricing e devolve offlineQueued', async () => {
+      Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+
+      const result = await renegotiateAgreementPricing('acordo-1', {
+        modo_preco: 'TOTAL_ACORDO',
+        valor_ask_kz: 90000,
+        n_passageiros: 3,
+      });
+
+      expect(result.offlineQueued).toBe(true);
+      expect(result.idempotency_key).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      );
+      expect(supabase.rpc).not.toHaveBeenCalled();
+    });
   });
 
   describe('acceptAgreementAdenda', () => {
-    it('chama RPC accept_agreement_adenda e devolve adenda aceite', async () => {
+    it('chama RPC accept_agreement_adenda com p_idempotency_key e devolve adenda aceite', async () => {
       supabase.rpc.mockResolvedValue({ data: 'adenda-1', error: null });
       supabase.from.mockReturnValue({
         select: vi.fn().mockReturnValue({
@@ -481,12 +521,30 @@ describe('AgreementService', () => {
 
       const result = await acceptAgreementAdenda('adenda-1');
 
-      expect(supabase.rpc).toHaveBeenCalledWith('accept_agreement_adenda', {
-        p_adenda_id: 'adenda-1',
-      });
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        'accept_agreement_adenda',
+        expect.objectContaining({
+          p_adenda_id: 'adenda-1',
+          p_idempotency_key: expect.stringMatching(
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+          ),
+        }),
+      );
       expect(result.estado).toBe('aceite');
       expect(result.applied_at).toBeNull();
       expect(result.aceite_em).toBeTruthy();
+    });
+
+    it('em falha de rede enfileira accept_agreement_adenda e devolve offlineQueued', async () => {
+      Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+
+      const result = await acceptAgreementAdenda('adenda-1');
+
+      expect(result.offlineQueued).toBe(true);
+      expect(result.idempotency_key).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      );
+      expect(supabase.rpc).not.toHaveBeenCalled();
     });
 
     it('propaga erro da RPC (ex. motorista a tentar aceitar)', async () => {
