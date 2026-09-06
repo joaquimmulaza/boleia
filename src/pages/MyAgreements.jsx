@@ -27,6 +27,13 @@ import { labelRotaOferta } from '../utils/ofertaLabels';
 import AcordoPagamentoPanel from '../components/AcordoPagamentoPanel';
 import AcordoContactosPanel from '../components/AcordoContactosPanel';
 import {
+  labelChipAdenda,
+  chipClassAdenda,
+  formatMesAdendaPt,
+} from '../utils/adendaStatus';
+import { copyCancelamentoPendente } from '../utils/rescisaoDisplay';
+import { isAdendaBeforeEffectiveFrom } from '../utils/adendaEffectiveFrom';
+import {
   getPagamentoForPassageiro,
   getAcordoContactos,
 } from '../services/PaymentService';
@@ -96,15 +103,11 @@ function countActivos(acordo) {
 }
 
 /**
- * Rótulo do mês de vigência da adenda (ex. «outubro de 2026»).
  * @param {string | null | undefined} isoDate
  * @returns {string}
  */
 function formatMesAdenda(isoDate) {
-  if (!isoDate) return 'próximo mês';
-  const d = new Date(`${String(isoDate).slice(0, 10)}T12:00:00`);
-  if (Number.isNaN(d.getTime())) return 'próximo mês';
-  return d.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+  return formatMesAdendaPt(isoDate);
 }
 
 /**
@@ -583,6 +586,13 @@ const MyAgreements = () => {
       selected.rescisao_solicitada_por !== user?.id;
     const cancelamentoPendente =
       String(selected.estado || '').toLowerCase() === 'cancelamento_pendente';
+    const cancelamentoCopy = cancelamentoPendente
+      ? copyCancelamentoPendente(selected.rescisao_effective_on)
+      : null;
+    const adendaAntesVigencia =
+      adenda?.effective_from && isAdendaBeforeEffectiveFrom(adenda.effective_from);
+    const precoActualPassageiro =
+      selected.valor_mensal_por_passageiro_kz ?? quotaDestaque;
 
     const valorNum = Number.parseInt(String(adendaValor), 10);
     const nNum = Number.parseInt(String(adendaN), 10);
@@ -703,33 +713,64 @@ const MyAgreements = () => {
             {selected.adenda_pendente && (
               <div
                 data-testid="adenda-pendente"
-                className="rounded-xl border border-amber-200/90 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 space-y-1"
+                className="rounded-xl border border-amber-200/90 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 space-y-2"
               >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">
+                    Alteração de preço
+                  </p>
+                  <span
+                    className={`text-xs font-bold px-2 py-1 rounded-full shrink-0 ${chipClassAdenda(adenda.estado)}`}
+                    data-testid="adenda-chip"
+                  >
+                    {labelChipAdenda(adenda.estado, {
+                      isMotorista,
+                      isPassageiro,
+                      effectiveFrom: adenda.effective_from,
+                    })}
+                  </span>
+                </div>
+
+                {adendaAntesVigencia ? (
+                  <div
+                    className="grid grid-cols-2 gap-2 text-xs"
+                    data-testid="adenda-precos-comparacao"
+                  >
+                    <div className="rounded-lg bg-white/80 dark:bg-slate-900/50 p-2">
+                      <p className="text-slate-500">Preço actual</p>
+                      <p className="font-bold tabular-nums text-slate-900 dark:text-white">
+                        {formatKwanza(precoActualPassageiro)} Kz
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-white/80 dark:bg-slate-900/50 p-2">
+                      <p className="text-slate-500">
+                        Preço futuro
+                        {adenda.effective_from
+                          ? ` (${formatMesAdenda(adenda.effective_from)})`
+                          : ''}
+                      </p>
+                      <p className="font-bold tabular-nums text-primary">
+                        {formatKwanza(adenda.valor_mensal_por_passageiro_kz)} Kz
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+
                 {adendaAguardando ? (
                   <>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">
+                    <p className="text-sm text-slate-600 dark:text-slate-300 text-pretty">
                       {mostrarCtAdenda
-                        ? 'Proposta de novo preço'
+                        ? 'Revisa a proposta abaixo antes de aceitar ou rejeitar.'
                         : String(adenda.estado || '').toLowerCase() === 'pendente_contraparte'
                           ? isMotorista
-                            ? 'Passageiro propôs um novo preço'
-                            : 'À espera da aceitação do motorista'
+                            ? 'O passageiro propôs um novo preço.'
+                            : 'À espera da aceitação do motorista.'
                           : isPassageiro
-                            ? 'Proposta de novo preço'
-                            : 'À espera da aceitação do passageiro'}
-                    </p>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">
-                      Cada um pagaria{' '}
-                      <span className="tabular-nums font-semibold">
-                        {formatKwanza(selected.adenda_pendente.valor_mensal_por_passageiro_kz)} Kz
-                      </span>
-                      {selected.adenda_pendente.effective_from
-                        ? ` a partir de ${formatMesAdenda(selected.adenda_pendente.effective_from)}`
-                        : ' a partir do próximo mês'}
-                      .
+                            ? 'O motorista propôs um novo preço.'
+                            : 'À espera da aceitação do passageiro.'}
                     </p>
                     {mostrarCtAdenda && (
-                      <div className="mt-3 flex flex-col gap-3">
+                      <div className="mt-1 flex flex-col gap-3">
                         <Button
                           type="button"
                           className="w-full min-h-12 text-base"
@@ -751,29 +792,37 @@ const MyAgreements = () => {
                   </>
                 ) : (
                   <>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">
-                      Novo preço a partir de{' '}
-                      {formatMesAdenda(selected.adenda_pendente.effective_from)}
+                    <p className="text-sm text-slate-600 dark:text-slate-300 text-pretty">
+                      {adendaAntesVigencia
+                        ? `O mês corrente mantém as quotas já combinadas até ${formatMesAdenda(adenda.effective_from)}.`
+                        : 'Novo preço em vigor neste acordo.'}
                     </p>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">
-                      Cada um paga{' '}
-                      <span className="tabular-nums font-semibold">
-                        {formatKwanza(selected.adenda_pendente.valor_mensal_por_passageiro_kz)} Kz
-                      </span>
-                    </p>
-                    {selected.adenda_pendente.valor_mensal_total_kz != null && (
+                    {selected.adenda_pendente.valor_mensal_total_kz != null && adendaAntesVigencia ? (
                       <p className="text-xs text-slate-500">
-                        Total{' '}
+                        Total futuro{' '}
                         <span className="tabular-nums font-medium">
                           {formatKwanza(selected.adenda_pendente.valor_mensal_total_kz)} Kz
                         </span>
-                        . O mês corrente mantém as quotas já combinadas.
                       </p>
-                    )}
+                    ) : null}
                   </>
                 )}
               </div>
             )}
+
+            {cancelamentoCopy ? (
+              <div
+                data-testid="cancelamento-pendente-banner"
+                className="rounded-xl border border-amber-200/90 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 space-y-1"
+              >
+                <p className="text-sm font-bold text-slate-900 dark:text-white">
+                  {cancelamentoCopy.titulo}
+                </p>
+                <p className="text-xs text-slate-600 dark:text-slate-300 text-pretty">
+                  {cancelamentoCopy.corpo}
+                </p>
+              </div>
+            ) : null}
 
             {rescisaoConsensualPendente && (
               <div

@@ -79,3 +79,49 @@ export function labelEstadoPagamento(estado) {
       return estado || '—';
   }
 }
+
+/**
+ * Explicação curta do estado (glossário UI).
+ * @param {string | null | undefined} estado
+ * @returns {string | null}
+ */
+export function helpEstadoPagamento(estado) {
+  const e = String(estado || '').toLowerCase();
+  switch (e) {
+    case PAYMENT_STATES.CUSTODIA:
+      return 'Valor recebido e retido pela plataforma até libertar ao motorista.';
+    case PAYMENT_STATES.LIQUIDADO:
+      return 'Pagamento transferido ao motorista após o ciclo.';
+    case PAYMENT_STATES.PENDENTE:
+      return 'Aguarda transferência para o IBAN da plataforma.';
+    case PAYMENT_STATES.COMPROVATIVO:
+      return 'Comprovativo enviado — aguarda validação.';
+    case PAYMENT_STATES.REEMBOLSADO:
+      return 'Valor devolvido ao passageiro.';
+    default:
+      return null;
+  }
+}
+
+/**
+ * Classes Tailwind para chip de estado de pagamento.
+ * @param {string | null | undefined} estado
+ * @returns {string}
+ */
+export function chipClassEstadoPagamento(estado) {
+  const e = String(estado || '').toLowerCase();
+  switch (e) {
+    case PAYMENT_STATES.PENDENTE:
+      return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200';
+    case PAYMENT_STATES.COMPROVATIVO:
+      return 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-100';
+    case PAYMENT_STATES.CUSTODIA:
+      return 'bg-sky-100 text-sky-900 dark:bg-sky-950/50 dark:text-sky-100';
+    case PAYMENT_STATES.LIQUIDADO:
+      return 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100';
+    case PAYMENT_STATES.REEMBOLSADO:
+      return 'bg-violet-100 text-violet-900 dark:bg-violet-950/50 dark:text-violet-100';
+    default:
+      return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
+  }
+}

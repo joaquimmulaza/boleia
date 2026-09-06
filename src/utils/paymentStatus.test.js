@@ -6,6 +6,8 @@ import {
   canTransitionPayment,
   computePayoutLiquidoKz,
   labelEstadoPagamento,
+  helpEstadoPagamento,
+  chipClassEstadoPagamento,
 } from './paymentStatus.js';
 
 describe('paymentStatus — máquina de estados PACOTE ENG #5', () => {
@@ -59,5 +61,15 @@ describe('paymentStatus — máquina de estados PACOTE ENG #5', () => {
   it('labelEstadoPagamento devolve copy humana PT-PT', () => {
     expect(labelEstadoPagamento('pendente_pagamento')).toMatch(/pendente/i);
     expect(labelEstadoPagamento('em_custodia')).toMatch(/custódia/i);
+  });
+
+  it('helpEstadoPagamento glossário para custódia e liquidado', () => {
+    expect(helpEstadoPagamento('em_custodia')).toMatch(/plataforma/i);
+    expect(helpEstadoPagamento('liquidado')).toMatch(/motorista/i);
+  });
+
+  it('chipClassEstadoPagamento devolve classes por estado', () => {
+    expect(chipClassEstadoPagamento('em_custodia')).toMatch(/sky/);
+    expect(chipClassEstadoPagamento('liquidado')).toMatch(/emerald/);
   });
 });
