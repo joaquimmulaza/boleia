@@ -446,11 +446,19 @@ const PassengerDashboard = () => {
   return (
     <PageShell>
       <PageHeader
-        title={view === 'form' ? 'Nova procura' : 'A minha procura'}
+        title={
+          view === 'form'
+            ? 'Nova procura'
+            : procura
+              ? 'A minha procura'
+              : 'Explorar'
+        }
         subtitle={
           view === 'form'
             ? 'Define a tua rota diária casa–trabalho.'
-            : 'Encontra ofertas compatíveis com o teu horário.'
+            : procura
+              ? 'Encontra ofertas compatíveis com o teu horário.'
+              : 'Vê motoristas e grupos disponíveis. A procura filtra e permite propor acordo.'
         }
         {...(view !== 'hub'
           ? { onBack: () => setView(procura ? 'matches' : 'hub') }
@@ -481,23 +489,21 @@ const PassengerDashboard = () => {
               </button>
             </div>
             <p className="text-sm text-slate-500 text-pretty">
-              Explora motoristas disponíveis. Para propor acordo, define a tua procura quando quiseres.
+              Motoristas com lugares publicados. Cria uma procura quando quiseres filtrar e propor acordo.
             </p>
 
             {loadingBrowse ? (
               <LoadingSkeleton />
             ) : browseOfertas.length === 0 ? (
               <p className="text-sm text-slate-500 text-pretty">
-                Ainda não há ofertas publicadas. Volta mais tarde ou cria a tua procura.
+                Ainda não há ofertas publicadas. Volta mais tarde.
               </p>
             ) : (
               browseOfertas.map((oferta) => (
                 <OfertaMatchCard
                   key={oferta.id}
                   oferta={oferta}
-                  variant="direct"
-                  busy={busyId === oferta.id}
-                  onPropor={() => handlePropor(oferta)}
+                  variant="browse"
                 />
               ))
             )}

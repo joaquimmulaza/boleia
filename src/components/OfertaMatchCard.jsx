@@ -5,10 +5,16 @@ import { labelModoPreco, labelCapacidade, labelRotaOferta } from '../utils/ofert
 
 /**
  * Chip de estado do card de match (lista = detalhe).
- * @param {'direct' | 'waitlist'} variant
+ * @param {'direct' | 'waitlist' | 'browse'} variant
  * @param {string | null} [waitlistEstado]
  */
 function estadoChip(variant, waitlistEstado) {
+  if (variant === 'browse') {
+    return {
+      label: 'Publicada',
+      className: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+    };
+  }
   if (variant === 'direct') {
     return {
       label: 'Disponível',
@@ -48,7 +54,7 @@ function estadoChip(variant, waitlistEstado) {
  *     modo_preco?: string,
  *     flexibilidade_rota?: boolean,
  *   },
- *   variant?: 'direct' | 'waitlist',
+ *   variant?: 'direct' | 'waitlist' | 'browse',
  *   waitlistEstado?: string | null,
  *   busy?: boolean,
  *   onPropor?: () => void,

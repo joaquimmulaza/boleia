@@ -138,12 +138,15 @@ describe('PassengerDashboard — marketplace', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('Ofertas disponíveis')).toBeInTheDocument();
+    expect(await screen.findByText('Explorar')).toBeInTheDocument();
+    expect(screen.getByText('Ofertas disponíveis')).toBeInTheDocument();
     expect(screen.getByText('Talatona')).toBeInTheDocument();
     expect(screen.getByText('Miramar')).toBeInTheDocument();
+    expect(screen.getByTestId('grupo-descoberta-panel')).toBeInTheDocument();
     expect(screen.getByText('Grupos abertos')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Criar procura/i })).toBeInTheDocument();
     expect(screen.queryByText(/Sem procura activa/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Propor acordo/i })).not.toBeInTheDocument();
     expect(findCompatibleOfertas).not.toHaveBeenCalled();
     expect(listOfertasDisponiveis).toHaveBeenCalled();
   });
@@ -172,7 +175,7 @@ describe('PassengerDashboard — marketplace', () => {
     expect(screen.queryByText(/^Destino$/)).not.toBeInTheDocument();
   });
 
-  it('propor acordo sem procura pede criar procura (não envia proposta)', async () => {
+  it('browse sem procura não mostra Propor acordo (só com procura activa)', async () => {
     listOfertasDisponiveis.mockResolvedValue([
       {
         id: 'of-browse',
@@ -191,11 +194,21 @@ describe('PassengerDashboard — marketplace', () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: /Propor acordo/i }));
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(/cria.*procura/i);
+    expect(await screen.findByTestId('browse-ofertas-feed')).toBeInTheDocument();
+    expect(screen.getByTestId('oferta-match-browse')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Propor acordo/i })).not.toBeInTheDocument();
     expect(createProposta).not.toHaveBeenCalled();
-    expect(screen.getByLabelText(/^Origem$/i)).toBeInTheDocument();
+  });
+
+  it('GrupoDescobertaPanel monta sem procura activa', async () => {
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId('grupo-descoberta-panel')).toBeInTheDocument();
+    expect(screen.getByText('Grupos abertos')).toBeInTheDocument();
   });
 
   it('grupos incompletos aparecem no feed browse', async () => {

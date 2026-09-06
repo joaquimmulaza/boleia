@@ -131,6 +131,23 @@ describe('OfertaMatchCard — variante waitlist', () => {
   });
 });
 
+describe('OfertaMatchCard — variante browse (feed sem procura)', () => {
+  it('mostra chip Publicada, preço e sem CTAs de acção', () => {
+    render(
+      <OfertaMatchCard
+        oferta={{ ...ofertaBase, flexibilidade_rota: true }}
+        variant="browse"
+      />,
+    );
+
+    expect(screen.getByTestId('oferta-match-browse')).toBeInTheDocument();
+    expect(screen.getByText('Publicada')).toBeInTheDocument();
+    expect(screen.getByText('Oferta flexível')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Propor acordo/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Entrar na lista de espera/i })).not.toBeInTheDocument();
+  });
+});
+
 describe('OfertaMatchCard — CTAs só com auth (callback)', () => {
   it('variante directa sem onPropor não mostra botão Propor acordo', () => {
     render(<OfertaMatchCard oferta={ofertaBase} variant="direct" />);
