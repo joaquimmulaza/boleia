@@ -130,3 +130,34 @@ describe('OfertaMatchCard — variante waitlist', () => {
     expect(screen.queryByRole('button', { name: /Propor acordo/i })).not.toBeInTheDocument();
   });
 });
+
+describe('OfertaMatchCard — CTAs só com auth (callback)', () => {
+  it('variante directa sem onPropor não mostra botão Propor acordo', () => {
+    render(<OfertaMatchCard oferta={ofertaBase} variant="direct" />);
+    expect(screen.queryByRole('button', { name: /Propor acordo/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/120[\s.]?000/)).toBeInTheDocument();
+  });
+
+  it('waitlist notificada sem onPropor não mostra botão Propor acordo', () => {
+    render(
+      <OfertaMatchCard
+        oferta={ofertaBase}
+        variant="waitlist"
+        waitlistEstado="notificada"
+      />,
+    );
+    expect(screen.getByText(/Há uma vaga — podes propor acordo/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Propor acordo/i })).not.toBeInTheDocument();
+  });
+
+  it('waitlist sem estado e sem onWaitlist não mostra botão Entrar na lista de espera', () => {
+    render(
+      <OfertaMatchCard
+        oferta={{ ...ofertaBase, vagas_disponiveis: 1 }}
+        variant="waitlist"
+        waitlistEstado={null}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Entrar na lista de espera/i })).not.toBeInTheDocument();
+  });
+});

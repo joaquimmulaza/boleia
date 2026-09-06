@@ -121,7 +121,7 @@ function OfertaMatchCard({
           <p className="text-xs text-slate-400">{labelModoPreco(oferta.modo_preco)}</p>
         </div>
 
-        {variant === 'direct' && (
+        {variant === 'direct' && onPropor ? (
           <button
             type="button"
             disabled={busy}
@@ -130,9 +130,9 @@ function OfertaMatchCard({
           >
             Propor acordo
           </button>
-        )}
+        ) : null}
 
-        {isWaitlist && waitlistEstado === 'notificada' && (
+        {isWaitlist && waitlistEstado === 'notificada' && onPropor ? (
           <button
             type="button"
             disabled={busy}
@@ -141,9 +141,9 @@ function OfertaMatchCard({
           >
             Propor acordo
           </button>
-        )}
+        ) : null}
 
-        {isWaitlist && !waitlistEstado && (
+        {isWaitlist && !waitlistEstado && onWaitlist ? (
           <button
             type="button"
             disabled={busy}
@@ -152,7 +152,7 @@ function OfertaMatchCard({
           >
             Entrar na lista de espera
           </button>
-        )}
+        ) : null}
       </div>
     </section>
   );
