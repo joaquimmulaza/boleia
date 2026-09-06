@@ -3,17 +3,42 @@ import { supabase } from '../lib/supabase';
 const BUCKET = 'comprovativos-pagamento';
 
 /**
- * Pagamento mensal do passageiro num acordo.
+ * 1.º dia do mês de referência (Africa/Luanda via offset local do runtime).
+ * @param {Date} [ref]
+ * @returns {string} YYYY-MM-01
+ */
+export function getMesReferenciaAtual(ref = new Date()) {
+  const y = ref.getFullYear();
+  const m = String(ref.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}-01`;
+}
+
+/**
+ * Pagamento mensal do passageiro num acordo (mês corrente por defeito).
  * @param {string} acordoId
  * @param {string} passengerId
+ * @param {string | null} [mesReferencia]
  * @returns {Promise<object | null>}
  */
-export async function getPagamentoForPassageiro(acordoId, passengerId) {
+export async function getPagamentoForPassageiro(acordoId, passengerId, mesReferencia = null) {
+  const mes = mesReferencia || getMesReferenciaAtual();
+  return getPagamentoForPassageiroMes(acordoId, passengerId, mes);
+}
+
+/**
+ * Pagamento de um período específico.
+ * @param {string} acordoId
+ * @param {string} passengerId
+ * @param {string} mesReferencia
+ * @returns {Promise<object | null>}
+ */
+export async function getPagamentoForPassageiroMes(acordoId, passengerId, mesReferencia) {
   const { data, error } = await supabase
     .from('pagamentos_acordo')
     .select('*')
     .eq('acordo_id', acordoId)
     .eq('passenger_id', passengerId)
+    .eq('mes_referencia', mesReferencia)
     .maybeSingle();
 
   if (error) throw error;
