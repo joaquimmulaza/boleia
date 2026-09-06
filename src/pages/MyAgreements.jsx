@@ -7,6 +7,8 @@ import {
   getAgreementsForPassenger,
   leavePassenger,
   terminateAgreement,
+  renewAgreementPeriod,
+  declineAgreementRenewal,
   renegotiateAgreementPricing,
   acceptAgreementAdenda,
   rejectAgreementAdenda,
@@ -37,7 +39,14 @@ import {
   getPagamentoForPassageiro,
   getAcordoContactos,
   listPagamentosByAcordo,
+  getMesReferenciaAtual,
 } from '../services/PaymentService';
+import {
+  labelRenovacaoEstado,
+  podeRenovarPeriodo,
+  podeRecusarRenovacao,
+  formatProximoMesPt,
+} from '../utils/periodoRenovacao';
 import {
   allowsAssiduidadeFaltasForAcordo,
 } from '../utils/paymentStatus';
@@ -175,6 +184,8 @@ const MyAgreements = () => {
   const [contactos, setContactos] = useState(/** @type {object | null} */ (null));
   const [pagamentoLoading, setPagamentoLoading] = useState(false);
   const [contactosLoading, setContactosLoading] = useState(false);
+  const [renewBusy, setRenewBusy] = useState(false);
+  const [renewFeedback, setRenewFeedback] = useState(/** @type {{ type: 'success' | 'error', text: string } | null} */ (null));
 
   const carregarPagamentoContactos = useCallback(async (acordo) => {
     if (!acordo?.id || !user?.id) return;
@@ -183,9 +194,12 @@ const MyAgreements = () => {
     try {
       const pagamentos = await listPagamentosByAcordo(acordo.id);
       setPagamentosAcordo(pagamentos);
+      const mesAtual = getMesReferenciaAtual();
       if (tipoPerfil === 'Passageiro') {
-        const row = pagamentos.find((p) => p.passenger_id === user.id)
-          ?? await getPagamentoForPassageiro(acordo.id, user.id);
+        const row = pagamentos.find(
+          (p) => p.passenger_id === user.id && String(p.mes_referencia || '').slice(0, 10) === mesAtual,
+        )
+          ?? await getPagamentoForPassageiro(acordo.id, user.id, mesAtual);
         setPagamento(row);
       } else {
         setPagamento(null);
@@ -399,6 +413,65 @@ const MyAgreements = () => {
     }
   };
 
+  const handleRenewPeriod = async () => {
+    if (!selected || renewBusy) return;
+    setRenewBusy(true);
+    setRenewFeedback(null);
+    try {
+      const result = await renewAgreementPeriod(selected.id);
+      if (result?.offlineQueued) {
+        setRenewFeedback({
+          type: 'success',
+          text: 'Renovação guardada. Sincronizamos quando a rede voltar.',
+        });
+      } else {
+        const mes = result?.renovacao_proximo_mes || result?.mes_referencia;
+        setRenewFeedback({
+          type: 'success',
+          text: `Período renovado para ${formatProximoMesPt(mes)}. Pagamentos do novo ciclo criados.`,
+        });
+      }
+      const acordoId = selected.id;
+      const refreshed = await carregar();
+      const updated = refreshed.find((a) => a.id === acordoId);
+      if (updated) {
+        setSelected(updated);
+        await carregarPagamentoContactos(updated);
+      }
+    } catch (err) {
+      setRenewFeedback({
+        type: 'error',
+        text: err.message || getFriendlyErrorMessage(err),
+      });
+    } finally {
+      setRenewBusy(false);
+    }
+  };
+
+  const handleDeclineRenewal = async () => {
+    if (!selected || renewBusy) return;
+    setRenewBusy(true);
+    setRenewFeedback(null);
+    try {
+      await declineAgreementRenewal(selected.id);
+      setRenewFeedback({
+        type: 'success',
+        text: 'Acordo termina no fim deste ciclo mensal.',
+      });
+      const acordoId = selected.id;
+      const refreshed = await carregar();
+      const updated = refreshed.find((a) => a.id === acordoId);
+      if (updated) setSelected(updated);
+    } catch (err) {
+      setRenewFeedback({
+        type: 'error',
+        text: err.message || getFriendlyErrorMessage(err),
+      });
+    } finally {
+      setRenewBusy(false);
+    }
+  };
+
   const handleConfirmAdenda = async () => {
     if (!selected || adendaBusy) return;
     const valor = Number.parseInt(String(adendaValor), 10);
@@ -587,7 +660,10 @@ const MyAgreements = () => {
       .filter((p) => isActivo(p.estado))
       .map((p) => p.passenger_id)
       .filter(Boolean);
-    const pagamentosGate = isPassageiro && pagamento ? [pagamento] : pagamentosAcordo;
+    const pagamentosMes = pagamentosAcordo.filter(
+      (p) => String(p.mes_referencia || '').slice(0, 10) === getMesReferenciaAtual(),
+    );
+    const pagamentosGate = isPassageiro && pagamento ? [pagamento] : pagamentosMes;
     const idsGate = isPassageiro ? [user?.id].filter(Boolean) : passageirosActivosIds;
     const podeRegistarFaltas = activo
       && allowsAssiduidadeFaltasForAcordo(pagamentosGate, idsGate);
@@ -610,6 +686,13 @@ const MyAgreements = () => {
       adenda?.effective_from && isAdendaBeforeEffectiveFrom(adenda.effective_from);
     const precoActualPassageiro =
       selected.valor_mensal_por_passageiro_kz ?? quotaDestaque;
+    const podeRenovar = activo && podeRenovarPeriodo(selected);
+    const podeRecusarRenov = activo && podeRecusarRenovacao(selected);
+    const renovacaoRenovado =
+      String(selected.renovacao_estado || '').toLowerCase() === 'renovado';
+    const renovacaoRecusada =
+      String(selected.renovacao_estado || '').toLowerCase() === 'nao_renovar'
+      || String(selected.rescisao_modo || '').toLowerCase() === 'nao_renovacao';
 
     const valorNum = Number.parseInt(String(adendaValor), 10);
     const nNum = Number.parseInt(String(adendaN), 10);
@@ -863,6 +946,59 @@ const MyAgreements = () => {
               </div>
             )}
           </section>
+
+          {(podeRenovar || renovacaoRenovado || renovacaoRecusada) && (
+            <section
+              className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 p-4 space-y-3"
+              data-testid="renovacao-periodo-panel"
+            >
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Renovação do período
+                </h3>
+                <p className="text-xs text-slate-500 text-pretty">
+                  {renovacaoRenovado
+                    ? `${labelRenovacaoEstado('renovado')} (${formatProximoMesPt(selected.renovacao_proximo_mes)}).`
+                    : renovacaoRecusada
+                      ? labelRenovacaoEstado('nao_renovar')
+                      : 'Confirma se o acordo continua no mês seguinte com os termos vigentes.'}
+                </p>
+              </div>
+
+              {renewFeedback ? (
+                <FeedbackAlert type={renewFeedback.type} text={renewFeedback.text} className="mb-0" />
+              ) : null}
+
+              {podeRenovar ? (
+                <div className="flex flex-col gap-2">
+                  <Button
+                    type="button"
+                    className="w-full min-h-11"
+                    disabled={renewBusy}
+                    data-testid="renovar-periodo-cta"
+                    onClick={handleRenewPeriod}
+                  >
+                    {renewBusy ? (
+                      <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+                    ) : null}
+                    Renovar próximo período
+                  </Button>
+                  {podeRecusarRenov ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full min-h-11 text-slate-600"
+                      disabled={renewBusy}
+                      data-testid="nao-renovar-periodo-cta"
+                      onClick={handleDeclineRenewal}
+                    >
+                      Não renovar
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
+            </section>
+          )}
 
           {isPassageiro && activo ? (
             <AcordoPagamentoPanel

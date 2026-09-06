@@ -70,6 +70,23 @@ async function applyDueTerminationsBestEffort(acordoId = null) {
 }
 
 /**
+ * Encerra acordos sem renovação explícita quando o ciclo expira (lazy). Best-effort.
+ * @param {string | null} [acordoId]
+ */
+async function applyDueNonRenewalsBestEffort(acordoId = null) {
+  try {
+    const res = await supabase.rpc('apply_due_agreement_non_renewals', {
+      p_acordo_id: acordoId,
+    });
+    if (res?.error) {
+      console.warn('Falha ao aplicar não-renovações devidas:', res.error.message);
+    }
+  } catch (err) {
+    console.warn('Falha ao aplicar não-renovações devidas:', err);
+  }
+}
+
+/**
  * Aceita proposta via RPC atómica (cria acordo 1:N + congela preços).
  * Só a contraparte pode aceitar (`created_by` bloqueado na RPC).
  * Em falha de rede, enfileira `accept_proposal` com idempotency_key.
@@ -396,6 +413,89 @@ export async function rejectAgreementAdenda(adendaId, options = {}) {
  * @param {{ idempotencyKey?: string, forceQueue?: boolean }} [options]
  * @returns {Promise<object>}
  */
+/**
+ * Renovação explícita para o período seguinte (M0→M1). Cria pagamentos escrow
+ * com quotas congeladas; termos de adenda em_vigor ou cabeçalho do acordo.
+ *
+ * @param {string} acordoId
+ * @param {{ idempotencyKey?: string, forceQueue?: boolean }} [options]
+ * @returns {Promise<object>}
+ */
+export async function renewAgreementPeriod(acordoId, options = {}) {
+  if (!acordoId) {
+    throw new Error('ID do acordo é obrigatório.');
+  }
+
+  const idempotencyKey = resolveIdempotencyKey(options.idempotencyKey);
+  const rpcArgs = {
+    p_acordo_id: acordoId,
+    p_idempotency_key: idempotencyKey,
+  };
+
+  return callRpcWithOfflineFallback({
+    rpc: 'renew_agreement_period',
+    rpcArgs,
+    options: { ...options, idempotencyKey },
+    sessionErrorMessage: 'Sessão necessária para guardar a renovação offline.',
+    rpcErrorMessage: 'Falha ao renovar o período.',
+    offlineResult: (key) => ({
+      acordo_id: acordoId,
+      offlineQueued: true,
+      idempotency_key: key,
+    }),
+    afterRpcSuccess: async (rpcData) => {
+      const { data, error } = await supabase
+        .from('acordos')
+        .select('*')
+        .eq('id', acordoId)
+        .single();
+      if (error) throw error;
+      return { ...(typeof rpcData === 'object' && rpcData ? rpcData : {}), ...withPendingAdenda(data) };
+    },
+  });
+}
+
+/**
+ * Recusa renovação — acordo termina no fim do ciclo corrente (sem órfãos).
+ *
+ * @param {string} acordoId
+ * @param {{ idempotencyKey?: string, forceQueue?: boolean }} [options]
+ * @returns {Promise<object>}
+ */
+export async function declineAgreementRenewal(acordoId, options = {}) {
+  if (!acordoId) {
+    throw new Error('ID do acordo é obrigatório.');
+  }
+
+  const idempotencyKey = resolveIdempotencyKey(options.idempotencyKey);
+  const rpcArgs = {
+    p_acordo_id: acordoId,
+    p_idempotency_key: idempotencyKey,
+  };
+
+  return callRpcWithOfflineFallback({
+    rpc: 'decline_agreement_renewal',
+    rpcArgs,
+    options: { ...options, idempotencyKey },
+    sessionErrorMessage: 'Sessão necessária para guardar a recusa offline.',
+    rpcErrorMessage: 'Falha ao recusar renovação.',
+    offlineResult: (key) => ({
+      acordo_id: acordoId,
+      offlineQueued: true,
+      idempotency_key: key,
+    }),
+    afterRpcSuccess: async (rpcData) => {
+      const { data, error } = await supabase
+        .from('acordos')
+        .select('*')
+        .eq('id', acordoId)
+        .single();
+      if (error) throw error;
+      return { ...(typeof rpcData === 'object' && rpcData ? rpcData : {}), ...withPendingAdenda(data) };
+    },
+  });
+}
+
 export async function terminateAgreement(acordoId, input, options = {}) {
   if (!acordoId) {
     throw new Error('ID do acordo é obrigatório.');
@@ -446,6 +546,7 @@ export async function terminateAgreement(acordoId, input, options = {}) {
 export async function getAgreementsForDriver(driverId) {
   await applyDueAdendasBestEffort(null);
   await applyDueTerminationsBestEffort(null);
+  await applyDueNonRenewalsBestEffort(null);
 
   const { data, error } = await supabase
     .from('acordos')
@@ -465,6 +566,7 @@ export async function getAgreementsForDriver(driverId) {
 export async function getAgreementsForPassenger(passengerId) {
   await applyDueAdendasBestEffort(null);
   await applyDueTerminationsBestEffort(null);
+  await applyDueNonRenewalsBestEffort(null);
 
   const { data, error } = await supabase
     .from('acordos_passageiros')

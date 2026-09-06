@@ -26,6 +26,8 @@ vi.mock('../services/AgreementService', () => ({
   getAgreementsForPassenger: vi.fn(),
   leavePassenger: vi.fn(),
   terminateAgreement: vi.fn(),
+  renewAgreementPeriod: vi.fn(),
+  declineAgreementRenewal: vi.fn(),
   renegotiateAgreementPricing: vi.fn(),
   acceptAgreementAdenda: vi.fn(),
   rejectAgreementAdenda: vi.fn(),
@@ -55,6 +57,8 @@ import {
   getAgreementsForPassenger,
   leavePassenger,
   terminateAgreement,
+  renewAgreementPeriod,
+  declineAgreementRenewal,
   renegotiateAgreementPricing,
   acceptAgreementAdenda,
   rejectAgreementAdenda,
@@ -64,28 +68,35 @@ import {
   listPagamentosByAcordo,
   getPagamentoForPassageiro,
   getAcordoContactos,
+  getMesReferenciaAtual,
 } from '../services/PaymentService';
 
 /** @param {boolean} [emCustodia] */
 function setupPagamentosDefault(emCustodia = true) {
   const estado = emCustodia ? 'em_custodia' : 'pendente_pagamento';
+  const mesReferencia = getMesReferenciaAtual();
   const pagamentos = ['pax-1', 'pax-2', 'pax-viewer', 'pax-3'].map((pid) => ({
     id: `pag-${pid}`,
     passenger_id: pid,
     estado,
     valor_kz: 40000,
     valor_payout_liquido_kz: 36000,
+    mes_referencia: mesReferencia,
   }));
   listPagamentosByAcordo.mockResolvedValue(pagamentos);
   getAcordoContactos.mockResolvedValue({ bloqueado: false, passageiros: [], motorista: null });
-  getPagamentoForPassageiro.mockImplementation(async (_acordoId, passengerId) => (
-    pagamentos.find((p) => p.passenger_id === passengerId) ?? null
+  getPagamentoForPassageiro.mockImplementation(async (_acordoId, passengerId, mesRef) => (
+    pagamentos.find(
+      (p) => p.passenger_id === passengerId
+        && (!mesRef || String(p.mes_referencia).slice(0, 10) === String(mesRef).slice(0, 10)),
+    ) ?? null
   ));
 }
 
 /** @param {object} [acordo] @param {string} [viewerId] @param {boolean} [emCustodia] */
 function mockPagamentosGate(acordo, viewerId, emCustodia = true) {
   const estado = emCustodia ? 'em_custodia' : 'pendente_pagamento';
+  const mesReferencia = getMesReferenciaAtual();
   const activos = (acordo?.acordos_passageiros || []).filter(
     (p) => String(p.estado || '').toLowerCase() === 'activo',
   );
@@ -96,12 +107,16 @@ function mockPagamentosGate(acordo, viewerId, emCustodia = true) {
       estado,
       valor_kz: p.quota_mensal_kz ?? acordo?.valor_mensal_por_passageiro_kz ?? 40000,
       valor_payout_liquido_kz: 36000,
+      mes_referencia: mesReferencia,
     }))
     : [];
   listPagamentosByAcordo.mockResolvedValue(pagamentos);
   getAcordoContactos.mockResolvedValue({ bloqueado: false, passageiros: [], motorista: null });
-  getPagamentoForPassageiro.mockImplementation(async (_acordoId, passengerId) => (
-    pagamentos.find((p) => p.passenger_id === passengerId) ?? null
+  getPagamentoForPassageiro.mockImplementation(async (_acordoId, passengerId, mesRef) => (
+    pagamentos.find(
+      (p) => p.passenger_id === passengerId
+        && (!mesRef || String(p.mes_referencia).slice(0, 10) === String(mesRef).slice(0, 10)),
+    ) ?? null
   ));
   if (viewerId && emCustodia) {
     getPagamentoForPassageiro.mockResolvedValue(
@@ -1030,5 +1045,70 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
     renderPage();
     expect(await screen.findByText(/Acordos/i)).toBeInTheDocument();
     expectNoUserFacingJargon(document.body.textContent);
+  });
+});
+
+describe('MyAgreements — PACOTE ENG #14 renovação período', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+    getAgreementsForDriver.mockResolvedValue([{ ...acordoMotorista, renovacao_estado: null }]);
+    getAgreementsForPassenger.mockResolvedValue([]);
+    listPending.mockResolvedValue([]);
+    setupPagamentosDefault();
+    renewAgreementPeriod.mockResolvedValue({
+      pagamentos_criados: 2,
+      mes_referencia: '2026-10-01',
+      renovacao_proximo_mes: '2026-10-01',
+    });
+    declineAgreementRenewal.mockResolvedValue({ renovacao_estado: 'nao_renovar' });
+  });
+
+  it('mostra CTAs de renovação explícita para acordo activo', async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByTestId('renovacao-periodo-panel')).toBeInTheDocument();
+    expect(within(dialog).getByTestId('renovar-periodo-cta')).toBeInTheDocument();
+    expect(within(dialog).getByTestId('nao-renovar-periodo-cta')).toBeInTheDocument();
+  });
+
+  it('renovar período chama renewAgreementPeriod', async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    fireEvent.click(within(dialog).getByTestId('renovar-periodo-cta'));
+
+    await waitFor(() => {
+      expect(renewAgreementPeriod).toHaveBeenCalledWith('acordo-1');
+    });
+  });
+
+  it('não renovar chama declineAgreementRenewal', async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    fireEvent.click(within(dialog).getByTestId('nao-renovar-periodo-cta'));
+
+    await waitFor(() => {
+      expect(declineAgreementRenewal).toHaveBeenCalledWith('acordo-1');
+    });
+  });
+
+  it('oculta CTAs quando período já renovado', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      { ...acordoMotorista, renovacao_estado: 'renovado', renovacao_proximo_mes: '2026-10-01' },
+    ]);
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByTestId('renovacao-periodo-panel')).toBeInTheDocument();
+    expect(within(dialog).queryByTestId('renovar-periodo-cta')).not.toBeInTheDocument();
+    expect(within(dialog).getByText(/Período seguinte renovado/i)).toBeInTheDocument();
   });
 });
