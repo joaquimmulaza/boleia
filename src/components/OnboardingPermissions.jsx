@@ -3,6 +3,10 @@ import { Bell, MapPin, Navigation } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { usePushNotifications } from '../hooks/usePushNotifications'
+import {
+  isPermissionsEligible,
+  PERMISSIONS_ELIGIBLE_EVENT,
+} from '../utils/permissionsPrompt'
 
 // --- Stitch Design System: Boleia Certa ---
 // Design source: Stitch project/16509963580370012988
@@ -56,20 +60,36 @@ const OnboardingPermissions = () => {
     let cancelled = false
 
     const evaluate = async () => {
+      if (!isPermissionsEligible()) {
+        if (!cancelled) {
+          setAnimating(false)
+          setVisible(false)
+        }
+        return
+      }
+
       const skip = await checkShouldSkip(profile)
       if (!cancelled && !skip) {
         setVisible(true)
-        // Trigger slide-in animation on next frame
         requestAnimationFrame(() => {
           if (!cancelled) setAnimating(true)
         })
+      } else if (!cancelled) {
+        setAnimating(false)
+        setVisible(false)
       }
     }
 
     evaluate()
 
+    const onEligible = () => {
+      evaluate()
+    }
+    window.addEventListener(PERMISSIONS_ELIGIBLE_EVENT, onEligible)
+
     return () => {
       cancelled = true
+      window.removeEventListener(PERMISSIONS_ELIGIBLE_EVENT, onEligible)
     }
   }, [profile])
 
@@ -202,7 +222,7 @@ const OnboardingPermissions = () => {
             fontFamily: 'Inter, sans-serif',
           }}
         >
-          Para te avisarmos da tua boleia e guiarmos ao ponto de encontro,
+          Para te avisarmos sobre propostas, acordos e alterações da tua rota,
           precisamos da tua autorização.
         </p>
 
@@ -281,7 +301,7 @@ const OnboardingPermissions = () => {
                   fontFamily: 'Inter, sans-serif',
                 }}
               >
-                Encontra boleias perto de ti
+                Ajuda a confirmar o ponto de recolha combinado
               </p>
             </div>
           </div>

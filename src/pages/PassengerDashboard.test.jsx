@@ -433,7 +433,7 @@ describe('PassengerDashboard — marketplace', () => {
     fireEvent.click(sab);
     expect(sab).toHaveAttribute('aria-pressed', 'true');
 
-    fireEvent.change(screen.getByLabelText(/Teto mensal/i), {
+    fireEvent.change(screen.getByLabelText(/Teto mensal por passageiro/i), {
       target: { name: 'teto_mensal_kz', value: '50000' },
     });
 
@@ -463,7 +463,45 @@ describe('PassengerDashboard — marketplace', () => {
     );
 
     expect(await screen.findByText(/50[\s.]?000\s*Kz/i)).toBeInTheDocument();
-    expect(screen.getByText(/Teto mensal/i)).toBeInTheDocument();
+    expect(screen.getByText(/Teto por passageiro/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Ver ofertas compatíveis/i })).toBeInTheDocument();
+  });
+
+  it('criar procura em modo grupo chama createGrupo e addMembroGrupo', async () => {
+    const { createGrupo, addMembroGrupo } = await import('../services/GrupoService');
+    createProcura.mockResolvedValue({
+      ...procuraBase,
+      id: 'pr-grupo',
+    });
+    createGrupo.mockResolvedValue({ id: 'g-new', procura_id: 'pr-grupo' });
+    addMembroGrupo.mockResolvedValue({ id: 'm-1' });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Criar procura/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Grupo$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^5$/i }));
+
+    fireEvent.change(screen.getByLabelText(/^Origem$/i), {
+      target: { name: 'origin_name', value: 'Talatona' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Destino$/i), {
+      target: { name: 'destination_name', value: 'Miramar' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Guardar procura/i }));
+
+    await waitFor(() => {
+      expect(createGrupo).toHaveBeenCalledWith('pr-grupo', 'O meu grupo', 5);
+      expect(addMembroGrupo).toHaveBeenCalledWith(
+        'g-new',
+        expect.objectContaining({ passenger_id: 'pax-1' }),
+      );
+    });
   });
 
   it('mostra inbox de propostas do motorista e permite aceitar (sentido B)', async () => {

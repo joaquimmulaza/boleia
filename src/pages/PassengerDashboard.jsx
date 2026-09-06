@@ -14,6 +14,12 @@ import PropostaReviewCard from '../components/PropostaReviewCard';
 import { createProcura, listProcurasByOwner } from '../services/ProcuraService';
 import { findCompatibleOfertas } from '../services/MatchingService';
 import {
+  createGrupo,
+  addMembroGrupo,
+  getGrupoByProcura,
+  listMembrosGrupo,
+} from '../services/GrupoService';
+import {
   createProposta,
   listPropostasByProcura,
   enrichPropostasForReview,
@@ -22,14 +28,24 @@ import {
 } from '../services/PropostaService';
 import { createAgreementFromProposal } from '../services/AgreementService';
 import { enqueueWaitlist, listWaitlistByProcura } from '../services/WaitlistService';
-import { getGrupoByProcura, listMembrosGrupo } from '../services/GrupoService';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { formatKwanza } from '../utils/formatKwanza';
+import { formatTime24h } from '../utils/formatTime';
+import { markPermissionsEligible } from '../utils/permissionsPrompt';
 import {
   filterPropostasParaInbox,
   filterPropostasEnviadas,
 } from '../utils/propostaInbox';
 import { DIAS_SEMANA, DIAS_UTEIS_DEFAULT } from '../utils/diasSemana';
+
+const CAPACIDADES_GRUPO = [2, 3, 4, 5, 6, 7, 8];
+
+/**
+ * @param {'POR_PASSAGEIRO' | 'TOTAL_ACORDO'} modo
+ */
+function labelModoTeto(modo) {
+  return modo === 'TOTAL_ACORDO' ? 'Total do acordo' : 'Por passageiro';
+}
 
 /**
  * Copy humana do tamanho da procura (lista = resumo).
@@ -90,6 +106,10 @@ const PassengerDashboard = () => {
     dias_semana: [...DIAS_UTEIS_DEFAULT],
     teto_mensal_kz: '',
   });
+  const [tipoProcura, setTipoProcura] = useState('individual'); // individual | grupo
+  const [nMaximoGrupo, setNMaximoGrupo] = useState(4);
+  const [modoTeto, setModoTeto] = useState('POR_PASSAGEIRO');
+  const [modoTetoActivo, setModoTetoActivo] = useState('POR_PASSAGEIRO');
 
   const carregar = useCallback(async () => {
     if (!user?.id) {
@@ -216,8 +236,25 @@ const PassengerDashboard = () => {
         dias_semana: form.dias_semana,
         teto_mensal_kz: tetoNumero,
       });
+
+      if (tipoProcura === 'grupo') {
+        const grupoCriado = await createGrupo(criada.id, 'O meu grupo', nMaximoGrupo);
+        await addMembroGrupo(grupoCriado.id, {
+          passenger_id: user.id,
+          pickup_name: form.origin_name ?? null,
+          pickup_lat: form.origin_lat ?? null,
+          pickup_lng: form.origin_lng ?? null,
+          dropoff_name: form.destination_name ?? null,
+          dropoff_lat: form.destination_lat ?? null,
+          dropoff_lng: form.destination_lng ?? null,
+          ordem_insercao: 0,
+        });
+      }
+
+      setModoTetoActivo(modoTeto);
       setProcura(criada);
       setView('matches');
+      markPermissionsEligible();
       await carregar();
       setFeedback({ type: 'success', text: 'Procura criada.' });
     } catch (err) {
@@ -394,6 +431,65 @@ const PassengerDashboard = () => {
 
       {!loading && view === 'form' && (
         <form onSubmit={handleCriarProcura} className="space-y-4 bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 shadow-sm">
+          <div
+            className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1"
+            role="group"
+            aria-label="Tipo de procura"
+          >
+            <button
+              type="button"
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                tipoProcura === 'individual'
+                  ? 'bg-white dark:bg-slate-700 text-primary shadow-sm'
+                  : 'text-slate-500'
+              }`}
+              onClick={() => setTipoProcura('individual')}
+            >
+              Individual
+            </button>
+            <button
+              type="button"
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                tipoProcura === 'grupo'
+                  ? 'bg-white dark:bg-slate-700 text-primary shadow-sm'
+                  : 'text-slate-500'
+              }`}
+              onClick={() => setTipoProcura('grupo')}
+            >
+              Grupo
+            </button>
+          </div>
+          <p className="text-xs text-slate-500 text-pretty">
+            {tipoProcura === 'individual'
+              ? 'Viajas sozinho — podes criar grupo mais tarde se quiseres.'
+              : 'Define quantas pessoas podem entrar no grupo desde o início.'}
+          </p>
+
+          {tipoProcura === 'grupo' && (
+            <div className="flex flex-col gap-2">
+              <span className="text-sm font-semibold text-charcoal dark:text-slate-300">
+                Até quantas pessoas?
+              </span>
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Capacidade do grupo">
+                {CAPACIDADES_GRUPO.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    aria-pressed={nMaximoGrupo === n}
+                    onClick={() => setNMaximoGrupo(n)}
+                    className={`min-w-10 h-10 px-2.5 rounded-lg text-sm font-bold transition-all ${
+                      nMaximoGrupo === n
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'bg-light-gray dark:bg-slate-800 text-slate-500'
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <AddressInput
             name="origin_name"
             label="Origem"
@@ -413,14 +509,17 @@ const PassengerDashboard = () => {
             }
           />
           <label className="flex flex-col gap-1.5 text-sm font-semibold">
-            Hora preferida
+            <span className="flex items-center gap-1.5">
+              <Clock size={16} aria-hidden="true" />
+              Hora preferida
+            </span>
             <input
               type="time"
               name="preferred_time"
               value={form.preferred_time}
               onChange={handleChange}
               required
-              className="h-12 rounded-lg bg-light-gray dark:bg-slate-800 px-3"
+              className="h-12 rounded-lg bg-light-gray dark:bg-slate-800 px-3 tabular-nums"
             />
           </label>
 
@@ -454,10 +553,41 @@ const PassengerDashboard = () => {
             </div>
           </div>
 
+          <div
+            className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1"
+            role="group"
+            aria-label="Modo do teto mensal"
+          >
+            <button
+              type="button"
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                modoTeto === 'POR_PASSAGEIRO'
+                  ? 'bg-white dark:bg-slate-700 text-primary shadow-sm'
+                  : 'text-slate-500'
+              }`}
+              onClick={() => setModoTeto('POR_PASSAGEIRO')}
+            >
+              Por passageiro
+            </button>
+            <button
+              type="button"
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                modoTeto === 'TOTAL_ACORDO'
+                  ? 'bg-white dark:bg-slate-700 text-primary shadow-sm'
+                  : 'text-slate-500'
+              }`}
+              onClick={() => setModoTeto('TOTAL_ACORDO')}
+            >
+              Total do acordo
+            </button>
+          </div>
+
           <label className="flex flex-col gap-1.5 text-sm font-semibold">
             <span className="flex items-center gap-1.5">
               <Banknote size={16} aria-hidden="true" />
-              Teto mensal
+              {modoTeto === 'POR_PASSAGEIRO'
+                ? 'Teto mensal por passageiro (Kz)'
+                : 'Teto mensal total do acordo (Kz)'}
             </span>
             <div className="flex items-center gap-2">
               <input
@@ -469,11 +599,20 @@ const PassengerDashboard = () => {
                 value={form.teto_mensal_kz}
                 onChange={handleChange}
                 placeholder="Opcional"
-                aria-label="Teto mensal"
+                aria-label={
+                  modoTeto === 'POR_PASSAGEIRO'
+                    ? 'Teto mensal por passageiro'
+                    : 'Teto mensal total do acordo'
+                }
                 className="flex-1 h-12 rounded-lg bg-light-gray dark:bg-slate-800 px-3 tabular-nums outline-none focus:ring-2 focus:ring-primary/50"
               />
               <span className="text-sm font-medium text-slate-500 shrink-0">Kz</span>
             </div>
+            <p className="text-xs text-slate-500 text-pretty">
+              {modoTeto === 'POR_PASSAGEIRO'
+                ? 'Valor máximo que queres pagar pela tua quota mensal.'
+                : 'Valor máximo para o carro completo no acordo.'}
+            </p>
           </label>
 
           <button
@@ -501,9 +640,9 @@ const PassengerDashboard = () => {
               <span>{procura.destination_name}</span>
             </div>
             <div className="flex gap-3 text-sm text-slate-500 flex-wrap">
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1 tabular-nums">
                 <Clock size={14} aria-hidden="true" />
-                {String(procura.preferred_time).slice(0, 5)}
+                {formatTime24h(procura.preferred_time)}
               </span>
               <span className="flex items-center gap-1 tabular-nums">
                 <Users size={14} aria-hidden="true" />
@@ -516,13 +655,14 @@ const PassengerDashboard = () => {
               {procura.teto_mensal_kz != null && Number(procura.teto_mensal_kz) > 0 && (
                 <span className="flex items-center gap-1 tabular-nums">
                   <Banknote size={14} aria-hidden="true" />
-                  Teto mensal {formatKwanza(procura.teto_mensal_kz)} Kz
+                  Teto {labelModoTeto(modoTetoActivo).toLowerCase()}{' '}
+                  {formatKwanza(procura.teto_mensal_kz)} Kz
                 </span>
               )}
             </div>
             <button
               type="button"
-              className="text-sm font-bold text-primary"
+              className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-primary/20"
               onClick={() => setView('matches')}
             >
               Ver ofertas compatíveis

@@ -4,7 +4,7 @@ const POINTS = [
   {
     icon: ShieldCheck,
     title: 'Perfis',
-    text: 'Cada pessoa tem perfil na plataforma — sabes com quem estás a combinar a boleia.',
+    text: 'Cada pessoa regista o seu perfil na plataforma — combinas com quem escolhes, sem verificação de identidade.',
   },
   {
     icon: FileCheck2,

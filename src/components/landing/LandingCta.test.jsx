@@ -30,15 +30,17 @@ describe('LandingCta', () => {
     expect(screen.queryByText(/centenas de pessoas/i)).not.toBeInTheDocument();
   });
 
-  it('navega para /auth ao clicar no botão', () => {
+  it('navega para registo com papel explícito', () => {
     render(
       <BrowserRouter>
         <LandingCta />
       </BrowserRouter>
     );
 
-    const button = screen.getByRole('button', { name: /começar|registar|juntar|entrar/i });
-    fireEvent.click(button);
-    expect(mockNavigate).toHaveBeenCalledWith('/auth');
+    fireEvent.click(screen.getByRole('button', { name: /Sou Passageiro/i }));
+    expect(mockNavigate).toHaveBeenCalledWith('/auth?mode=register&role=passenger');
+
+    fireEvent.click(screen.getByRole('button', { name: /Sou Motorista/i }));
+    expect(mockNavigate).toHaveBeenCalledWith('/auth?mode=register&role=driver');
   });
 });

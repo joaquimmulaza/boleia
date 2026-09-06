@@ -42,7 +42,7 @@ const Layout = () => {
             onClick={handleLogout}
             aria-label="Terminar sessão"
             className="flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 ml-1"
-            title="Sair"
+            title="Terminar sessão"
           >
             <LogOut size={18} strokeWidth={2} />
           </button>

@@ -3,6 +3,7 @@ import { Armchair, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
+import { markPermissionsEligible } from '../utils/permissionsPrompt';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 
@@ -83,6 +84,7 @@ const VehicleSetup = () => {
     if (error) {
       setFeedbackVeiculo({ type: 'error', message: getFriendlyErrorMessage(error) });
     } else {
+      markPermissionsEligible();
       setFeedbackVeiculo({ type: 'success', message: 'Veículo guardado com sucesso!' });
     }
   };

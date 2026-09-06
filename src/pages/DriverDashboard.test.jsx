@@ -13,6 +13,7 @@ import { createAgreementFromProposal } from '../services/AgreementService';
 import { findCompatibleProcuras } from '../services/MatchingService';
 import { getGrupoByProcura } from '../services/GrupoService';
 import { listOfertasByDriver } from '../services/OfertaService';
+import { supabase } from '../lib/supabase';
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' }),
@@ -132,6 +133,11 @@ const reviewFixture = {
 describe('DriverDashboard — marketplace', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    supabase.from.mockReturnValue({
+      select: vi.fn(() => ({
+        eq: vi.fn().mockResolvedValue({ data: [{ id: 'vei-1' }], error: null }),
+      })),
+    });
     listOfertasByDriver.mockResolvedValue([{ ...ofertaFixa }]);
     listPropostasByOferta.mockResolvedValue([]);
     enrichPropostasForReview.mockImplementation(async (lista) => (lista?.length ? [] : []));
@@ -139,6 +145,43 @@ describe('DriverDashboard — marketplace', () => {
     getGrupoByProcura.mockResolvedValue(null);
     createProposta.mockResolvedValue({ id: 'prop-b' });
     cancelProposta.mockResolvedValue({ id: 'prop-own', estado: 'cancelada' });
+  });
+
+  it('esconde Publicar oferta quando não há veículo registado', async () => {
+    supabase.from.mockReturnValue({
+      select: vi.fn(() => ({
+        eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+      })),
+    });
+    listOfertasByDriver.mockResolvedValue([]);
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(/Veículo não registado/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Publicar oferta/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Registar veículo/i })).toBeInTheDocument();
+  });
+
+  it('mostra badge Fixa ou Flexível e ida/regresso no card', async () => {
+    listOfertasByDriver.mockResolvedValue([
+      {
+        ...ofertaFixa,
+        return_time: '17:00:00',
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Fixa')).toBeInTheDocument();
+    expect(screen.getByText(/07:15 → 17:00/i)).toBeInTheDocument();
   });
 
   it('mostra ofertas do motorista com copy humana', async () => {
