@@ -75,7 +75,7 @@ function OfertaRotaTitulo({ oferta }) {
 const DriverDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [hasVehicle, setHasVehicle] = useState(true);
+  const [hasVehicle, setHasVehicle] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [ofertas, setOfertas] = useState([]);
   const [reviews, setReviews] = useState([]);
@@ -250,7 +250,7 @@ const DriverDashboard = () => {
       <PageHeader
         title="As minhas ofertas"
         subtitle="Acompanha as tuas viagens e propostas."
-        {...(hasVehicle
+        {...(hasVehicle === true
           ? {
               actionLabel: 'Publicar oferta',
               onAction: () => navigate('/publicar-trajeto'),
@@ -271,7 +271,7 @@ const DriverDashboard = () => {
         </div>
       )}
 
-      {!isLoading && !hasVehicle && (
+      {!isLoading && hasVehicle === false && (
         <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-5 border border-amber-200 mb-6">
           <div className="flex items-start gap-3">
             <AlertCircle size={24} className="text-amber-500 shrink-0" aria-hidden="true" />
@@ -294,7 +294,7 @@ const DriverDashboard = () => {
 
       {isLoading && <LoadingSkeleton />}
 
-      {!isLoading && ofertas.length === 0 && hasVehicle && (
+      {!isLoading && ofertas.length === 0 && hasVehicle === true && (
         <EmptyState
           icon={MapPin}
           title="Ainda sem ofertas"

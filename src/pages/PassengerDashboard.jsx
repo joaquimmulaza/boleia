@@ -11,14 +11,13 @@ import GrupoProcuraPanel from '../components/GrupoProcuraPanel';
 import GrupoDescobertaPanel from '../components/GrupoDescobertaPanel';
 import OfertaMatchCard from '../components/OfertaMatchCard';
 import PropostaReviewCard from '../components/PropostaReviewCard';
-import { createProcura, listProcurasByOwner } from '../services/ProcuraService';
-import { findCompatibleOfertas } from '../services/MatchingService';
 import {
-  createGrupo,
-  addMembroGrupo,
-  getGrupoByProcura,
-  listMembrosGrupo,
-} from '../services/GrupoService';
+  createProcura,
+  createProcuraWithGrupo,
+  listProcurasByOwner,
+} from '../services/ProcuraService';
+import { findCompatibleOfertas } from '../services/MatchingService';
+import { getGrupoByProcura, listMembrosGrupo } from '../services/GrupoService';
 import {
   createProposta,
   listPropostasByProcura,
@@ -37,6 +36,7 @@ import {
   filterPropostasEnviadas,
 } from '../utils/propostaInbox';
 import { DIAS_SEMANA, DIAS_UTEIS_DEFAULT } from '../utils/diasSemana';
+import { getModoTetoPreferido, setModoTetoPreferido } from '../utils/procuraTetoPrefs';
 
 const CAPACIDADES_GRUPO = [2, 3, 4, 5, 6, 7, 8];
 
@@ -108,8 +108,8 @@ const PassengerDashboard = () => {
   });
   const [tipoProcura, setTipoProcura] = useState('individual'); // individual | grupo
   const [nMaximoGrupo, setNMaximoGrupo] = useState(4);
-  const [modoTeto, setModoTeto] = useState('POR_PASSAGEIRO');
-  const [modoTetoActivo, setModoTetoActivo] = useState('POR_PASSAGEIRO');
+  const [modoTeto, setModoTeto] = useState(() => getModoTetoPreferido());
+  const [modoTetoActivo, setModoTetoActivo] = useState(() => getModoTetoPreferido());
 
   const carregar = useCallback(async () => {
     if (!user?.id) {
@@ -225,7 +225,7 @@ const PassengerDashboard = () => {
       }
     }
     try {
-      const criada = await createProcura({
+      const payload = {
         preferred_time: form.preferred_time,
         origin_name: form.origin_name,
         origin_lat: form.origin_lat,
@@ -235,22 +235,22 @@ const PassengerDashboard = () => {
         destination_lng: form.destination_lng,
         dias_semana: form.dias_semana,
         teto_mensal_kz: tetoNumero,
-      });
+      };
 
-      if (tipoProcura === 'grupo') {
-        const grupoCriado = await createGrupo(criada.id, 'O meu grupo', nMaximoGrupo);
-        await addMembroGrupo(grupoCriado.id, {
-          passenger_id: user.id,
-          pickup_name: form.origin_name ?? null,
-          pickup_lat: form.origin_lat ?? null,
-          pickup_lng: form.origin_lng ?? null,
-          dropoff_name: form.destination_name ?? null,
-          dropoff_lat: form.destination_lat ?? null,
-          dropoff_lng: form.destination_lng ?? null,
-          ordem_insercao: 0,
-        });
-      }
+      const criada = tipoProcura === 'grupo'
+        ? await createProcuraWithGrupo(payload, {
+            nome: 'O meu grupo',
+            nMaximo: nMaximoGrupo,
+            pickup_name: form.origin_name ?? null,
+            pickup_lat: form.origin_lat ?? null,
+            pickup_lng: form.origin_lng ?? null,
+            dropoff_name: form.destination_name ?? null,
+            dropoff_lat: form.destination_lat ?? null,
+            dropoff_lng: form.destination_lng ?? null,
+          })
+        : await createProcura(payload);
 
+      setModoTetoPreferido(modoTeto);
       setModoTetoActivo(modoTeto);
       setProcura(criada);
       setView('matches');
@@ -258,7 +258,7 @@ const PassengerDashboard = () => {
       await carregar();
       setFeedback({ type: 'success', text: 'Procura criada.' });
     } catch (err) {
-      setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
+      setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
     }
   };
 
@@ -565,7 +565,10 @@ const PassengerDashboard = () => {
                   ? 'bg-white dark:bg-slate-700 text-primary shadow-sm'
                   : 'text-slate-500'
               }`}
-              onClick={() => setModoTeto('POR_PASSAGEIRO')}
+              onClick={() => {
+                setModoTeto('POR_PASSAGEIRO');
+                setModoTetoPreferido('POR_PASSAGEIRO');
+              }}
             >
               Por passageiro
             </button>
@@ -576,7 +579,10 @@ const PassengerDashboard = () => {
                   ? 'bg-white dark:bg-slate-700 text-primary shadow-sm'
                   : 'text-slate-500'
               }`}
-              onClick={() => setModoTeto('TOTAL_ACORDO')}
+              onClick={() => {
+                setModoTeto('TOTAL_ACORDO');
+                setModoTetoPreferido('TOTAL_ACORDO');
+              }}
             >
               Total do acordo
             </button>

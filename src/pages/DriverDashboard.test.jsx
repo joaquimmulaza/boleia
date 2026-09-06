@@ -161,9 +161,26 @@ describe('DriverDashboard — marketplace', () => {
       </MemoryRouter>,
     );
 
+    expect(screen.queryByRole('button', { name: /Publicar oferta/i })).not.toBeInTheDocument();
     expect(await screen.findByText(/Veículo não registado/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Publicar oferta/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Registar veículo/i })).toBeInTheDocument();
+  });
+
+  it('não mostra Publicar oferta enquanto o estado do veículo está a carregar', () => {
+    supabase.from.mockReturnValue({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => new Promise(() => {})),
+      })),
+    });
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('button', { name: /Publicar oferta/i })).not.toBeInTheDocument();
   });
 
   it('mostra badge Fixa ou Flexível e ida/regresso no card', async () => {
