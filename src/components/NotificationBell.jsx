@@ -41,17 +41,27 @@ export default function NotificationBell() {
   const { isSupported, permission, isSubscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const backdropRef = useRef(null);
+  const panelRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      if (!isOpen) return;
+
+      const target = event.target;
+      const insidePanel =
+        dropdownRef.current?.contains(target) ||
+        backdropRef.current?.contains(target) ||
+        panelRef.current?.contains(target);
+
+      if (!insidePanel) {
         setIsOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [isOpen]);
 
   // Scroll locking for mobile and portal
   useEffect(() => {
@@ -104,12 +114,16 @@ export default function NotificationBell() {
       {/* Backdrop & Panel inside React Portal to escape stacking context */}
       {createPortal(
         <>
-          <div 
+          <div
+            ref={backdropRef}
+            data-testid="notification-backdrop"
             className={`fixed inset-0 z-overlay bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             onClick={() => setIsOpen(false)}
           />
 
-          <div 
+          <div
+            ref={panelRef}
+            data-testid="notification-panel"
             className={`fixed top-0 right-0 h-dvh w-full max-w-md bg-white dark:bg-slate-900 shadow-2xl z-drawer transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-slate-900 shrink-0">
