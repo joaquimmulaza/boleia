@@ -201,6 +201,134 @@ describe('GrupoService T31 — n_maximo e pedidos de entrada', () => {
     expect(procuraCalls).toHaveLength(0);
   });
 
+  it('addMembroGrupo com pickup vazio ou apenas espaços persiste pickup como null', async () => {
+    let insertedPayload = null;
+    let membrosCalls = 0;
+    supabase.from.mockImplementation((table) => {
+      if (table === 'grupos') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: { id: 'g-1', procura_id: 'pr-1', n_maximo: 4 },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      if (table === 'membros_grupo') {
+        membrosCalls += 1;
+        if (membrosCalls === 1) {
+          // assertTemVaga
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue({ count: 1, error: null }),
+              }),
+            }),
+          };
+        }
+        if (membrosCalls === 2) {
+          // insert
+          return {
+            insert: vi.fn().mockImplementation((payload) => {
+              insertedPayload = payload[0];
+              return {
+                select: vi.fn().mockReturnValue({
+                  single: vi.fn().mockResolvedValue({
+                    data: { id: 'm-2', ...payload[0] },
+                    error: null,
+                  }),
+                }),
+              };
+            }),
+          };
+        }
+        // syncNCandidato
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ count: 2, error: null }),
+            }),
+          }),
+        };
+      }
+      if (table === 'procuras') {
+        return {
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+          }),
+        };
+      }
+      return {};
+    });
+
+    const membroCriado = await addMembroGrupo('g-1', {
+      passenger_id: 'pax-2',
+      pickup_name: '   ',
+      pickup_lat: '',
+      pickup_lng: null,
+      ordem_insercao: 1,
+    });
+
+    expect(insertedPayload.pickup_name).toBeNull();
+    expect(insertedPayload.pickup_lat).toBeNull();
+    expect(insertedPayload.pickup_lng).toBeNull();
+    expect(membroCriado.pickup_name).toBeNull();
+  });
+
+  it('pedirEntradaGrupo com pickup vazio ou espaços persiste pickup como null', async () => {
+    let insertedPayload = null;
+    supabase.from.mockImplementation((table) => {
+      if (table === 'grupos') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: { id: 'g-1', n_maximo: 4, procura_id: 'pr-1' },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      if (table === 'membros_grupo') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              }),
+              mockResolvedValue: vi.fn().mockResolvedValue({ count: 1, error: null }),
+            }),
+          }),
+          insert: vi.fn().mockImplementation((payload) => {
+            insertedPayload = payload[0];
+            return {
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: { id: 'm-p', ...payload[0] },
+                  error: null,
+                }),
+              }),
+            };
+          }),
+        };
+      }
+      return {};
+    });
+
+    await pedirEntradaGrupo('g-1', {
+      passenger_id: 'pax-2',
+      pickup_name: '',
+    });
+
+    expect(insertedPayload.pickup_name).toBeNull();
+    expect(insertedPayload.pickup_lat).toBeNull();
+    expect(insertedPayload.pickup_lng).toBeNull();
+  });
+
   it('listPedidosPendentes lista só estado pendente', async () => {
     const mockOrder = vi.fn().mockResolvedValue({
       data: [

@@ -8,6 +8,26 @@ const N_MAXIMO_DEFAULT = 4;
 
 /**
  * @param {unknown} value
+ * @returns {string | null}
+ */
+function sanitizeOptionalText(value) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
+/**
+ * @param {unknown} value
+ * @returns {number | null}
+ */
+function sanitizeOptionalCoord(value) {
+  if (value == null || value === '') return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+/**
+ * @param {unknown} value
  * @returns {number}
  */
 function normalizarNMaximo(value) {
@@ -162,12 +182,12 @@ export async function syncNCandidato(grupoId) {
  * @param {string} grupoId
  * @param {{
  *   passenger_id: string,
- *   pickup_name?: string,
- *   pickup_lat?: number,
- *   pickup_lng?: number,
- *   dropoff_name?: string,
- *   dropoff_lat?: number,
- *   dropoff_lng?: number,
+ *   pickup_name?: string | null,
+ *   pickup_lat?: number | null,
+ *   pickup_lng?: number | null,
+ *   dropoff_name?: string | null,
+ *   dropoff_lat?: number | null,
+ *   dropoff_lng?: number | null,
  *   ordem_insercao?: number,
  * }} membro
  */
@@ -178,18 +198,26 @@ export async function addMembroGrupo(grupoId, membro) {
 
   await assertTemVaga(grupoId);
 
+  const pickupName = sanitizeOptionalText(membro.pickup_name);
+  const pickupLat = pickupName ? sanitizeOptionalCoord(membro.pickup_lat) : null;
+  const pickupLng = pickupName ? sanitizeOptionalCoord(membro.pickup_lng) : null;
+
+  const dropoffName = sanitizeOptionalText(membro.dropoff_name);
+  const dropoffLat = dropoffName ? sanitizeOptionalCoord(membro.dropoff_lat) : null;
+  const dropoffLng = dropoffName ? sanitizeOptionalCoord(membro.dropoff_lng) : null;
+
   const { data, error } = await supabase
     .from('membros_grupo')
     .insert([
       {
         grupo_id: grupoId,
         passenger_id: membro.passenger_id,
-        pickup_name: membro.pickup_name ?? null,
-        pickup_lat: membro.pickup_lat ?? null,
-        pickup_lng: membro.pickup_lng ?? null,
-        dropoff_name: membro.dropoff_name ?? null,
-        dropoff_lat: membro.dropoff_lat ?? null,
-        dropoff_lng: membro.dropoff_lng ?? null,
+        pickup_name: pickupName,
+        pickup_lat: pickupLat,
+        pickup_lng: pickupLng,
+        dropoff_name: dropoffName,
+        dropoff_lat: dropoffLat,
+        dropoff_lng: dropoffLng,
         ordem_insercao: membro.ordem_insercao ?? 0,
         estado: 'activo',
       },
@@ -237,12 +265,12 @@ export async function listGruposAbertos(opts = {}) {
  * @param {string} grupoId
  * @param {{
  *   passenger_id: string,
- *   pickup_name?: string,
- *   pickup_lat?: number,
- *   pickup_lng?: number,
- *   dropoff_name?: string,
- *   dropoff_lat?: number,
- *   dropoff_lng?: number,
+ *   pickup_name?: string | null,
+ *   pickup_lat?: number | null,
+ *   pickup_lng?: number | null,
+ *   dropoff_name?: string | null,
+ *   dropoff_lat?: number | null,
+ *   dropoff_lng?: number | null,
  * }} membro
  */
 export async function pedirEntradaGrupo(grupoId, membro) {
@@ -254,6 +282,14 @@ export async function pedirEntradaGrupo(grupoId, membro) {
   }
 
   const { nActivos } = await assertTemVaga(grupoId);
+
+  const pickupName = sanitizeOptionalText(membro.pickup_name);
+  const pickupLat = pickupName ? sanitizeOptionalCoord(membro.pickup_lat) : null;
+  const pickupLng = pickupName ? sanitizeOptionalCoord(membro.pickup_lng) : null;
+
+  const dropoffName = sanitizeOptionalText(membro.dropoff_name);
+  const dropoffLat = dropoffName ? sanitizeOptionalCoord(membro.dropoff_lat) : null;
+  const dropoffLng = dropoffName ? sanitizeOptionalCoord(membro.dropoff_lng) : null;
 
   const { data: existente, error: existError } = await supabase
     .from('membros_grupo')
@@ -277,12 +313,12 @@ export async function pedirEntradaGrupo(grupoId, membro) {
       .from('membros_grupo')
       .update({
         estado: 'pendente',
-        pickup_name: membro.pickup_name ?? null,
-        pickup_lat: membro.pickup_lat ?? null,
-        pickup_lng: membro.pickup_lng ?? null,
-        dropoff_name: membro.dropoff_name ?? null,
-        dropoff_lat: membro.dropoff_lat ?? null,
-        dropoff_lng: membro.dropoff_lng ?? null,
+        pickup_name: pickupName,
+        pickup_lat: pickupLat,
+        pickup_lng: pickupLng,
+        dropoff_name: dropoffName,
+        dropoff_lat: dropoffLat,
+        dropoff_lng: dropoffLng,
         ordem_insercao: nActivos,
       })
       .eq('id', existente.id)
@@ -299,12 +335,12 @@ export async function pedirEntradaGrupo(grupoId, membro) {
       {
         grupo_id: grupoId,
         passenger_id: membro.passenger_id,
-        pickup_name: membro.pickup_name ?? null,
-        pickup_lat: membro.pickup_lat ?? null,
-        pickup_lng: membro.pickup_lng ?? null,
-        dropoff_name: membro.dropoff_name ?? null,
-        dropoff_lat: membro.dropoff_lat ?? null,
-        dropoff_lng: membro.dropoff_lng ?? null,
+        pickup_name: pickupName,
+        pickup_lat: pickupLat,
+        pickup_lng: pickupLng,
+        dropoff_name: dropoffName,
+        dropoff_lat: dropoffLat,
+        dropoff_lng: dropoffLng,
         ordem_insercao: nActivos,
         estado: 'pendente',
       },

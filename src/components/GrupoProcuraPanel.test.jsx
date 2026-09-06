@@ -11,6 +11,7 @@ import {
   aprovarEntrada,
   sairDoGrupo,
 } from '../services/GrupoService';
+import { findPassageiroByTelefone } from '../services/ProfileService';
 
 vi.mock('../services/GrupoService', () => ({
   createGrupo: vi.fn(),
@@ -28,10 +29,16 @@ vi.mock('../services/ProfileService', () => ({
 }));
 
 vi.mock('./AddressInput', () => ({
-  default: ({ name, label, value, onChange }) => (
-    <label>
+  default: ({ id, name, label, value, onChange, required = true }) => (
+    <label htmlFor={id || name}>
       {label}
-      <input name={name} value={value || ''} onChange={onChange} />
+      <input
+        id={id || name}
+        name={name}
+        value={value || ''}
+        onChange={onChange}
+        required={required}
+      />
     </label>
   ),
 }));
@@ -324,6 +331,151 @@ describe('GrupoProcuraPanel T31', () => {
     await waitFor(() => {
       expect(sairDoGrupo).toHaveBeenCalledWith('g-1', 'pax-2');
       expect(onGrupoChange).toHaveBeenCalled();
+    });
+  });
+
+  it('fluxo fallback telefone: campo de recolha tem required=false e telefone tem required=true', async () => {
+    getGrupoByProcura.mockResolvedValue({
+      id: 'g-1',
+      procura_id: 'pr-1',
+      n_maximo: 4,
+    });
+    listMembrosGrupo.mockResolvedValue([
+      {
+        id: 'm-1',
+        passenger_id: 'pax-1',
+        estado: 'activo',
+        ordem_insercao: 0,
+        perfis: { nome_completo: 'Ana' },
+      },
+    ]);
+
+    render(<GrupoProcuraPanel procura={procura} userId="pax-1" onGrupoChange={vi.fn()} />);
+
+    const fallbackBtn = await screen.findByRole('button', {
+      name: /Fallback: Convidar por telefone/i,
+    });
+    fireEvent.click(fallbackBtn);
+
+    const telefoneInput = screen.getByLabelText(/Telefone do colega/i);
+    expect(telefoneInput).toBeRequired();
+
+    const pickupInput = screen.getByLabelText(/Ponto de recolha \(opcional\)/i);
+    expect(pickupInput).not.toBeRequired();
+  });
+
+  it('permite submeter formulário de fallback com recolha vazia persistindo null', async () => {
+    getGrupoByProcura.mockResolvedValue({
+      id: 'g-1',
+      procura_id: 'pr-1',
+      n_maximo: 4,
+    });
+    listMembrosGrupo.mockResolvedValue([
+      {
+        id: 'm-1',
+        passenger_id: 'pax-1',
+        estado: 'activo',
+        ordem_insercao: 0,
+        perfis: { nome_completo: 'Ana' },
+      },
+    ]);
+    findPassageiroByTelefone.mockResolvedValue({
+      id: 'pax-novo',
+      nome_completo: 'Colega Novo',
+    });
+    addMembroGrupo.mockResolvedValue({
+      id: 'm-2',
+      passenger_id: 'pax-novo',
+      pickup_name: null,
+      pickup_lat: null,
+      pickup_lng: null,
+    });
+
+    const onGrupoChange = vi.fn();
+    render(<GrupoProcuraPanel procura={procura} userId="pax-1" onGrupoChange={onGrupoChange} />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /Fallback: Convidar por telefone/i }),
+    );
+
+    const telefoneInput = screen.getByLabelText(/Telefone do colega/i);
+    fireEvent.change(telefoneInput, { target: { value: '923456789' } });
+
+    // Ponto de recolha fica intencionalmente vazio
+    const pickupInput = screen.getByLabelText(/Ponto de recolha \(opcional\)/i);
+    expect(pickupInput.value).toBe('');
+
+    fireEvent.click(screen.getByRole('button', { name: /Adicionar ao grupo/i }));
+
+    await waitFor(() => {
+      expect(addMembroGrupo).toHaveBeenCalledWith(
+        'g-1',
+        expect.objectContaining({
+          passenger_id: 'pax-novo',
+          pickup_name: null,
+          pickup_lat: null,
+          pickup_lng: null,
+          ordem_insercao: 1,
+        }),
+      );
+    });
+
+    expect(
+      await screen.findByText(/Colega Novo adicionado ao grupo/i),
+    ).toBeInTheDocument();
+  });
+
+  it('submeter formulário de fallback com apenas espaços na recolha persiste null', async () => {
+    getGrupoByProcura.mockResolvedValue({
+      id: 'g-1',
+      procura_id: 'pr-1',
+      n_maximo: 4,
+    });
+    listMembrosGrupo.mockResolvedValue([
+      {
+        id: 'm-1',
+        passenger_id: 'pax-1',
+        estado: 'activo',
+        ordem_insercao: 0,
+        perfis: { nome_completo: 'Ana' },
+      },
+    ]);
+    findPassageiroByTelefone.mockResolvedValue({
+      id: 'pax-novo',
+      nome_completo: 'Colega Novo',
+    });
+    addMembroGrupo.mockResolvedValue({
+      id: 'm-2',
+      passenger_id: 'pax-novo',
+      pickup_name: null,
+      pickup_lat: null,
+      pickup_lng: null,
+    });
+
+    render(<GrupoProcuraPanel procura={procura} userId="pax-1" onGrupoChange={vi.fn()} />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /Fallback: Convidar por telefone/i }),
+    );
+
+    const telefoneInput = screen.getByLabelText(/Telefone do colega/i);
+    fireEvent.change(telefoneInput, { target: { value: '923456789' } });
+
+    const pickupInput = screen.getByLabelText(/Ponto de recolha \(opcional\)/i);
+    fireEvent.change(pickupInput, { target: { value: '   ' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Adicionar ao grupo/i }));
+
+    await waitFor(() => {
+      expect(addMembroGrupo).toHaveBeenCalledWith(
+        'g-1',
+        expect.objectContaining({
+          passenger_id: 'pax-novo',
+          pickup_name: null,
+          pickup_lat: null,
+          pickup_lng: null,
+        }),
+      );
     });
   });
 });
