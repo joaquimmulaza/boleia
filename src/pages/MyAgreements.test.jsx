@@ -3,6 +3,7 @@ import { render, screen, waitFor, fireEvent, within } from '@testing-library/rea
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import MyAgreements from './MyAgreements';
+import { expectNoUserFacingJargon } from '../test/jargonBan';
 
 const mockNavigate = vi.fn();
 
@@ -906,5 +907,11 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
     );
     expect(within(dialog).queryByRole('button', { name: /Aceitar Alteração/i })).not.toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: /Rejeitar Alteração/i })).not.toBeInTheDocument();
+  });
+
+  it('não expõe jargon de produto na UI de acordos', async () => {
+    renderPage();
+    expect(await screen.findByText(/Acordos/i)).toBeInTheDocument();
+    expectNoUserFacingJargon(document.body.textContent);
   });
 });

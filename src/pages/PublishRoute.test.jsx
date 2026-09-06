@@ -5,6 +5,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import PublishRoute from './PublishRoute';
 import { createOferta } from '../services/OfertaService';
 import { useHasVehicle } from '../hooks/useHasVehicle';
+import { expectNoUserFacingJargon } from '../test/jargonBan';
 
 vi.mock('../services/OfertaService', () => ({
   createOferta: vi.fn(),
@@ -283,5 +284,14 @@ describe('PublishRoute — Publicar oferta', () => {
         }),
       );
     });
+  });
+
+  it('não expõe jargon de produto na UI de publicar oferta', async () => {
+    await act(async () => {
+      renderWithRouter(<PublishRoute />);
+    });
+
+    expect(await screen.findByRole('heading', { name: /Publicar oferta/i })).toBeInTheDocument();
+    expectNoUserFacingJargon(document.body.textContent);
   });
 });
