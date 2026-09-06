@@ -1,6 +1,8 @@
-import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../lib/supabase';
-import { enqueueRpc, isNetworkFailure } from './offlineQueue.js';
+import {
+  callRpcWithOfflineFallback,
+  resolveIdempotencyKey,
+} from '../utils/callRpcWithOfflineFallback.js';
 
 const N_MAXIMO_MIN = 2;
 const N_MAXIMO_MAX = 8;
@@ -491,53 +493,25 @@ export async function sairDoGrupo(grupoId, passengerId, options = {}) {
     throw new Error('ID do passageiro é obrigatório.');
   }
 
-  const idempotencyKey = options.idempotencyKey || uuidv4();
+  const idempotencyKey = resolveIdempotencyKey(options.idempotencyKey);
   const rpcArgs = {
     p_grupo_id: grupoId,
     p_passenger_id: passengerId,
     p_idempotency_key: idempotencyKey,
   };
 
-  const queueLeaveGrupo = async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData?.session?.access_token;
-    if (!accessToken) {
-      throw new Error('Sessão necessária para guardar a saída do grupo offline.');
-    }
-    await enqueueRpc({
-      rpc: 'leave_grupo_membro',
-      args: rpcArgs,
-      accessToken,
-      idempotencyKey,
-    });
-    return {
+  return callRpcWithOfflineFallback({
+    rpc: 'leave_grupo_membro',
+    rpcArgs,
+    options: { ...options, idempotencyKey },
+    sessionErrorMessage: 'Sessão necessária para guardar a saída do grupo offline.',
+    rpcErrorMessage: 'Falha ao sair do grupo.',
+    offlineResult: (key) => ({
       grupo_id: grupoId,
       passenger_id: passengerId,
       estado: 'saiu',
       offlineQueued: true,
-      idempotency_key: idempotencyKey,
-    };
-  };
-
-  if (options.forceQueue || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
-    return queueLeaveGrupo();
-  }
-
-  try {
-    const { data, error: rpcError } = await supabase.rpc('leave_grupo_membro', rpcArgs);
-
-    if (rpcError) {
-      if (isNetworkFailure(rpcError)) {
-        return queueLeaveGrupo();
-      }
-      throw new Error(rpcError.message || 'Falha ao sair do grupo.');
-    }
-
-    return data;
-  } catch (err) {
-    if (isNetworkFailure(err)) {
-      return queueLeaveGrupo();
-    }
-    throw err;
-  }
+      idempotency_key: key,
+    }),
+  });
 }

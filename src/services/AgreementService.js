@@ -1,7 +1,9 @@
-import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../lib/supabase';
 import { resolveAgreementPricing } from '../utils/resolveAgreementPricing.js';
-import { enqueueRpc, isNetworkFailure } from './offlineQueue.js';
+import {
+  callRpcWithOfflineFallback,
+  resolveIdempotencyKey,
+} from '../utils/callRpcWithOfflineFallback.js';
 
 /**
  * Normaliza acordo: expõe `adenda_pendente` (não aplicada / não supersedida).
@@ -56,7 +58,7 @@ export async function createAgreementFromProposal(propostaId, options = {}) {
     throw new Error('ID da proposta é obrigatório.');
   }
 
-  const idempotencyKey = options.idempotencyKey || uuidv4();
+  const idempotencyKey = resolveIdempotencyKey(options.idempotencyKey);
   /** @type {Record<string, unknown>} */
   const rpcArgs = {
     p_proposta_id: propostaId,
@@ -66,61 +68,27 @@ export async function createAgreementFromProposal(propostaId, options = {}) {
     rpcArgs.p_member_ids = options.memberIds;
   }
 
-  const queueAccept = async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData?.session?.access_token;
-    if (!accessToken) {
-      throw new Error('Sessão necessária para guardar o aceite offline.');
-    }
-    await enqueueRpc({
-      rpc: 'accept_proposal',
-      args: rpcArgs,
-      accessToken,
-      idempotencyKey,
-    });
-    return {
+  return callRpcWithOfflineFallback({
+    rpc: 'accept_proposal',
+    rpcArgs,
+    options: { ...options, idempotencyKey },
+    sessionErrorMessage: 'Sessão necessária para guardar o aceite offline.',
+    rpcErrorMessage: 'Falha ao aceitar proposta.',
+    offlineResult: (key) => ({
       id: propostaId,
       offlineQueued: true,
-      idempotency_key: idempotencyKey,
-    };
-  };
-
-  if (options.forceQueue || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
-    return queueAccept();
-  }
-
-  try {
-    const { data: acordoId, error: rpcError } = await supabase.rpc(
-      'accept_proposal',
-      rpcArgs,
-    );
-
-    if (rpcError) {
-      if (isNetworkFailure(rpcError)) {
-        return queueAccept();
-      }
-      throw new Error(rpcError.message || 'Falha ao aceitar proposta.');
-    }
-
-    const { data, error } = await supabase
-      .from('acordos')
-      .select('*')
-      .eq('id', acordoId)
-      .single();
-
-    if (error) {
-      if (isNetworkFailure(error)) {
-        return queueAccept();
-      }
-      throw error;
-    }
-    return data;
-  } catch (err) {
-    if (isNetworkFailure(err)) {
-      return queueAccept();
-    }
-    throw err;
-  }
+      idempotency_key: key,
+    }),
+    afterRpcSuccess: async (acordoId) => {
+      const { data, error } = await supabase
+        .from('acordos')
+        .select('*')
+        .eq('id', acordoId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
 }
 
 /**
@@ -139,71 +107,37 @@ export async function leavePassenger(acordoId, passengerId, options = {}) {
     throw new Error('acordoId e passengerId são obrigatórios.');
   }
 
-  const idempotencyKey = options.idempotencyKey || uuidv4();
+  const idempotencyKey = resolveIdempotencyKey(options.idempotencyKey);
   const rpcArgs = {
     p_acordo_id: acordoId,
     p_passenger_id: passengerId,
     p_idempotency_key: idempotencyKey,
   };
 
-  const queueLeave = async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData?.session?.access_token;
-    if (!accessToken) {
-      throw new Error('Sessão necessária para guardar a saída offline.');
-    }
-    await enqueueRpc({
-      rpc: 'leave_passenger',
-      args: rpcArgs,
-      accessToken,
-      idempotencyKey,
-    });
-    return {
+  return callRpcWithOfflineFallback({
+    rpc: 'leave_passenger',
+    rpcArgs,
+    options: { ...options, idempotencyKey },
+    sessionErrorMessage: 'Sessão necessária para guardar a saída offline.',
+    rpcErrorMessage: 'Falha ao sair do acordo.',
+    offlineResult: (key) => ({
       id: acordoId,
       offlineQueued: true,
-      idempotency_key: idempotencyKey,
-    };
-  };
-
-  if (options.forceQueue || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
-    return queueLeave();
-  }
-
-  try {
-    const { data: acordoIdOut, error: rpcError } = await supabase.rpc(
-      'leave_passenger',
-      rpcArgs,
-    );
-
-    if (rpcError) {
-      if (isNetworkFailure(rpcError)) {
-        return queueLeave();
-      }
-      throw new Error(rpcError.message || 'Falha ao sair do acordo.');
-    }
-
-    const id = acordoIdOut ?? acordoId;
-    const { data, error } = await supabase
-      .from('acordos')
-      .select(
-        'id, oferta_id, valor_mensal_por_passageiro_kz, valor_mensal_total_kz, n_passageiros_contrato',
-      )
-      .eq('id', id)
-      .single();
-
-    if (error) {
-      if (isNetworkFailure(error)) {
-        return queueLeave();
-      }
-      throw error;
-    }
-    return data;
-  } catch (err) {
-    if (isNetworkFailure(err)) {
-      return queueLeave();
-    }
-    throw err;
-  }
+      idempotency_key: key,
+    }),
+    afterRpcSuccess: async (acordoIdOut) => {
+      const id = acordoIdOut ?? acordoId;
+      const { data, error } = await supabase
+        .from('acordos')
+        .select(
+          'id, oferta_id, valor_mensal_por_passageiro_kz, valor_mensal_total_kz, n_passageiros_contrato',
+        )
+        .eq('id', id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
 }
 
 /**
@@ -256,7 +190,7 @@ export async function renegotiateAgreementPricing(acordoId, input, options = {})
     n_passageiros: nPassageiros,
   });
 
-  const idempotencyKey = options.idempotencyKey || uuidv4();
+  const idempotencyKey = resolveIdempotencyKey(options.idempotencyKey);
   const rpcArgs = {
     p_acordo_id: acordoId,
     p_modo_preco: input.modo_preco,
@@ -265,62 +199,28 @@ export async function renegotiateAgreementPricing(acordoId, input, options = {})
     p_idempotency_key: idempotencyKey,
   };
 
-  const queueRenegotiate = async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData?.session?.access_token;
-    if (!accessToken) {
-      throw new Error('Sessão necessária para guardar a renegociação offline.');
-    }
-    await enqueueRpc({
-      rpc: 'renegotiate_agreement_pricing',
-      args: rpcArgs,
-      accessToken,
-      idempotencyKey,
-    });
-    return {
+  return callRpcWithOfflineFallback({
+    rpc: 'renegotiate_agreement_pricing',
+    rpcArgs,
+    options: { ...options, idempotencyKey },
+    sessionErrorMessage: 'Sessão necessária para guardar a renegociação offline.',
+    rpcErrorMessage: 'Falha ao renegociar preço do acordo.',
+    offlineResult: (key) => ({
       id: acordoId,
       offlineQueued: true,
-      idempotency_key: idempotencyKey,
-    };
-  };
-
-  if (options.forceQueue || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
-    return queueRenegotiate();
-  }
-
-  try {
-    const { data: acordoIdOut, error: rpcError } = await supabase.rpc(
-      'renegotiate_agreement_pricing',
-      rpcArgs,
-    );
-
-    if (rpcError) {
-      if (isNetworkFailure(rpcError)) {
-        return queueRenegotiate();
-      }
-      throw new Error(rpcError.message || 'Falha ao renegociar preço do acordo.');
-    }
-
-    const id = acordoIdOut ?? acordoId;
-    const { data, error } = await supabase
-      .from('acordos')
-      .select('*, acordos_adendas(*)')
-      .eq('id', id)
-      .single();
-
-    if (error) {
-      if (isNetworkFailure(error)) {
-        return queueRenegotiate();
-      }
-      throw error;
-    }
-    return withPendingAdenda(data);
-  } catch (err) {
-    if (isNetworkFailure(err)) {
-      return queueRenegotiate();
-    }
-    throw err;
-  }
+      idempotency_key: key,
+    }),
+    afterRpcSuccess: async (acordoIdOut) => {
+      const id = acordoIdOut ?? acordoId;
+      const { data, error } = await supabase
+        .from('acordos')
+        .select('*, acordos_adendas(*)')
+        .eq('id', id)
+        .single();
+      if (error) throw error;
+      return withPendingAdenda(data);
+    },
+  });
 }
 
 /**
@@ -338,68 +238,34 @@ export async function acceptAgreementAdenda(adendaId, options = {}) {
     throw new Error('ID da adenda é obrigatório.');
   }
 
-  const idempotencyKey = options.idempotencyKey || uuidv4();
+  const idempotencyKey = resolveIdempotencyKey(options.idempotencyKey);
   const rpcArgs = {
     p_adenda_id: adendaId,
     p_idempotency_key: idempotencyKey,
   };
 
-  const queueAcceptAdenda = async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData?.session?.access_token;
-    if (!accessToken) {
-      throw new Error('Sessão necessária para guardar o aceite da adenda offline.');
-    }
-    await enqueueRpc({
-      rpc: 'accept_agreement_adenda',
-      args: rpcArgs,
-      accessToken,
-      idempotencyKey,
-    });
-    return {
+  return callRpcWithOfflineFallback({
+    rpc: 'accept_agreement_adenda',
+    rpcArgs,
+    options: { ...options, idempotencyKey },
+    sessionErrorMessage: 'Sessão necessária para guardar o aceite da adenda offline.',
+    rpcErrorMessage: 'Falha ao aceitar a adenda.',
+    offlineResult: (key) => ({
       id: adendaId,
       offlineQueued: true,
-      idempotency_key: idempotencyKey,
-    };
-  };
-
-  if (options.forceQueue || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
-    return queueAcceptAdenda();
-  }
-
-  try {
-    const { data: adendaIdOut, error: rpcError } = await supabase.rpc(
-      'accept_agreement_adenda',
-      rpcArgs,
-    );
-
-    if (rpcError) {
-      if (isNetworkFailure(rpcError)) {
-        return queueAcceptAdenda();
-      }
-      throw new Error(rpcError.message || 'Falha ao aceitar a adenda.');
-    }
-
-    const id = adendaIdOut ?? adendaId;
-    const { data, error } = await supabase
-      .from('acordos_adendas')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error) {
-      if (isNetworkFailure(error)) {
-        return queueAcceptAdenda();
-      }
-      throw error;
-    }
-    return data;
-  } catch (err) {
-    if (isNetworkFailure(err)) {
-      return queueAcceptAdenda();
-    }
-    throw err;
-  }
+      idempotency_key: key,
+    }),
+    afterRpcSuccess: async (adendaIdOut) => {
+      const id = adendaIdOut ?? adendaId;
+      const { data, error } = await supabase
+        .from('acordos_adendas')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
 }
 
 /**
@@ -415,68 +281,34 @@ export async function rejectAgreementAdenda(adendaId, options = {}) {
     throw new Error('ID da adenda é obrigatório.');
   }
 
-  const idempotencyKey = options.idempotencyKey || uuidv4();
+  const idempotencyKey = resolveIdempotencyKey(options.idempotencyKey);
   // Contrato DB actual: reject_agreement_adenda(p_adenda_id) — sem p_idempotency_key.
   const rpcArgs = {
     p_adenda_id: adendaId,
   };
 
-  const queueRejectAdenda = async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData?.session?.access_token;
-    if (!accessToken) {
-      throw new Error('Sessão necessária para guardar a rejeição da adenda offline.');
-    }
-    await enqueueRpc({
-      rpc: 'reject_agreement_adenda',
-      args: rpcArgs,
-      accessToken,
-      idempotencyKey,
-    });
-    return {
+  return callRpcWithOfflineFallback({
+    rpc: 'reject_agreement_adenda',
+    rpcArgs,
+    options: { ...options, idempotencyKey },
+    sessionErrorMessage: 'Sessão necessária para guardar a rejeição da adenda offline.',
+    rpcErrorMessage: 'Falha ao rejeitar a adenda.',
+    offlineResult: (key) => ({
       id: adendaId,
       offlineQueued: true,
-      idempotency_key: idempotencyKey,
-    };
-  };
-
-  if (options.forceQueue || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
-    return queueRejectAdenda();
-  }
-
-  try {
-    const { data: adendaIdOut, error: rpcError } = await supabase.rpc(
-      'reject_agreement_adenda',
-      rpcArgs,
-    );
-
-    if (rpcError) {
-      if (isNetworkFailure(rpcError)) {
-        return queueRejectAdenda();
-      }
-      throw new Error(rpcError.message || 'Falha ao rejeitar a adenda.');
-    }
-
-    const id = adendaIdOut ?? adendaId;
-    const { data, error } = await supabase
-      .from('acordos_adendas')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error) {
-      if (isNetworkFailure(error)) {
-        return queueRejectAdenda();
-      }
-      throw error;
-    }
-    return data;
-  } catch (err) {
-    if (isNetworkFailure(err)) {
-      return queueRejectAdenda();
-    }
-    throw err;
-  }
+      idempotency_key: key,
+    }),
+    afterRpcSuccess: async (adendaIdOut) => {
+      const id = adendaIdOut ?? adendaId;
+      const { data, error } = await supabase
+        .from('acordos_adendas')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
 }
 
 /**
