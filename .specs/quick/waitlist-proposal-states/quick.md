@@ -16,8 +16,8 @@ Auditoria produção: waitlist difícil de encontrar; propostas rejeitadas/cance
 | RPC reject/cancel | `PropostaService.rejectProposta`, `cancelProposta` |
 
 ## Mudanças mínimas
-1. `propostaInbox.js`: filtros `filterPropostasTerminadasRecebidas` / `filterPropostasTerminadasEnviadas` (rejeitada, cancelada).
-2. `propostaEstado.js`: labels PT + chips (Pendente, Rejeitada, Cancelada).
+1. `propostaInbox.js`: filtros `filterPropostasTerminadas*` via `isPropostaHistorico` (rejeitada, cancelada, aceite; **não** invalidada).
+2. `propostaEstado.js`: labels PT + chips (Por responder, Aguarda resposta, Rejeitada, Cancelada, Aceite).
 3. `PropostaReviewCard`: `modo="historico"` read-only com chip; chip pendente em abertas.
 4. `PassengerDashboard`: secção «Lista de espera» antes de propostas; historico terminadas; reload após reject (não remover optimistically).
 5. `DriverDashboard`: secção historico terminadas; chips pendentes.

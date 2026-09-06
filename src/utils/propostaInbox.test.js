@@ -69,17 +69,19 @@ describe('filterPropostasEnviadas', () => {
 describe('filterPropostasTerminadasRecebidas', () => {
   const userId = 'pax-1';
 
-  it('mantém rejeitada/cancelada criadas por outro', () => {
+  it('mantém rejeitada/cancelada/aceite criadas por outro', () => {
     const result = filterPropostasTerminadasRecebidas(
       [
         { id: 'a', estado: 'rejeitada', created_by: 'driver-1' },
         { id: 'b', estado: 'cancelada', created_by: 'driver-1' },
-        { id: 'c', estado: 'aberta', created_by: 'driver-1' },
-        { id: 'd', estado: 'rejeitada', created_by: 'pax-1' },
+        { id: 'c', estado: 'aceite', created_by: 'driver-1' },
+        { id: 'd', estado: 'aberta', created_by: 'driver-1' },
+        { id: 'e', estado: 'invalidada', created_by: 'driver-1' },
+        { id: 'f', estado: 'rejeitada', created_by: 'pax-1' },
       ],
       userId,
     );
-    expect(result.map((p) => p.id)).toEqual(['a', 'b']);
+    expect(result.map((p) => p.id)).toEqual(['a', 'b', 'c']);
   });
 });
 

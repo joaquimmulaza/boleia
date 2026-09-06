@@ -362,7 +362,6 @@ const PassengerDashboard = () => {
         await createAgreementFromProposal(propostaId);
       }
       setFeedback({ type: 'success', text: 'Proposta aceite. Acordo criado.' });
-      setInboxReviews((prev) => prev.filter((r) => r.proposta.id !== propostaId));
       await carregar();
     } catch (err) {
       setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
@@ -815,7 +814,7 @@ const PassengerDashboard = () => {
             <section className="space-y-3" data-testid="propostas-terminadas">
               <h2 className="text-lg font-bold text-balance">Propostas concluídas</h2>
               <p className="text-sm text-slate-500 text-pretty">
-                Recusadas ou canceladas — já não podes actuar sobre estas propostas.
+                Aceites, recusadas ou canceladas — já não podes actuar sobre estas propostas.
               </p>
               {terminadasRecebidas.map((review) => (
                 <PropostaReviewCard

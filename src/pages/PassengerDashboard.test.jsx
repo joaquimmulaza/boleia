@@ -720,4 +720,42 @@ describe('PassengerDashboard — marketplace', () => {
 
     expect(await screen.findByText('Aguarda resposta')).toBeInTheDocument();
   });
+
+  it('mostra proposta aceite na secção concluídas (historico)', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    listPropostasByProcura.mockResolvedValue([
+      {
+        id: 'prop-aceite',
+        estado: 'aceite',
+        created_by: 'driver-1',
+        modo_preco: 'POR_PASSAGEIRO',
+        valor_mensal_ask_kz: 50000,
+        n_passageiros_propostos: 1,
+      },
+    ]);
+    enrichPropostasForReview.mockImplementation(async (lista) =>
+      (lista || []).map((p) => ({
+        proposta: p,
+        titulo: 'Individual',
+        membros: [{ passenger_id: 'pax-1', nome: 'Tu', quota_mensal_kz: 50000 }],
+        pricing: {
+          valor_mensal_total_kz: 50000,
+          valor_mensal_por_passageiro_kz: 50000,
+          quotas: [50000],
+          temResto: false,
+        },
+        avisoComposicao: null,
+      })),
+    );
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Propostas concluídas')).toBeInTheDocument();
+    expect(screen.getByText('Aceite')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Aceitar proposta/i })).not.toBeInTheDocument();
+  });
 });

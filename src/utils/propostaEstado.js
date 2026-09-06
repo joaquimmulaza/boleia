@@ -71,6 +71,18 @@ export function chipEstadoProposta(estado, opts = {}) {
 }
 
 /**
+ * Estados terminais visíveis no historico do hub (não inclui invalidada — sem writer UI).
+ *
+ * @param {string | null | undefined} estado
+ * @returns {boolean}
+ */
+export function isPropostaHistorico(estado) {
+  const e = normalizeEstadoProposta(estado);
+  return e === 'rejeitada' || e === 'cancelada' || e === 'aceite';
+}
+
+/**
+ * @deprecated Preferir isPropostaHistorico — alias para rejeitada/cancelada only.
  * @param {string | null | undefined} estado
  * @returns {boolean}
  */

@@ -70,7 +70,7 @@ function countMembrosComPickup(membros) {
  * Card de revisão de proposta multi-passageiro.
  * - `modo="contraparte"` (default): Aceitar / Recusar (inbox A ou B).
  * - `modo="criador"`: Cancelar proposta enviada (só criador; RPC cancel_proposal).
- * - `modo="historico"`: só leitura com chip de estado (rejeitada/cancelada).
+ * - `modo="historico"`: só leitura com chip de estado (rejeitada/cancelada/aceite).
  * - Se `requiresMemberSelection`, checkboxes até exactamente N seleccionados.
  *
  * @param {{

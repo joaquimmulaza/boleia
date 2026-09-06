@@ -3,6 +3,7 @@ import {
   labelEstadoProposta,
   chipEstadoProposta,
   isPropostaTerminada,
+  isPropostaHistorico,
 } from './propostaEstado';
 
 describe('labelEstadoProposta', () => {
@@ -24,6 +25,16 @@ describe('chipEstadoProposta', () => {
   it('devolve chip para estados conhecidos', () => {
     expect(chipEstadoProposta('rejeitada')?.label).toBe('Rejeitada');
     expect(chipEstadoProposta('cancelada')?.label).toBe('Cancelada');
+  });
+});
+
+describe('isPropostaHistorico', () => {
+  it('inclui aceite, rejeitada e cancelada; exclui invalidada', () => {
+    expect(isPropostaHistorico('aceite')).toBe(true);
+    expect(isPropostaHistorico('rejeitada')).toBe(true);
+    expect(isPropostaHistorico('cancelada')).toBe(true);
+    expect(isPropostaHistorico('aberta')).toBe(false);
+    expect(isPropostaHistorico('invalidada')).toBe(false);
   });
 });
 
