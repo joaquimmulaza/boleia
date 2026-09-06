@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { Home, Search, CarFront, User, HandshakeIcon, CalendarX2, LogOut } from 'lucide-react';
+import { Home, CarFront, User, HandshakeIcon, CalendarX2, LogOut } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import ThemeToggle from '../components/ThemeToggle';
 import NotificationBell from '../components/NotificationBell';

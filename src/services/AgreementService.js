@@ -479,9 +479,6 @@ export async function rejectAgreementAdenda(adendaId, options = {}) {
   }
 }
 
-/** Alias Prompt 3 / audit gaps. */
-export const rejectAdenda = rejectAgreementAdenda;
-
 /**
  * @param {string} driverId
  */

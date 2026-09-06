@@ -127,5 +127,5 @@ export function useNotifications(userId) {
     };
   }, [userId, fetchNotifications]);
 
-  return { notifications, unreadCount, markAsRead, markAllAsRead, fetchNotifications, deleteNotification };
+  return { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification };
 }
