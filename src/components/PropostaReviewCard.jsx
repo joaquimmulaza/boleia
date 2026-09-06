@@ -44,6 +44,7 @@ import { buildPreferentialMapPoints } from '../utils/propostaReview';
  *   pricing: PropostaReviewPricing,
  *   titulo: string,
  *   avisoComposicao?: string | null,
+ *   requiresMemberSelection?: boolean,
  * }} PropostaReview
  */
 
@@ -68,12 +69,13 @@ function countMembrosComPickup(membros) {
  * Card de revisão de proposta multi-passageiro.
  * - `modo="contraparte"` (default): Aceitar / Recusar (inbox A ou B).
  * - `modo="criador"`: Cancelar proposta enviada (só criador; RPC cancel_proposal).
+ * - Se `requiresMemberSelection`, checkboxes até exactamente N seleccionados.
  *
  * @param {{
  *   review: PropostaReview,
  *   busy?: boolean,
  *   modo?: 'contraparte' | 'criador',
- *   onAceitar?: () => void,
+ *   onAceitar?: (selectedMemberIds?: string[]) => void,
  *   onRecusar?: () => void,
  *   onCancelar?: () => void,
  * }} props
@@ -87,15 +89,40 @@ function PropostaReviewCard({
   onCancelar,
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(/** @type {string[]} */ ([]));
   const isCriador = modo === 'criador';
 
   const modoLabel =
     review.proposta.modo_preco === 'TOTAL_ACORDO' ? 'Total do acordo' : 'Por passageiro';
   const { pricing, membros, titulo, avisoComposicao } = review;
-  const points = buildPreferentialMapPoints(membros);
+  const nProposto = Number(review.proposta.n_passageiros_propostos) || 0;
+  const needsPicker = Boolean(review.requiresMemberSelection) && !isCriador;
+  const points = buildPreferentialMapPoints(
+    needsPicker
+      ? membros.filter((m) => selectedIds.includes(m.passenger_id))
+      : membros,
+  );
   const totalMembros = membros.length;
   const comPickup = countMembrosComPickup(membros);
   const mostraNotaParcial = totalMembros > 0 && comPickup > 0 && comPickup < totalMembros;
+  const selectionOk = !needsPicker || selectedIds.length === nProposto;
+  const canAceitar = Boolean(onAceitar) && selectionOk && !busy;
+
+  /**
+   * @param {string} passengerId
+   */
+  const toggleMember = (passengerId) => {
+    if (!passengerId || busy) return;
+    setSelectedIds((prev) => {
+      if (prev.includes(passengerId)) {
+        return prev.filter((id) => id !== passengerId);
+      }
+      if (prev.length >= nProposto) {
+        return prev;
+      }
+      return [...prev, passengerId];
+    });
+  };
 
   return (
     <section className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
@@ -116,34 +143,84 @@ function PropostaReviewCard({
         ) : null}
       </div>
 
-      <ul className="space-y-3">
-        {membros.map((m, index) => (
-          <li key={m.passenger_id || `membro-${index}`} className="flex items-start gap-3">
-            <span
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-600 dark:text-slate-300"
-              aria-hidden="true"
-            >
-              {(m.nome || '?').slice(0, 1).toUpperCase()}
+      {needsPicker ? (
+        <fieldset className="space-y-3" data-testid="member-picker">
+          <legend className="text-sm font-semibold text-slate-800 dark:text-slate-100 text-pretty">
+            Escolhe {nProposto}{' '}
+            {nProposto === 1 ? 'passageiro' : 'passageiros'} para o acordo
+            <span className="ml-1 font-normal text-slate-500 tabular-nums">
+              ({selectedIds.length}/{nProposto})
             </span>
-            <div className="min-w-0 flex-1 space-y-0.5">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
-                {m.nome}
-              </p>
-              {m.pickup_name ? (
-                <p className="flex items-start gap-1 text-xs text-slate-500 text-pretty">
-                  <MapPin size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
-                  <span>{m.pickup_name}</span>
+          </legend>
+          <ul className="space-y-2">
+            {membros.map((m, index) => {
+              const id = m.passenger_id || `membro-${index}`;
+              const checked = selectedIds.includes(m.passenger_id);
+              const disabledExtra = !checked && selectedIds.length >= nProposto;
+              return (
+                <li key={id}>
+                  <label
+                    className={`flex min-h-12 items-start gap-3 rounded-xl border px-3 py-2.5 cursor-pointer ${
+                      checked
+                        ? 'border-primary/40 bg-primary/5'
+                        : 'border-slate-100 dark:border-slate-800'
+                    } ${disabledExtra ? 'opacity-50' : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-1 size-5 shrink-0 accent-primary"
+                      checked={checked}
+                      disabled={busy || disabledExtra}
+                      aria-label={m.nome}
+                      onChange={() => toggleMember(m.passenger_id)}
+                    />
+                    <span className="min-w-0 flex-1 space-y-0.5">
+                      <span className="block text-sm font-semibold text-slate-900 dark:text-white truncate">
+                        {m.nome}
+                      </span>
+                      {m.pickup_name ? (
+                        <span className="flex items-start gap-1 text-xs text-slate-500 text-pretty">
+                          <MapPin size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
+                          <span>{m.pickup_name}</span>
+                        </span>
+                      ) : null}
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        </fieldset>
+      ) : (
+        <ul className="space-y-3">
+          {membros.map((m, index) => (
+            <li key={m.passenger_id || `membro-${index}`} className="flex items-start gap-3">
+              <span
+                className="flex size-9 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-600 dark:text-slate-300"
+                aria-hidden="true"
+              >
+                {(m.nome || '?').slice(0, 1).toUpperCase()}
+              </span>
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                  {m.nome}
                 </p>
-              ) : null}
-              {pricing.temResto && m.quota_mensal_kz != null ? (
-                <p className="text-xs text-slate-400 tabular-nums">
-                  {formatKwanza(m.quota_mensal_kz)} Kz
-                </p>
-              ) : null}
-            </div>
-          </li>
-        ))}
-      </ul>
+                {m.pickup_name ? (
+                  <p className="flex items-start gap-1 text-xs text-slate-500 text-pretty">
+                    <MapPin size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
+                    <span>{m.pickup_name}</span>
+                  </p>
+                ) : null}
+                {pricing.temResto && m.quota_mensal_kz != null ? (
+                  <p className="text-xs text-slate-400 tabular-nums">
+                    {formatKwanza(m.quota_mensal_kz)} Kz
+                  </p>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <div className="border-t border-slate-100 dark:border-slate-800 pt-3 space-y-1.5">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
@@ -180,18 +257,18 @@ function PropostaReviewCard({
             type="button"
             disabled={busy || !onCancelar}
             onClick={() => setConfirmOpen(true)}
-            className="w-full bg-slate-100 dark:bg-slate-800 font-bold py-3 rounded-xl disabled:opacity-60"
+            className="w-full min-h-12 bg-slate-100 dark:bg-slate-800 font-bold py-3 rounded-xl disabled:opacity-60"
           >
             Cancelar proposta
           </button>
         </div>
       ) : (
-        <div className="flex gap-2 pt-1">
+        <div className="flex flex-col gap-3 pt-1">
           <button
             type="button"
-            disabled={busy || !onAceitar}
+            disabled={!canAceitar}
             onClick={() => setConfirmOpen(true)}
-            className="flex-1 bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60"
+            className="w-full min-h-12 bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60"
           >
             Aceitar proposta
           </button>
@@ -199,7 +276,7 @@ function PropostaReviewCard({
             type="button"
             disabled={busy || !onRecusar}
             onClick={onRecusar}
-            className="flex-1 bg-slate-100 dark:bg-slate-800 font-bold py-3 rounded-xl disabled:opacity-60"
+            className="w-full min-h-12 border border-slate-300 dark:border-slate-600 bg-transparent text-slate-700 dark:text-slate-200 font-semibold py-3 rounded-lg disabled:opacity-60"
           >
             Recusar
           </button>
@@ -212,7 +289,9 @@ function PropostaReviewCard({
         message={
           isCriador
             ? 'A proposta deixa de ficar disponível para a contraparte. Podes enviar outra mais tarde.'
-            : 'Vais criar um acordo com estes passageiros. Esta acção não se pode desfazer.'
+            : needsPicker
+              ? `Vais criar um acordo com ${nProposto} passageiros seleccionados. Esta acção não se pode desfazer.`
+              : 'Vais criar um acordo com estes passageiros. Esta acção não se pode desfazer.'
         }
         confirmText={isCriador ? 'Confirmar cancelamento' : 'Confirmar'}
         cancelText="Voltar"
@@ -221,7 +300,7 @@ function PropostaReviewCard({
           if (isCriador) {
             onCancelar?.();
           } else {
-            onAceitar?.();
+            onAceitar?.(needsPicker ? selectedIds : undefined);
           }
         }}
         onCancel={() => setConfirmOpen(false)}

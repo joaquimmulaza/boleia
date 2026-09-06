@@ -4,6 +4,7 @@ import {
   leavePassenger,
   renegotiateAgreementPricing,
   acceptAgreementAdenda,
+  rejectAgreementAdenda,
   getAgreementsForDriver,
   getAgreementsForPassenger,
 } from './AgreementService.js';
@@ -60,6 +61,33 @@ describe('AgreementService', () => {
       );
       expect(result.id).toBe('acordo-1');
       expect(result.valor_mensal_por_passageiro_kz).toBe(40000);
+    });
+
+    it('envia p_member_ids quando memberIds é fornecido', async () => {
+      supabase.rpc.mockResolvedValue({ data: 'acordo-2', error: null });
+      supabase.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: { id: 'acordo-2', n_passageiros_contrato: 2 },
+              error: null,
+            }),
+          }),
+        }),
+      });
+
+      await createAgreementFromProposal('prop-1', {
+        memberIds: ['pax-a', 'pax-b'],
+      });
+
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        'accept_proposal',
+        expect.objectContaining({
+          p_proposta_id: 'prop-1',
+          p_member_ids: ['pax-a', 'pax-b'],
+          p_idempotency_key: expect.any(String),
+        }),
+      );
     });
 
     it('em falha de rede enfileira accept_proposal e devolve offlineQueued', async () => {
@@ -560,6 +588,47 @@ describe('AgreementService', () => {
 
     it('exige id da adenda', async () => {
       await expect(acceptAgreementAdenda('')).rejects.toThrow(/adenda/i);
+    });
+  });
+
+  describe('rejectAgreementAdenda', () => {
+    it('chama RPC reject_agreement_adenda e devolve adenda rejeitada', async () => {
+      supabase.rpc.mockResolvedValue({ data: 'adenda-1', error: null });
+      supabase.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: {
+                id: 'adenda-1',
+                acordo_id: 'acordo-1',
+                estado: 'rejeitada',
+                applied_at: null,
+              },
+              error: null,
+            }),
+          }),
+        }),
+      });
+
+      const result = await rejectAgreementAdenda('adenda-1');
+
+      expect(supabase.rpc).toHaveBeenCalledWith('reject_agreement_adenda', {
+        p_adenda_id: 'adenda-1',
+      });
+      expect(result.estado).toBe('rejeitada');
+    });
+
+    it('em falha de rede enfileira reject_agreement_adenda', async () => {
+      Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+
+      const result = await rejectAgreementAdenda('adenda-1');
+
+      expect(result.offlineQueued).toBe(true);
+      expect(supabase.rpc).not.toHaveBeenCalled();
+    });
+
+    it('exige id da adenda', async () => {
+      await expect(rejectAgreementAdenda('')).rejects.toThrow(/adenda/i);
     });
   });
 

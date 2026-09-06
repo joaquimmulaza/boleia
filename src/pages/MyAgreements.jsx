@@ -8,10 +8,12 @@ import {
   leavePassenger,
   renegotiateAgreementPricing,
   acceptAgreementAdenda,
+  rejectAgreementAdenda,
 } from '../services/AgreementService';
 import { listPending } from '../services/offlineQueue';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import EmptyState from '../components/EmptyState';
+import FeedbackAlert from '../components/FeedbackAlert';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
@@ -301,7 +303,7 @@ const MyAgreements = () => {
       await acceptAgreementAdenda(adendaId);
       setMessage({
         type: 'success',
-        text: 'Adenda aceite. O novo preço aplica-se a partir do próximo mês.',
+        text: 'Alteração aceite. O novo preço aplica-se a partir do próximo mês.',
       });
       const acordoId = selected.id;
       const refreshed = await carregar();
@@ -309,6 +311,28 @@ const MyAgreements = () => {
       if (updated) setSelected(updated);
     } catch (err) {
       console.error('Erro ao aceitar adenda:', err);
+      setMessage({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+    } finally {
+      setAdendaBusy(false);
+    }
+  };
+
+  const handleRejectAdenda = async () => {
+    const adendaId = selected?.adenda_pendente?.id;
+    if (!adendaId || adendaBusy) return;
+    setAdendaBusy(true);
+    try {
+      await rejectAgreementAdenda(adendaId);
+      setMessage({
+        type: 'success',
+        text: 'Alteração rejeitada. Mantém-se o preço combinado actual.',
+      });
+      const acordoId = selected.id;
+      const refreshed = await carregar();
+      const updated = refreshed.find((a) => a.id === acordoId);
+      if (updated) setSelected(updated);
+    } catch (err) {
+      console.error('Erro ao rejeitar adenda:', err);
       setMessage({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
     } finally {
       setAdendaBusy(false);
@@ -549,14 +573,24 @@ const MyAgreements = () => {
                       .
                     </p>
                     {isPassageiro && (
-                      <Button
-                        type="button"
-                        className="mt-2 w-full"
-                        disabled={adendaBusy}
-                        onClick={handleAcceptAdenda}
-                      >
-                        Aceitar adenda
-                      </Button>
+                      <div className="mt-3 flex flex-col gap-3">
+                        <Button
+                          type="button"
+                          className="w-full min-h-12 text-base"
+                          disabled={adendaBusy}
+                          onClick={handleAcceptAdenda}
+                        >
+                          Aceitar Alteração
+                        </Button>
+                        <button
+                          type="button"
+                          disabled={adendaBusy}
+                          onClick={handleRejectAdenda}
+                          className="w-full min-h-12 rounded-lg border border-red-300/90 bg-transparent px-4 text-sm font-semibold text-red-800 dark:border-red-800 dark:text-red-200 disabled:opacity-60"
+                        >
+                          Rejeitar Alteração
+                        </button>
+                      </div>
                     )}
                   </>
                 ) : (
@@ -760,14 +794,9 @@ const MyAgreements = () => {
                 </div>
               )}
 
-              {adendaError && (
-                <div
-                  role="alert"
-                  className="rounded-xl px-3 py-2.5 text-sm font-medium bg-red-50 text-red-700 border border-red-200"
-                >
-                  {adendaError}
-                </div>
-              )}
+              {adendaError ? (
+                <FeedbackAlert type="error" text={adendaError} className="mb-0" />
+              ) : null}
 
               <div className="flex flex-col gap-2 sm:flex-row-reverse">
                 <Button
@@ -846,18 +875,13 @@ const MyAgreements = () => {
     <PageShell>
       <PageHeader title="Acordos" subtitle="As tuas viagens combinadas num só lugar." />
 
-      {message.text && (
-        <div
-          role="alert"
-          className={`mb-4 rounded-xl px-4 py-3 text-sm font-medium ${
-            message.type === 'success'
-              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-              : 'bg-red-50 text-red-700 border border-red-200'
-          }`}
-        >
-          {message.text}
-        </div>
-      )}
+      {message.text ? (
+        <FeedbackAlert
+          type={message.type === 'success' ? 'success' : 'error'}
+          text={message.text}
+          data-testid="agreements-feedback"
+        />
+      ) : null}
 
       {isLoading && <LoadingSkeleton />}
 

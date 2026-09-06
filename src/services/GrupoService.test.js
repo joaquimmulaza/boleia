@@ -587,3 +587,203 @@ describe('GrupoService T31 — n_maximo e pedidos de entrada', () => {
     await expect(aprovarEntrada('m-p')).rejects.toThrow(/organizador/i);
   });
 });
+
+describe('GrupoService — Task 2 hardening joins (estado activo)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+  });
+
+  it("insert de membro com estado 'activo' pelo papel passageiro falha ou força 'pendente'", async () => {
+    /** @type {object | null} */
+    let insertPayload = null;
+    let membrosFromCalls = 0;
+
+    supabase.from.mockImplementation((table) => {
+      if (table === 'grupos') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: { id: 'g-1', n_maximo: 4, procura_id: 'pr-1' },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      if (table === 'membros_grupo') {
+        membrosFromCalls += 1;
+        if (membrosFromCalls === 1) {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue({ count: 1, error: null }),
+              }),
+            }),
+          };
+        }
+        if (membrosFromCalls === 2) {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+                }),
+              }),
+            }),
+          };
+        }
+        return {
+          insert: vi.fn().mockImplementation((rows) => {
+            insertPayload = rows?.[0] ?? null;
+            return {
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: {
+                    id: 'm-pend',
+                    grupo_id: 'g-1',
+                    passenger_id: 'pax-pass',
+                    estado: 'pendente',
+                  },
+                  error: null,
+                }),
+              }),
+            };
+          }),
+        };
+      }
+      return {};
+    });
+
+    // Self-join (papel passageiro): payload nunca pode ir como 'activo'.
+    const pedido = await pedirEntradaGrupo('g-1', { passenger_id: 'pax-pass' });
+    expect(insertPayload).toEqual(
+      expect.objectContaining({
+        passenger_id: 'pax-pass',
+        estado: 'pendente',
+      }),
+    );
+    expect(insertPayload?.estado).not.toBe('activo');
+    expect(pedido.estado).toBe('pendente');
+
+    // Bypass: insert com activo rejeitado por RLS / CHECK — erro propaga.
+    vi.clearAllMocks();
+    let bypassCalls = 0;
+    supabase.from.mockImplementation((table) => {
+      if (table === 'grupos') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: { id: 'g-1', n_maximo: 4, procura_id: 'pr-1' },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      if (table === 'membros_grupo') {
+        bypassCalls += 1;
+        if (bypassCalls === 1) {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue({ count: 1, error: null }),
+              }),
+            }),
+          };
+        }
+        return {
+          insert: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: null,
+                error: {
+                  code: '42501',
+                  message:
+                    'new row violates row-level security policy for table "membros_grupo"',
+                },
+              }),
+            }),
+          }),
+        };
+      }
+      return {};
+    });
+
+    await expect(
+      addMembroGrupo('g-1', { passenger_id: 'pax-pass', ordem_insercao: 1 }),
+    ).rejects.toMatchObject({
+      code: '42501',
+      message: expect.stringMatching(/row-level security|política|membros_grupo/i),
+    });
+  });
+});
+
+describe('GrupoService — Task 5 snapshot N_proposto imutável', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('após syncNCandidato por crescimento do grupo, n_passageiros_propostos das propostas existentes permanece intacto', async () => {
+    // Snapshot congelado na proposta (N_proposto=2) antes do grupo crescer para 3 activos.
+    const propostasExistentes = [
+      {
+        id: 'prop-snap',
+        grupo_id: 'g-1',
+        n_passageiros_propostos: 2,
+        estado: 'aberta',
+      },
+    ];
+    const nPropostoAntes = propostasExistentes[0].n_passageiros_propostos;
+
+    const mockProcuraUpdate = vi.fn().mockReturnValue({
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    });
+    const mockPropostasUpdate = vi.fn();
+
+    supabase.from.mockImplementation((table) => {
+      if (table === 'grupos') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: { id: 'g-1', procura_id: 'pr-1' },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      if (table === 'membros_grupo') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ count: 3, error: null }),
+            }),
+          }),
+        };
+      }
+      if (table === 'procuras') {
+        return { update: mockProcuraUpdate };
+      }
+      if (table === 'propostas') {
+        return { update: mockPropostasUpdate };
+      }
+      return {};
+    });
+
+    const n = await syncNCandidato('g-1');
+
+    expect(n).toBe(3);
+    expect(mockProcuraUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ n_candidato: 3 }),
+    );
+    // sync só actualiza procura — nunca muta propostas / N_proposto.
+    expect(supabase.from).not.toHaveBeenCalledWith('propostas');
+    expect(mockPropostasUpdate).not.toHaveBeenCalled();
+    expect(propostasExistentes[0].n_passageiros_propostos).toBe(nPropostoAntes);
+    expect(propostasExistentes[0].n_passageiros_propostos).toBe(2);
+  });
+});

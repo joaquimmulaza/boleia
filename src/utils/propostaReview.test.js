@@ -141,21 +141,22 @@ describe('buildPropostaReview', () => {
     expect(review.avisoComposicao).toBeNull();
   });
 
-  it('corta aos primeiros n_passageiros_propostos membros e avisa se o grupo cresceu', () => {
+  it('quando o grupo cresceu, lista todos os activos e exige selecção (não corta)', () => {
     const review = buildPropostaReview(
       { ...propostaGrupo, n_passageiros_propostos: 2, valor_mensal_ask_kz: 80000 },
       membrosTres,
     );
 
-    expect(review.membros).toHaveLength(2);
-    expect(review.membros.map((m) => m.nome)).toEqual(['Ana Silva', 'Bruno Costa']);
+    expect(review.requiresMemberSelection).toBe(true);
+    expect(review.membros).toHaveLength(3);
+    expect(review.membros.map((m) => m.nome)).toEqual(['Ana Silva', 'Bruno Costa', 'Carla Dias']);
     expect(review.titulo).toBe('Grupo · 2 pessoas');
-    expect(review.avisoComposicao).toMatch(/mais pessoas|nova proposta/i);
+    expect(review.avisoComposicao).toMatch(/escolhe|seleciona|exactamente 2/i);
     expect(review.avisoComposicao).not.toMatch(/N_/);
     expect(review.avisoComposicao).not.toMatch(/incompleto/i);
   });
 
-  it('avisoComposicao quando N_actual > N_proposto sem mutar o tamanho da proposta', () => {
+  it('avisoComposicao quando N_actual > N_proposto exige selecção explícita (lista completa)', () => {
     const review = buildPropostaReview(propostaGrupo, [
       ...membrosTres,
       {
@@ -166,10 +167,11 @@ describe('buildPropostaReview', () => {
       },
     ]);
 
-    expect(review.membros).toHaveLength(3);
+    expect(review.requiresMemberSelection).toBe(true);
+    expect(review.membros).toHaveLength(4);
     expect(review.titulo).toBe('Grupo · 3 pessoas');
-    expect(review.avisoComposicao).toMatch(/3 de 4|nova proposta/i);
-    expect(review.avisoComposicao).not.toMatch(/N_proposto|N_actual/);
+    expect(review.avisoComposicao).toMatch(/escolhe|seleciona|exactamente 3/i);
+    expect(review.avisoComposicao).not.toMatch(/primeiras pessoas|N_proposto|N_actual/);
   });
 
   it('fallback de nome «Passageiro» quando perfil sem nome_completo', () => {

@@ -194,11 +194,15 @@ const DriverDashboard = () => {
     }
   };
 
-  const handleAceitar = async (propostaId) => {
+  const handleAceitar = async (propostaId, memberIds) => {
     setBusyId(propostaId);
     setFeedback({ type: '', text: '' });
     try {
-      await createAgreementFromProposal(propostaId);
+      if (Array.isArray(memberIds) && memberIds.length > 0) {
+        await createAgreementFromProposal(propostaId, { memberIds });
+      } else {
+        await createAgreementFromProposal(propostaId);
+      }
       setFeedback({ type: 'success', text: 'Proposta aceite. Acordo criado.' });
       setReviews((prev) => prev.filter((r) => r.proposta.id !== propostaId));
       await carregar();
@@ -369,7 +373,7 @@ const DriverDashboard = () => {
                   key={review.proposta.id}
                   review={review}
                   busy={busyId === review.proposta.id || loadingPropostas}
-                  onAceitar={() => handleAceitar(review.proposta.id)}
+                  onAceitar={(memberIds) => handleAceitar(review.proposta.id, memberIds)}
                   onRecusar={() => handleRecusar(review.proposta.id)}
                 />
               ))

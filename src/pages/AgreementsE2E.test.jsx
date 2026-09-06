@@ -7,10 +7,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveAgreementPricing } from '../utils/resolveAgreementPricing.js';
-import {
-  leavePassenger,
-  renegotiateAgreementPricing,
-} from '../services/AgreementService.js';
+import * as AgreementService from '../services/AgreementService.js';
+import { leavePassenger, renegotiateAgreementPricing } from '../services/AgreementService.js';
 import { supabase } from '../lib/supabase';
 
 vi.mock('../lib/supabase', () => ({
@@ -302,6 +300,80 @@ describe('Agreements marketplace E2E (T25)', () => {
       expect(renegotiateBlock).toMatch(/renegotiate_agreement_pricing/);
       expect(renegotiateBlock).not.toMatch(/\.update\(/);
       expect(renegotiateBlock).not.toMatch(/quota_mensal_kz/);
+    });
+  });
+
+  describe('Task 6 — rejeição de adenda (reject_agreement_adenda)', () => {
+    it("após reject_agreement_adenda, estado fica 'rejeitada' e preço activo preservado sem alterações retroactivas", async () => {
+      expect(typeof AgreementService.rejectAgreementAdenda).toBe('function');
+
+      const precoActivo = {
+        id: 'acordo-1',
+        modo_preco: 'TOTAL_ACORDO',
+        n_passageiros_contrato: 4,
+        valor_mensal_total_kz: 120000,
+        valor_mensal_por_passageiro_kz: 30000,
+        estado: 'activo',
+      };
+
+      supabase.rpc.mockResolvedValue({ data: 'adenda-rej-1', error: null });
+      supabase.from.mockImplementation((table) => {
+        if (table === 'acordos_adendas') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: {
+                    id: 'adenda-rej-1',
+                    acordo_id: 'acordo-1',
+                    estado: 'rejeitada',
+                    applied_at: null,
+                    valor_mensal_total_kz: 90000,
+                    n_passageiros_contrato: 3,
+                    previo_valor_mensal_total_kz: 120000,
+                    previo_n_passageiros_contrato: 4,
+                  },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        if (table === 'acordos') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: { ...precoActivo },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        return {};
+      });
+
+      const adenda = await AgreementService.rejectAgreementAdenda('adenda-rej-1');
+
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        'reject_agreement_adenda',
+        expect.objectContaining({ p_adenda_id: 'adenda-rej-1' }),
+      );
+      expect(String(adenda.estado).toLowerCase()).toMatch(/rejeitada/);
+      expect(adenda.applied_at).toBeNull();
+
+      // Preço live do acordo permanece o contratual (sem recálculo retroactivo).
+      const { data: acordoLive, error } = await supabase
+        .from('acordos')
+        .select('*')
+        .eq('id', 'acordo-1')
+        .single();
+      expect(error).toBeNull();
+      expect(acordoLive.valor_mensal_total_kz).toBe(120000);
+      expect(acordoLive.valor_mensal_por_passageiro_kz).toBe(30000);
+      expect(acordoLive.n_passageiros_contrato).toBe(4);
+      expect(acordoLive.estado).toBe('activo');
     });
   });
 });

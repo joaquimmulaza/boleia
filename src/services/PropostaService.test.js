@@ -5,8 +5,10 @@ import {
   listPropostasByOferta,
   rejectProposta,
   cancelProposta,
+  acceptProposal,
   enrichPropostasForReview,
 } from './PropostaService.js';
+import { createAgreementFromProposal } from './AgreementService.js';
 import { supabase } from '../lib/supabase';
 import { listMembrosGrupo } from './GrupoService.js';
 
@@ -25,6 +27,10 @@ vi.mock('../lib/supabase', () => ({
 
 vi.mock('./GrupoService.js', () => ({
   listMembrosGrupo: vi.fn(),
+}));
+
+vi.mock('./AgreementService.js', () => ({
+  createAgreementFromProposal: vi.fn(),
 }));
 
 describe('PropostaService', () => {
@@ -224,6 +230,17 @@ describe('PropostaService', () => {
   it('cancelProposta exige ID da proposta', async () => {
     await expect(cancelProposta('')).rejects.toThrow(/proposta/i);
     expect(supabase.rpc).not.toHaveBeenCalled();
+  });
+
+  it('acceptProposal encaminha memberIds para createAgreementFromProposal', async () => {
+    createAgreementFromProposal.mockResolvedValue({ id: 'acordo-9' });
+
+    const result = await acceptProposal('prop-9', ['p1', 'p2']);
+
+    expect(createAgreementFromProposal).toHaveBeenCalledWith('prop-9', {
+      memberIds: ['p1', 'p2'],
+    });
+    expect(result.id).toBe('acordo-9');
   });
 
   it('enrichPropostasForReview anexa review a cada proposta em paralelo', async () => {

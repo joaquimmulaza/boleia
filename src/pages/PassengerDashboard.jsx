@@ -5,6 +5,7 @@ import AddressInput from '../components/AddressInput';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 import EmptyState from '../components/EmptyState';
+import FeedbackAlert from '../components/FeedbackAlert';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import GrupoProcuraPanel from '../components/GrupoProcuraPanel';
 import GrupoDescobertaPanel from '../components/GrupoDescobertaPanel';
@@ -313,11 +314,15 @@ const PassengerDashboard = () => {
     }
   };
 
-  const handleAceitarInbox = async (propostaId) => {
+  const handleAceitarInbox = async (propostaId, memberIds) => {
     setBusyId(propostaId);
     setFeedback({ type: '', text: '' });
     try {
-      await createAgreementFromProposal(propostaId);
+      if (Array.isArray(memberIds) && memberIds.length > 0) {
+        await createAgreementFromProposal(propostaId, { memberIds });
+      } else {
+        await createAgreementFromProposal(propostaId);
+      }
       setFeedback({ type: 'success', text: 'Proposta aceite. Acordo criado.' });
       setInboxReviews((prev) => prev.filter((r) => r.proposta.id !== propostaId));
       await carregar();
@@ -379,18 +384,13 @@ const PassengerDashboard = () => {
           : {})}
       />
 
-      {feedback.text && (
-        <div
-          role="alert"
-          className={`mb-4 rounded-xl px-4 py-3 text-sm font-medium ${
-            feedback.type === 'success'
-              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-              : 'bg-red-50 text-red-700 border border-red-200'
-          }`}
-        >
-          {feedback.text}
-        </div>
-      )}
+      {feedback.text ? (
+        <FeedbackAlert
+          type={feedback.type === 'success' ? 'success' : 'error'}
+          text={feedback.text}
+          data-testid="passenger-feedback"
+        />
+      ) : null}
 
       {loading && <LoadingSkeleton />}
 
@@ -566,7 +566,7 @@ const PassengerDashboard = () => {
                   key={review.proposta.id}
                   review={review}
                   busy={busyId === review.proposta.id}
-                  onAceitar={() => handleAceitarInbox(review.proposta.id)}
+                  onAceitar={(memberIds) => handleAceitarInbox(review.proposta.id, memberIds)}
                   onRecusar={() => handleRecusarInbox(review.proposta.id)}
                 />
               ))

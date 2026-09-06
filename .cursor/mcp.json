@@ -7,6 +7,9 @@
         "GRAPHLORE_OUT_DIR": "graphify-out",
         "GRAPHLORE_TOOLSET": "lean"
       }
+    },
+    "supabase": {
+      "url": "https://mcp.supabase.com/mcp"
     }
   }
 }

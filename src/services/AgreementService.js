@@ -42,9 +42,14 @@ async function applyDueAdendasBestEffort(acordoId = null) {
  * Aceita proposta via RPC atómica (cria acordo 1:N + congela preços).
  * Só a contraparte pode aceitar (`created_by` bloqueado na RPC).
  * Em falha de rede, enfileira `accept_proposal` com idempotency_key.
+ * Quando o grupo cresceu, passar `memberIds` (exactamente N da proposta).
  *
  * @param {string} propostaId
- * @param {{ idempotencyKey?: string, forceQueue?: boolean }} [options]
+ * @param {{
+ *   idempotencyKey?: string,
+ *   forceQueue?: boolean,
+ *   memberIds?: string[],
+ * }} [options]
  */
 export async function createAgreementFromProposal(propostaId, options = {}) {
   if (!propostaId) {
@@ -52,10 +57,14 @@ export async function createAgreementFromProposal(propostaId, options = {}) {
   }
 
   const idempotencyKey = options.idempotencyKey || uuidv4();
+  /** @type {Record<string, unknown>} */
   const rpcArgs = {
     p_proposta_id: propostaId,
     p_idempotency_key: idempotencyKey,
   };
+  if (Array.isArray(options.memberIds) && options.memberIds.length > 0) {
+    rpcArgs.p_member_ids = options.memberIds;
+  }
 
   const queueAccept = async () => {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -392,6 +401,86 @@ export async function acceptAgreementAdenda(adendaId, options = {}) {
     throw err;
   }
 }
+
+/**
+ * Contraparte rejeita adenda pendente (`pendente_passageiro` → `rejeitada`).
+ * Preços activos do acordo mantêm-se. Em falha de rede, enfileira a RPC.
+ *
+ * @param {string} adendaId
+ * @param {{ idempotencyKey?: string, forceQueue?: boolean }} [options]
+ * @returns {Promise<object>}
+ */
+export async function rejectAgreementAdenda(adendaId, options = {}) {
+  if (!adendaId) {
+    throw new Error('ID da adenda é obrigatório.');
+  }
+
+  const idempotencyKey = options.idempotencyKey || uuidv4();
+  // Contrato DB actual: reject_agreement_adenda(p_adenda_id) — sem p_idempotency_key.
+  const rpcArgs = {
+    p_adenda_id: adendaId,
+  };
+
+  const queueRejectAdenda = async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+    if (!accessToken) {
+      throw new Error('Sessão necessária para guardar a rejeição da adenda offline.');
+    }
+    await enqueueRpc({
+      rpc: 'reject_agreement_adenda',
+      args: rpcArgs,
+      accessToken,
+      idempotencyKey,
+    });
+    return {
+      id: adendaId,
+      offlineQueued: true,
+      idempotency_key: idempotencyKey,
+    };
+  };
+
+  if (options.forceQueue || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
+    return queueRejectAdenda();
+  }
+
+  try {
+    const { data: adendaIdOut, error: rpcError } = await supabase.rpc(
+      'reject_agreement_adenda',
+      rpcArgs,
+    );
+
+    if (rpcError) {
+      if (isNetworkFailure(rpcError)) {
+        return queueRejectAdenda();
+      }
+      throw new Error(rpcError.message || 'Falha ao rejeitar a adenda.');
+    }
+
+    const id = adendaIdOut ?? adendaId;
+    const { data, error } = await supabase
+      .from('acordos_adendas')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      if (isNetworkFailure(error)) {
+        return queueRejectAdenda();
+      }
+      throw error;
+    }
+    return data;
+  } catch (err) {
+    if (isNetworkFailure(err)) {
+      return queueRejectAdenda();
+    }
+    throw err;
+  }
+}
+
+/** Alias Prompt 3 / audit gaps. */
+export const rejectAdenda = rejectAgreementAdenda;
 
 /**
  * @param {string} driverId

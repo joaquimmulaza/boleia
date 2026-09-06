@@ -44,6 +44,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
   const [feedback, setFeedback] = useState({ type: '', text: '' });
   const [nMaximo, setNMaximo] = useState(4);
   const [telefone, setTelefone] = useState('');
+  const [telefoneFallbackOpen, setTelefoneFallbackOpen] = useState(false);
   const [pickup, setPickup] = useState({
     pickup_name: '',
     pickup_lat: null,
@@ -376,45 +377,69 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
           {cheio ? (
             <p className="text-sm text-slate-500 text-pretty">Este grupo já está completo.</p>
           ) : (
-            <form
-              onSubmit={handleAdicionarMembro}
-              className="space-y-3 border-t border-slate-100 pt-4"
-            >
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                Ou convidar por telefone
-              </p>
-              <label className="flex flex-col gap-1.5 text-sm font-semibold">
-                Telefone do colega
-                <input
-                  type="tel"
-                  value={telefone}
-                  onChange={(e) => setTelefone(e.target.value)}
-                  placeholder="9XXXXXXXX"
-                  required
-                  className="h-12 rounded-lg bg-light-gray dark:bg-slate-800 px-3 font-normal"
-                />
-              </label>
-              <AddressInput
-                name="pickup_name"
-                label="Ponto de recolha (opcional)"
-                value={pickup.pickup_name}
-                onChange={handlePickupChange}
-                onSelectCoordinates={(c) =>
-                  setPickup((prev) => ({
-                    ...prev,
-                    pickup_lat: c.lat,
-                    pickup_lng: c.lng,
-                  }))
-                }
-              />
+            <div className="border-t border-slate-100 pt-4 space-y-3">
               <button
-                type="submit"
-                disabled={busy || !telefone.trim()}
-                className="w-full bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60"
+                type="button"
+                aria-expanded={telefoneFallbackOpen}
+                onClick={() => setTelefoneFallbackOpen((open) => !open)}
+                className="w-full min-h-12 flex items-center justify-between gap-2 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2.5 text-left text-sm font-semibold text-slate-700 dark:text-slate-200"
               >
-                Adicionar ao grupo
+                <span>Fallback: Convidar por telefone</span>
+                <span className="text-xs font-normal text-slate-500" aria-hidden="true">
+                  {telefoneFallbackOpen ? '−' : '+'}
+                </span>
               </button>
-            </form>
+
+              {telefoneFallbackOpen ? (
+                <form onSubmit={handleAdicionarMembro} className="space-y-3">
+                  <p className="text-xs text-slate-500 text-pretty">
+                    Usa só se o colega ainda não aparecer na descoberta pública. Preferimos
+                    convites dentro da app.
+                  </p>
+                  <label className="flex flex-col gap-1.5 text-sm font-semibold">
+                    Telefone do colega
+                    <input
+                      type="tel"
+                      value={telefone}
+                      onChange={(e) => setTelefone(e.target.value)}
+                      placeholder="9XXXXXXXX"
+                      required
+                      className="h-12 rounded-lg bg-light-gray dark:bg-slate-800 px-3 font-normal"
+                    />
+                  </label>
+                  <AddressInput
+                    name="pickup_name"
+                    label="Ponto de recolha (opcional)"
+                    value={pickup.pickup_name}
+                    onChange={handlePickupChange}
+                    onSelectCoordinates={(c) =>
+                      setPickup((prev) => ({
+                        ...prev,
+                        pickup_lat: c.lat,
+                        pickup_lng: c.lng,
+                      }))
+                    }
+                  />
+                  <button
+                    type="submit"
+                    disabled={busy || !telefone.trim()}
+                    className="w-full min-h-12 bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60"
+                  >
+                    Adicionar ao grupo
+                  </button>
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(
+                      'Junta-te ao meu grupo na Boleia Certa para partilharmos a boleia diária em Luanda.',
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-12 w-full items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 text-sm font-semibold text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100"
+                  >
+                    Partilhar convite via WhatsApp
+                  </a>
+                </form>
+              ) : null}
+            </div>
           )}
         </div>
       )}

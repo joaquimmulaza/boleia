@@ -185,7 +185,8 @@ describe('PassengerDashboard — marketplace', () => {
         }),
       );
     });
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Proposta enviada/i);
+    expect(await screen.findByTestId('passenger-feedback')).toHaveTextContent(/Proposta enviada/i);
+    expect(screen.getByTestId('passenger-feedback')).toHaveAttribute('data-variant', 'success');
   });
 
   it('ao propor com grupo de 3 envia grupo_id e N_actual = 3', async () => {
@@ -400,7 +401,8 @@ describe('PassengerDashboard — marketplace', () => {
     await waitFor(() => {
       expect(cancelProposta).toHaveBeenCalledWith('prop-out');
     });
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Proposta cancelada/i);
+    expect(await screen.findByTestId('passenger-feedback')).toHaveTextContent(/Proposta cancelada/i);
+    expect(screen.getByTestId('passenger-feedback')).toHaveAttribute('role', 'status');
   });
 
   it('criar procura envia dias_semana e teto_mensal_kz ao interagir no formulário', async () => {

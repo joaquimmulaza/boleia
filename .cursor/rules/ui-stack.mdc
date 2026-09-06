@@ -15,6 +15,7 @@ Quando o pedido tocar UI, UX, ecrãs, componentes visuais, layout ou polish:
    - Skills ponte: `.cursor/skills/boleia-stitch` + vendor em `skills/` (`enhance-prompt`, `design-md`, `stitch-loop`, `react-components` adaptado JSX).
    - Tools: `create_project` / `generate_screen_from_text` / `edit_screens` / `get_screen` / `list_screens` / design system tools.
    - Artefactos locais: `.stitch/DESIGN.md`, `.stitch/SITE.md`, `.stitch/metadata.json`, `.stitch/designs/`.
+   - **Project Resolution (obrigatório):** um projecto canónico «Boleia Certa». Se `list_projects` vazio → `create_project` sem confirmação + persistir `projectId` em `.stitch/metadata.json`. Reutilizar o mesmo projecto para novos ecrãs/fluxos. **Proibido** ignorar Stitch por lista vazia.
    - **Proibido** dump cego do HTML Stitch em `src/`; mapear para shadcn + tokens.
 4. **shadcn MCP** (`plugin-shadcn-shadcn`): search → view/examples → `get_add_command_for_items`; primitivos em `src/components/ui/` (**só `.jsx`/`.js`**).
 5. **Mobbin** (`plugin-mobbin-mobbin`) — free-safe opcional:
@@ -22,7 +23,7 @@ Quando o pedido tocar UI, UX, ecrãs, componentes visuais, layout ou polish:
    - `limit` ≤ 5
    - `platform: "web"`
    - Se 403/auth/plano free: **degradar sem bloquear**; anotar no handoff.
-6. **v0 via One** (`user-one`, platform `v0`) — **só fallback** se Stitch estiver indisponível ou o utilizador pedir explicitamente. Se usado: anti-plano-só (Send Message a construir UI). Confirmar antes de create/deploy Vercel.
+6. **v0 via One** (`user-one`, platform `v0`) — **só fallback** se Stitch estiver indisponível/auth falhou ou o utilizador pedir explicitamente. **Nunca** por lista de projectos vazia. Se usado: anti-plano-só (Send Message a construir UI). Confirmar antes de create/deploy Vercel.
 7. Tokens: mapear para `src/index.css` (`--color-primary`, backgrounds, etc.).
 8. Seguir `.cursor/skills/boleia-agent-loop/ui-designer`, `ui-qa` e `.cursor/skills/boleia-stitch`.
 
@@ -30,7 +31,7 @@ Quando o pedido tocar UI, UX, ecrãs, componentes visuais, layout ou polish:
 
 1. Spec (`tlc-spec-driven`)
 2. UI Skills MCP (`list_skills` → `get_skill`)
-3. `enhance-prompt` (+ `DESIGN.md` Boleia) → Stitch generate/edit
+3. Project Resolution → `enhance-prompt` (+ `DESIGN.md` Boleia) → Stitch generate/edit
 4. shadcn + tokens → gate design (ecrã Stitch + constraints UI Skills + primitivos)
 5. TDD → implementar em `src/` (JSX/JSDoc; sem TypeScript)
 6. UI QA (UI Skills de novo + browser) + Code Reviewer

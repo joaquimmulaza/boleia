@@ -293,4 +293,59 @@ describe('PropostaReviewCard', () => {
       screen.getByText(/pagam .+ para o total fechar exacto/i),
     ).toBeInTheDocument();
   });
+
+  it('com requiresMemberSelection: Aceitar desactivado até exactamente N seleccionados', () => {
+    const onAceitar = vi.fn();
+    render(
+      <PropostaReviewCard
+        review={buildReview({
+          requiresMemberSelection: true,
+          avisoComposicao:
+            'O grupo tem mais pessoas do que as cobertas nesta proposta. Escolhe exactamente 3 passageiros para o acordo.',
+          membros: [
+            ...buildReview().membros,
+            {
+              passenger_id: 'p4',
+              nome: 'Diana Lima',
+              pickup_name: null,
+              quota_mensal_kz: null,
+            },
+          ],
+        })}
+        busy={false}
+        onAceitar={onAceitar}
+        onRecusar={vi.fn()}
+      />,
+    );
+
+    const aceitar = screen.getByRole('button', { name: /Aceitar proposta/i });
+    expect(aceitar).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /Ana Silva/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Bruno Costa/i }));
+    expect(aceitar).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /Carla Dias/i }));
+    expect(aceitar).not.toBeDisabled();
+
+    fireEvent.click(aceitar);
+    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
+    expect(onAceitar).toHaveBeenCalledWith(['p1', 'p2', 'p3']);
+  });
+
+  it('sem requiresMemberSelection: onAceitar sem IDs (comportamento legado)', () => {
+    const onAceitar = vi.fn();
+    render(
+      <PropostaReviewCard
+        review={buildReview({ requiresMemberSelection: false })}
+        busy={false}
+        onAceitar={onAceitar}
+        onRecusar={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Aceitar proposta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
+    expect(onAceitar).toHaveBeenCalledWith(undefined);
+  });
 });

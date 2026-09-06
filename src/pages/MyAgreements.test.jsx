@@ -26,6 +26,7 @@ vi.mock('../services/AgreementService', () => ({
   leavePassenger: vi.fn(),
   renegotiateAgreementPricing: vi.fn(),
   acceptAgreementAdenda: vi.fn(),
+  rejectAgreementAdenda: vi.fn(),
 }));
 
 vi.mock('../services/offlineQueue', () => ({
@@ -43,6 +44,7 @@ import {
   leavePassenger,
   renegotiateAgreementPricing,
   acceptAgreementAdenda,
+  rejectAgreementAdenda,
 } from '../services/AgreementService';
 import { listPending } from '../services/offlineQueue';
 
@@ -297,6 +299,11 @@ describe('MyAgreements — marketplace 1:N', () => {
     expect(await screen.findByText(/Saída Pendente/i)).toBeInTheDocument();
     expect(screen.getByText(/A sincronizar/i)).toBeInTheDocument();
     expect(screen.getByText(/Talatona/i)).toBeInTheDocument();
+
+    const feedback = screen.getByTestId('agreements-feedback');
+    expect(feedback).toHaveAttribute('data-variant', 'success');
+    expect(feedback).toHaveTextContent(/Saída guardada/i);
+    expect(feedback).toHaveAttribute('role', 'status');
 
     fireEvent.click(screen.getByRole('button', { name: /Talatona/i }));
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
@@ -597,7 +604,7 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
     expect(within(dialog).getByRole('button', { name: /Renegociar preço/i })).toBeInTheDocument();
   });
 
-  it('passageiro vê CTA Aceitar adenda quando estado é pendente_passageiro', async () => {
+  it('passageiro vê CTA Aceitar Alteração e Rejeitar Alteração quando pendente', async () => {
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     getAgreementsForPassenger.mockResolvedValue([
       {
@@ -621,7 +628,8 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
     const pendente = within(dialog).getByTestId('adenda-pendente');
     expect(pendente).toHaveTextContent(/proposta de novo preço/i);
-    expect(within(dialog).getByRole('button', { name: /Aceitar adenda/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: /Aceitar Alteração/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: /Rejeitar Alteração/i })).toBeInTheDocument();
   });
 
   it('passageiro aceita adenda e actualiza o detalhe', async () => {
@@ -663,18 +671,60 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Aceitar adenda/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Aceitar Alteração/i }));
 
     await waitFor(() => {
       expect(acceptAgreementAdenda).toHaveBeenCalledWith('adenda-1');
     });
 
-    expect(await screen.findByText(/Adenda aceite/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Adenda aceite|Alteração aceite/i)).toBeInTheDocument();
     const dialog = screen.getByRole('dialog', { name: /Detalhe do acordo/i });
     expect(within(dialog).getByTestId('adenda-pendente')).toHaveTextContent(
       /Novo preço a partir de/i,
     );
-    expect(within(dialog).queryByRole('button', { name: /Aceitar adenda/i })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: /Aceitar Alteração/i })).not.toBeInTheDocument();
+  });
+
+  it('passageiro rejeita adenda com feedback modeless e remove CTAs', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger
+      .mockResolvedValueOnce([
+        {
+          ...acordoPassageiro,
+          adenda_pendente: {
+            id: 'adenda-1',
+            estado: 'pendente_passageiro',
+            effective_from: '2026-10-01',
+            valor_mensal_por_passageiro_kz: 45000,
+            valor_mensal_total_kz: 90000,
+            applied_at: null,
+          },
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          ...acordoPassageiro,
+          adenda_pendente: null,
+        },
+      ]);
+    rejectAgreementAdenda.mockResolvedValue({
+      id: 'adenda-1',
+      estado: 'rejeitada',
+    });
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Rejeitar Alteração/i }));
+
+    await waitFor(() => {
+      expect(rejectAgreementAdenda).toHaveBeenCalledWith('adenda-1');
+    });
+
+    expect(await screen.findByText(/Alteração rejeitada|adenda rejeitada/i)).toBeInTheDocument();
+    const dialog = screen.getByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).queryByRole('button', { name: /Aceitar Alteração/i })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: /Rejeitar Alteração/i })).not.toBeInTheDocument();
   });
 
   it('motorista com adenda pendente_passageiro vê aviso sem CTA Aceitar', async () => {
@@ -700,6 +750,7 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
     expect(within(dialog).getByTestId('adenda-pendente')).toHaveTextContent(
       /à espera|aguard|aceitação/i,
     );
-    expect(within(dialog).queryByRole('button', { name: /Aceitar adenda/i })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: /Aceitar Alteração/i })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: /Rejeitar Alteração/i })).not.toBeInTheDocument();
   });
 });

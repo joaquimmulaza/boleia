@@ -121,7 +121,7 @@ ThemeProvider → AuthProvider → BrowserRouter
 5. Forms: estado local controlado; handlers `handleSubmit` / `handleChange`.
 6. Modais: props `isOpen` + callbacks (`onConfirm` / `onCancel`), padrão `ConfirmationModal`.
 7. Ícones: `import { Home, Car } from 'lucide-react'`. Preferir Lucide; Material Symbols só se o design Stitch o exigir explicitamente.
-8. **Stitch + UI Skills sync (UI):** gerador SoT = **Stitch MCP** (`user-stitch`); sincronia obrigatória com **UI Skills MCP** (antes do prompt e no QA). Tokens em `src/index.css` + primitivos `src/components/ui/` (shadcn JSX). Mobbin free-safe opcional (`mode: standard`, `limit` ≤ 5). **v0/One só fallback.** Fluxo: `tlc-spec-driven` → UI Skills → enhance-prompt/`DESIGN.md` → Stitch → shadcn → gate “design pronto” → TDD → `src/` → UI QA + Code Reviewer. Penpot/Superdesign **não** são SoT. Ver `AGENTS.md` §4, `.cursor/rules/ui-stack.mdc`, `.cursor/skills/boleia-stitch`.
+8. **Stitch + UI Skills sync (UI):** gerador SoT = **Stitch MCP** (`user-stitch`); sincronia obrigatória com **UI Skills MCP** (antes do prompt e no QA). Tokens em `src/index.css` + primitivos `src/components/ui/` (shadcn JSX). Mobbin free-safe opcional (`mode: standard`, `limit` ≤ 5). **v0/One só fallback** (nunca por lista de projectos vazia). **One-project:** se `list_projects` vazio → `create_project("Boleia Certa")` sem confirmação + persistir `.stitch/metadata.json`; reutilizar o mesmo projecto para novos ecrãs. Fluxo: `tlc-spec-driven` → UI Skills → Project Resolution → enhance-prompt/`DESIGN.md` → Stitch → shadcn → gate “design pronto” → TDD → `src/` → UI QA + Code Reviewer. Penpot/Superdesign **não** são SoT. Ver `AGENTS.md` §4, `.cursor/rules/ui-stack.mdc`, `.cursor/skills/boleia-stitch`.
 9. **Tarefa nova:** ler e seguir `.cursor/skills/tlc-spec-driven` antes de Designer/Implementer. Com ≥2 tasks independentes: `.cursor/skills/subagent-creator` + `Task` em paralelo (scopes de ficheiros disjuntos).
 
 ### Imports
@@ -228,6 +228,7 @@ try {
 | Penpot / Superdesign como gate | Stitch + UI Skills + shadcn (Penpot não é SoT) |
 | Dump cego HTML Stitch / TypeScript do vendor | Adaptar a JSX + `src/components/ui/`; ver `boleia-stitch` |
 | Gerar UI só com Stitch (sem UI Skills) | Sempre UI Skills antes do prompt e no QA |
+| Ignorar Stitch porque `list_projects` está vazio | `create_project("Boleia Certa")` + persistir `metadata.json`; reutilizar projecto |
 | Saltar `tlc-spec-driven` em tarefa nova | Spec/Quick em `.specs/` antes de código |
 | Mobbin `deep` / limites altos | `standard`, `limit` ≤ 5; degradar se MCP free falhar |
 | Hardcode secrets | `.env` / `VITE_*` |

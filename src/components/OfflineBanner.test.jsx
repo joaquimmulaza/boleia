@@ -10,9 +10,10 @@ describe('OfflineBanner', () => {
 
   it('mostra aviso Luanda quando offline', () => {
     render(<OfflineBanner isOffline />);
-    expect(
-      screen.getByText(/Sem ligação à Internet/i),
-    ).toBeInTheDocument();
+    const banner = screen.getByTestId('offline-banner');
+    expect(banner).toHaveAttribute('data-variant', 'offline');
+    expect(banner).toHaveTextContent(/Sem ligação à Internet/i);
     expect(screen.getByRole('status')).toHaveTextContent(/cache/i);
+    expect(banner.querySelector('svg')).toBeTruthy();
   });
 });

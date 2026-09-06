@@ -41,9 +41,9 @@
 
 Ordem documentada e consistente em `ui-stack.mdc` + `ui-designer` + `boleia-stitch`:
 
-0 Spec → A UX → B UI Skills → C Stitch (`enhance-prompt` / `DESIGN.md`) → D shadcn → Gate → E TDD JSX → F UI QA (UI Skills + fidelidade Stitch).
+0 Spec → A UX → B UI Skills → C Stitch (Project Resolution → `enhance-prompt` / `DESIGN.md`) → D shadcn → Gate → E TDD JSX → F UI QA (UI Skills + fidelidade Stitch).
 
-**Não** se chamou `create_project` / `generate_screen_from_text` (evitar projectos órfãos sem ecrã-alvo confirmado).
+Neste smoke **sem ecrã-alvo** não se chamou `generate_screen_from_text` (dry-run). Isso **não** implica evitar `create_project` numa tarefa UI real: lista vazia → criar projecto canónico «Boleia Certa» e persistir `.stitch/metadata.json` (ver Project Resolution Protocol em `boleia-stitch`).
 
 ---
 
@@ -52,7 +52,7 @@ Ordem documentada e consistente em `ui-stack.mdc` + `ui-designer` + `boleia-stit
 | P | Gap | Acção recomendada |
 |---|-----|-------------------|
 | P1 | UI Skills MCP timeout nas tools de leitura | Recarregar MCP no Cursor; confirmar plano/rede; re-testar `list_skills` + `get_skill ibelick/baseline-ui` |
-| P2 | Zero projectos Stitch | Na próxima tarefa UI real: `create_project` (com confirmação) + primeiro ecrã smoke |
+| P2 | Zero projectos Stitch | Na próxima tarefa UI real: `create_project(title: "Boleia Certa")` **sem confirmação** + primeiro ecrã + persistir `metadata.json` |
 | P2 | Planos antigos em `.cursor/plans/*` ainda dizem v0-first | Histórico; ignorar ou actualizar só se reabertos |
 | P3 | Vendor `react-components` ainda TS | Já coberto pelos overrides em `boleia-stitch` |
 
@@ -66,4 +66,6 @@ Ordem documentada e consistente em `ui-stack.mdc` + `ui-designer` + `boleia-stit
 | Docs/rules mesma ordem | **Sim** |
 | ui-designer exige UI Skills antes de Stitch | **Sim** |
 
-**Conclusão:** integração de fluxo **sincronizada na governança**. Smoke Stitch **OK** (sem projectos). Smoke UI Skills **bloqueado por timeout de transporte** — requer reload/reauth no cliente Cursor pelo utilizador; depois revalidar `get_skill`.
+**Conclusão:** integração de fluxo **sincronizada na governança**. Smoke Stitch **OK** (sem projectos no momento do audit). Smoke UI Skills **bloqueado por timeout de transporte** — requer reload/reauth no cliente Cursor pelo utilizador; depois revalidar `get_skill`.
+
+**Errata (2026-09-06):** a formulação anterior «evitar projectos órfãos» / «create_project com confirmação» está **obsoleta**. Política actual = one-project canónico; lista vazia nunca justifica saltar Stitch.

@@ -155,7 +155,7 @@ describe('GrupoProcuraPanel T31', () => {
     });
   });
 
-  it('mantém telefone como fallback e não expõe jargon', async () => {
+  it('demove telefone para fallback colapsável e não expõe jargon', async () => {
     getGrupoByProcura.mockResolvedValue({
       id: 'g-1',
       procura_id: 'pr-1',
@@ -175,8 +175,16 @@ describe('GrupoProcuraPanel T31', () => {
       <GrupoProcuraPanel procura={procura} userId="pax-1" onGrupoChange={vi.fn()} />,
     );
 
-    expect(await screen.findByText(/Ou convidar por telefone/i)).toBeInTheDocument();
-    expect(container.textContent).not.toMatch(/N_actual|n_maximo|POR_PASSAGEIRO|pendente/i);
+    const fallback = await screen.findByRole('button', {
+      name: /Fallback: Convidar por telefone/i,
+    });
+    expect(fallback).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Telefone do colega/i)).not.toBeInTheDocument();
+
+    fireEvent.click(fallback);
+    expect(await screen.findByLabelText(/Telefone do colega/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /WhatsApp/i })).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/N_actual|n_maximo|POR_PASSAGEIRO/i);
   });
 
   it('grupo incompleto: copy a explicar que já se pode negociar', async () => {

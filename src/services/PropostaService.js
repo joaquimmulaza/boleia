@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../lib/supabase';
 import { loadPropostaReview } from '../utils/propostaReview.js';
 import { enqueueRpc, isNetworkFailure } from './offlineQueue.js';
+import { createAgreementFromProposal } from './AgreementService.js';
 
 export { buildPropostaReview, loadPropostaReview } from '../utils/propostaReview.js';
 
@@ -117,6 +118,23 @@ export async function rejectProposta(propostaId) {
   }
 
   return data;
+}
+
+/**
+ * Aceita proposta (contraparte). Encaminha para `createAgreementFromProposal`.
+ * Quando o grupo cresceu, passar `selectedMemberIds` com exactamente N IDs.
+ *
+ * @param {string} propostaId
+ * @param {string[]} [selectedMemberIds]
+ * @param {{ idempotencyKey?: string, forceQueue?: boolean }} [options]
+ */
+export async function acceptProposal(propostaId, selectedMemberIds, options = {}) {
+  /** @type {{ idempotencyKey?: string, forceQueue?: boolean, memberIds?: string[] }} */
+  const opts = { ...options };
+  if (Array.isArray(selectedMemberIds) && selectedMemberIds.length > 0) {
+    opts.memberIds = selectedMemberIds;
+  }
+  return createAgreementFromProposal(propostaId, opts);
 }
 
 /**

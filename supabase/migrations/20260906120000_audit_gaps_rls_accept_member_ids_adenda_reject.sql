@@ -1,25 +1,75 @@
--- Wave 4 Epsilon: idempotência para accept_proposal, leave_grupo_membro,
--- renegotiate_agreement_pricing, accept_agreement_adenda.
+-- Audit gaps DB/Segurança (prompts-and-audit.md §1 / Prompt 1)
+-- Task 2: RLS membros_grupo — self-insert só estado='pendente'
+-- Task 3/4: accept_proposal(..., p_member_ids uuid[], p_idempotency_key)
+-- Task 6: estados adenda alargados + reject_agreement_adenda + divisor N_contrato
 --
--- Corpos derivados de pg_get_functiondef no project ref fdclrbcgytnuqcrpsevw
--- (boleia) em 2026-09-06. Padrão igual a
--- 20260905230000_rpc_idempotency_leave_cancel.sql (leave_passenger / cancel_proposal).
---
--- Aplicado remotamente via Supabase MCP (apply_migration) em 2026-09-06:
---   rpc_idempotency_wave4_accept_proposal
---   rpc_idempotency_wave4_leave_grupo_membro
---   rpc_idempotency_wave4_renegotiate_agreement_pricing
---   rpc_idempotency_wave4_accept_agreement_adenda
---
--- Tabela public.rpc_idempotency já existe (Wave 3).
+-- Aplicado remotamente via Supabase MCP (project fdclrbcgytnuqcrpsevw) em 2026-09-06:
+--   audit_gaps_rls_membros_and_adenda_estados
+--   audit_gaps_accept_proposal_member_ids
+--   audit_gaps_renegotiate_n_contrato
+--   audit_gaps_reject_agreement_adenda
+--   audit_gaps_apply_due_em_vigor_v2
+-- Fonte canónica local (ficheiro único); remoto ficou em 5 versões MCP.
 
--- ---------------------------------------------------------------------------
--- 1) accept_proposal
--- ---------------------------------------------------------------------------
-DROP FUNCTION IF EXISTS public.accept_proposal(uuid);
+-- =============================================================================
+-- Task 2 — RLS membros_grupo: self-insert força pendente
+-- =============================================================================
+DROP POLICY IF EXISTS membros_insert_envolvidos ON public.membros_grupo;
+
+CREATE POLICY membros_insert_envolvidos
+  ON public.membros_grupo
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    (
+      -- Owner do grupo (via procura): pode inserir com qualquer estado (ex. activo)
+      auth.uid() = (
+        SELECT p.owner_id
+        FROM public.grupos g
+        JOIN public.procuras p ON p.id = g.procura_id
+        WHERE g.id = membros_grupo.grupo_id
+      )
+    )
+    OR (
+      -- Self-join: só pedido pendente — impossível bypass para 'activo'
+      auth.uid() = passenger_id
+      AND lower(estado) = 'pendente'
+    )
+  );
+
+-- =============================================================================
+-- Task 6a — Estados adenda (PT snake_case; UI case-insensitive)
+-- PENDENTE_CONTRAPARTE → pendente_passageiro | pendente_contraparte
+-- ACEITE_AGENDADA → aceite
+-- REJEITADA / CANCELADA_INICIADOR / EM_VIGOR
+-- =============================================================================
+ALTER TABLE public.acordos_adendas
+  DROP CONSTRAINT IF EXISTS acordos_adendas_estado_check;
+
+ALTER TABLE public.acordos_adendas
+  ADD CONSTRAINT acordos_adendas_estado_check
+  CHECK (
+    lower(estado) = ANY (
+      ARRAY[
+        'pendente_passageiro'::text,
+        'pendente_contraparte'::text,
+        'rejeitada'::text,
+        'cancelada_iniciador'::text,
+        'aceite'::text,
+        'em_vigor'::text
+      ]
+    )
+  );
+
+-- =============================================================================
+-- Task 3/4 — accept_proposal com composição explícita (p_member_ids)
+-- =============================================================================
+DROP FUNCTION IF EXISTS public.accept_proposal(uuid, uuid);
+DROP FUNCTION IF EXISTS public.accept_proposal(uuid, uuid[], uuid);
 
 CREATE OR REPLACE FUNCTION public.accept_proposal(
   p_proposta_id uuid,
+  p_member_ids uuid[] DEFAULT NULL,
   p_idempotency_key uuid DEFAULT NULL
 )
 RETURNS uuid
@@ -39,7 +89,10 @@ DECLARE
   v_resto integer;
   v_acordo_id uuid;
   v_uid uuid := auth.uid();
-  r record;
+  v_member_id uuid;
+  v_membro public.membros_grupo%ROWTYPE;
+  v_ids uuid[];
+  v_seen uuid[] := ARRAY[]::uuid[];
   i integer := 0;
   v_quota integer;
 BEGIN
@@ -66,7 +119,7 @@ BEGIN
     RAISE EXCEPTION 'Proposta não está aberta.';
   END IF;
 
-  -- T32: só a contraparte aceita (criador bloqueado)
+  -- Contraparte: criador NÃO pode aceitar
   IF v_uid = v_prop.created_by THEN
     RAISE EXCEPTION 'Só a contraparte pode aceitar ou rejeitar esta proposta.';
   END IF;
@@ -120,13 +173,32 @@ BEGIN
   ) RETURNING id INTO v_acordo_id;
 
   IF v_prop.grupo_id IS NOT NULL THEN
-    FOR r IN
-      SELECT *
-      FROM public.membros_grupo
-      WHERE grupo_id = v_prop.grupo_id AND estado = 'activo'
-      ORDER BY ordem_insercao ASC, passenger_id ASC
-      LIMIT v_n
+    v_ids := COALESCE(p_member_ids, ARRAY[]::uuid[]);
+
+    IF cardinality(v_ids) IS DISTINCT FROM v_n THEN
+      RAISE EXCEPTION 'Capacidade inconsistente com proposta';
+    END IF;
+
+    FOREACH v_member_id IN ARRAY v_ids
     LOOP
+      IF v_member_id = ANY (v_seen) THEN
+        RAISE EXCEPTION 'Capacidade inconsistente com proposta';
+      END IF;
+      v_seen := array_append(v_seen, v_member_id);
+
+      SELECT *
+      INTO v_membro
+      FROM public.membros_grupo
+      WHERE grupo_id = v_prop.grupo_id
+        AND passenger_id = v_member_id
+        AND lower(estado) = 'activo';
+
+      IF NOT FOUND THEN
+        RAISE EXCEPTION
+          'Membro % não está activo no grupo da proposta.',
+          v_member_id;
+      END IF;
+
       IF v_prop.modo_preco = 'POR_PASSAGEIRO' THEN
         v_quota := v_base;
       ELSE
@@ -139,22 +211,25 @@ BEGIN
         dropoff_name, dropoff_lat, dropoff_lng,
         estado
       ) VALUES (
-        v_acordo_id, r.passenger_id, v_quota, i,
-        r.pickup_name, r.pickup_lat, r.pickup_lng,
-        r.dropoff_name, r.dropoff_lat, r.dropoff_lng,
+        v_acordo_id, v_membro.passenger_id, v_quota, i,
+        v_membro.pickup_name, v_membro.pickup_lat, v_membro.pickup_lng,
+        v_membro.dropoff_name, v_membro.dropoff_lat, v_membro.dropoff_lng,
         'activo'
       );
       i := i + 1;
     END LOOP;
-
-    IF i <> v_n THEN
-      RAISE EXCEPTION 'O grupo tem apenas % membros activos; a proposta exige %.',
-        i, v_n;
-    END IF;
   ELSE
     IF v_n <> 1 THEN
       RAISE EXCEPTION 'Proposta sem grupo exige n_passageiros_propostos = 1.';
     END IF;
+
+    -- Solo: p_member_ids opcional; se presente deve ser exactamente o owner
+    IF p_member_ids IS NOT NULL AND cardinality(p_member_ids) > 0 THEN
+      IF cardinality(p_member_ids) <> 1 OR p_member_ids[1] IS DISTINCT FROM v_procura.owner_id THEN
+        RAISE EXCEPTION 'Capacidade inconsistente com proposta';
+      END IF;
+    END IF;
+
     INSERT INTO public.acordos_passageiros (
       acordo_id, passenger_id, quota_mensal_kz, ordem_insercao, estado
     ) VALUES (
@@ -211,131 +286,13 @@ BEGIN
 END;
 $function$;
 
-REVOKE ALL ON FUNCTION public.accept_proposal(uuid, uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.accept_proposal(uuid, uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.accept_proposal(uuid, uuid[], uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.accept_proposal(uuid, uuid[], uuid) TO authenticated;
 
--- ---------------------------------------------------------------------------
--- 2) leave_grupo_membro
--- ---------------------------------------------------------------------------
-DROP FUNCTION IF EXISTS public.leave_grupo_membro(uuid, uuid);
-
-CREATE OR REPLACE FUNCTION public.leave_grupo_membro(
-  p_grupo_id uuid,
-  p_passenger_id uuid DEFAULT NULL,
-  p_idempotency_key uuid DEFAULT NULL
-)
-RETURNS public.membros_grupo
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $function$
-DECLARE
-  v_uid uuid := auth.uid();
-  v_target uuid;
-  v_membro public.membros_grupo%ROWTYPE;
-  v_n_activos integer;
-  v_procura_id uuid;
-BEGIN
-  IF v_uid IS NULL THEN
-    RAISE EXCEPTION 'Não autenticado.';
-  END IF;
-
-  IF p_grupo_id IS NULL THEN
-    RAISE EXCEPTION 'grupo_id é obrigatório.';
-  END IF;
-
-  IF p_idempotency_key IS NOT NULL THEN
-    IF EXISTS (
-      SELECT 1 FROM public.rpc_idempotency WHERE idempotency_key = p_idempotency_key
-    ) THEN
-      v_target := COALESCE(p_passenger_id, v_uid);
-      SELECT * INTO v_membro
-      FROM public.membros_grupo
-      WHERE grupo_id = p_grupo_id
-        AND passenger_id = v_target;
-      IF FOUND THEN
-        RETURN v_membro;
-      END IF;
-      v_membro.grupo_id := p_grupo_id;
-      v_membro.passenger_id := v_target;
-      v_membro.estado := 'saiu';
-      RETURN v_membro;
-    END IF;
-  END IF;
-
-  v_target := COALESCE(p_passenger_id, v_uid);
-
-  -- Só o próprio membro pode sair por esta RPC (owner continua a gerir pedidos via RLS).
-  IF v_uid IS DISTINCT FROM v_target THEN
-    RAISE EXCEPTION 'Só podes sair do grupo por ti próprio.';
-  END IF;
-
-  SELECT * INTO v_membro
-  FROM public.membros_grupo
-  WHERE grupo_id = p_grupo_id
-    AND passenger_id = v_target
-  FOR UPDATE;
-
-  IF NOT FOUND OR lower(v_membro.estado) <> 'activo' THEN
-    RAISE EXCEPTION 'Não estás activo neste grupo.';
-  END IF;
-
-  SELECT COUNT(*)::integer INTO v_n_activos
-  FROM public.membros_grupo
-  WHERE grupo_id = p_grupo_id
-    AND lower(estado) = 'activo';
-
-  IF v_n_activos <= 1 THEN
-    RAISE EXCEPTION 'Não podes sair: és o único membro activo do grupo.';
-  END IF;
-
-  UPDATE public.membros_grupo
-  SET estado = 'saiu'
-  WHERE id = v_membro.id
-  RETURNING * INTO v_membro;
-
-  SELECT procura_id INTO v_procura_id
-  FROM public.grupos
-  WHERE id = p_grupo_id
-  FOR UPDATE;
-
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Grupo não encontrado.';
-  END IF;
-
-  SELECT COUNT(*)::integer INTO v_n_activos
-  FROM public.membros_grupo
-  WHERE grupo_id = p_grupo_id
-    AND lower(estado) = 'activo';
-
-  IF v_n_activos < 1 THEN
-    RAISE EXCEPTION 'O grupo precisa de pelo menos 1 membro activo.';
-  END IF;
-
-  -- Sync N_actual (n_candidato). Não invalida nem muta propostas.
-  UPDATE public.procuras
-  SET
-    n_candidato = v_n_activos,
-    updated_at = now()
-  WHERE id = v_procura_id;
-
-  IF p_idempotency_key IS NOT NULL THEN
-    INSERT INTO public.rpc_idempotency (idempotency_key, rpc_name, subject_id, user_id)
-    VALUES (p_idempotency_key, 'leave_grupo_membro', p_grupo_id, v_uid)
-    ON CONFLICT (idempotency_key) DO NOTHING;
-  END IF;
-
-  RETURN v_membro;
-END;
-$function$;
-
-REVOKE ALL ON FUNCTION public.leave_grupo_membro(uuid, uuid, uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.leave_grupo_membro(uuid, uuid, uuid) TO authenticated;
-
--- ---------------------------------------------------------------------------
--- 3) renegotiate_agreement_pricing
--- ---------------------------------------------------------------------------
-DROP FUNCTION IF EXISTS public.renegotiate_agreement_pricing(uuid, text, integer, integer);
+-- =============================================================================
+-- Task 6b — renegotiate: divisor sempre N_contrato (sem recálculo por N_activos)
+-- =============================================================================
+DROP FUNCTION IF EXISTS public.renegotiate_agreement_pricing(uuid, text, integer, integer, uuid);
 
 CREATE OR REPLACE FUNCTION public.renegotiate_agreement_pricing(
   p_acordo_id uuid,
@@ -408,12 +365,17 @@ BEGIN
     RAISE EXCEPTION 'O acordo não tem passageiros activos.';
   END IF;
 
-  v_n := COALESCE(p_n_passageiros, v_n_activos);
+  -- Divisor congelado: sempre N_contrato (nunca N_activos)
+  v_n := v_acordo.n_passageiros_contrato;
 
-  IF v_n <> v_n_activos THEN
+  IF v_n < 1 THEN
+    RAISE EXCEPTION 'N_contrato inválido neste acordo.';
+  END IF;
+
+  IF p_n_passageiros IS NOT NULL AND p_n_passageiros IS DISTINCT FROM v_n THEN
     RAISE EXCEPTION
-      'n_passageiros (%) deve coincidir com o número de passageiros activos (%).',
-      v_n, v_n_activos;
+      'n_passageiros (%) deve coincidir com N_contrato (%); sem recálculo retroactivo.',
+      p_n_passageiros, v_n;
   END IF;
 
   IF p_modo_preco = 'POR_PASSAGEIRO' THEN
@@ -452,7 +414,8 @@ BEGIN
   SET superseded_at = now()
   WHERE acordo_id = p_acordo_id
     AND applied_at IS NULL
-    AND superseded_at IS NULL;
+    AND superseded_at IS NULL
+    AND lower(estado) IN ('pendente_passageiro', 'pendente_contraparte', 'aceite');
 
   INSERT INTO public.acordos_adendas (
     acordo_id,
@@ -517,14 +480,82 @@ $function$;
 REVOKE ALL ON FUNCTION public.renegotiate_agreement_pricing(uuid, text, integer, integer, uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.renegotiate_agreement_pricing(uuid, text, integer, integer, uuid) TO authenticated;
 
--- ---------------------------------------------------------------------------
--- 4) accept_agreement_adenda
--- ---------------------------------------------------------------------------
-DROP FUNCTION IF EXISTS public.accept_agreement_adenda(uuid);
+-- =============================================================================
+-- Task 6c — apply_due: marcar em_vigor; quotas por N_contrato (sem redistribuir
+-- o total pelos N_activos — cada activo recebe a unidade contratual)
+-- =============================================================================
+CREATE OR REPLACE FUNCTION public.apply_due_agreement_adendas(
+  p_acordo_id uuid DEFAULT NULL::uuid
+)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_today date := (timezone('Africa/Luanda', now()))::date;
+  v_adenda public.acordos_adendas%ROWTYPE;
+  v_base integer;
+  v_quota integer;
+  r record;
+  v_applied integer := 0;
+BEGIN
+  FOR v_adenda IN
+    SELECT *
+    FROM public.acordos_adendas
+    WHERE applied_at IS NULL
+      AND superseded_at IS NULL
+      AND lower(estado) = 'aceite'
+      AND effective_from <= v_today
+      AND (p_acordo_id IS NULL OR acordo_id = p_acordo_id)
+    ORDER BY effective_from ASC, created_at ASC
+    FOR UPDATE
+  LOOP
+    UPDATE public.acordos
+    SET
+      modo_preco = v_adenda.modo_preco,
+      n_passageiros_contrato = v_adenda.n_passageiros_contrato,
+      valor_mensal_total_kz = v_adenda.valor_mensal_total_kz,
+      valor_mensal_por_passageiro_kz = v_adenda.valor_mensal_por_passageiro_kz
+    WHERE id = v_adenda.acordo_id;
 
-CREATE OR REPLACE FUNCTION public.accept_agreement_adenda(
-  p_adenda_id uuid,
-  p_idempotency_key uuid DEFAULT NULL
+    -- Unidade contratual congelada (N_contrato); não recalcular por N_activos
+    v_base := v_adenda.valor_mensal_por_passageiro_kz;
+
+    FOR r IN
+      SELECT id
+      FROM public.acordos_passageiros
+      WHERE acordo_id = v_adenda.acordo_id
+        AND estado = 'activo'
+      ORDER BY ordem_insercao ASC, passenger_id ASC
+    LOOP
+      v_quota := v_base;
+
+      UPDATE public.acordos_passageiros
+      SET quota_mensal_kz = v_quota
+      WHERE id = r.id;
+    END LOOP;
+
+    UPDATE public.acordos_adendas
+    SET
+      applied_at = now(),
+      estado = 'em_vigor'
+    WHERE id = v_adenda.id;
+
+    v_applied := v_applied + 1;
+  END LOOP;
+
+  RETURN v_applied;
+END;
+$function$;
+
+-- =============================================================================
+-- Task 6d — reject_agreement_adenda (contraparte → rejeitada; preços intactos)
+-- =============================================================================
+DROP FUNCTION IF EXISTS public.reject_agreement_adenda(uuid);
+
+CREATE OR REPLACE FUNCTION public.reject_agreement_adenda(
+  p_adenda_id uuid
 )
 RETURNS uuid
 LANGUAGE plpgsql
@@ -545,14 +576,6 @@ BEGIN
     RAISE EXCEPTION 'ID da adenda é obrigatório.';
   END IF;
 
-  IF p_idempotency_key IS NOT NULL THEN
-    IF EXISTS (
-      SELECT 1 FROM public.rpc_idempotency WHERE idempotency_key = p_idempotency_key
-    ) THEN
-      RETURN p_adenda_id;
-    END IF;
-  END IF;
-
   SELECT * INTO v_adenda
   FROM public.acordos_adendas
   WHERE id = p_adenda_id
@@ -566,21 +589,16 @@ BEGIN
     RAISE EXCEPTION 'Esta adenda já foi substituída.';
   END IF;
 
-  IF v_adenda.applied_at IS NOT NULL THEN
+  IF v_adenda.applied_at IS NOT NULL OR lower(v_adenda.estado) = 'em_vigor' THEN
     RAISE EXCEPTION 'Esta adenda já foi aplicada.';
   END IF;
 
-  IF v_adenda.estado = 'aceite' THEN
-    IF p_idempotency_key IS NOT NULL THEN
-      INSERT INTO public.rpc_idempotency (idempotency_key, rpc_name, subject_id, user_id)
-      VALUES (p_idempotency_key, 'accept_agreement_adenda', v_adenda.id, v_uid)
-      ON CONFLICT (idempotency_key) DO NOTHING;
-    END IF;
+  IF lower(v_adenda.estado) = 'rejeitada' THEN
     RETURN v_adenda.id;
   END IF;
 
-  IF v_adenda.estado IS DISTINCT FROM 'pendente_passageiro' THEN
-    RAISE EXCEPTION 'Adenda não está pendente de aceitação.';
+  IF lower(v_adenda.estado) NOT IN ('pendente_passageiro', 'pendente_contraparte') THEN
+    RAISE EXCEPTION 'Adenda não está pendente de decisão da contraparte.';
   END IF;
 
   SELECT * INTO v_acordo
@@ -591,64 +609,55 @@ BEGIN
     RAISE EXCEPTION 'Acordo não encontrado.';
   END IF;
 
-  IF lower(v_acordo.estado) <> 'activo' THEN
-    RAISE EXCEPTION 'Acordo não está activo.';
+  -- Iniciador não rejeita a própria proposta
+  IF v_uid = v_adenda.created_by THEN
+    RAISE EXCEPTION 'Só a contraparte pode rejeitar esta adenda.';
   END IF;
 
-  -- Motorista criador NÃO pode aceitar
-  IF v_uid = v_acordo.driver_id OR v_uid = v_adenda.created_by THEN
-    RAISE EXCEPTION 'Apenas um passageiro activo do acordo pode aceitar a adenda.';
-  END IF;
+  IF lower(v_adenda.estado) = 'pendente_passageiro' THEN
+    SELECT EXISTS (
+      SELECT 1
+      FROM public.acordos_passageiros ap
+      WHERE ap.acordo_id = v_adenda.acordo_id
+        AND ap.passenger_id = v_uid
+        AND ap.estado = 'activo'
+    ) INTO v_is_pax;
 
-  SELECT EXISTS (
-    SELECT 1
-    FROM public.acordos_passageiros ap
-    WHERE ap.acordo_id = v_adenda.acordo_id
-      AND ap.passenger_id = v_uid
-      AND ap.estado = 'activo'
-  ) INTO v_is_pax;
-
-  IF NOT v_is_pax THEN
-    RAISE EXCEPTION 'Apenas um passageiro activo do acordo pode aceitar a adenda.';
+    IF NOT v_is_pax THEN
+      RAISE EXCEPTION 'Só a contraparte pode rejeitar esta adenda.';
+    END IF;
+  ELSIF lower(v_adenda.estado) = 'pendente_contraparte' THEN
+    IF v_uid IS DISTINCT FROM v_acordo.driver_id THEN
+      RAISE EXCEPTION 'Só a contraparte pode rejeitar esta adenda.';
+    END IF;
   END IF;
 
   UPDATE public.acordos_adendas
-  SET
-    estado = 'aceite',
-    aceite_em = now(),
-    aceite_por = v_uid
+  SET estado = 'rejeitada'
   WHERE id = v_adenda.id;
-
-  -- Não aplica preços antes de effective_from; lazy apply trata disso.
-  PERFORM public.apply_due_agreement_adendas(v_adenda.acordo_id);
+  -- Preços do acordo / quotas NÃO são alterados (sem recálculo retroactivo)
 
   BEGIN
     INSERT INTO public.notificacoes (user_id, mensagem, tipo, metadata)
     VALUES (
-      v_acordo.driver_id,
-      'Um passageiro aceitou a adenda de preço do acordo.',
-      'success',
+      v_adenda.created_by,
+      'A contraparte rejeitou a proposta de alteração de preço.',
+      'warning',
       jsonb_build_object(
         'type', 'agreement_update',
         'acordo_id', v_adenda.acordo_id,
         'adenda_id', v_adenda.id,
-        'adenda_estado', 'aceite'
+        'adenda_estado', 'rejeitada'
       )
     );
   EXCEPTION
     WHEN OTHERS THEN
-      RAISE WARNING 'Falha ao notificar aceite de adenda %: %', v_adenda.id, SQLERRM;
+      RAISE WARNING 'Falha ao notificar rejeição de adenda %: %', v_adenda.id, SQLERRM;
   END;
-
-  IF p_idempotency_key IS NOT NULL THEN
-    INSERT INTO public.rpc_idempotency (idempotency_key, rpc_name, subject_id, user_id)
-    VALUES (p_idempotency_key, 'accept_agreement_adenda', v_adenda.id, v_uid)
-    ON CONFLICT (idempotency_key) DO NOTHING;
-  END IF;
 
   RETURN v_adenda.id;
 END;
 $function$;
 
-REVOKE ALL ON FUNCTION public.accept_agreement_adenda(uuid, uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.accept_agreement_adenda(uuid, uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.reject_agreement_adenda(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.reject_agreement_adenda(uuid) TO authenticated;

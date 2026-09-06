@@ -42,6 +42,7 @@ import { listMembrosGrupo } from '../services/GrupoService.js';
  *   membros: PropostaReviewMembro[],
  *   pricing: PropostaReviewPricing,
  *   avisoComposicao: string | null,
+ *   requiresMemberSelection: boolean,
  * }} PropostaReview
  */
 
@@ -102,8 +103,9 @@ function resolveOptionalName(value) {
 }
 
 /**
- * Constrói a vista de revisão de uma proposta para o hub do motorista.
- * Usa os primeiros `n_passageiros_propostos` membros (já ordenados por `ordem_insercao`).
+ * Constrói a vista de revisão de uma proposta para o hub (contraparte).
+ * Se o grupo activo for maior que os lugares da proposta, lista todos os
+ * membros e marca `requiresMemberSelection` para o picker explícito.
  *
  * @param {{
  *   grupo_id?: string | null,
@@ -119,6 +121,8 @@ export function buildPropostaReview(proposta, membrosActivos = []) {
   const ask = Number(proposta.valor_mensal_ask_kz);
   const modo = proposta.modo_preco;
   const activos = Array.isArray(membrosActivos) ? membrosActivos : [];
+  const nActual = activos.length;
+  const requiresMemberSelection = Boolean(proposta.grupo_id) && nActual > n;
 
   const resolved = resolveAgreementPricing({
     modo_preco: modo,
@@ -126,8 +130,8 @@ export function buildPropostaReview(proposta, membrosActivos = []) {
     n_passageiros: n,
   });
 
-  const sliced = activos.slice(0, n);
-  const membros = sliced.map((membro, i) => ({
+  const listForUi = requiresMemberSelection ? activos : activos.slice(0, n);
+  const membros = listForUi.map((membro, i) => ({
     passenger_id: membro?.passenger_id ?? null,
     nome: resolveNome(membro),
     telefone: resolveTelefone(membro),
@@ -137,7 +141,7 @@ export function buildPropostaReview(proposta, membrosActivos = []) {
     dropoff_name: membro?.dropoff_name ?? null,
     dropoff_lat: resolveCoord(membro?.dropoff_lat),
     dropoff_lng: resolveCoord(membro?.dropoff_lng),
-    quota_mensal_kz: resolved.quotas[i],
+    quota_mensal_kz: requiresMemberSelection ? null : resolved.quotas[i],
   }));
 
   const temResto = modo === 'TOTAL_ACORDO' && ask % n !== 0;
@@ -146,14 +150,13 @@ export function buildPropostaReview(proposta, membrosActivos = []) {
   let avisoComposicao = null;
   // Solo sem grupo: membros vazios é esperado — sem aviso.
   if (proposta.grupo_id) {
-    const nActual = activos.length;
     if (nActual < n) {
       avisoComposicao =
         'O grupo tem menos pessoas do que as indicadas nesta proposta. A aceitação pode falhar.';
-    } else if (nActual > n) {
+    } else if (requiresMemberSelection) {
       avisoComposicao =
-        `O grupo tem mais pessoas do que as cobertas nesta proposta (${n} de ${nActual}). ` +
-        'Só entram as primeiras pessoas listadas; para incluir todos, é preciso uma nova proposta.';
+        `O grupo tem mais pessoas do que as cobertas nesta proposta. ` +
+        `Escolhe exactamente ${n} passageiros para o acordo.`;
     }
   }
 
@@ -165,6 +168,7 @@ export function buildPropostaReview(proposta, membrosActivos = []) {
       temResto,
     },
     avisoComposicao,
+    requiresMemberSelection,
   };
 }
 
