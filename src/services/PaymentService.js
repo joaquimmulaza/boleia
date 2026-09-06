@@ -1,16 +1,15 @@
 import { supabase } from '../lib/supabase';
+import { firstDayCurrentMonthLuanda } from '../utils/adendaEffectiveFrom.js';
 
 const BUCKET = 'comprovativos-pagamento';
 
 /**
- * 1.º dia do mês de referência (Africa/Luanda via offset local do runtime).
+ * 1.º dia do mês de referência (Africa/Luanda).
  * @param {Date} [ref]
  * @returns {string} YYYY-MM-01
  */
 export function getMesReferenciaAtual(ref = new Date()) {
-  const y = ref.getFullYear();
-  const m = String(ref.getMonth() + 1).padStart(2, '0');
-  return `${y}-${m}-01`;
+  return firstDayCurrentMonthLuanda(ref);
 }
 
 /**

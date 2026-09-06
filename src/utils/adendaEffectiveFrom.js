@@ -2,6 +2,29 @@
 export const ADENDA_TIMEZONE = 'Africa/Luanda';
 
 /**
+ * 1.º dia do mês corrente em Africa/Luanda (YYYY-MM-DD).
+ *
+ * @param {Date} [fromDate]
+ * @returns {string}
+ */
+export function firstDayCurrentMonthLuanda(fromDate = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: ADENDA_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(fromDate);
+
+  /** @type {Record<string, string>} */
+  const map = {};
+  for (const p of parts) {
+    if (p.type !== 'literal') map[p.type] = p.value;
+  }
+
+  return `${map.year}-${map.month}-01`;
+}
+
+/**
  * 1.º dia do mês seguinte em Africa/Luanda (YYYY-MM-DD).
  * Espelha `date_trunc('month', timezone('Africa/Luanda', now())) + interval '1 month'` na BD.
  *
