@@ -1,12 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Flag } from 'lucide-react';
 import { useAutocomplete } from '../hooks/useAutocomplete';
 import AutocompleteDropdown from './AutocompleteDropdown';
-
-const ICON_MAP = {
-  location_on: MapPin,
-  flag: Flag,
-};
 
 /**
  * Campo de endereço com autocomplete Photon/OSM.
@@ -14,8 +8,6 @@ const ICON_MAP = {
  *   id?: string,
  *   name: string,
  *   label?: string,
- *   icon?: 'location_on' | 'flag',
- *   placeholder?: string,
  *   value?: string,
  *   onChange: (e: { target: { name: string, value: string } }) => void,
  *   onSelectCoordinates?: (coords: { lat: number, lng: number, [key: string]: any }) => void,
@@ -26,15 +18,11 @@ const AddressInput = ({
   id,
   name,
   label,
-  icon,
-  placeholder,
   value,
   onChange,
   onSelectCoordinates,
   required = true,
 }) => {
-  const IconComponent = icon ? ICON_MAP[icon] : null;
-
   const {
     suggestions,
     loading,
@@ -99,12 +87,6 @@ const AddressInput = ({
           </span>
         )}
         <div className="relative flex items-center">
-          {IconComponent ? (
-            <IconComponent
-              className="absolute left-4 text-primary size-5"
-              aria-hidden="true"
-            />
-          ) : null}
           <input
             id={inputId}
             type="text"
@@ -115,10 +97,7 @@ const AddressInput = ({
             onFocus={() => {
               if (inputValue.length > 2) setShowDropdown(true);
             }}
-            className={`form-input w-full ${
-              IconComponent ? 'pl-12' : 'pl-4'
-            } pr-4 h-14 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:ring-primary/20 transition-all placeholder:text-slate-400 outline-none`}
-            placeholder={placeholder}
+            className="form-input w-full pl-4 pr-4 h-14 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:ring-primary/20 transition-all placeholder:text-slate-400 outline-none"
           />
         </div>
       </label>
