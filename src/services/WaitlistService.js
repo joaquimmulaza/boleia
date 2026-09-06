@@ -60,6 +60,18 @@ export async function listWaitlistByProcura(procuraId) {
 }
 
 /**
+ * Entradas de lista de espera ainda relevantes na UI (activa ou notificada).
+ * @param {Array<{ estado?: string }> | null | undefined} entries
+ * @returns {Array<{ estado?: string }>}
+ */
+export function filterWaitlistEntriesVisiveis(entries) {
+  return (entries || []).filter((e) => {
+    const est = String(e.estado || '').toLowerCase();
+    return est === 'activa' || est === 'notificada';
+  });
+}
+
+/**
  * Promove o 1º da lista de espera (FIFO) quando há vaga libertada.
  * Marca `notificada` + cria notif `waitlist_promoted` — **não** auto-aceita.
  * @param {string} ofertaId

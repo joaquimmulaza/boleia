@@ -37,10 +37,14 @@ vi.mock('../services/AgreementService', () => ({
   createAgreementFromProposal: vi.fn(),
 }));
 
-vi.mock('../services/WaitlistService', () => ({
-  enqueueWaitlist: vi.fn(),
-  listWaitlistByProcura: vi.fn().mockResolvedValue([]),
-}));
+vi.mock('../services/WaitlistService', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    enqueueWaitlist: vi.fn(),
+    listWaitlistByProcura: vi.fn().mockResolvedValue([]),
+  };
+});
 
 vi.mock('../services/GrupoService', () => ({
   getGrupoByProcura: vi.fn().mockResolvedValue(null),
@@ -769,5 +773,64 @@ describe('PassengerDashboard — marketplace', () => {
 
     expect(await screen.findByText(/Sem procura activa/i)).toBeInTheDocument();
     expectNoUserFacingJargon(document.body.textContent);
+  });
+
+  it('contagem de ofertas compatíveis reflecte só direct (não waitlist do bucket separado)', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    findCompatibleOfertas.mockResolvedValue({
+      direct: [ofertaDirect],
+      waitlist: [
+        {
+          id: 'of-w1',
+          origin_name: 'Kilamba',
+          destination_name: 'Maianga',
+          departure_time: '07:00:00',
+          vagas_disponiveis: 0,
+          valor_mensal_ask_kz: 80000,
+          modo_preco: 'POR_PASSAGEIRO',
+        },
+        {
+          id: 'of-w2',
+          origin_name: 'Viana',
+          destination_name: 'Centro',
+          departure_time: '07:30:00',
+          vagas_disponiveis: 0,
+          valor_mensal_ask_kz: 70000,
+          modo_preco: 'POR_PASSAGEIRO',
+        },
+      ],
+      incompatible: [],
+    });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Ofertas compatíveis')).toBeInTheDocument();
+    expect(screen.getByText('1 oferta compatível')).toBeInTheDocument();
+    expect(screen.queryByText('3 ofertas compatíveis')).not.toBeInTheDocument();
+  });
+
+  it('não mostra órfãos cancelada/promovida na lista de espera', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    findCompatibleOfertas.mockResolvedValue({ direct: [], waitlist: [], incompatible: [] });
+    listWaitlistByProcura.mockResolvedValue([
+      { id: 'w-cancel', oferta_id: 'of-old-1', procura_id: 'pr-1', estado: 'cancelada' },
+      { id: 'w-promo', oferta_id: 'of-old-2', procura_id: 'pr-1', estado: 'promovida' },
+      { id: 'w-activa', oferta_id: 'of-old-3', procura_id: 'pr-1', estado: 'activa' },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId('waitlist-bucket')).toBeInTheDocument();
+    expect(screen.getAllByTestId('waitlist-entry-orfa')).toHaveLength(1);
+    expect(screen.getByText('Em espera')).toBeInTheDocument();
+    expect(screen.queryByText('Inscrição activa nesta oferta')).toBeInTheDocument();
   });
 });

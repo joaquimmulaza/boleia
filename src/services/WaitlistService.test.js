@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   enqueueWaitlist,
+  filterWaitlistEntriesVisiveis,
   listWaitlistByOferta,
   listWaitlistByProcura,
   promoteWaitlist,
@@ -120,6 +121,27 @@ describe('WaitlistService', () => {
       });
 
       await expect(promoteWaitlist('of-1')).rejects.toThrow(/permissão/i);
+    });
+  });
+
+  describe('filterWaitlistEntriesVisiveis', () => {
+    it('mantém só activa e notificada', () => {
+      const entries = [
+        { id: 'w-1', estado: 'activa' },
+        { id: 'w-2', estado: 'notificada' },
+        { id: 'w-3', estado: 'cancelada' },
+        { id: 'w-4', estado: 'promovida' },
+      ];
+
+      expect(filterWaitlistEntriesVisiveis(entries)).toEqual([
+        { id: 'w-1', estado: 'activa' },
+        { id: 'w-2', estado: 'notificada' },
+      ]);
+    });
+
+    it('devolve array vazio para null/undefined', () => {
+      expect(filterWaitlistEntriesVisiveis(null)).toEqual([]);
+      expect(filterWaitlistEntriesVisiveis(undefined)).toEqual([]);
     });
   });
 });
