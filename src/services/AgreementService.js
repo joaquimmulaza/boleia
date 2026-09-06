@@ -17,7 +17,12 @@ function withPendingAdenda(acordo) {
     return { ...rest, adenda_pendente };
   }
   const rows = Array.isArray(acordos_adendas) ? acordos_adendas : [];
-  const pendingEstados = new Set(['pendente_passageiro', 'pendente_contraparte', 'aceite']);
+  const pendingEstados = new Set([
+    'pendente_passageiro',
+    'pendente_contraparte',
+    'aceite',
+    'aceite_agendada',
+  ]);
   const pending =
     rows.find(
       (a) =>
@@ -293,6 +298,50 @@ export async function acceptAgreementAdenda(adendaId, options = {}) {
 }
 
 /**
+ * Contraparte responde à adenda (`respond_agreement_adenda`: accept | reject).
+ *
+ * @param {string} adendaId
+ * @param {boolean} accept
+ * @param {{ idempotencyKey?: string, forceQueue?: boolean }} [options]
+ * @returns {Promise<object>}
+ */
+export async function respondAgreementAdenda(adendaId, accept, options = {}) {
+  if (!adendaId) {
+    throw new Error('ID da adenda é obrigatório.');
+  }
+
+  const idempotencyKey = resolveIdempotencyKey(options.idempotencyKey);
+  const rpcArgs = {
+    p_adenda_id: adendaId,
+    p_accept: accept === true,
+    p_idempotency_key: idempotencyKey,
+  };
+
+  return callRpcWithOfflineFallback({
+    rpc: 'respond_agreement_adenda',
+    rpcArgs,
+    options: { ...options, idempotencyKey },
+    sessionErrorMessage: 'Sessão necessária para guardar a resposta à adenda offline.',
+    rpcErrorMessage: accept ? 'Falha ao aceitar a adenda.' : 'Falha ao rejeitar a adenda.',
+    offlineResult: (key) => ({
+      id: adendaId,
+      offlineQueued: true,
+      idempotency_key: key,
+    }),
+    afterRpcSuccess: async (adendaIdOut) => {
+      const id = adendaIdOut ?? adendaId;
+      const { data, error } = await supabase
+        .from('acordos_adendas')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+/**
  * Contraparte rejeita adenda pendente (`pendente_passageiro` → `rejeitada`).
  * Preços activos do acordo mantêm-se. Em falha de rede, enfileira a RPC.
  *
@@ -306,9 +355,9 @@ export async function rejectAgreementAdenda(adendaId, options = {}) {
   }
 
   const idempotencyKey = resolveIdempotencyKey(options.idempotencyKey);
-  // Contrato DB actual: reject_agreement_adenda(p_adenda_id) — sem p_idempotency_key.
   const rpcArgs = {
     p_adenda_id: adendaId,
+    p_idempotency_key: idempotencyKey,
   };
 
   return callRpcWithOfflineFallback({

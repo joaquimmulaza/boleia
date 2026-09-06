@@ -213,25 +213,27 @@ describe('OfertaService', () => {
   });
 
   describe('listOfertasDisponiveis', () => {
-    it('lista ofertas disponíveis para passageiro autenticado', async () => {
+    it('lista ofertas disponíveis e parciais (exclui cheia) com limit', async () => {
       supabase.auth.getUser.mockResolvedValue({
         data: { user: { id: 'pax-1' } },
       });
-      const mockOrder = vi.fn().mockResolvedValue({
+      const mockRange = vi.fn().mockResolvedValue({
         data: [
           { id: 'of-fix', flexibilidade_rota: false, origin_name: 'A', destination_name: 'B' },
           { id: 'of-flex', flexibilidade_rota: true },
         ],
         error: null,
       });
+      const mockOrder = vi.fn().mockReturnValue({ range: mockRange });
       const mockIn = vi.fn().mockReturnValue({ order: mockOrder });
       const mockSelect = vi.fn().mockReturnValue({ in: mockIn });
       supabase.from.mockReturnValue({ select: mockSelect });
 
-      const result = await listOfertasDisponiveis();
+      const result = await listOfertasDisponiveis({ limit: 20, offset: 0 });
 
       expect(supabase.from).toHaveBeenCalledWith('ofertas_capacidade');
-      expect(mockIn).toHaveBeenCalledWith('estado', ['disponivel', 'parcial', 'cheia']);
+      expect(mockIn).toHaveBeenCalledWith('estado', ['disponivel', 'parcial']);
+      expect(mockRange).toHaveBeenCalledWith(0, 19);
       expect(result).toHaveLength(2);
     });
 
