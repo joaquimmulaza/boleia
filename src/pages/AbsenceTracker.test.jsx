@@ -12,11 +12,13 @@ const {
   mockLogAbsence,
   mockGetAgreementsForDriver,
   mockGetAgreementsForPassenger,
+  mockListPagamentosByAcordo,
 } = vi.hoisted(() => ({
   mockGetAbsences: vi.fn(),
   mockLogAbsence: vi.fn(),
   mockGetAgreementsForDriver: vi.fn(),
   mockGetAgreementsForPassenger: vi.fn(),
+  mockListPagamentosByAcordo: vi.fn(),
 }));
 
 vi.mock('../contexts/AuthContext', () => ({
@@ -34,6 +36,10 @@ vi.mock('../services/AbsenceService', () => ({
 vi.mock('../services/AgreementService', () => ({
   getAgreementsForDriver: mockGetAgreementsForDriver,
   getAgreementsForPassenger: mockGetAgreementsForPassenger,
+}));
+
+vi.mock('../services/PaymentService', () => ({
+  listPagamentosByAcordo: mockListPagamentosByAcordo,
 }));
 
 vi.mock('react-router-dom', () => ({
@@ -69,6 +75,9 @@ describe('AbsenceTracker — marketplace', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAcordoId = 'acordo-uuid-001';
+    mockListPagamentosByAcordo.mockResolvedValue([
+      { passenger_id: 'user-1', estado: 'em_custodia' },
+    ]);
     mockGetAbsences.mockResolvedValue([
       {
         id: 'f1',
@@ -95,7 +104,16 @@ describe('AbsenceTracker — marketplace', () => {
     expect(await screen.findByTestId('absence-card')).toBeInTheDocument();
   });
 
-  it('regista falta com viagem', async () => {
+  it('bloqueia registo de falta sem pagamento em custódia', async () => {
+    mockListPagamentosByAcordo.mockResolvedValue([
+      { passenger_id: 'user-1', estado: 'pendente_pagamento' },
+    ]);
+    render(<AbsenceTracker />);
+    expect(await screen.findByTestId('faltas-gate-pagamento')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Registar Falta/i })).not.toBeInTheDocument();
+  });
+
+  it('regista falta com viagem quando pagamento em custódia', async () => {
     mockLogAbsence.mockResolvedValue({ id: 'f2' });
     render(<AbsenceTracker />);
     fireEvent.click(await screen.findByRole('button', { name: /Registar Falta/i }));

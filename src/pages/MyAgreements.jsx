@@ -36,7 +36,11 @@ import { isAdendaBeforeEffectiveFrom } from '../utils/adendaEffectiveFrom';
 import {
   getPagamentoForPassageiro,
   getAcordoContactos,
+  listPagamentosByAcordo,
 } from '../services/PaymentService';
+import {
+  allowsAssiduidadeFaltasForAcordo,
+} from '../utils/paymentStatus';
 
 /**
  * @param {string | null | undefined} estado
@@ -167,6 +171,7 @@ const MyAgreements = () => {
   const [adendaBusy, setAdendaBusy] = useState(false);
   const [adendaError, setAdendaError] = useState('');
   const [pagamento, setPagamento] = useState(/** @type {object | null} */ (null));
+  const [pagamentosAcordo, setPagamentosAcordo] = useState(/** @type {object[]} */ ([]));
   const [contactos, setContactos] = useState(/** @type {object | null} */ (null));
   const [pagamentoLoading, setPagamentoLoading] = useState(false);
   const [contactosLoading, setContactosLoading] = useState(false);
@@ -176,8 +181,11 @@ const MyAgreements = () => {
     setPagamentoLoading(true);
     setContactosLoading(true);
     try {
+      const pagamentos = await listPagamentosByAcordo(acordo.id);
+      setPagamentosAcordo(pagamentos);
       if (tipoPerfil === 'Passageiro') {
-        const row = await getPagamentoForPassageiro(acordo.id, user.id);
+        const row = pagamentos.find((p) => p.passenger_id === user.id)
+          ?? await getPagamentoForPassageiro(acordo.id, user.id);
         setPagamento(row);
       } else {
         setPagamento(null);
@@ -197,6 +205,7 @@ const MyAgreements = () => {
       void carregarPagamentoContactos(selected);
     } else {
       setPagamento(null);
+      setPagamentosAcordo([]);
       setContactos(null);
     }
   }, [selected, carregarPagamentoContactos]);
@@ -574,6 +583,14 @@ const MyAgreements = () => {
     const podeRenegociar =
       activo && (isMotorista || (isPassageiro && podeSair));
     const podeEncerrar = activo && (isMotorista || podeSair);
+    const passageirosActivosIds = linhas
+      .filter((p) => isActivo(p.estado))
+      .map((p) => p.passenger_id)
+      .filter(Boolean);
+    const pagamentosGate = isPassageiro && pagamento ? [pagamento] : pagamentosAcordo;
+    const idsGate = isPassageiro ? [user?.id].filter(Boolean) : passageirosActivosIds;
+    const podeRegistarFaltas = activo
+      && allowsAssiduidadeFaltasForAcordo(pagamentosGate, idsGate);
     const leavePending = Boolean(pendingLeaveIds[selected.id]);
     const adenda = selected.adenda_pendente;
     const adendaAguardando = adenda && isAdendaAguardandoContraparte(adenda.estado);
@@ -1069,7 +1086,7 @@ const MyAgreements = () => {
                 <Pencil size={16} aria-hidden="true" /> Renegociar preço
               </Button>
             )}
-            {activo && (
+            {activo && podeRegistarFaltas ? (
               <Button
                 type="button"
                 variant="secondary"
@@ -1078,7 +1095,15 @@ const MyAgreements = () => {
               >
                 <Clock size={16} aria-hidden="true" /> Registar falta
               </Button>
-            )}
+            ) : null}
+            {activo && !podeRegistarFaltas && !pagamentoLoading ? (
+              <p
+                className="text-xs text-slate-500 text-pretty px-1"
+                data-testid="faltas-gate-pagamento"
+              >
+                Registo de faltas disponível após pagamento validado em custódia.
+              </p>
+            ) : null}
             {podeSair && (
               <Button
                 type="button"

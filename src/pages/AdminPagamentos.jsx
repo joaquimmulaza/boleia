@@ -8,13 +8,17 @@ import { formatKwanza } from '../utils/formatKwanza';
 import { basenameComprovativoPath } from '../utils/comprovativoPath';
 import {
   adminValidatePayment,
+  adminLiquidatePayment,
   getComprovativoSignedUrl,
   listPagamentosPendentesValidacao,
+  listPagamentosEmCustodia,
 } from '../services/PaymentService';
+import { computeRepasseLiquidoKz } from '../utils/paymentStatus';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 
 const AdminPagamentos = () => {
   const [rows, setRows] = useState([]);
+  const [custodiaRows, setCustodiaRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(/** @type {string | null} */ (null));
   const [feedback, setFeedback] = useState(/** @type {{ type: 'success' | 'error', text: string } | null} */ (null));
@@ -25,8 +29,12 @@ const AdminPagamentos = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await listPagamentosPendentesValidacao();
-      setRows(data);
+      const [pendentes, custodia] = await Promise.all([
+        listPagamentosPendentesValidacao(),
+        listPagamentosEmCustodia(),
+      ]);
+      setRows(pendentes);
+      setCustodiaRows(custodia);
     } catch (error) {
       console.error('Erro ao listar pagamentos:', error);
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(error) });
@@ -79,9 +87,27 @@ const AdminPagamentos = () => {
     void handleValidate(rejeicaoTarget, false, motivo);
   };
 
+  const handleLiquidate = async (pagamentoId) => {
+    setBusyId(pagamentoId);
+    setFeedback(null);
+    try {
+      await adminLiquidatePayment(pagamentoId);
+      setFeedback({ type: 'success', text: 'Pagamento liquidado — repasse registado.' });
+      await load();
+    } catch (error) {
+      console.error('Erro na liquidação:', error);
+      setFeedback({ type: 'error', text: getFriendlyErrorMessage(error) });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return (
     <PageShell>
-      <PageHeader title="Validar pagamentos" subtitle="Comprovativos à espera de revisão" />
+      <PageHeader
+        title="Validar pagamentos"
+        subtitle="Comprovativos pendentes e liquidação em custódia"
+      />
 
       {feedback ? <FeedbackAlert type={feedback.type} text={feedback.text} /> : null}
 
@@ -172,6 +198,60 @@ const AdminPagamentos = () => {
                     Rejeitar
                   </button>
                 </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <h2 className="mt-10 mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">
+        Em custódia — liquidar
+      </h2>
+
+      {loading ? null : custodiaRows.length === 0 ? (
+        <p className="text-sm text-slate-500" data-testid="admin-custodia-vazia">
+          Nenhum pagamento em custódia.
+        </p>
+      ) : (
+        <ul className="space-y-3" data-testid="admin-fila-custodia">
+          {custodiaRows.map((row) => {
+            const passageiro = row.perfis?.nome_completo || 'Passageiro';
+            const repasseEstimado = computeRepasseLiquidoKz(
+              row.valor_payout_liquido_kz,
+              row.desconto_faltas_kz || 0,
+            );
+
+            return (
+              <li
+                key={row.id}
+                className="rounded-xl border border-sky-100 dark:border-sky-900/40 bg-white dark:bg-slate-900 p-4 space-y-3"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-semibold text-slate-900 dark:text-white">{passageiro}</p>
+                    <p className="text-xs text-slate-500 tabular-nums">
+                      Payout {formatKwanza(row.valor_payout_liquido_kz)} Kz
+                      {row.desconto_faltas_kz
+                        ? ` · faltas −${formatKwanza(row.desconto_faltas_kz)} Kz`
+                        : ''}
+                    </p>
+                    <p className="text-xs text-emerald-700 dark:text-emerald-300 tabular-nums">
+                      Repasse estimado: {formatKwanza(repasseEstimado)} Kz
+                    </p>
+                  </div>
+                  <span className="text-xs font-bold px-2 py-1 rounded-full bg-sky-100 text-sky-900">
+                    Em custódia
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  disabled={busyId === row.id}
+                  onClick={() => handleLiquidate(row.id)}
+                  className="w-full min-h-11 rounded-xl bg-emerald-600 text-white font-semibold disabled:opacity-60"
+                  data-testid={`liquidar-${row.id}`}
+                >
+                  Liquidar repasse
+                </button>
               </li>
             );
           })}

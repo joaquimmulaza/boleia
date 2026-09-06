@@ -40,6 +40,16 @@ vi.mock('../hooks/useNetworkStatus', () => ({
   useNetworkStatus: vi.fn(() => ({ isOnline: true, isOffline: false })),
 }));
 
+vi.mock('../services/PaymentService', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    listPagamentosByAcordo: vi.fn(),
+    getPagamentoForPassageiro: vi.fn(),
+    getAcordoContactos: vi.fn(),
+  };
+});
+
 import {
   getAgreementsForDriver,
   getAgreementsForPassenger,
@@ -50,6 +60,55 @@ import {
   rejectAgreementAdenda,
 } from '../services/AgreementService';
 import { listPending } from '../services/offlineQueue';
+import {
+  listPagamentosByAcordo,
+  getPagamentoForPassageiro,
+  getAcordoContactos,
+} from '../services/PaymentService';
+
+/** @param {boolean} [emCustodia] */
+function setupPagamentosDefault(emCustodia = true) {
+  const estado = emCustodia ? 'em_custodia' : 'pendente_pagamento';
+  const pagamentos = ['pax-1', 'pax-2', 'pax-viewer', 'pax-3'].map((pid) => ({
+    id: `pag-${pid}`,
+    passenger_id: pid,
+    estado,
+    valor_kz: 40000,
+    valor_payout_liquido_kz: 36000,
+  }));
+  listPagamentosByAcordo.mockResolvedValue(pagamentos);
+  getAcordoContactos.mockResolvedValue({ bloqueado: false, passageiros: [], motorista: null });
+  getPagamentoForPassageiro.mockImplementation(async (_acordoId, passengerId) => (
+    pagamentos.find((p) => p.passenger_id === passengerId) ?? null
+  ));
+}
+
+/** @param {object} [acordo] @param {string} [viewerId] @param {boolean} [emCustodia] */
+function mockPagamentosGate(acordo, viewerId, emCustodia = true) {
+  const estado = emCustodia ? 'em_custodia' : 'pendente_pagamento';
+  const activos = (acordo?.acordos_passageiros || []).filter(
+    (p) => String(p.estado || '').toLowerCase() === 'activo',
+  );
+  const pagamentos = activos.length > 0
+    ? activos.map((p) => ({
+      id: `pag-${p.passenger_id}`,
+      passenger_id: p.passenger_id,
+      estado,
+      valor_kz: p.quota_mensal_kz ?? acordo?.valor_mensal_por_passageiro_kz ?? 40000,
+      valor_payout_liquido_kz: 36000,
+    }))
+    : [];
+  listPagamentosByAcordo.mockResolvedValue(pagamentos);
+  getAcordoContactos.mockResolvedValue({ bloqueado: false, passageiros: [], motorista: null });
+  getPagamentoForPassageiro.mockImplementation(async (_acordoId, passengerId) => (
+    pagamentos.find((p) => p.passenger_id === passengerId) ?? null
+  ));
+  if (viewerId && emCustodia) {
+    getPagamentoForPassageiro.mockResolvedValue(
+      pagamentos.find((p) => p.passenger_id === viewerId) ?? null,
+    );
+  }
+}
 
 const acordoMotorista = {
   id: 'acordo-1',
@@ -134,6 +193,7 @@ describe('MyAgreements — marketplace 1:N', () => {
     getAgreementsForDriver.mockResolvedValue([acordoMotorista]);
     getAgreementsForPassenger.mockResolvedValue([]);
     listPending.mockResolvedValue([]);
+    setupPagamentosDefault();
   });
 
   it('lista acordos activos com copy humana', async () => {
@@ -195,6 +255,7 @@ describe('MyAgreements — marketplace 1:N', () => {
   it('passageiro vê a sua quota em destaque e badge de preço congelado', async () => {
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    mockPagamentosGate(acordoPassageiro, 'pax-viewer');
 
     renderPage();
 
@@ -231,6 +292,18 @@ describe('MyAgreements — marketplace 1:N', () => {
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
     expect(within(dialog).getByRole('button', { name: /Registar falta/i })).toBeInTheDocument();
+  });
+
+  it('sem pagamento em custódia: mostra aviso em vez de CTA Registar falta', async () => {
+    mockPagamentosGate(acordoMotorista, undefined, false);
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).queryByRole('button', { name: /Registar falta/i })).not.toBeInTheDocument();
+    expect(within(dialog).getByTestId('faltas-gate-pagamento')).toBeInTheDocument();
   });
 
   it('acordo não activo: não mostra CTA Registar falta', async () => {
@@ -461,6 +534,7 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
     getAgreementsForDriver.mockResolvedValue([acordoMotorista]);
     getAgreementsForPassenger.mockResolvedValue([]);
     renegotiateAgreementPricing.mockResolvedValue({ id: 'acordo-1' });
+    setupPagamentosDefault();
   });
 
   it('motorista com acordo activo vê CTA Renegociar preço acima de Registar falta', async () => {
@@ -477,6 +551,7 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
   it('passageiro activo vê CTA Renegociar preço', async () => {
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    mockPagamentosGate(acordoPassageiro, 'pax-viewer');
 
     renderPage();
 

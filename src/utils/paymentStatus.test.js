@@ -3,8 +3,11 @@ import {
   PAYMENT_STATES,
   TAKE_RATE_PCT,
   allowsContactReveal,
+  allowsAssiduidadeFaltas,
+  allowsAssiduidadeFaltasForAcordo,
   canTransitionPayment,
   computePayoutLiquidoKz,
+  computeRepasseLiquidoKz,
   labelEstadoPagamento,
   helpEstadoPagamento,
   chipClassEstadoPagamento,
@@ -38,6 +41,26 @@ describe('paymentStatus — máquina de estados PACOTE ENG #5', () => {
     expect(allowsContactReveal('em_custodia')).toBe(true);
     expect(allowsContactReveal('liquidado')).toBe(true);
     expect(allowsContactReveal('reembolsado')).toBe(false);
+  });
+
+  it('allowsAssiduidadeFaltas exige em_custodia ou liquidado', () => {
+    expect(allowsAssiduidadeFaltas('comprovativo_enviado')).toBe(false);
+    expect(allowsAssiduidadeFaltas('em_custodia')).toBe(true);
+    expect(allowsAssiduidadeFaltas('liquidado')).toBe(true);
+  });
+
+  it('allowsAssiduidadeFaltasForAcordo exige custódia para todos os passageiros activos', () => {
+    const pagamentos = [
+      { passenger_id: 'p1', estado: 'em_custodia' },
+      { passenger_id: 'p2', estado: 'pendente_pagamento' },
+    ];
+    expect(allowsAssiduidadeFaltasForAcordo(pagamentos, ['p1'])).toBe(true);
+    expect(allowsAssiduidadeFaltasForAcordo(pagamentos, ['p1', 'p2'])).toBe(false);
+  });
+
+  it('computeRepasseLiquidoKz subtrai faltas do payout sem ir abaixo de zero', () => {
+    expect(computeRepasseLiquidoKz(45000, 1363.64)).toBe(43636);
+    expect(computeRepasseLiquidoKz(45000, 50000)).toBe(0);
   });
 
   it('canTransitionPayment valida transições permitidas', () => {

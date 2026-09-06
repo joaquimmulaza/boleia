@@ -44,20 +44,14 @@ export const logAbsence = async (faltaData) => {
     throw new Error('Viagem inválida.');
   }
 
-  const row = {
-    id_acordo: faltaData.id_acordo,
-    data_falta: faltaData.data_falta,
-    tipo: faltaData.tipo,
-    observacao: faltaData.observacao ?? null,
-    passenger_id: faltaData.passenger_id ?? null,
-    viagem,
-  };
-
-  const { data, error } = await supabase
-    .from('faltas')
-    .insert([row])
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc('log_falta', {
+    p_id_acordo: faltaData.id_acordo,
+    p_data_falta: faltaData.data_falta,
+    p_tipo: faltaData.tipo,
+    p_observacao: faltaData.observacao ?? null,
+    p_passenger_id: faltaData.passenger_id ?? null,
+    p_viagem: viagem,
+  });
 
   if (error) throw error;
   return data;

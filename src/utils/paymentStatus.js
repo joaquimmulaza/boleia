@@ -47,6 +47,50 @@ export function allowsContactReveal(estado) {
 }
 
 /**
+ * Assiduidade/faltas só activas com pagamento validado on-platform.
+ * @param {string | null | undefined} estado
+ * @returns {boolean}
+ */
+export function allowsAssiduidadeFaltas(estado) {
+  return allowsContactReveal(estado);
+}
+
+/**
+ * Verifica se todos os passageiros activos têm pagamento em custódia.
+ * @param {Array<{ passenger_id?: string, estado?: string }>} pagamentos
+ * @param {string[]} passengerIdsRequired IDs dos passageiros activos
+ * @returns {boolean}
+ */
+export function allowsAssiduidadeFaltasForAcordo(pagamentos, passengerIdsRequired) {
+  if (!Array.isArray(passengerIdsRequired) || passengerIdsRequired.length === 0) {
+    return false;
+  }
+  const rows = Array.isArray(pagamentos) ? pagamentos : [];
+  return passengerIdsRequired.every((pid) => {
+    const pg = rows.find((p) => p.passenger_id === pid);
+    return pg && allowsAssiduidadeFaltas(pg.estado);
+  });
+}
+
+/**
+ * Repasse líquido ao motorista após descontos de faltas on-platform.
+ * @param {number} payoutLiquidoKz Payout após take-rate (do acordo).
+ * @param {number} descontoFaltasKz Soma descontos de faltas válidas.
+ * @returns {number}
+ */
+export function computeRepasseLiquidoKz(payoutLiquidoKz, descontoFaltasKz) {
+  const payout = Number(payoutLiquidoKz);
+  const desconto = Number(descontoFaltasKz);
+  if (!Number.isFinite(payout) || payout < 0) {
+    throw new Error('Payout líquido inválido.');
+  }
+  if (!Number.isFinite(desconto) || desconto < 0) {
+    throw new Error('Desconto de faltas inválido.');
+  }
+  return Math.max(0, Math.floor(payout - desconto));
+}
+
+/**
  * @param {string | null | undefined} from
  * @param {string | null | undefined} to
  * @returns {boolean}
