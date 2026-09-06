@@ -4,6 +4,7 @@ import ConfirmationModal from './ConfirmationModal';
 import PreferentialPointsMap from './PreferentialPointsMap';
 import { formatKwanza } from '../utils/formatKwanza';
 import { buildPreferentialMapPoints } from '../utils/propostaReview';
+import { chipEstadoProposta } from '../utils/propostaEstado';
 
 /**
  * @typedef {{
@@ -69,12 +70,14 @@ function countMembrosComPickup(membros) {
  * Card de revisão de proposta multi-passageiro.
  * - `modo="contraparte"` (default): Aceitar / Recusar (inbox A ou B).
  * - `modo="criador"`: Cancelar proposta enviada (só criador; RPC cancel_proposal).
+ * - `modo="historico"`: só leitura com chip de estado (rejeitada/cancelada/aceite).
  * - Se `requiresMemberSelection`, checkboxes até exactamente N seleccionados.
  *
  * @param {{
  *   review: PropostaReview,
  *   busy?: boolean,
- *   modo?: 'contraparte' | 'criador',
+ *   modo?: 'contraparte' | 'criador' | 'historico',
+ *   secao?: 'recebidas' | 'enviadas',
  *   onAceitar?: (selectedMemberIds?: string[]) => void,
  *   onRecusar?: () => void,
  *   onCancelar?: () => void,
@@ -84,6 +87,7 @@ function PropostaReviewCard({
   review,
   busy = false,
   modo = 'contraparte',
+  secao = 'recebidas',
   onAceitar,
   onRecusar,
   onCancelar,
@@ -91,6 +95,10 @@ function PropostaReviewCard({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState(/** @type {string[]} */ ([]));
   const isCriador = modo === 'criador';
+  const isHistorico = modo === 'historico';
+  const estadoChip = chipEstadoProposta(review.proposta.estado, {
+    secao: isCriador ? 'enviadas' : secao,
+  });
 
   const modoLabel =
     review.proposta.modo_preco === 'TOTAL_ACORDO' ? 'Total do acordo' : 'Por passageiro';
@@ -126,9 +134,19 @@ function PropostaReviewCard({
 
   return (
     <section className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
-      <h3 className="text-base font-bold text-slate-900 dark:text-white text-balance">
-        {titulo}
-      </h3>
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="text-base font-bold text-slate-900 dark:text-white text-balance min-w-0">
+          {titulo}
+        </h3>
+        {estadoChip ? (
+          <span
+            className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${estadoChip.className}`}
+            data-testid="proposta-estado-chip"
+          >
+            {estadoChip.label}
+          </span>
+        ) : null}
+      </div>
 
       <div className="space-y-2">
         {totalMembros > 0 ? (
@@ -251,7 +269,7 @@ function PropostaReviewCard({
         <p className="text-xs text-amber-700 dark:text-amber-400 text-pretty">{avisoComposicao}</p>
       ) : null}
 
-      {isCriador ? (
+      {!isHistorico && isCriador ? (
         <div className="pt-1">
           <button
             type="button"
@@ -262,7 +280,7 @@ function PropostaReviewCard({
             Cancelar proposta
           </button>
         </div>
-      ) : (
+      ) : !isHistorico ? (
         <div className="flex flex-col gap-3 pt-1">
           <button
             type="button"
@@ -281,8 +299,9 @@ function PropostaReviewCard({
             Recusar
           </button>
         </div>
-      )}
+      ) : null}
 
+      {!isHistorico ? (
       <ConfirmationModal
         isOpen={confirmOpen}
         title={isCriador ? 'Cancelar esta proposta?' : 'Aceitar esta proposta?'}
@@ -305,6 +324,7 @@ function PropostaReviewCard({
         }}
         onCancel={() => setConfirmOpen(false)}
       />
+      ) : null}
     </section>
   );
 }
