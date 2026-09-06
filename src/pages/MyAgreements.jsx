@@ -24,6 +24,12 @@ import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { resolveAgreementPricing } from '../utils/resolveAgreementPricing';
 import { labelRotaOferta } from '../utils/ofertaLabels';
+import AcordoPagamentoPanel from '../components/AcordoPagamentoPanel';
+import AcordoContactosPanel from '../components/AcordoContactosPanel';
+import {
+  getPagamentoForPassageiro,
+  getAcordoContactos,
+} from '../services/PaymentService';
 
 /**
  * @param {string | null | undefined} estado
@@ -157,6 +163,40 @@ const MyAgreements = () => {
   const [adendaModalOpen, setAdendaModalOpen] = useState(false);
   const [adendaBusy, setAdendaBusy] = useState(false);
   const [adendaError, setAdendaError] = useState('');
+  const [pagamento, setPagamento] = useState(/** @type {object | null} */ (null));
+  const [contactos, setContactos] = useState(/** @type {object | null} */ (null));
+  const [pagamentoLoading, setPagamentoLoading] = useState(false);
+  const [contactosLoading, setContactosLoading] = useState(false);
+
+  const carregarPagamentoContactos = useCallback(async (acordo) => {
+    if (!acordo?.id || !user?.id) return;
+    setPagamentoLoading(true);
+    setContactosLoading(true);
+    try {
+      if (tipoPerfil === 'Passageiro') {
+        const row = await getPagamentoForPassageiro(acordo.id, user.id);
+        setPagamento(row);
+      } else {
+        setPagamento(null);
+      }
+      const payload = await getAcordoContactos(acordo.id);
+      setContactos(payload);
+    } catch (err) {
+      console.error('Erro ao carregar pagamento/contactos:', err);
+    } finally {
+      setPagamentoLoading(false);
+      setContactosLoading(false);
+    }
+  }, [user?.id, tipoPerfil]);
+
+  useEffect(() => {
+    if (selected) {
+      void carregarPagamentoContactos(selected);
+    } else {
+      setPagamento(null);
+      setContactos(null);
+    }
+  }, [selected, carregarPagamentoContactos]);
 
   const closeTerminateFlow = () => {
     setTerminatePickerOpen(false);
@@ -757,6 +797,15 @@ const MyAgreements = () => {
               </div>
             )}
           </section>
+
+          {isPassageiro && activo ? (
+            <AcordoPagamentoPanel
+              pagamento={pagamentoLoading ? null : pagamento}
+              onUpdated={() => carregarPagamentoContactos(selected)}
+            />
+          ) : null}
+
+          <AcordoContactosPanel contactos={contactos} loading={contactosLoading} />
 
           <div className="border-t border-slate-100 dark:border-slate-800" role="separator" />
 

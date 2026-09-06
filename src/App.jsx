@@ -11,6 +11,8 @@ import PublishRoute from './pages/PublishRoute';
 import MyAgreements from './pages/MyAgreements';
 import VehicleSetup from './pages/VehicleSetup';
 import Profile from './pages/Profile';
+import AdminPagamentos from './pages/AdminPagamentos';
+import AdminRoute from './components/AdminRoute';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import UpdatePrompt from './components/UpdatePrompt';
@@ -60,6 +62,10 @@ function AppShell() {
           <Route path="/faltas" element={<AbsenceTracker />} />
           <Route path="/faltas/:acordoId" element={<AbsenceTracker />} />
           <Route path="/perfil" element={<Profile />} />
+        </Route>
+
+        <Route element={<AdminRoute />}>
+          <Route path="/admin/pagamentos" element={<AdminPagamentos />} />
         </Route>
       </Route>
 
