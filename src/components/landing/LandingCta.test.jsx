@@ -19,7 +19,7 @@ describe('LandingCta', () => {
     vi.clearAllMocks();
   });
 
-  it('mostra soft claim sem inventar números', () => {
+  it('reforça acordo mensal sem números inventados', () => {
     render(
       <BrowserRouter>
         <LandingCta />
@@ -27,7 +27,18 @@ describe('LandingCta', () => {
     );
 
     expect(screen.getByText(/junta-te ao boleia certa/i)).toBeInTheDocument();
+    expect(screen.getByText(/acordo mensal/i)).toBeInTheDocument();
     expect(screen.queryByText(/centenas de pessoas/i)).not.toBeInTheDocument();
+  });
+
+  it('não expõe jargon de produto (1:N, matchmaking, marketplace)', () => {
+    const { container } = render(
+      <BrowserRouter>
+        <LandingCta />
+      </BrowserRouter>
+    );
+    const text = container.textContent ?? '';
+    expect(text).not.toMatch(/1:N|1:n|matchmaking|marketplace/i);
   });
 
   it('navega para registo com papel explícito', () => {

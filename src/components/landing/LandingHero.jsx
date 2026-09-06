@@ -38,8 +38,8 @@ export default function LandingHero() {
             Casa e trabalho. No mesmo caminho.
           </h1>
           <p className="max-w-xl text-pretty text-lg text-slate-600 dark:text-slate-300 md:text-xl">
-            Matchmaking diário: publica uma procura ou oferta, combina uma proposta e fecha um acordo
-            mensal com preço claro em Kz.
+            Partilha a viagem casa–trabalho todos os dias em Luanda. Diz o teu percurso, encontra
+            motorista ou passageiros, e fecha um acordo mensal com preço claro em Kwanza.
           </p>
           <div className="flex flex-wrap gap-4">
             <button
@@ -64,23 +64,23 @@ export default function LandingHero() {
           aria-label="Pré-visualização do produto"
         >
           <div className="rounded-2xl border border-primary/15 bg-white/90 p-4 shadow-sm dark:bg-slate-900/80">
-            <p className="text-xs font-bold uppercase text-primary">Oferta</p>
+            <p className="text-xs font-bold uppercase text-primary">Lugares do motorista</p>
             <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
               Talatona → Centro · Seg–Sex
             </p>
             <p className="text-sm text-slate-500 dark:text-slate-400">3 vagas · a partir de 25.000 Kz</p>
           </div>
           <div className="rounded-2xl border border-primary/15 bg-white/90 p-4 shadow-sm dark:bg-slate-900/80">
-            <p className="text-xs font-bold uppercase text-primary">Procura</p>
+            <p className="text-xs font-bold uppercase text-primary">Quem precisa de boleia</p>
             <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
               Viana → Mutamba · manhã
             </p>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Grupo · 2 pessoas</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Grupo · 2 colegas</p>
           </div>
           <div className="rounded-2xl border border-primary/25 bg-primary/10 p-4 shadow-sm">
-            <p className="text-xs font-bold uppercase text-primary">Acordo</p>
+            <p className="text-xs font-bold uppercase text-primary">Acordo mensal</p>
             <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
-              Mensal · preço congelado
+              1 motorista · vários passageiros · preço congelado
             </p>
             <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Total 75.000 Kz</p>
           </div>

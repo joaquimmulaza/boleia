@@ -14,7 +14,7 @@ const BENEFITS = [
   {
     icon: Users,
     title: 'Grupo de colegas',
-    text: 'Junta colegas no mesmo percurso e negocia em grupo com o motorista.',
+    text: 'Junta colegas no mesmo percurso — o grupo pode viajar mesmo antes de estar completo.',
   },
 ];
 
@@ -31,7 +31,7 @@ export default function LandingBenefits() {
             Vantagens
           </h2>
           <p className="text-pretty text-lg leading-relaxed text-slate-600 dark:text-slate-400">
-            Mobilidade urbana útil para Luanda: poupar, chegar a horas e viajar com quem partilha o caminho.
+            Boleia casa–trabalho em Luanda: poupar, chegar a horas e viajar com quem partilha o caminho.
           </p>
         </div>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">

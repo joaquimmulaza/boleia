@@ -19,9 +19,10 @@ describe('LandingBenefits', () => {
     expect(screen.getByText(/grupo de colegas/i)).toBeInTheDocument();
   });
 
-  it('não expõe jargon interno', () => {
+  it('não expõe jargon interno nem fórmulas de produto', () => {
     const { container } = render(<LandingBenefits />);
     const text = container.textContent;
     expect(text).not.toMatch(/N_candidato|N_proposto|N_actual|POR_PASSAGEIRO|TOTAL_ACORDO/);
+    expect(text).not.toMatch(/1:N|1:n|matchmaking|marketplace/i);
   });
 });

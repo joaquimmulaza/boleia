@@ -31,34 +31,42 @@ describe('LandingHero', () => {
     return container;
   }
 
-  it('renderiza headline de marketplace casa-trabalho (não o copy legado)', () => {
+  it('renderiza headline de boleia casa-trabalho (não o copy legado)', () => {
     renderHero();
 
     const heading = screen.getByRole('heading', { level: 1 });
     expect(heading).toBeInTheDocument();
-    expect(heading.textContent).toMatch(/casa|trabalho|boleia|match|quotidiano|diári/i);
+    expect(heading.textContent).toMatch(/casa|trabalho|boleia|quotidiano|diári/i);
     expect(heading.textContent).not.toBe('A tua rota diária, mais simples e barata.');
   });
 
-  it('mostra marca hero-level e frase de suporte com fluxo procura/oferta → acordo', () => {
+  it('mostra marca hero-level e frase de suporte com percurso → acordo mensal', () => {
     renderHero();
 
     const logo = screen.getByAltText('Boleia Certa');
     expect(logo).toHaveAttribute('src', '/boleia-logo.png');
 
-    expect(screen.getAllByText(/procura|oferta/i).length).toBeGreaterThan(0);
-    expect(document.body.textContent).toMatch(/proposta/i);
+    expect(document.body.textContent).toMatch(/percurso/i);
+    expect(document.body.textContent).toMatch(/motorista|passageiro/i);
     expect(document.body.textContent).toMatch(/acordo/i);
-    expect(document.body.textContent).toMatch(/Kz|Luanda/i);
+    expect(document.body.textContent).toMatch(/Kz|Kwanza|Luanda/i);
   });
 
-  it('mostra mock leve do produto com Oferta, Procura e Acordo em Kz', () => {
+  it('mostra mock leve do produto com lugares, procura e acordo em Kz', () => {
     renderHero();
 
-    expect(screen.getByText('Oferta')).toBeInTheDocument();
-    expect(screen.getByText('Procura')).toBeInTheDocument();
-    expect(screen.getByText('Acordo')).toBeInTheDocument();
+    expect(screen.getByText(/lugares do motorista/i)).toBeInTheDocument();
+    expect(screen.getByText(/quem precisa de boleia/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 motorista · vários passageiros/i)).toBeInTheDocument();
     expect(document.body.textContent).toMatch(/Kz/);
+  });
+
+  it('não expõe jargon de produto (1:N, matchmaking, marketplace)', () => {
+    renderHero();
+    const text = document.body.textContent ?? '';
+
+    expect(text).not.toMatch(/1:N|1:n|matchmaking|marketplace/i);
+    expect(text).not.toMatch(/N_candidato|N_proposto|N_actual|POR_PASSAGEIRO|TOTAL_ACORDO/);
   });
 
   it('navega para auth passageiro e motorista nos CTAs', () => {

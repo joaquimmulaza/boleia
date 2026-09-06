@@ -45,13 +45,13 @@ describe('LandingPage', () => {
     vi.clearAllMocks();
   });
 
-  it('renderiza hero marketplace (sem copy legado de rotas)', () => {
+  it('renderiza hero de boleia casa–trabalho (sem copy legado de rotas)', () => {
     renderLanding();
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/casa e trabalho/i);
     expect(screen.queryByText('A tua rota diária, mais simples e barata.')).not.toBeInTheDocument();
-    expect(document.body.textContent).toMatch(/procura|oferta/i);
-    expect(document.body.textContent).toMatch(/Kz/i);
+    expect(document.body.textContent).toMatch(/percurso|motorista|passageiro/i);
+    expect(document.body.textContent).toMatch(/Kz|Kwanza/i);
   });
 
   it('navega para /auth?role=passenger ao clicar Sou Passageiro', () => {
@@ -96,6 +96,14 @@ describe('LandingPage', () => {
 
     expect(container.innerHTML).not.toMatch(/googleusercontent/i);
     expect(screen.queryByRole('link', { name: /blog/i })).not.toBeInTheDocument();
+  });
+
+  it('não expõe jargon de produto na landing (1:N, matchmaking, marketplace)', () => {
+    renderLanding();
+    const text = document.body.textContent ?? '';
+
+    expect(text).not.toMatch(/1:N|1:n|matchmaking|marketplace/i);
+    expect(text).not.toMatch(/N_candidato|N_proposto|N_actual|POR_PASSAGEIRO|TOTAL_ACORDO/);
   });
 
   it('mostra soft claim no CTA sem números inventados', () => {

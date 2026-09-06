@@ -14,7 +14,8 @@ export default function LandingCta() {
           Junta-te ao Boleia Certa
         </h2>
         <p className="text-pretty text-slate-700 dark:text-slate-300">
-          Começa a combinar a tua boleia casa–trabalho com acordos mensais claros em Kz.
+          Começa a combinar a tua boleia casa–trabalho — acordo mensal com preço em Kz, combinado e
+          registado.
         </p>
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:justify-center">
           <button

@@ -3,23 +3,23 @@ import { Search, Handshake, PiggyBank } from 'lucide-react';
 const STEPS = [
   {
     icon: Search,
-    title: 'Publica procura ou oferta',
-    text: 'Passageiros publicam a procura; motoristas publicam a oferta de capacidade na rota casa–trabalho.',
+    title: 'Diz o teu percurso',
+    text: 'Passageiro pede boleia; motorista diz que tem lugares — rota fixa ou horário flexível.',
   },
   {
     icon: Handshake,
-    title: 'Combina proposta ou grupo',
-    text: 'Recebe propostas alinhadas ao horário e ao percurso — sozinho ou em grupo de colegas.',
+    title: 'Combinam a proposta',
+    text: 'Vê quem bate no horário e no caminho — sozinho ou com colegas no mesmo percurso.',
   },
   {
     icon: PiggyBank,
-    title: 'Acordo 1:N com preço em Kz',
-    text: 'Fecha um acordo mensal transparente: um motorista, vários passageiros, quotas claras em Kwanza.',
+    title: 'Fecha o acordo mensal',
+    text: 'Um motorista leva vários passageiros no mesmo caminho, com preço em Kz combinado e registado.',
   },
 ];
 
 /**
- * Secção «Como funciona» — fluxo marketplace.
+ * Secção «Como funciona» — fluxo boleia casa–trabalho.
  * @typedef {Readonly<{}>} LandingHowItWorksProps
  */
 export default function LandingHowItWorks() {
