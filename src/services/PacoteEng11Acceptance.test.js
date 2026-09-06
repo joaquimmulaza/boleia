@@ -105,6 +105,7 @@ describe('PACOTE ENG #11 — assiduidade + faltaDesconto gate pagamento', () => 
       await adminLiquidatePayment('pag-1');
       expect(supabase.rpc).toHaveBeenCalledWith('admin_liquidate_payment', {
         p_pagamento_id: 'pag-1',
+        p_idempotency_key: null,
       });
     });
 
