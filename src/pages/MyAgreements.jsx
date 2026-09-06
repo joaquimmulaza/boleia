@@ -1,17 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowRight, Clock, Users, ChevronRight, ShieldCheck, Pencil, Loader2 } from 'lucide-react';
+import { ArrowRight, Clock, Users, ChevronRight, ShieldCheck, Pencil } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getAgreementsForDriver,
   getAgreementsForPassenger,
-  leavePassenger,
+  terminateAgreement,
   renegotiateAgreementPricing,
   acceptAgreementAdenda,
   rejectAgreementAdenda,
 } from '../services/AgreementService';
-import { listPending } from '../services/offlineQueue';
-import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import EmptyState from '../components/EmptyState';
 import FeedbackAlert from '../components/FeedbackAlert';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -100,21 +98,46 @@ function formatMesAdenda(isoDate) {
 }
 
 /**
+ * @param {string | null | undefined} estado
+ * @returns {boolean}
+ */
+function isAdendaAguardandoContraparte(estado) {
+  const e = String(estado || '').toLowerCase();
+  return e === 'pendente_passageiro' || e === 'pendente_contraparte';
+}
+
+/**
+ * @param {{ estado?: string } | null | undefined} adenda
+ * @param {boolean} isMotorista
+ * @param {boolean} isPassageiro
+ * @returns {boolean}
+ */
+function souContraparteAdenda(adenda, isMotorista, isPassageiro) {
+  const e = String(adenda?.estado || '').toLowerCase();
+  if (e === 'pendente_passageiro') return isPassageiro;
+  if (e === 'pendente_contraparte') return isMotorista;
+  return false;
+}
+
+/**
  * Gestão de acordos 1 motorista : N passageiros.
  */
 const MyAgreements = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, tipoPerfil } = useAuth();
-  const { isOnline } = useNetworkStatus();
   const [message, setMessage] = useState({ type: '', text: '' });
   const [acordos, setAcordos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selected, setSelected] = useState(null);
-  const [leaveModalOpen, setLeaveModalOpen] = useState(false);
-  const [leaveBusy, setLeaveBusy] = useState(false);
-  /** @type {[Record<string, true>, React.Dispatch<React.SetStateAction<Record<string, true>>>]} */
-  const [pendingLeaveIds, setPendingLeaveIds] = useState({});
+  const [terminatePickerOpen, setTerminatePickerOpen] = useState(false);
+  const [terminateConfirmOpen, setTerminateConfirmOpen] = useState(false);
+  const [terminateJustaPickerOpen, setTerminateJustaPickerOpen] = useState(false);
+  /** @type {['consensual' | 'aviso_previo' | 'justa_causa' | '', React.Dispatch<React.SetStateAction<'consensual' | 'aviso_previo' | 'justa_causa' | ''>>]} */
+  const [terminateModo, setTerminateModo] = useState('');
+  /** @type {['faltas_excessivas' | 'avaria_veiculo' | 'seguranca' | '', React.Dispatch<React.SetStateAction<'faltas_excessivas' | 'avaria_veiculo' | 'seguranca' | ''>>]} */
+  const [terminateJustificativa, setTerminateJustificativa] = useState('');
+  const [terminateBusy, setTerminateBusy] = useState(false);
 
   const [adendaModo, setAdendaModo] = useState(
     /** @type {'POR_PASSAGEIRO' | 'TOTAL_ACORDO'} */ ('POR_PASSAGEIRO'),
@@ -126,20 +149,14 @@ const MyAgreements = () => {
   const [adendaBusy, setAdendaBusy] = useState(false);
   const [adendaError, setAdendaError] = useState('');
 
-  const syncPendingLeaves = useCallback(async () => {
-    try {
-      const pending = await listPending();
-      const next = {};
-      for (const item of pending || []) {
-        if (item?.rpc !== 'leave_passenger') continue;
-        const acordoId = item?.args?.p_acordo_id;
-        if (acordoId) next[String(acordoId)] = true;
-      }
-      setPendingLeaveIds(next);
-    } catch {
-      /* fila indisponível — manter estado local */
-    }
-  }, []);
+  const closeTerminateFlow = () => {
+    setTerminatePickerOpen(false);
+    setTerminateConfirmOpen(false);
+    setTerminateJustaPickerOpen(false);
+    setTerminateModo('');
+    setTerminateJustificativa('');
+    setTerminateBusy(false);
+  };
 
   const carregar = useCallback(async () => {
     if (!user?.id) {
@@ -167,15 +184,6 @@ const MyAgreements = () => {
   useEffect(() => {
     carregar();
   }, [carregar]);
-
-  useEffect(() => {
-    void syncPendingLeaves();
-  }, [syncPendingLeaves]);
-
-  useEffect(() => {
-    if (!isOnline) return;
-    void syncPendingLeaves();
-  }, [isOnline, syncPendingLeaves]);
 
   useEffect(() => {
     if (isLoading || acordos.length === 0) return;
@@ -219,38 +227,55 @@ const MyAgreements = () => {
     setAdendaFormOpen(true);
   };
 
-  const handleLeave = async () => {
-    if (!selected || !user?.id || leaveBusy) return;
-    const acordoId = selected.id;
-    setLeaveBusy(true);
+  const handleTerminate = async (modoOverride, justificativaOverride) => {
+    if (!selected || terminateBusy) return;
+    const modo = modoOverride || terminateModo;
+    if (!modo) return;
+
+    setTerminateBusy(true);
     try {
-      const result = await leavePassenger(acordoId, user.id);
-      setLeaveModalOpen(false);
+      const input = { modo };
+      const justificativa = justificativaOverride || terminateJustificativa;
+      if (modo === 'justa_causa') {
+        if (!justificativa) {
+          setMessage({ type: 'error', text: 'Escolhe o motivo da justa causa.' });
+          return;
+        }
+        input.justificativa = justificativa;
+      }
+
+      const result = await terminateAgreement(selected.id, input);
+      closeTerminateFlow();
+
       if (result?.offlineQueued) {
-        setPendingLeaveIds((prev) => ({ ...prev, [acordoId]: true }));
         setMessage({
           type: 'success',
-          text: 'Saída guardada. Sincronizamos quando a rede voltar.',
+          text: 'Rescisão guardada. Sincronizamos quando a rede voltar.',
         });
         setSelected(null);
         await carregar();
         return;
       }
-      setMessage({
-        type: 'success',
-        text: 'Saíste do acordo. A quota do mês mantém-se.',
-      });
+
+      const estado = String(result?.estado || '').toLowerCase();
+      let text = 'Pedido de rescisão registado.';
+      if (modo === 'consensual' && estado === 'activo') {
+        text = 'Pedido amigável enviado. A outra parte precisa de confirmar.';
+      } else if (modo === 'consensual' && estado === 'cancelado') {
+        text = 'Acordo encerrado de forma amigável.';
+      } else if (modo === 'aviso_previo' || estado === 'cancelamento_pendente') {
+        text = 'Rescisão agendada. O acordo mantém-se activo até ao fim deste mês.';
+      } else if (modo === 'justa_causa' || estado === 'cancelado_justificado') {
+        text = 'Acordo rescindido por justa causa.';
+      }
+
+      setMessage({ type: 'success', text });
       setSelected(null);
-      setPendingLeaveIds((prev) => {
-        const next = { ...prev };
-        delete next[acordoId];
-        return next;
-      });
       await carregar();
     } catch (err) {
       setMessage({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
     } finally {
-      setLeaveBusy(false);
+      setTerminateBusy(false);
     }
   };
 
@@ -277,9 +302,11 @@ const MyAgreements = () => {
         valor_ask_kz: valor,
         n_passageiros: n,
       });
+      const contraparteLabel =
+        tipoPerfil === 'Passageiro' ? 'do motorista' : 'do passageiro';
       setMessage({
         type: 'success',
-        text: 'Proposta de novo preço enviada. Fica à espera da aceitação do passageiro.',
+        text: `Proposta de novo preço enviada. Fica à espera da aceitação ${contraparteLabel}.`,
       });
       const acordoId = selected.id;
       closeAdendaForm();
@@ -352,7 +379,6 @@ const MyAgreements = () => {
     const origem = oferta?.origin_name || 'Origem';
     const destino = oferta?.destination_name || 'Destino';
     const activo = isActivo(acordo.estado);
-    const leavePending = Boolean(pendingLeaveIds[acordo.id]);
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
     const quotaCard =
       tipoPerfil === 'Passageiro'
@@ -379,15 +405,6 @@ const MyAgreements = () => {
             >
               {activo ? 'Activo' : acordo.estado}
             </span>
-            {leavePending && (
-              <span
-                className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200"
-                data-testid={`saida-pendente-${acordo.id}`}
-              >
-                <Loader2 size={12} className="animate-spin shrink-0" aria-hidden="true" />
-                Saída Pendente (A sincronizar...)
-              </span>
-            )}
           </div>
           <ChevronRight size={18} className="text-slate-400 shrink-0" aria-hidden="true" />
         </div>
@@ -433,10 +450,21 @@ const MyAgreements = () => {
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
     const quotaDestaque =
       minhaLinha?.quota_mensal_kz ?? selected.valor_mensal_por_passageiro_kz;
-    const leavePending = Boolean(pendingLeaveIds[selected.id]);
     const podeSair =
       isPassageiro && activo && (!minhaLinha || isActivo(minhaLinha.estado));
-    const podeRenegociar = isMotorista && activo;
+    const podeRenegociar =
+      activo && (isMotorista || (isPassageiro && podeSair));
+    const adenda = selected.adenda_pendente;
+    const adendaAguardando = adenda && isAdendaAguardandoContraparte(adenda.estado);
+    const mostrarCtAdenda =
+      adendaAguardando && souContraparteAdenda(adenda, isMotorista, isPassageiro);
+    const rescisaoConsensualPendente =
+      activo &&
+      String(selected.rescisao_modo || '').toLowerCase() === 'consensual' &&
+      selected.rescisao_solicitada_por &&
+      selected.rescisao_solicitada_por !== user?.id;
+    const cancelamentoPendente =
+      String(selected.estado || '').toLowerCase() === 'cancelamento_pendente';
 
     const valorNum = Number.parseInt(String(adendaValor), 10);
     const nNum = Number.parseInt(String(adendaN), 10);
@@ -482,10 +510,9 @@ const MyAgreements = () => {
                 >
                   {activo ? 'Activo' : selected.estado}
                 </span>
-                {leavePending && (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900">
-                    <Loader2 size={12} className="animate-spin shrink-0" aria-hidden="true" />
-                    Saída Pendente (A sincronizar...)
+                {cancelamentoPendente && (
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900">
+                    Cancelamento pendente
                   </span>
                 )}
               </div>
@@ -554,13 +581,18 @@ const MyAgreements = () => {
                 data-testid="adenda-pendente"
                 className="rounded-xl border border-amber-200/90 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 space-y-1"
               >
-                {String(selected.adenda_pendente.estado || '').toLowerCase() ===
-                'pendente_passageiro' ? (
+                {adendaAguardando ? (
                   <>
                     <p className="text-sm font-bold text-slate-900 dark:text-white">
-                      {isPassageiro
+                      {mostrarCtAdenda
                         ? 'Proposta de novo preço'
-                        : 'À espera da aceitação do passageiro'}
+                        : String(adenda.estado || '').toLowerCase() === 'pendente_contraparte'
+                          ? isMotorista
+                            ? 'Passageiro propôs um novo preço'
+                            : 'À espera da aceitação do motorista'
+                          : isPassageiro
+                            ? 'Proposta de novo preço'
+                            : 'À espera da aceitação do passageiro'}
                     </p>
                     <p className="text-sm text-slate-600 dark:text-slate-300">
                       Cada um pagaria{' '}
@@ -572,7 +604,7 @@ const MyAgreements = () => {
                         : ' a partir do próximo mês'}
                       .
                     </p>
-                    {isPassageiro && (
+                    {mostrarCtAdenda && (
                       <div className="mt-3 flex flex-col gap-3">
                         <Button
                           type="button"
@@ -616,6 +648,28 @@ const MyAgreements = () => {
                     )}
                   </>
                 )}
+              </div>
+            )}
+
+            {rescisaoConsensualPendente && (
+              <div
+                data-testid="rescisao-consensual-pendente"
+                className="rounded-xl border border-amber-200/90 bg-amber-50/80 p-3 space-y-3"
+              >
+                <p className="text-sm font-bold text-slate-900 dark:text-white">
+                  Pedido de encerramento amigável
+                </p>
+                <p className="text-sm text-slate-600 dark:text-slate-300 text-pretty">
+                  A outra parte quer encerrar o acordo de forma amigável. Confirma se concordas.
+                </p>
+                <Button
+                  type="button"
+                  className="w-full min-h-12"
+                  disabled={terminateBusy}
+                  onClick={() => handleTerminate('consensual')}
+                >
+                  Confirmar encerramento amigável
+                </Button>
               </div>
             )}
           </section>
@@ -848,8 +902,7 @@ const MyAgreements = () => {
                 type="button"
                 variant="outline"
                 className="w-full h-11 rounded-xl font-bold text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                disabled={leavePending}
-                onClick={() => setLeaveModalOpen(true)}
+                onClick={() => setTerminatePickerOpen(true)}
               >
                 Sair do acordo
               </Button>
@@ -910,15 +963,173 @@ const MyAgreements = () => {
 
       {renderDetalhe()}
 
+      {terminatePickerOpen && (
+        <div className="fixed inset-0 z-modal flex items-end sm:items-center justify-center bg-black/40 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="terminate-picker-title"
+            data-testid="terminate-modality-picker"
+            className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl p-6 space-y-4 shadow-xl"
+          >
+            <div className="space-y-1">
+              <h3 id="terminate-picker-title" className="text-lg font-bold">
+                Como queres sair?
+              </h3>
+              <p className="text-sm text-slate-500 text-pretty">
+                Escolhe a modalidade de rescisão. O mês corrente mantém as quotas já combinadas,
+                excepto em justa causa imediata.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <button
+                type="button"
+                className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                onClick={() => {
+                  setTerminateModo('consensual');
+                  setTerminatePickerOpen(false);
+                  setTerminateConfirmOpen(true);
+                }}
+              >
+                <p className="font-bold text-slate-900 dark:text-white">Acordo amigável</p>
+                <p className="text-sm text-slate-500 mt-1 text-pretty">
+                  Pedes o encerramento e a outra parte confirma. Termina quando ambos concordam.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                onClick={() => {
+                  setTerminateModo('aviso_previo');
+                  setTerminatePickerOpen(false);
+                  setTerminateConfirmOpen(true);
+                }}
+              >
+                <p className="font-bold text-slate-900 dark:text-white">Aviso prévio</p>
+                <p className="text-sm text-slate-500 mt-1 text-pretty">
+                  O acordo mantém-se activo até ao fim deste mês. A partir do próximo mês fica
+                  cancelado.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                className="w-full text-left rounded-xl border border-red-200 dark:border-red-900/50 p-4 hover:bg-red-50/50 dark:hover:bg-red-950/20"
+                onClick={() => {
+                  setTerminateModo('justa_causa');
+                  setTerminatePickerOpen(false);
+                  setTerminateJustaPickerOpen(true);
+                }}
+              >
+                <p className="font-bold text-red-800 dark:text-red-200">Justa causa imediata</p>
+                <p className="text-sm text-slate-500 mt-1 text-pretty">
+                  Só com motivo válido: avaria do veículo, segurança ou faltas excessivas (&gt;50%
+                  do mês).
+                </p>
+              </button>
+            </div>
+
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              onClick={() => setTerminatePickerOpen(false)}
+            >
+              Voltar
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {terminateJustaPickerOpen && (
+        <div className="fixed inset-0 z-modal flex items-end sm:items-center justify-center bg-black/40 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="justa-causa-title"
+            data-testid="terminate-justa-picker"
+            className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl p-6 space-y-4 shadow-xl"
+          >
+            <h3 id="justa-causa-title" className="text-lg font-bold">
+              Motivo da justa causa
+            </h3>
+            <div className="space-y-2">
+              {[
+                { id: 'avaria_veiculo', label: 'Avaria do veículo', hint: 'Impossibilita cumprir o trajeto.' },
+                { id: 'seguranca', label: 'Motivo de segurança', hint: 'Risco grave para passageiros ou motorista.' },
+                { id: 'faltas_excessivas', label: 'Faltas excessivas', hint: 'Mais de metade dos dias úteis deste mês.' },
+              ].map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  className={`w-full text-left rounded-xl border p-4 ${
+                    terminateJustificativa === opt.id
+                      ? 'border-primary bg-primary/5'
+                      : 'border-slate-200 dark:border-slate-700'
+                  }`}
+                  onClick={() => setTerminateJustificativa(opt.id)}
+                >
+                  <p className="font-bold">{opt.label}</p>
+                  <p className="text-sm text-slate-500 mt-1">{opt.hint}</p>
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-col gap-2">
+              <Button
+                type="button"
+                className="w-full"
+                disabled={!terminateJustificativa || terminateBusy}
+                onClick={() => {
+                  setTerminateJustaPickerOpen(false);
+                  setTerminateConfirmOpen(true);
+                }}
+              >
+                Continuar
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => {
+                  setTerminateJustaPickerOpen(false);
+                  setTerminatePickerOpen(true);
+                  setTerminateJustificativa('');
+                }}
+              >
+                Voltar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ConfirmationModal
-        isOpen={leaveModalOpen}
-        busy={leaveBusy}
-        title="Sair do acordo?"
-        message="A tua quota deste mês não é reembolsada. Os preços dos restantes passageiros mantêm-se."
-        confirmText="Sair"
-        onConfirm={handleLeave}
+        isOpen={terminateConfirmOpen}
+        busy={terminateBusy}
+        title={
+          terminateModo === 'consensual'
+            ? 'Pedir encerramento amigável?'
+            : terminateModo === 'aviso_previo'
+              ? 'Confirmar aviso prévio?'
+              : 'Confirmar justa causa?'
+        }
+        message={
+          terminateModo === 'consensual'
+            ? 'Enviaremos o pedido à outra parte. Só termina quando ela confirmar.'
+            : terminateModo === 'aviso_previo'
+              ? 'O acordo mantém-se activo até ao último dia deste mês. A quota deste mês não é reembolsada.'
+              : 'O acordo termina de imediato se o motivo for válido. As quotas deste mês podem ser ajustadas proporcionalmente.'
+        }
+        confirmText="Confirmar"
+        onConfirm={() => handleTerminate()}
         onCancel={() => {
-          if (!leaveBusy) setLeaveModalOpen(false);
+          if (!terminateBusy) {
+            setTerminateConfirmOpen(false);
+            setTerminateModo('');
+            setTerminateJustificativa('');
+          }
         }}
       />
 
@@ -927,7 +1138,7 @@ const MyAgreements = () => {
         busy={adendaBusy}
         variant="primary"
         title="Confirmar novo preço?"
-        message="A proposta fica à espera da aceitação do passageiro. Depois, aplica-se a partir do próximo mês; o mês corrente mantém as quotas já combinadas."
+        message={`A proposta fica à espera da aceitação ${tipoPerfil === 'Passageiro' ? 'do motorista' : 'do passageiro'}. Depois, aplica-se a partir do próximo mês; o mês corrente mantém as quotas já combinadas.`}
         confirmText="Confirmar"
         onConfirm={handleConfirmAdenda}
         onCancel={() => {

@@ -17,8 +17,15 @@ function withPendingAdenda(acordo) {
     return { ...rest, adenda_pendente };
   }
   const rows = Array.isArray(acordos_adendas) ? acordos_adendas : [];
+  const pendingEstados = new Set(['pendente_passageiro', 'pendente_contraparte', 'aceite']);
   const pending =
-    rows.find((a) => a && a.applied_at == null && a.superseded_at == null) || null;
+    rows.find(
+      (a) =>
+        a &&
+        a.applied_at == null &&
+        a.superseded_at == null &&
+        pendingEstados.has(String(a.estado || '').toLowerCase()),
+    ) || null;
   return { ...rest, adenda_pendente: pending };
 }
 
@@ -302,6 +309,62 @@ export async function rejectAgreementAdenda(adendaId, options = {}) {
       const id = adendaIdOut ?? adendaId;
       const { data, error } = await supabase
         .from('acordos_adendas')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+/**
+ * Rescisão contratual via RPC `terminate_agreement` (consensual, aviso prévio, justa causa).
+ * Em falha de rede, enfileira a RPC com idempotency_key.
+ *
+ * @param {string} acordoId
+ * @param {{
+ *   modo: 'consensual' | 'aviso_previo' | 'justa_causa',
+ *   justificativa?: 'faltas_excessivas' | 'avaria_veiculo' | 'seguranca',
+ * }} input
+ * @param {{ idempotencyKey?: string, forceQueue?: boolean }} [options]
+ * @returns {Promise<object>}
+ */
+export async function terminateAgreement(acordoId, input, options = {}) {
+  if (!acordoId) {
+    throw new Error('ID do acordo é obrigatório.');
+  }
+  const modo = String(input?.modo || '').toLowerCase();
+  if (!['consensual', 'aviso_previo', 'justa_causa'].includes(modo)) {
+    throw new Error('Modo de rescisão inválido.');
+  }
+
+  const idempotencyKey = resolveIdempotencyKey(options.idempotencyKey);
+  /** @type {Record<string, unknown>} */
+  const rpcArgs = {
+    p_acordo_id: acordoId,
+    p_modo: modo,
+    p_idempotency_key: idempotencyKey,
+  };
+  if (input.justificativa) {
+    rpcArgs.p_justificativa = input.justificativa;
+  }
+
+  return callRpcWithOfflineFallback({
+    rpc: 'terminate_agreement',
+    rpcArgs,
+    options: { ...options, idempotencyKey },
+    sessionErrorMessage: 'Sessão necessária para guardar a rescisão offline.',
+    rpcErrorMessage: 'Falha ao rescindir o acordo.',
+    offlineResult: (key) => ({
+      id: acordoId,
+      offlineQueued: true,
+      idempotency_key: key,
+    }),
+    afterRpcSuccess: async (acordoIdOut) => {
+      const id = acordoIdOut ?? acordoId;
+      const { data, error } = await supabase
+        .from('acordos')
         .select('*')
         .eq('id', id)
         .single();

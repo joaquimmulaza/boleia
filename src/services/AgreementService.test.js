@@ -5,6 +5,7 @@ import {
   renegotiateAgreementPricing,
   acceptAgreementAdenda,
   rejectAgreementAdenda,
+  terminateAgreement,
   getAgreementsForDriver,
   getAgreementsForPassenger,
 } from './AgreementService.js';
@@ -629,6 +630,68 @@ describe('AgreementService', () => {
 
     it('exige id da adenda', async () => {
       await expect(rejectAgreementAdenda('')).rejects.toThrow(/adenda/i);
+    });
+  });
+
+  describe('terminateAgreement', () => {
+    it('chama RPC terminate_agreement com modo aviso_previo', async () => {
+      supabase.rpc.mockResolvedValue({ data: 'acordo-1', error: null });
+      supabase.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: { id: 'acordo-1', estado: 'cancelamento_pendente' },
+              error: null,
+            }),
+          }),
+        }),
+      });
+
+      const result = await terminateAgreement('acordo-1', { modo: 'aviso_previo' });
+
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        'terminate_agreement',
+        expect.objectContaining({
+          p_acordo_id: 'acordo-1',
+          p_modo: 'aviso_previo',
+          p_idempotency_key: expect.stringMatching(
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+          ),
+        }),
+      );
+      expect(result.estado).toBe('cancelamento_pendente');
+    });
+
+    it('envia justificativa para justa_causa', async () => {
+      supabase.rpc.mockResolvedValue({ data: 'acordo-1', error: null });
+      supabase.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: { id: 'acordo-1', estado: 'cancelado_justificado' },
+              error: null,
+            }),
+          }),
+        }),
+      });
+
+      await terminateAgreement('acordo-1', {
+        modo: 'justa_causa',
+        justificativa: 'avaria_veiculo',
+      });
+
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        'terminate_agreement',
+        expect.objectContaining({
+          p_modo: 'justa_causa',
+          p_justificativa: 'avaria_veiculo',
+        }),
+      );
+    });
+
+    it('exige acordoId e modo válido', async () => {
+      await expect(terminateAgreement('', { modo: 'consensual' })).rejects.toThrow(/acordo/i);
+      await expect(terminateAgreement('acordo-1', { modo: '' })).rejects.toThrow(/modo/i);
     });
   });
 
