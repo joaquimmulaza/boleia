@@ -40,6 +40,7 @@ import {
 } from '../utils/propostaInbox';
 import { DIAS_SEMANA, DIAS_UTEIS_DEFAULT } from '../utils/diasSemana';
 import { getModoTetoPreferido, setModoTetoPreferido } from '../utils/procuraTetoPrefs';
+import { resolveCapacityN } from '../utils/capacityGate.js';
 
 const CAPACIDADES_GRUPO = [2, 3, 4, 5, 6, 7, 8];
 
@@ -138,12 +139,18 @@ const PassengerDashboard = () => {
           ]);
           setGrupo(g);
           setWaitlistEntries(enrolled);
+          let membrosActivos = 0;
           if (g) {
             const membros = await listMembrosGrupo(g.id);
-            setMembrosCount(membros.length);
+            membrosActivos = membros.length;
+            setMembrosCount(membrosActivos);
           } else {
             setMembrosCount(0);
           }
+          const nCapacidade = resolveCapacityN({
+            n_candidato: activa.n_candidato,
+            membrosActivos,
+          });
           const inbox = filterPropostasParaInbox(propostas, user.id);
           const enviadas = filterPropostasEnviadas(propostas, user.id);
           const termRecebidas = filterPropostasTerminadasRecebidas(propostas, user.id);
@@ -164,7 +171,7 @@ const PassengerDashboard = () => {
             origin_lng: Number(activa.origin_lng),
             destination_lat: Number(activa.destination_lat),
             destination_lng: Number(activa.destination_lng),
-            n_candidato: activa.n_candidato,
+            n_candidato: nCapacidade,
             dias_semana: activa.dias_semana,
           });
           setMatches({ direct: result.direct, waitlist: result.waitlist });
