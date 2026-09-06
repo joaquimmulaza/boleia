@@ -22,6 +22,7 @@ import PropostaReviewCard from '../components/PropostaReviewCard';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { filterPropostasParaInbox, filterPropostasEnviadas } from '../utils/propostaInbox';
+import { formatIdaRegresso, formatTime24h } from '../utils/formatTime';
 
 function estadoChip(estado) {
   const map = {
@@ -35,6 +36,10 @@ function estadoChip(estado) {
 
 function labelModo(modo) {
   return modo === 'TOTAL_ACORDO' ? 'Total do acordo' : 'Por passageiro';
+}
+
+function labelTipoRota(oferta) {
+  return isOfertaFlexivel(oferta) ? 'Flexível' : 'Fixa';
 }
 
 function labelProcuraN(n) {
@@ -70,7 +75,7 @@ function OfertaRotaTitulo({ oferta }) {
 const DriverDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [hasVehicle, setHasVehicle] = useState(true);
+  const [hasVehicle, setHasVehicle] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [ofertas, setOfertas] = useState([]);
   const [reviews, setReviews] = useState([]);
@@ -245,8 +250,12 @@ const DriverDashboard = () => {
       <PageHeader
         title="As minhas ofertas"
         subtitle="Acompanha as tuas viagens e propostas."
-        actionLabel="Publicar oferta"
-        onAction={() => navigate('/publicar-trajeto')}
+        {...(hasVehicle === true
+          ? {
+              actionLabel: 'Publicar oferta',
+              onAction: () => navigate('/publicar-trajeto'),
+            }
+          : {})}
       />
 
       {feedback.text && !selectedOfertaId && (
@@ -262,7 +271,7 @@ const DriverDashboard = () => {
         </div>
       )}
 
-      {!isLoading && !hasVehicle && (
+      {!isLoading && hasVehicle === false && (
         <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-5 border border-amber-200 mb-6">
           <div className="flex items-start gap-3">
             <AlertCircle size={24} className="text-amber-500 shrink-0" aria-hidden="true" />
@@ -274,7 +283,7 @@ const DriverDashboard = () => {
               <button
                 type="button"
                 onClick={() => navigate('/veiculo')}
-                className="mt-2 bg-amber-500 text-white text-sm font-bold py-2.5 px-4 rounded-lg"
+                className="mt-2 bg-primary hover:bg-primary/90 text-white text-sm font-bold py-2.5 px-4 rounded-lg"
               >
                 Registar veículo
               </button>
@@ -285,7 +294,7 @@ const DriverDashboard = () => {
 
       {isLoading && <LoadingSkeleton />}
 
-      {!isLoading && ofertas.length === 0 && hasVehicle && (
+      {!isLoading && ofertas.length === 0 && hasVehicle === true && (
         <EmptyState
           icon={MapPin}
           title="Ainda sem ofertas"
@@ -298,22 +307,28 @@ const DriverDashboard = () => {
       <div className="space-y-4">
         {ofertas.map((oferta) => {
           const chip = estadoChip(oferta.estado);
-          const time = String(oferta.departure_time || '').slice(0, 5);
+          const horario = formatIdaRegresso(oferta.departure_time, oferta.return_time);
+          const tipoRota = labelTipoRota(oferta);
           return (
             <section
               key={oferta.id}
               className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
             >
-              <div className="flex items-center justify-between">
-                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${chip.className}`}>
-                  {chip.label}
-                </span>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${chip.className}`}>
+                    {chip.label}
+                  </span>
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    {tipoRota}
+                  </span>
+                </div>
                 <span className="text-xs text-slate-400">{labelModo(oferta.modo_preco)}</span>
               </div>
               <OfertaRotaTitulo oferta={oferta} />
               <div className="flex items-center gap-3 text-sm text-slate-500">
-                <span className="flex items-center gap-1">
-                  <Clock size={15} aria-hidden="true" /> {time}
+                <span className="flex items-center gap-1 tabular-nums">
+                  <Clock size={15} aria-hidden="true" /> {horario}
                 </span>
                 <span className="flex items-center gap-1">
                   <Users size={15} aria-hidden="true" />{' '}
@@ -441,7 +456,7 @@ const DriverDashboard = () => {
                   <div className="flex gap-3 text-sm text-slate-500">
                     <span className="flex items-center gap-1">
                       <Clock size={14} aria-hidden="true" />
-                      {String(procura.preferred_time || '').slice(0, 5)}
+                      {formatTime24h(procura.preferred_time)}
                     </span>
                     <span className="flex items-center gap-1">
                       <Users size={14} aria-hidden="true" />
@@ -491,7 +506,7 @@ const DriverDashboard = () => {
                       <div className="flex gap-3 text-sm text-slate-500">
                         <span className="flex items-center gap-1">
                           <Clock size={14} aria-hidden="true" />
-                          {String(procura.preferred_time || '').slice(0, 5)}
+                          {formatTime24h(procura.preferred_time)}
                         </span>
                         <span className="flex items-center gap-1">
                           <Users size={14} aria-hidden="true" />

@@ -7,6 +7,7 @@ import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { DIAS_SEMANA, DIAS_UTEIS_DEFAULT } from '../utils/diasSemana';
+import { markPermissionsEligible } from '../utils/permissionsPrompt';
 
 const OD_VAZIO = {
   origin_name: '',
@@ -60,9 +61,9 @@ const PublishRoute = () => {
     }));
   };
 
-  const handleToggleFlexivel = (checked) => {
-    setOfertaFlexivel(checked);
-    if (checked) {
+  const handleSelectTipoRota = (flexivel) => {
+    setOfertaFlexivel(flexivel);
+    if (flexivel) {
       setFormData((prev) => ({ ...prev, ...OD_VAZIO }));
     }
   };
@@ -120,6 +121,7 @@ const PublishRoute = () => {
         flexibilidade_rota: ofertaFlexivel,
       });
       setMessage({ type: 'success', text: 'Oferta publicada com sucesso!' });
+      markPermissionsEligible();
       setTimeout(() => navigate('/motorista'), 1500);
     } catch (error) {
       if (error.message === 'Não autenticado.') {
@@ -142,7 +144,41 @@ const PublishRoute = () => {
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 text-pretty px-1">
         {ofertaFlexivel
           ? 'Oferta flexível: capacidade, dias e horário — sem rota origem/destino fixa. A tua residência não limita a área.'
-          : 'Partilha a tua rota com pessoas de confiança.'}
+          : 'Publica a tua rota casa–trabalho com origem e destino definidos.'}
+      </p>
+
+      <div
+        className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 mb-4"
+        role="group"
+        aria-label="Tipo de rota"
+      >
+        <button
+          type="button"
+          className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
+            !ofertaFlexivel
+              ? 'bg-white dark:bg-slate-700 text-primary shadow-sm'
+              : 'text-slate-500'
+          }`}
+          onClick={() => handleSelectTipoRota(false)}
+        >
+          Rota fixa
+        </button>
+        <button
+          type="button"
+          className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
+            ofertaFlexivel
+              ? 'bg-white dark:bg-slate-700 text-primary shadow-sm'
+              : 'text-slate-500'
+          }`}
+          onClick={() => handleSelectTipoRota(true)}
+        >
+          Flexível
+        </button>
+      </div>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mb-6 text-pretty px-1">
+        {ofertaFlexivel
+          ? 'Capacidade e janela horária — sem origem/destino fixos.'
+          : 'Origem e destino obrigatórios na oferta fixa.'}
       </p>
 
       {message.text && (
@@ -189,19 +225,6 @@ const PublishRoute = () => {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full">
         <div className="flex flex-col gap-4 bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm">
-          <label className="flex items-center justify-between gap-3 rounded-lg bg-light-gray dark:bg-slate-800 px-3 py-3 cursor-pointer">
-            <span className="text-sm font-semibold text-charcoal dark:text-slate-300">
-              Oferta flexível
-            </span>
-            <input
-              type="checkbox"
-              checked={ofertaFlexivel}
-              onChange={(e) => handleToggleFlexivel(e.target.checked)}
-              className="h-5 w-5 accent-primary rounded"
-              aria-label="Oferta flexível"
-            />
-          </label>
-
           {!ofertaFlexivel && (
             <>
               <AddressInput

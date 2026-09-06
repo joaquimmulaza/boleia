@@ -10,11 +10,12 @@ describe('LandingSecurity', () => {
     expect(section.tagName).toBe('SECTION');
   });
 
-  it('fala de perfis, acordos claros e faltas rastreáveis', () => {
+  it('fala de perfis auto-declarados, acordos claros e faltas rastreáveis', () => {
     render(<LandingSecurity />);
 
     expect(screen.getByRole('heading', { name: /segurança/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /^perfis$/i })).toBeInTheDocument();
+    expect(screen.getByText(/sem verificação de identidade/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /^acordos claros$/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /^faltas rastreáveis$/i })).toBeInTheDocument();
   });

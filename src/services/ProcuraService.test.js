@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   createProcura,
+  createProcuraWithGrupo,
   listProcurasByOwner,
   getProcura,
 } from './ProcuraService.js';
@@ -17,6 +18,7 @@ vi.mock('../lib/supabase', () => ({
   supabase: {
     from: vi.fn(),
     auth: { getUser: vi.fn() },
+    rpc: vi.fn(),
   },
 }));
 
@@ -123,6 +125,74 @@ describe('ProcuraService', () => {
     });
     const result = await getProcura('pr-1');
     expect(result.id).toBe('pr-1');
+  });
+
+  it('createProcuraWithGrupo chama RPC atómica com procura+grupo+membro', async () => {
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'pax-1' } },
+    });
+    supabase.rpc.mockResolvedValue({
+      data: {
+        id: 'pr-grupo',
+        owner_id: 'pax-1',
+        n_candidato: 1,
+        estado: 'activa',
+      },
+      error: null,
+    });
+
+    const result = await createProcuraWithGrupo(
+      {
+        preferred_time: '07:15',
+        origin_name: 'Talatona',
+        origin_lat: -8.9,
+        origin_lng: 13.3,
+        destination_name: 'Miramar',
+        destination_lat: -8.81,
+        destination_lng: 13.23,
+        dias_semana: [1, 2, 3, 4, 5],
+        teto_mensal_kz: 50000,
+      },
+      {
+        nome: 'O meu grupo',
+        nMaximo: 5,
+        pickup_name: 'Talatona',
+        pickup_lat: -8.9,
+        pickup_lng: 13.3,
+        dropoff_name: 'Miramar',
+        dropoff_lat: -8.81,
+        dropoff_lng: 13.23,
+      },
+    );
+
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      'create_procura_with_grupo',
+      expect.objectContaining({
+        p_preferred_time: '07:15',
+        p_grupo_nome: 'O meu grupo',
+        p_n_maximo: 5,
+        p_pickup_name: 'Talatona',
+        p_dropoff_name: 'Miramar',
+        p_teto_mensal_kz: 50000,
+      }),
+    );
+    expect(result.id).toBe('pr-grupo');
+    expect(supabase.from).not.toHaveBeenCalled();
+  });
+
+  it('createProcuraWithGrupo propaga erro da RPC sem insert client', async () => {
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'pax-1' } },
+    });
+    supabase.rpc.mockResolvedValue({
+      data: null,
+      error: { message: 'Falha ao criar grupo.' },
+    });
+
+    await expect(
+      createProcuraWithGrupo({ preferred_time: '07:15' }, { nMaximo: 5 }),
+    ).rejects.toEqual({ message: 'Falha ao criar grupo.' });
+    expect(supabase.from).not.toHaveBeenCalled();
   });
 });
 

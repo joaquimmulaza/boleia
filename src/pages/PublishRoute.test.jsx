@@ -75,7 +75,7 @@ describe('PublishRoute — Publicar oferta', () => {
     expect(screen.getByRole('button', { name: /Publicar oferta/i })).toBeInTheDocument();
   });
 
-  it('mostra dias Seg–Sex seleccionados por omissão e toggle Oferta flexível', async () => {
+  it('mostra dias Seg–Sex seleccionados por omissão e selector Rota fixa | Flexível', async () => {
     await act(async () => {
       renderWithRouter(<PublishRoute />);
     });
@@ -87,8 +87,8 @@ describe('PublishRoute — Publicar oferta', () => {
     expect(screen.getByRole('button', { name: 'Sáb' })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('button', { name: 'Dom' })).toHaveAttribute('aria-pressed', 'false');
 
-    const flexToggle = screen.getByRole('checkbox', { name: /Oferta flexível/i });
-    expect(flexToggle).not.toBeChecked();
+    expect(screen.getByRole('button', { name: /Rota fixa/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Flexível$/i })).toBeInTheDocument();
   });
 
   it('submete createOferta com POR_PASSAGEIRO, dias Seg–Sex e flexibilidade desligada', async () => {
@@ -129,7 +129,7 @@ describe('PublishRoute — Publicar oferta', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Sex' }));
     fireEvent.click(screen.getByRole('button', { name: 'Sáb' }));
-    fireEvent.click(screen.getByRole('checkbox', { name: /Oferta flexível/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Flexível$/i }));
 
     fireEvent.change(document.querySelector('input[name="departure_time"]'), {
       target: { value: '07:15' },
@@ -179,7 +179,7 @@ describe('PublishRoute — Publicar oferta', () => {
     );
     expect(createOferta).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('checkbox', { name: /Oferta flexível/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Flexível$/i }));
     expect(screen.queryByLabelText(/Origem/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Destino/i)).not.toBeInTheDocument();
     expect(

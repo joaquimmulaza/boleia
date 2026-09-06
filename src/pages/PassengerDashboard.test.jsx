@@ -3,7 +3,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import PassengerDashboard from './PassengerDashboard';
-import { createProcura, listProcurasByOwner } from '../services/ProcuraService';
+import { createProcura, createProcuraWithGrupo, listProcurasByOwner } from '../services/ProcuraService';
 import { findCompatibleOfertas } from '../services/MatchingService';
 import { createProposta, listPropostasByProcura, enrichPropostasForReview, cancelProposta } from '../services/PropostaService';
 import { createAgreementFromProposal } from '../services/AgreementService';
@@ -16,6 +16,7 @@ vi.mock('../contexts/AuthContext', () => ({
 
 vi.mock('../services/ProcuraService', () => ({
   createProcura: vi.fn(),
+  createProcuraWithGrupo: vi.fn(),
   listProcurasByOwner: vi.fn().mockResolvedValue([]),
 }));
 
@@ -41,8 +42,6 @@ vi.mock('../services/WaitlistService', () => ({
 }));
 
 vi.mock('../services/GrupoService', () => ({
-  createGrupo: vi.fn(),
-  addMembroGrupo: vi.fn(),
   getGrupoByProcura: vi.fn().mockResolvedValue(null),
   listMembrosGrupo: vi.fn().mockResolvedValue([]),
   listGruposAbertos: vi.fn().mockResolvedValue([]),
@@ -98,6 +97,7 @@ const ofertaDirect = {
 describe('PassengerDashboard — marketplace', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     listProcurasByOwner.mockResolvedValue([]);
     getGrupoByProcura.mockResolvedValue(null);
     listMembrosGrupo.mockResolvedValue([]);
@@ -433,7 +433,7 @@ describe('PassengerDashboard — marketplace', () => {
     fireEvent.click(sab);
     expect(sab).toHaveAttribute('aria-pressed', 'true');
 
-    fireEvent.change(screen.getByLabelText(/Teto mensal/i), {
+    fireEvent.change(screen.getByLabelText(/Teto mensal por passageiro/i), {
       target: { name: 'teto_mensal_kz', value: '50000' },
     });
 
@@ -463,7 +463,94 @@ describe('PassengerDashboard — marketplace', () => {
     );
 
     expect(await screen.findByText(/50[\s.]?000\s*Kz/i)).toBeInTheDocument();
-    expect(screen.getByText(/Teto mensal/i)).toBeInTheDocument();
+    expect(screen.getByText(/Teto por passageiro/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Ver ofertas compatíveis/i })).toBeInTheDocument();
+  });
+
+  it('criar procura em modo grupo chama createProcuraWithGrupo (atómico)', async () => {
+    createProcuraWithGrupo.mockResolvedValue({
+      ...procuraBase,
+      id: 'pr-grupo',
+      n_candidato: 1,
+    });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Criar procura/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Grupo$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^5$/i }));
+
+    fireEvent.change(screen.getByLabelText(/^Origem$/i), {
+      target: { name: 'origin_name', value: 'Talatona' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Destino$/i), {
+      target: { name: 'destination_name', value: 'Miramar' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Guardar procura/i }));
+
+    await waitFor(() => {
+      expect(createProcuraWithGrupo).toHaveBeenCalledWith(
+        expect.objectContaining({
+          origin_name: 'Talatona',
+          destination_name: 'Miramar',
+        }),
+        expect.objectContaining({
+          nome: 'O meu grupo',
+          nMaximo: 5,
+          pickup_name: 'Talatona',
+          dropoff_name: 'Miramar',
+        }),
+      );
+    });
+    expect(createProcura).not.toHaveBeenCalled();
+  });
+
+  it('modo grupo: falha atómica não chama createProcura separado', async () => {
+    createProcuraWithGrupo.mockRejectedValue(new Error('Falha ao criar grupo.'));
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Criar procura/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Grupo$/i }));
+
+    fireEvent.change(screen.getByLabelText(/^Origem$/i), {
+      target: { name: 'origin_name', value: 'Talatona' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Destino$/i), {
+      target: { name: 'destination_name', value: 'Miramar' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Guardar procura/i }));
+
+    await waitFor(() => {
+      expect(createProcuraWithGrupo).toHaveBeenCalled();
+    });
+    expect(createProcura).not.toHaveBeenCalled();
+    expect(await screen.findByTestId('passenger-feedback')).toHaveTextContent(/Falha ao criar grupo/i);
+  });
+
+  it('persiste modo teto total do acordo após reload simulado', async () => {
+    localStorage.setItem('procuraTetoModo:v1', 'TOTAL_ACORDO');
+    listProcurasByOwner.mockResolvedValue([
+      { ...procuraBase, n_candidato: 1, teto_mensal_kz: 80000 },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(/Teto total do acordo/i)).toBeInTheDocument();
   });
 
   it('mostra inbox de propostas do motorista e permite aceitar (sentido B)', async () => {
