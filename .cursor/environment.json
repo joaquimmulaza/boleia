@@ -7,5 +7,10 @@
       "command": "pnpm dev"
     }
   ],
-  "ports": [5173]
+  "ports": [
+    {
+      "name": "dev",
+      "port": 5173
+    }
+  ]
 }
