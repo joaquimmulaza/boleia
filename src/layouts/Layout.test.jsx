@@ -120,4 +120,18 @@ describe('Layout Component', () => {
     expect(logo).toBeInTheDocument();
     expect(logo).toHaveAttribute('src', '/boleia-logo.png');
   });
+
+  it('main faz scroll interno e header não usa sticky sobre o conteúdo', async () => {
+    useAuth.mockReturnValue({ tipoPerfil: 'Passageiro' });
+
+    await act(async () => {
+      renderWithRouterAndTheme(<Layout />);
+    });
+
+    const header = document.querySelector('header');
+    const main = document.querySelector('main');
+    expect(header).not.toHaveClass('sticky');
+    expect(main).toHaveClass('min-h-0');
+    expect(main).toHaveClass('overflow-y-auto');
+  });
 });

@@ -125,3 +125,8 @@ body {
 .z-modal { z-index: var(--z-modal); }
 .z-drawer { z-index: var(--z-drawer); }
 .z-overlay { z-index: var(--z-overlay); }
+
+/* Hora 24h — ocultar AM/PM em WebKit/Blink */
+.time-input-24h::-webkit-datetime-edit-ampm-field {
+  display: none;
+}

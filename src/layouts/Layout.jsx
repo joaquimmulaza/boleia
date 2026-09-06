@@ -30,8 +30,8 @@ const Layout = () => {
     }`;
 
   return (
-    <div className="flex flex-col min-h-dvh bg-background-light dark:bg-background-dark transition-colors">
-      <header className="sticky top-0 z-header flex items-center justify-between px-4 py-3 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 max-w-md mx-auto w-full transition-colors shadow-sm">
+    <div className="flex h-full min-h-0 flex-col bg-background-light dark:bg-background-dark transition-colors">
+      <header className="shrink-0 z-header flex items-center justify-between px-4 py-3 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 max-w-md mx-auto w-full transition-colors shadow-sm">
         <h1 className="flex items-center">
           <img src="/boleia-logo.png" alt="Boleia Certa" className="h-9 w-auto object-contain" />
         </h1>
@@ -50,7 +50,7 @@ const Layout = () => {
       </header>
 
       {/* Área de Conteúdo */}
-      <main className="flex-1 overflow-y-auto pb-16 bg-background-light dark:bg-background-dark sm:pb-20 transition-colors">
+      <main className="flex-1 min-h-0 overflow-y-auto pb-16 bg-background-light dark:bg-background-dark sm:pb-20 transition-colors">
         <div className="w-full h-full min-h-full max-w-md mx-auto relative flex flex-col">
           <Outlet />
         </div>

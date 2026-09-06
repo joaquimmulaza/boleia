@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ArrowRight, Clock, Users, MapPin, Banknote } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AddressInput from '../components/AddressInput';
+import TimeInput from '../components/TimeInput';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 import EmptyState from '../components/EmptyState';
@@ -513,13 +514,13 @@ const PassengerDashboard = () => {
               <Clock size={16} aria-hidden="true" />
               Hora preferida
             </span>
-            <input
-              type="time"
+            <TimeInput
               name="preferred_time"
               value={form.preferred_time}
               onChange={handleChange}
               required
-              className="h-12 rounded-lg bg-light-gray dark:bg-slate-800 px-3 tabular-nums"
+              aria-label="Hora preferida"
+              className="h-12 rounded-lg bg-light-gray dark:bg-slate-800 px-3 outline-none focus:ring-2 focus:ring-primary/50"
             />
           </label>
 

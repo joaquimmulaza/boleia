@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, History, Banknote, Send } from 'lucide-react';
 import { createOferta } from '../services/OfertaService';
 import AddressInput from '../components/AddressInput';
+import TimeInput from '../components/TimeInput';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import { useAuth } from '../contexts/AuthContext';
+import { useHasVehicle } from '../hooks/useHasVehicle';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { DIAS_SEMANA, DIAS_UTEIS_DEFAULT } from '../utils/diasSemana';
 import { markPermissionsEligible } from '../utils/permissionsPrompt';
@@ -25,6 +29,8 @@ const OD_VAZIO = {
  */
 const PublishRoute = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { hasVehicle, loading: loadingVehicle } = useHasVehicle(user?.id);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [modoPreco, setModoPreco] = useState('POR_PASSAGEIRO');
@@ -37,6 +43,12 @@ const PublishRoute = () => {
     return_time: '',
     valor_mensal_ask_kz: '',
   });
+
+  useEffect(() => {
+    if (!loadingVehicle && hasVehicle === false) {
+      navigate('/veiculo', { replace: true });
+    }
+  }, [loadingVehicle, hasVehicle, navigate]);
 
   const handleChange = (e) => {
     setFormData({
@@ -136,6 +148,15 @@ const PublishRoute = () => {
       setLoading(false);
     }
   };
+
+  if (loadingVehicle || hasVehicle === false) {
+    return (
+      <PageShell className="pb-32">
+        <PageHeader title="Publicar oferta" onBack={() => navigate('/motorista')} />
+        <LoadingSkeleton />
+      </PageShell>
+    );
+  }
 
   return (
     <PageShell className="pb-32">
@@ -249,12 +270,12 @@ const PublishRoute = () => {
               <span className="flex items-center gap-1.5">
                 <Clock size={16} aria-hidden="true" /> Ida
               </span>
-              <input
-                type="time"
+              <TimeInput
                 name="departure_time"
                 value={formData.departure_time}
                 onChange={handleChange}
                 required
+                aria-label="Hora de ida"
                 className="h-12 rounded-lg bg-light-gray dark:bg-slate-800 px-3 outline-none focus:ring-2 focus:ring-primary/50"
               />
             </label>
@@ -262,11 +283,11 @@ const PublishRoute = () => {
               <span className="flex items-center gap-1.5">
                 <History size={16} aria-hidden="true" /> Regresso
               </span>
-              <input
-                type="time"
+              <TimeInput
                 name="return_time"
                 value={formData.return_time}
                 onChange={handleChange}
+                aria-label="Hora de regresso"
                 className="h-12 rounded-lg bg-light-gray dark:bg-slate-800 px-3 outline-none focus:ring-2 focus:ring-primary/50"
               />
             </label>

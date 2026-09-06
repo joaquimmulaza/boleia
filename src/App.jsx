@@ -33,9 +33,10 @@ function AppShell() {
   const { isOffline } = useNetworkStatus();
 
   return (
-    <>
+    <div className="flex h-dvh max-h-dvh flex-col overflow-hidden">
       <OfflineBanner isOffline={isOffline} />
-      <Routes>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <Routes>
         {/* Rotas públicas */}
         <Route path="/" element={<RootRoute />} />
         <Route path="/auth" element={<Auth />} />
@@ -65,9 +66,10 @@ function AppShell() {
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+        </Routes>
+      </div>
       <UpdatePrompt />
-    </>
+    </div>
   );
 }
 

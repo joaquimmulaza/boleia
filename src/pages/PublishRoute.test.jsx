@@ -1,12 +1,21 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import PublishRoute from './PublishRoute';
 import { createOferta } from '../services/OfertaService';
+import { useHasVehicle } from '../hooks/useHasVehicle';
 
 vi.mock('../services/OfertaService', () => ({
   createOferta: vi.fn(),
+}));
+
+vi.mock('../contexts/AuthContext', () => ({
+  useAuth: () => ({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' }),
+}));
+
+vi.mock('../hooks/useHasVehicle', () => ({
+  useHasVehicle: vi.fn(),
 }));
 
 vi.mock('../services/LocationService', () => ({
@@ -39,11 +48,28 @@ vi.mock('../lib/supabase', () => ({
   },
 }));
 
-const renderWithRouter = (ui) => render(<BrowserRouter>{ui}</BrowserRouter>);
+const renderWithRouter = (ui) => render(<MemoryRouter>{ui}</MemoryRouter>);
 
 describe('PublishRoute — Publicar oferta', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useHasVehicle.mockReturnValue({ hasVehicle: true, loading: false });
+  });
+
+  it('redireciona para /veiculo quando não há veículo registado', async () => {
+    useHasVehicle.mockReturnValue({ hasVehicle: false, loading: false });
+
+    render(
+      <MemoryRouter initialEntries={['/publicar-trajeto']}>
+        <Routes>
+          <Route path="/publicar-trajeto" element={<PublishRoute />} />
+          <Route path="/veiculo" element={<div>Página veículo</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Página veículo')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Publicar oferta/i })).not.toBeInTheDocument();
   });
 
   const fillRequiredFields = () => {
