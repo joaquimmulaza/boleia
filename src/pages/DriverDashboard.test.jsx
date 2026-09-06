@@ -14,6 +14,7 @@ import { findCompatibleProcuras } from '../services/MatchingService';
 import { getGrupoByProcura } from '../services/GrupoService';
 import { listOfertasByDriver } from '../services/OfertaService';
 import { supabase } from '../lib/supabase';
+import { expectNoUserFacingJargon } from '../test/jargonBan';
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' }),
@@ -663,5 +664,16 @@ describe('DriverDashboard — marketplace', () => {
       );
     });
     expect(await screen.findByText(/Proposta enviada ao passageiro/i)).toBeInTheDocument();
+  });
+
+  it('não expõe jargon de produto na UI do hub motorista', async () => {
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Talatona');
+    expectNoUserFacingJargon(document.body.textContent);
   });
 });

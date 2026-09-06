@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AbsenceTracker from './AbsenceTracker';
+import { expectNoUserFacingJargon } from '../test/jargonBan';
 
 const mockNavigate = vi.fn();
 let mockAcordoId = 'acordo-uuid-001';
@@ -123,5 +124,20 @@ describe('AbsenceTracker — marketplace', () => {
     render(<AbsenceTracker />);
     expect(await screen.findByTestId('acordo-faltas-item')).toBeInTheDocument();
     expect(screen.getByText(/Acordo · 3 pessoas/i)).toBeInTheDocument();
+  });
+
+  it('não expõe jargon de produto na UI de faltas', async () => {
+    mockAcordoId = null;
+    mockGetAgreementsForPassenger.mockResolvedValue([
+      {
+        id: 'acordo-uuid-001',
+        estado: 'activo',
+        n_passageiros_contrato: 1,
+        valor_mensal_por_passageiro_kz: 40000,
+      },
+    ]);
+    render(<AbsenceTracker />);
+    expect(await screen.findByText(/Registo de Faltas/i)).toBeInTheDocument();
+    expectNoUserFacingJargon(document.body.textContent);
   });
 });

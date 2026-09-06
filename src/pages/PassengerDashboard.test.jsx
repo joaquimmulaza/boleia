@@ -9,6 +9,7 @@ import { createProposta, listPropostasByProcura, enrichPropostasForReview, cance
 import { createAgreementFromProposal } from '../services/AgreementService';
 import { getGrupoByProcura, listMembrosGrupo } from '../services/GrupoService';
 import { listWaitlistByProcura } from '../services/WaitlistService';
+import { expectNoUserFacingJargon } from '../test/jargonBan';
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'pax-1' }, tipoPerfil: 'Passageiro' }),
@@ -757,5 +758,16 @@ describe('PassengerDashboard — marketplace', () => {
     expect(await screen.findByText('Propostas concluídas')).toBeInTheDocument();
     expect(screen.getByText('Aceite')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Aceitar proposta/i })).not.toBeInTheDocument();
+  });
+
+  it('não expõe jargon de produto na UI do hub passageiro', async () => {
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(/Sem procura activa/i)).toBeInTheDocument();
+    expectNoUserFacingJargon(document.body.textContent);
   });
 });
