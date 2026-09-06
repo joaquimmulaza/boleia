@@ -1,6 +1,5 @@
 import { supabase } from '../lib/supabase';
-
-const MODOS_PRECO = new Set(['POR_PASSAGEIRO', 'TOTAL_ACORDO']);
+import { MODOS_PRECO } from '../utils/modosPreco';
 
 /**
  * @param {{ flexibilidade_rota?: boolean } | null | undefined} oferta

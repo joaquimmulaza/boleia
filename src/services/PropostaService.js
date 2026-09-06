@@ -3,10 +3,9 @@ import { supabase } from '../lib/supabase';
 import { loadPropostaReview } from '../utils/propostaReview.js';
 import { enqueueRpc, isNetworkFailure } from './offlineQueue.js';
 import { createAgreementFromProposal } from './AgreementService.js';
+import { MODOS_PRECO } from '../utils/modosPreco.js';
 
 export { buildPropostaReview, loadPropostaReview } from '../utils/propostaReview.js';
-
-const MODOS_PRECO = new Set(['POR_PASSAGEIRO', 'TOTAL_ACORDO']);
 
 /**
  * @typedef {'POR_PASSAGEIRO' | 'TOTAL_ACORDO'} ModoPreco

@@ -29,19 +29,7 @@ import {
   filterPropostasParaInbox,
   filterPropostasEnviadas,
 } from '../utils/propostaInbox';
-
-/** ISO: 1=Seg … 7=Dom (duplicado de PublishRoute — evitar conflito de ficheiros). */
-const DIAS_SEMANA = [
-  { valor: 1, label: 'Seg' },
-  { valor: 2, label: 'Ter' },
-  { valor: 3, label: 'Qua' },
-  { valor: 4, label: 'Qui' },
-  { valor: 5, label: 'Sex' },
-  { valor: 6, label: 'Sáb' },
-  { valor: 7, label: 'Dom' },
-];
-
-const DIAS_UTEIS_DEFAULT = [1, 2, 3, 4, 5];
+import { DIAS_SEMANA, DIAS_UTEIS_DEFAULT } from '../utils/diasSemana';
 
 /**
  * Copy humana do tamanho da procura (lista = resumo).

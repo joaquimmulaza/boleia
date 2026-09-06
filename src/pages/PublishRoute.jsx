@@ -6,19 +6,7 @@ import AddressInput from '../components/AddressInput';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
-
-/** ISO: 1=Seg … 7=Dom */
-const DIAS_SEMANA = [
-  { valor: 1, label: 'Seg' },
-  { valor: 2, label: 'Ter' },
-  { valor: 3, label: 'Qua' },
-  { valor: 4, label: 'Qui' },
-  { valor: 5, label: 'Sex' },
-  { valor: 6, label: 'Sáb' },
-  { valor: 7, label: 'Dom' },
-];
-
-const DIAS_UTEIS_DEFAULT = [1, 2, 3, 4, 5];
+import { DIAS_SEMANA, DIAS_UTEIS_DEFAULT } from '../utils/diasSemana';
 
 const OD_VAZIO = {
   origin_name: '',

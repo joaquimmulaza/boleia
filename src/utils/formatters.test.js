@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatDate, formatCurrency } from './formatters';
+import { formatDate } from './formatters';
 
 describe('Formatters Utilities', () => {
   describe('formatDate', () => {
@@ -29,23 +29,6 @@ describe('Formatters Utilities', () => {
         const dateStr = `2023-${(index + 1).toString().padStart(2, '0')}-01`;
         expect(formatDate(dateStr)).toContain(month);
       });
-    });
-  });
-
-  describe('formatCurrency', () => {
-    it('adiciona pontos como separadores de milhar', () => {
-      expect(formatCurrency(1000)).toBe('1.000');
-      expect(formatCurrency(1000000)).toBe('1.000.000');
-      expect(formatCurrency(1500)).toBe('1.500');
-    });
-
-    it('mantém números pequenos sem alteração', () => {
-      expect(formatCurrency(100)).toBe('100');
-      expect(formatCurrency(0)).toBe('0');
-    });
-
-    it('lida com strings numéricas', () => {
-      expect(formatCurrency('2500')).toBe('2.500');
     });
   });
 });

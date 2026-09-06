@@ -12,7 +12,8 @@ import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 import EmptyState from '../components/EmptyState';
 import LoadingSkeleton from '../components/LoadingSkeleton';
-import { formatDate, formatCurrency } from '../utils/formatters';
+import { formatDate } from '../utils/formatters';
+import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 
 const AbsenceTracker = () => {
@@ -152,7 +153,7 @@ const AbsenceTracker = () => {
         <p className="text-primary font-semibold text-sm uppercase">Total a descontar</p>
         <div className="flex items-baseline gap-1 mt-1">
           <span className="text-3xl font-bold text-slate-900 dark:text-slate-50 tabular-nums">
-            {formatCurrency(totalDesconto)}
+            {formatKwanza(totalDesconto)}
           </span>
           <span className="text-lg font-semibold text-slate-600 dark:text-slate-400">Kz</span>
         </div>
@@ -203,7 +204,7 @@ const AbsenceTracker = () => {
               </div>
               <div className="text-right">
                 <p className="text-base font-bold text-red-500 tabular-nums">
-                  -{formatCurrency(falta.desconto_kz)} Kz
+                  -{formatKwanza(falta.desconto_kz)} Kz
                 </p>
               </div>
             </div>
