@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   createOferta,
   listOfertasByDriver,
+  listOfertasDisponiveis,
   getOferta,
   updateOferta,
   isOfertaFlexivel,
@@ -208,6 +209,35 @@ describe('OfertaService', () => {
       ).rejects.toThrow(/origem e destino/i);
 
       expect(supabase.from).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('listOfertasDisponiveis', () => {
+    it('lista ofertas disponíveis para passageiro autenticado', async () => {
+      supabase.auth.getUser.mockResolvedValue({
+        data: { user: { id: 'pax-1' } },
+      });
+      const mockOrder = vi.fn().mockResolvedValue({
+        data: [
+          { id: 'of-fix', flexibilidade_rota: false, origin_name: 'A', destination_name: 'B' },
+          { id: 'of-flex', flexibilidade_rota: true },
+        ],
+        error: null,
+      });
+      const mockIn = vi.fn().mockReturnValue({ order: mockOrder });
+      const mockSelect = vi.fn().mockReturnValue({ in: mockIn });
+      supabase.from.mockReturnValue({ select: mockSelect });
+
+      const result = await listOfertasDisponiveis();
+
+      expect(supabase.from).toHaveBeenCalledWith('ofertas_capacidade');
+      expect(mockIn).toHaveBeenCalledWith('estado', ['disponivel', 'parcial', 'cheia']);
+      expect(result).toHaveLength(2);
+    });
+
+    it('rejeita sem autenticação', async () => {
+      supabase.auth.getUser.mockResolvedValue({ data: { user: null } });
+      await expect(listOfertasDisponiveis()).rejects.toThrow('Não autenticado');
     });
   });
 

@@ -147,6 +147,29 @@ export async function listOfertasByDriver(driverId) {
 }
 
 /**
+ * Feed browse para passageiro autenticado — todas as ofertas activas no marketplace.
+ * Sem matching geo; flexível mantém OD null (UI usa `labelRotaOferta`).
+ * @returns {Promise<object[]>}
+ */
+export async function listOfertasDisponiveis() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('Não autenticado.');
+  }
+
+  const { data, error } = await supabase
+    .from('ofertas_capacidade')
+    .select('*')
+    .in('estado', ['disponivel', 'parcial', 'cheia'])
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
  * @param {string} ofertaId
  */
 export async function getOferta(ofertaId) {
