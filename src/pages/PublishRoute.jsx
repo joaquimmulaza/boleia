@@ -7,6 +7,7 @@ import TimeInput from '../components/TimeInput';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import FeedbackAlert from '../components/FeedbackAlert';
 import { useAuth } from '../contexts/AuthContext';
 import { useHasVehicle } from '../hooks/useHasVehicle';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
@@ -30,7 +31,8 @@ const OD_VAZIO = {
 const PublishRoute = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { hasVehicle, loading: loadingVehicle } = useHasVehicle(user?.id);
+  const { hasVehicle, loading: loadingVehicle, error: vehicleError, retry: retryVehicleCheck } =
+    useHasVehicle(user?.id);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [modoPreco, setModoPreco] = useState('POR_PASSAGEIRO');
@@ -45,10 +47,10 @@ const PublishRoute = () => {
   });
 
   useEffect(() => {
-    if (!loadingVehicle && hasVehicle === false) {
+    if (!loadingVehicle && !vehicleError && hasVehicle === false) {
       navigate('/veiculo', { replace: true });
     }
-  }, [loadingVehicle, hasVehicle, navigate]);
+  }, [loadingVehicle, vehicleError, hasVehicle, navigate]);
 
   const handleChange = (e) => {
     setFormData({
@@ -154,6 +156,22 @@ const PublishRoute = () => {
       <PageShell className="pb-32">
         <PageHeader title="Publicar oferta" onBack={() => navigate('/motorista')} />
         <LoadingSkeleton />
+      </PageShell>
+    );
+  }
+
+  if (vehicleError) {
+    return (
+      <PageShell className="pb-32">
+        <PageHeader title="Publicar oferta" onBack={() => navigate('/motorista')} />
+        <FeedbackAlert type="error" text={vehicleError} className="mb-4" />
+        <button
+          type="button"
+          onClick={retryVehicleCheck}
+          className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-sm transition-opacity hover:opacity-90"
+        >
+          Tentar novamente
+        </button>
       </PageShell>
     );
   }

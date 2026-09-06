@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import Auth from './pages/Auth';
 import Layout from './layouts/Layout';
@@ -31,42 +31,57 @@ const RootRoute = () => {
 
 function AppShell() {
   const { isOffline } = useNetworkStatus();
+  const { pathname } = useLocation();
+  const isPublicRoute = pathname === '/' || pathname === '/auth';
+
+  const routes = (
+    <Routes>
+      {/* Rotas públicas */}
+      <Route path="/" element={<RootRoute />} />
+      <Route path="/auth" element={<Auth />} />
+
+      {/* Rotas protegidas envolvidas pelo Layout global (com BottomBar) */}
+      <Route element={<Layout />}>
+        {/* Rotas exclusivas do Passageiros */}
+        <Route element={<ProtectedRoute allowedRole="Passageiro" />}>
+          <Route path="/passageiro" element={<PassengerDashboard />} />
+        </Route>
+
+        {/* Rotas exclusivas do Motorista */}
+        <Route element={<ProtectedRoute allowedRole="Motorista" />}>
+          <Route path="/motorista" element={<DriverDashboard />} />
+          <Route path="/veiculo" element={<VehicleSetup />} />
+          <Route path="/publicar-trajeto" element={<PublishRoute />} />
+        </Route>
+
+        {/* Rotas partilhadas (qualquer utilizador autenticado) */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/acordos" element={<MyAgreements />} />
+          <Route path="/faltas" element={<AbsenceTracker />} />
+          <Route path="/faltas/:acordoId" element={<AbsenceTracker />} />
+          <Route path="/perfil" element={<Profile />} />
+        </Route>
+      </Route>
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+
+  if (isPublicRoute) {
+    return (
+      <>
+        {routes}
+        <UpdatePrompt />
+      </>
+    );
+  }
 
   return (
     <div className="flex h-dvh max-h-dvh flex-col overflow-hidden">
       <OfflineBanner isOffline={isOffline} />
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <Routes>
-        {/* Rotas públicas */}
-        <Route path="/" element={<RootRoute />} />
-        <Route path="/auth" element={<Auth />} />
-
-        {/* Rotas protegidas envolvidas pelo Layout global (com BottomBar) */}
-        <Route element={<Layout />}>
-          {/* Rotas exclusivas do Passageiros */}
-          <Route element={<ProtectedRoute allowedRole="Passageiro" />}>
-            <Route path="/passageiro" element={<PassengerDashboard />} />
-          </Route>
-
-          {/* Rotas exclusivas do Motorista */}
-          <Route element={<ProtectedRoute allowedRole="Motorista" />}>
-            <Route path="/motorista" element={<DriverDashboard />} />
-            <Route path="/veiculo" element={<VehicleSetup />} />
-            <Route path="/publicar-trajeto" element={<PublishRoute />} />
-          </Route>
-
-          {/* Rotas partilhadas (qualquer utilizador autenticado) */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/acordos" element={<MyAgreements />} />
-            <Route path="/faltas" element={<AbsenceTracker />} />
-            <Route path="/faltas/:acordoId" element={<AbsenceTracker />} />
-            <Route path="/perfil" element={<Profile />} />
-          </Route>
-        </Route>
-
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        {routes}
       </div>
       <UpdatePrompt />
     </div>
@@ -84,5 +99,7 @@ function App() {
     </ThemeProvider>
   );
 }
+
+export { AppShell };
 
 export default App;

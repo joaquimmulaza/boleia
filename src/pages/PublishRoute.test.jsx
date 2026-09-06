@@ -53,11 +53,11 @@ const renderWithRouter = (ui) => render(<MemoryRouter>{ui}</MemoryRouter>);
 describe('PublishRoute — Publicar oferta', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useHasVehicle.mockReturnValue({ hasVehicle: true, loading: false });
+    useHasVehicle.mockReturnValue({ hasVehicle: true, loading: false, error: null, retry: vi.fn() });
   });
 
   it('redireciona para /veiculo quando não há veículo registado', async () => {
-    useHasVehicle.mockReturnValue({ hasVehicle: false, loading: false });
+    useHasVehicle.mockReturnValue({ hasVehicle: false, loading: false, error: null, retry: vi.fn() });
 
     render(
       <MemoryRouter initialEntries={['/publicar-trajeto']}>
@@ -70,6 +70,32 @@ describe('PublishRoute — Publicar oferta', () => {
 
     expect(await screen.findByText('Página veículo')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Publicar oferta/i })).not.toBeInTheDocument();
+  });
+
+  it('não redireciona para /veiculo quando a consulta de veículo falha', async () => {
+    const retry = vi.fn();
+    useHasVehicle.mockReturnValue({
+      hasVehicle: null,
+      loading: false,
+      error: 'Não foi possível verificar o veículo.',
+      retry,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/publicar-trajeto']}>
+        <Routes>
+          <Route path="/publicar-trajeto" element={<PublishRoute />} />
+          <Route path="/veiculo" element={<div>Página veículo</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/verificar o veículo/i);
+    expect(screen.getByRole('button', { name: /Tentar novamente/i })).toBeInTheDocument();
+    expect(screen.queryByText('Página veículo')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Tentar novamente/i }));
+    expect(retry).toHaveBeenCalledTimes(1);
   });
 
   const fillRequiredFields = () => {
