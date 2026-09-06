@@ -23,6 +23,7 @@ import { Button } from '../components/ui/button';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { resolveAgreementPricing } from '../utils/resolveAgreementPricing';
+import { labelRotaOferta } from '../utils/ofertaLabels';
 
 /**
  * @param {string | null | undefined} estado
@@ -443,8 +444,7 @@ const MyAgreements = () => {
       linhas.filter((p) => isActivo(p.estado)).length ||
       0;
     const oferta = acordo.ofertas_capacidade;
-    const origem = oferta?.origin_name || 'Origem';
-    const destino = oferta?.destination_name || 'Destino';
+    const rota = labelRotaOferta(oferta || {});
     const activo = isActivo(acordo.estado);
     const leavePending = Boolean(pendingLeaveIds[acordo.id]);
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
@@ -486,9 +486,9 @@ const MyAgreements = () => {
           <ChevronRight size={18} className="text-slate-400 shrink-0" aria-hidden="true" />
         </div>
         <div className="flex items-center gap-2 font-bold">
-          <span>{origem}</span>
+          <span>{rota.origem}</span>
           <ArrowRight size={16} className="text-slate-400 shrink-0" aria-hidden="true" />
-          <span>{destino}</span>
+          <span>{rota.destino}</span>
         </div>
         <div className="flex justify-between items-end gap-2 text-sm text-slate-500">
           <span className="flex items-center gap-1">
@@ -516,8 +516,7 @@ const MyAgreements = () => {
     if (!selected) return null;
 
     const oferta = selected.ofertas_capacidade;
-    const origem = oferta?.origin_name || 'Origem';
-    const destino = oferta?.destination_name || 'Destino';
+    const rota = labelRotaOferta(oferta || {});
     const horaPartida = formatHora(oferta?.departure_time);
     const linhas = selected.acordos_passageiros || [];
     const nLinhas = selected.n_passageiros_contrato || linhas.length || 0;
@@ -606,23 +605,23 @@ const MyAgreements = () => {
               Detalhe do acordo
             </h2>
             <p className="font-semibold text-slate-900 dark:text-white text-balance">
-              {origem} → {destino}
+              {rota.origem} → {rota.destino}
             </p>
           </div>
 
           <section className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 p-4 space-y-4">
-            {(horaPartida || origem || destino) && (
+            {(horaPartida || rota.origem || rota.destino) && (
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-xs text-slate-500">Partida</p>
                   {horaPartida ? (
                     <p className="font-bold tabular-nums">{horaPartida}</p>
                   ) : null}
-                  <p className="text-xs text-slate-600 dark:text-slate-300">{origem}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">{rota.origem}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500">Chegada</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300">{destino}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">{rota.destino}</p>
                 </div>
               </div>
             )}

@@ -262,5 +262,39 @@ describe('OfertaService', () => {
       );
       expect(result.estado).toBe('inactiva');
     });
+
+    it('oferta flexível: update com flexibilidade_rota anula OD (não persiste origem/destino)', async () => {
+      const mockSingle = vi.fn().mockResolvedValue({
+        data: { id: 'of-flex', flexibilidade_rota: true },
+        error: null,
+      });
+      const mockEq = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({ single: mockSingle }),
+      });
+      const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
+      supabase.from.mockReturnValue({ update: mockUpdate });
+
+      await updateOferta('of-flex', {
+        flexibilidade_rota: true,
+        origin_name: 'Talatona',
+        origin_lat: -8.9,
+        origin_lng: 13.1,
+        destination_name: 'Miramar',
+        destination_lat: -8.8,
+        destination_lng: 13.2,
+      });
+
+      expect(mockUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          flexibilidade_rota: true,
+          origin_name: null,
+          origin_lat: null,
+          origin_lng: null,
+          destination_name: null,
+          destination_lat: null,
+          destination_lng: null,
+        }),
+      );
+    });
   });
 });

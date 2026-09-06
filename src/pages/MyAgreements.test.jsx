@@ -146,6 +146,26 @@ describe('MyAgreements — marketplace 1:N', () => {
     });
   });
 
+  it('acordo com oferta flexível não mostra placeholders Origem/Destino', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        ofertas_capacidade: {
+          flexibilidade_rota: true,
+          departure_time: '07:15',
+          origin_name: null,
+          destination_name: null,
+        },
+      },
+    ]);
+
+    renderPage();
+
+    expect(await screen.findByText('Oferta flexível')).toBeInTheDocument();
+    expect(screen.queryByText(/^Origem$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Destino$/)).not.toBeInTheDocument();
+  });
+
   it('motorista no detalhe vê N linhas com nome, quota Kz e estado humano', async () => {
     renderPage();
 

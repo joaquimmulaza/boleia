@@ -142,6 +142,55 @@ describe('PassengerDashboard — marketplace', () => {
     expect(screen.queryByText(/zona/i)).not.toBeInTheDocument();
   });
 
+  it('findCompatibleOfertas recebe dias_semana da procura activa', async () => {
+    listProcurasByOwner.mockResolvedValue([
+      { ...procuraBase, n_candidato: 1, dias_semana: [1, 2, 3] },
+    ]);
+    findCompatibleOfertas.mockResolvedValue({ direct: [], waitlist: [], incompatible: [] });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(findCompatibleOfertas).toHaveBeenCalledWith(
+        expect.objectContaining({ dias_semana: [1, 2, 3] }),
+      );
+    });
+  });
+
+  it('oferta flexível compatível mostra «Oferta flexível» sem Origem/Destino fictícios', async () => {
+    listProcurasByOwner.mockResolvedValue([
+      { ...procuraBase, n_candidato: 1, dias_semana: [1, 2, 3, 4, 5] },
+    ]);
+    findCompatibleOfertas.mockResolvedValue({
+      direct: [
+        {
+          id: 'of-flex',
+          flexibilidade_rota: true,
+          departure_time: '07:15:00',
+          vagas_disponiveis: 4,
+          valor_mensal_ask_kz: 80000,
+          modo_preco: 'POR_PASSAGEIRO',
+        },
+      ],
+      waitlist: [],
+      incompatible: [],
+    });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Oferta flexível')).toBeInTheDocument();
+    expect(screen.queryByText(/^Origem$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Destino$/)).not.toBeInTheDocument();
+  });
+
   it('com procura activa mostra painel para criar grupo', async () => {
     listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
 

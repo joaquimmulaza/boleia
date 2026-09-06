@@ -163,6 +163,7 @@ const PassengerDashboard = () => {
             destination_lat: Number(activa.destination_lat),
             destination_lng: Number(activa.destination_lng),
             n_candidato: activa.n_candidato,
+            dias_semana: activa.dias_semana,
           });
           setMatches({ direct: result.direct, waitlist: result.waitlist });
         } finally {

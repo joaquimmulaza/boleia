@@ -170,6 +170,15 @@ export async function updateOferta(ofertaId, updates) {
   delete allowed.driver_id;
   delete allowed.id;
 
+  if (allowed.flexibilidade_rota) {
+    allowed.origin_name = null;
+    allowed.origin_lat = null;
+    allowed.origin_lng = null;
+    allowed.destination_name = null;
+    allowed.destination_lat = null;
+    allowed.destination_lng = null;
+  }
+
   const { data, error } = await supabase
     .from('ofertas_capacidade')
     .update({ ...allowed, updated_at: new Date().toISOString() })
