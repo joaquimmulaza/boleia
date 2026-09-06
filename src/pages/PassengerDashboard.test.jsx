@@ -451,6 +451,21 @@ describe('PassengerDashboard — marketplace', () => {
     });
   });
 
+  it('formulário usa TimeInput 24h para hora preferida', async () => {
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Criar procura/i }));
+
+    const hora = screen.getByLabelText('Hora preferida');
+    expect(hora).toHaveAttribute('type', 'time');
+    expect(hora).toHaveAttribute('lang', 'pt-PT');
+    expect(hora).toHaveClass('time-input-24h');
+  });
+
   it('mostra teto mensal formatado no hub quando a procura tem teto_mensal_kz', async () => {
     listProcurasByOwner.mockResolvedValue([
       { ...procuraBase, n_candidato: 1, teto_mensal_kz: 50000 },
