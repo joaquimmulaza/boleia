@@ -20,6 +20,20 @@ alwaysApply: true
 - Pergunta de leitura / “só explica” sem mudar código.
 - Follow-up micro da mesma task já especificada na sessão (continua Execute).
 
+## Plan mode / CreatePlan / Implementar plano
+
+CreatePlan e a execução do plano são **camadas** do loop Boleia — **não o substituem**.
+
+1. **Antes de CreatePlan:** ler `orchestrator/SKILL.md`; se UI, também `ui-stack.mdc` + `boleia-stitch`.
+2. **O plano deve incluir todos de workflow**, não só ficheiros:
+   - Spec/Quick (excepto pergunta só-leitura **ou** alteração só docs/rules/skills sem `src/` — aí Spec é opcional/Quick; não exige artefacto `.specs/` completo)
+   - UI: `ui-designer` → gate design → `implementer` → `ui-qa` + `code-reviewer`
+   - Não-UI com `src/`: Spec/Quick → `implementer` → `code-reviewer`
+   - Só docs/rules/skills (sem `src/`): implementar + `code-reviewer` leve (consistência); sem Stitch/ui-qa; Spec opcional
+3. **Ao «Implement the plan» / Agent mode após plano:** completar o loop mesmo se o plano omitiu gates — adicionar aos todos de sessão os papéis em falta. Proibido terminar só com edits de ficheiros.
+4. **Revisores** (`ui-qa`, `code-reviewer`): preferir `Task` com o `SKILL.md` do papel no prompt, para o hook `subagentStop` reagir a `VERDICT: REJECT`.
+5. **Proibido:** «plano aprovado = só editar ficheiros e terminar» sem `VERDICT: APPROVE` quando houve mudança em `src/` ou UI.
+
 ## Contrato VERDICT (revisores)
 
 ```text
@@ -30,7 +44,7 @@ NEXT: (se REJECT) instruções concretas para o agente seguinte
 ```
 
 - Máx. **2** ciclos Designer↔UI QA e **2** ciclos Implementer↔Code Reviewer; depois escalar ao utilizador.
-- Hook `subagentStop` pode reenviar follow-up em REJECT (`loop_limit: 2`).
+- Hook `subagentStop` pode reenviar follow-up em REJECT (`loop_limit: 2`) — só se os revisores correram via `Task`.
 
 ## Commit
 

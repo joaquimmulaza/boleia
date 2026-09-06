@@ -17,7 +17,7 @@ Stack: React + Vite, Tailwind CSS, Lucide React, shadcn/ui (JSX), Supabase (Back
 * **TDD Obrigatório (Test-Driven Development):** Todo o código funcional deve ser precedido por testes no Vitest. É estritamente proibido escrever a implementação antes dos testes. O fluxo é: 1. Escrever Testes (e mockar o necessário) -> 2. Executar (vão falhar) -> 3. Escrever Código -> 4. Passar nos Testes.
 * **Spec-Driven obrigatório (tarefa nova):** Ler e seguir `.cursor/skills/tlc-spec-driven` antes de Designer/Implementer. Auto-size (Quick / Spec / Design / Tasks). Artefactos em `.specs/`.
 * **Paralelismo:** Com ≥2 tasks independentes, ler `.cursor/skills/subagent-creator` e lançar `Task` em paralelo só com scopes de ficheiros disjuntos.
-* **Loop multi-agente:** Orquestrador → papéis em `.cursor/skills/boleia-agent-loop/` (ui-designer, implementer, ui-qa, code-reviewer). Contrato `VERDICT: APPROVE|REJECT`. Máx. 2 ciclos por gate. Ver `.cursor/rules/multi-agent-loop.mdc`.
+* **Loop multi-agente:** Orquestrador → papéis em `.cursor/skills/boleia-agent-loop/` (ui-designer, implementer, ui-qa, code-reviewer). Contrato `VERDICT: APPROVE|REJECT`. Máx. 2 ciclos por gate. Ver `.cursor/rules/multi-agent-loop.mdc`. **Plan mode / CreatePlan / «Implement the plan» não dispensam Spec nem gates VERDICT** — o plano injecta todos de workflow; a execução despacha os papéis (revisores preferencialmente via `Task`).
 * **Supabase MCP Exclusivo:** Para quaisquer alterações na base de dados (DDL ou migrações), utilizar exclusivamente o Supabase MCP. Nada de escrever SQL manual solto ou executar lógicas de alteração fora do MCP.
 * **Modularidade:** Mantém os ficheiros pequenos e o código altamente modular. Se um ficheiro crescer demasiado, para e sugere uma refatoração.
 * **Um Passo de Cada Vez:** Resolve apenas o problema que foi pedido no prompt. Não tentes prever e construir funcionalidades futuras não solicitadas.
@@ -59,7 +59,7 @@ Lê este documento antes de iniciares qualquer nova funcionalidade. Tarefa nova 
 * **Geocoding:** `LocationService.js` (Photon API / OpenStreetMap, `countrycode=ao`) — coordenadas OD nas ofertas/procuras. Sem Google Maps / `VITE_GOOGLE_MAPS_API_KEY`.
 * Serviços canónicos: `OfertaService`, `ProcuraService`, `GrupoService`, `PropostaService`, `AgreementService` (RPC `accept_proposal`), `MatchingService`, `WaitlistService`, `AbsenceService`.
 * Testar fluxo de sessão em produção após deploy no Vercel.
-* **Agent loop:** regras em `.cursor/rules/` (incl. `graphify.mdc`), skills em `.cursor/skills/boleia-agent-loop/`, hooks em `.cursor/hooks.json`.
+* **Agent loop:** regras em `.cursor/rules/` (incl. `graphify.mdc`, `multi-agent-loop.mdc` com ponte Plan mode), skills em `.cursor/skills/boleia-agent-loop/`, hooks em `.cursor/hooks.json` (`subagentStop` + `stop` com check VERDICT).
 * **Grafo:** consultar Graphlore **antes** de Grep em massa (ver §1.1).
 
 ## 7. Acordos (Agreements)
@@ -121,9 +121,10 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
  * **Deep linking:** `notificationRouter.js` — `proposal_received` → hub da **contraparte** (`metadata.inbox`: `passageiro`|`motorista`); `waitlist_promoted`, `match_available`, etc.
  * **AuthContext:** `{ session, user, loading, tipoPerfil, profile, refreshProfile }`.
  * **Design SoT:** Stitch MCP (one-project canónico «Boleia Certa» + Project Resolution) + UI Skills sync + shadcn (`src/components/ui/`) + Mobbin free-safe; v0/One só fallback (nunca por lista vazia). Ponte `.cursor/skills/boleia-stitch` + `skills/`. Penpot não é SoT.
- * **Agent loop:** `.cursor/skills/boleia-agent-loop/`, `.cursor/rules/ui-stack.mdc`, `.cursor/rules/multi-agent-loop.mdc`, `.cursor/rules/graphify.mdc` (grafo antes de Grep), hooks `subagentStop`.
+ * **Agent loop:** `.cursor/skills/boleia-agent-loop/` (incl. bridge Plan mode no orchestrator), `.cursor/rules/ui-stack.mdc`, `.cursor/rules/multi-agent-loop.mdc` (secção Plan mode), `.cursor/rules/graphify.mdc` (grafo antes de Grep), hooks `subagentStop` + `stop` (exige VERDICT em falta).
  * **Produto (2026-09-05):** oferta fixa vs flexível (sem OD/zona no flex); propostas A/B; aceite só contraparte; Procura→M propostas→1 acordo 1:N. **T32–T35 Done** (Phase 7 completa).
  * **UI audit gaps Tasks 4/6/19 (2026-09-06):** `PropostaReviewCard` picker checkboxes se grupo > lugares (`requiresMemberSelection` → `p_member_ids`); `MyAgreements` rejeitar adenda; `GrupoProcuraPanel` telefone em fallback colapsável + WhatsApp auxiliar. Spec: `.specs/features/ui-audit-gaps/quick.md`.
+ * **Pickup opcional no fallback telefone (2026-09-06):** `AddressInput` passou a aceitar `required` (default `true` para OD); no convite por telefone usa `required={false}` — alinha label «Ponto de recolha (opcional)» com HTML5/service/DB (`membros_grupo.pickup_*` nullable). Spec: `.specs/features/grupo-pickup-opcional/quick.md`.
  * **DB audit gaps Tasks 2/3/4/6 (2026-09-06):** migração `20260906120000_audit_gaps_rls_accept_member_ids_adenda_reject.sql` — RLS `membros_grupo` self-insert só `pendente`; `accept_proposal(..., p_member_ids)`; `reject_agreement_adenda(p_adenda_id)`. Verificação integração Vitest scoped **50/50 green**.
 3. **Serviços canónicos (`src/services/`):**
  * `OfertaService`, `ProcuraService` (`dias_semana` default Seg–Sex), `GrupoService` (`createGrupo`, `getGrupoByProcura`, `listMembrosGrupo`, `addMembroGrupo`, `syncNCandidato`), `PropostaService` (`acceptProposal` → memberIds), `AgreementService` (`createAgreementFromProposal` + `memberIds`/`p_member_ids`, `leavePassenger`, **`renegotiateAgreementPricing`**, **`acceptAgreementAdenda`**, **`rejectAgreementAdenda`**), `MatchingService` (`findCompatibleOfertas`, **`findCompatibleProcuras`** dual fixa/flex), `WaitlistService` (`enqueueWaitlist`, `promoteWaitlist`, listagens), `AbsenceService`, `LocationService` (Photon), `ProfileService.findPassageiroByTelefone`.

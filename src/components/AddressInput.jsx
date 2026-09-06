@@ -8,6 +8,20 @@ const ICON_MAP = {
   flag: Flag,
 };
 
+/**
+ * Campo de endereço com autocomplete Photon/OSM.
+ * @param {{
+ *   id?: string,
+ *   name: string,
+ *   label?: string,
+ *   icon?: string,
+ *   placeholder?: string,
+ *   value?: string,
+ *   onChange: Function,
+ *   onSelectCoordinates?: Function,
+ *   required?: boolean,
+ * }} props
+ */
 const AddressInput = ({
   id,
   name,
@@ -17,6 +31,7 @@ const AddressInput = ({
   value,
   onChange,
   onSelectCoordinates,
+  required = true,
 }) => {
   const IconComponent = icon ? ICON_MAP[icon] : null;
 
@@ -93,7 +108,7 @@ const AddressInput = ({
             id={id}
             type="text"
             name={name}
-            required
+            required={required}
             value={inputValue}
             onChange={handleChange}
             onFocus={() => {

@@ -130,9 +130,9 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
       }
       await addMembroGrupo(grupo.id, {
         passenger_id: perfil.id,
-        pickup_name: pickup.pickup_name || null,
-        pickup_lat: pickup.pickup_lat,
-        pickup_lng: pickup.pickup_lng,
+        pickup_name: pickup.pickup_name?.trim() || null,
+        pickup_lat: pickup.pickup_lat ?? null,
+        pickup_lng: pickup.pickup_lng ?? null,
         ordem_insercao: membros.length,
       });
       setTelefone('');
@@ -411,6 +411,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
                     name="pickup_name"
                     label="Ponto de recolha (opcional)"
                     value={pickup.pickup_name}
+                    required={false}
                     onChange={handlePickupChange}
                     onSelectCoordinates={(c) =>
                       setPickup((prev) => ({

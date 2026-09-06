@@ -11,7 +11,7 @@
     "stop": [
       {
         "type": "prompt",
-        "prompt": "Antes de terminar: se houve implementação, confirma se npm run lint e npm run test:run foram considerados; não faças commit sem pedido explícito do utilizador. Se VERDICT REJECT ficou por resolver, resume o próximo papel. Input: $ARGUMENTS",
+        "prompt": "Antes de terminar (loop Boleia): (1) Se a sessão alterou ficheiros em src/ ou UI/UX e NÃO há VERDICT: APPROVE de code-reviewer (e de ui-qa se foi UI), NÃO termines — lê .cursor/skills/boleia-agent-loop/<papel>/SKILL.md e despacha o papel em falta via Task. (2) Se VERDICT: REJECT ficou por resolver, resume o NEXT indicado. (3) Confirma se npm run lint e npm run test:run foram considerados quando houve código. (4) Não faças commit sem pedido explícito do utilizador. Plan mode / CreatePlan não dispensam estes gates. Input: $ARGUMENTS",
         "loop_limit": 1
       }
     ]
