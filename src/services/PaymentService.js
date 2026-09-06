@@ -60,13 +60,52 @@ export async function listPagamentosEmCustodia() {
  * @param {string} pagamentoId
  * @returns {Promise<string>}
  */
-export async function adminLiquidatePayment(pagamentoId) {
+/**
+ * Admin liquida um pagamento (idempotente).
+ * @param {string} pagamentoId
+ * @param {string | null} [idempotencyKey]
+ * @returns {Promise<string>}
+ */
+export async function adminLiquidatePayment(pagamentoId, idempotencyKey = null) {
   const { data, error } = await supabase.rpc('admin_liquidate_payment', {
     p_pagamento_id: pagamentoId,
+    p_idempotency_key: idempotencyKey,
   });
 
   if (error) throw error;
   return data;
+}
+
+/**
+ * Admin liquida todos os pagamentos em custódia de um período (batch).
+ * @param {string} mesReferencia ISO date (1.º dia do mês)
+ * @param {string | null} [driverId] opcional — só um motorista
+ * @param {string | null} [idempotencyKey]
+ * @returns {Promise<{ mes_referencia: string, pagamentos_liquidados: number, repasses: object[] }>}
+ */
+export async function adminLiquidatePeriod(mesReferencia, driverId = null, idempotencyKey = null) {
+  const { data, error } = await supabase.rpc('admin_liquidate_period', {
+    p_mes_referencia: mesReferencia,
+    p_driver_id: driverId,
+    p_idempotency_key: idempotencyKey,
+  });
+
+  if (error) throw error;
+  return data || { mes_referencia: mesReferencia, pagamentos_liquidados: 0, repasses: [] };
+}
+
+/**
+ * Admin: repasses registados (liquidação de período).
+ * @returns {Promise<object[]>}
+ */
+export async function listRepassesMotorista() {
+  const { data, error } = await supabase
+    .from('repasses_motorista')
+    .select('*, perfis!repasses_motorista_driver_id_fkey(nome_completo, iban, iban_titular)')
+    .order('liquidado_em', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
 }
 
 export async function listPagamentosPendentesValidacao() {

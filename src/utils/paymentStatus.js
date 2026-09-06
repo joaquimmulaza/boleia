@@ -38,6 +38,20 @@ export function computePayoutLiquidoKz(valorKz, takeRate = TAKE_RATE_PCT) {
 }
 
 /**
+ * Retenção da plataforma (~10% do GMV on-platform).
+ * @param {number} valorKz GMV (quota congelada do acordo).
+ * @param {number} [takeRate=TAKE_RATE_PCT]
+ * @returns {number}
+ */
+export function computePlatformFeeKz(valorKz, takeRate = TAKE_RATE_PCT) {
+  const valor = Number(valorKz);
+  if (!Number.isFinite(valor) || valor < 0) {
+    throw new Error('Valor do acordo inválido.');
+  }
+  return Math.floor(valor * takeRate);
+}
+
+/**
  * @param {string | null | undefined} estado
  * @returns {boolean}
  */

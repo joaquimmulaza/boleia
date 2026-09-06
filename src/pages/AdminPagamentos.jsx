@@ -9,9 +9,11 @@ import { basenameComprovativoPath } from '../utils/comprovativoPath';
 import {
   adminValidatePayment,
   adminLiquidatePayment,
+  adminLiquidatePeriod,
   getComprovativoSignedUrl,
   listPagamentosPendentesValidacao,
   listPagamentosEmCustodia,
+  listRepassesMotorista,
 } from '../services/PaymentService';
 import { computeRepasseLiquidoKz } from '../utils/paymentStatus';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
@@ -19,7 +21,9 @@ import { getFriendlyErrorMessage } from '../utils/errorHandler';
 const AdminPagamentos = () => {
   const [rows, setRows] = useState([]);
   const [custodiaRows, setCustodiaRows] = useState([]);
+  const [repasses, setRepasses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [periodBusy, setPeriodBusy] = useState(false);
   const [busyId, setBusyId] = useState(/** @type {string | null} */ (null));
   const [feedback, setFeedback] = useState(/** @type {{ type: 'success' | 'error', text: string } | null} */ (null));
   const [previewUrls, setPreviewUrls] = useState(/** @type {Record<string, string>} */ ({}));
@@ -29,12 +33,14 @@ const AdminPagamentos = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [pendentes, custodia] = await Promise.all([
+      const [pendentes, custodia, repasseRows] = await Promise.all([
         listPagamentosPendentesValidacao(),
         listPagamentosEmCustodia(),
+        listRepassesMotorista(),
       ]);
       setRows(pendentes);
       setCustodiaRows(custodia);
+      setRepasses(repasseRows);
     } catch (error) {
       console.error('Erro ao listar pagamentos:', error);
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(error) });
@@ -85,6 +91,29 @@ const AdminPagamentos = () => {
   const handleConfirmRejeicao = (motivo) => {
     if (!rejeicaoTarget) return;
     void handleValidate(rejeicaoTarget, false, motivo);
+  };
+
+  const handleLiquidatePeriod = async () => {
+    const now = new Date();
+    const mesReferencia = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    setPeriodBusy(true);
+    setFeedback(null);
+    try {
+      const result = await adminLiquidatePeriod(mesReferencia);
+      const count = result?.pagamentos_liquidados ?? 0;
+      setFeedback({
+        type: 'success',
+        text: count > 0
+          ? `Período liquidado — ${count} pagamento(s), ${result?.repasses?.length ?? 0} repasse(s).`
+          : 'Nenhum pagamento em custódia para liquidar neste período.',
+      });
+      await load();
+    } catch (error) {
+      console.error('Erro na liquidação do período:', error);
+      setFeedback({ type: 'error', text: getFriendlyErrorMessage(error) });
+    } finally {
+      setPeriodBusy(false);
+    }
   };
 
   const handleLiquidate = async (pagamentoId) => {
@@ -205,6 +234,25 @@ const AdminPagamentos = () => {
       )}
 
       <h2 className="mt-10 mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">
+        Liquidação do período
+      </h2>
+      <div className="rounded-xl border border-emerald-100 dark:border-emerald-900/40 bg-white dark:bg-slate-900 p-4 space-y-3">
+        <p className="text-xs text-slate-500 text-pretty">
+          Liquida todos os pagamentos em custódia do mês corrente e regista repasse por motorista
+          (take-rate ~10%, menos faltas on-platform). Requer IBAN no perfil de cada motorista.
+        </p>
+        <button
+          type="button"
+          disabled={periodBusy || Boolean(busyId)}
+          onClick={() => void handleLiquidatePeriod()}
+          className="w-full min-h-11 rounded-xl bg-emerald-700 text-white font-semibold disabled:opacity-60"
+          data-testid="liquidar-periodo"
+        >
+          Liquidar período (mês corrente)
+        </button>
+      </div>
+
+      <h2 className="mt-10 mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">
         Em custódia — liquidar
       </h2>
 
@@ -252,6 +300,40 @@ const AdminPagamentos = () => {
                 >
                   Liquidar repasse
                 </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <h2 className="mt-10 mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">
+        Repasses registados
+      </h2>
+
+      {loading ? null : repasses.length === 0 ? (
+        <p className="text-sm text-slate-500" data-testid="admin-repasses-vazio">
+          Nenhum repasse registado.
+        </p>
+      ) : (
+        <ul className="space-y-3" data-testid="admin-repasses-lista">
+          {repasses.map((rep) => {
+            const motorista = rep.perfis?.nome_completo || 'Motorista';
+            return (
+              <li
+                key={rep.id}
+                className="rounded-xl border border-emerald-100 dark:border-emerald-900/40 bg-white dark:bg-slate-900 p-4 space-y-1"
+              >
+                <p className="font-semibold text-slate-900 dark:text-white">{motorista}</p>
+                <p className="text-xs text-slate-500 tabular-nums">
+                  GMV {formatKwanza(rep.gmv_kz)} Kz · plataforma −{formatKwanza(rep.valor_plataforma_kz)} Kz
+                </p>
+                <p className="text-xs text-emerald-700 dark:text-emerald-300 tabular-nums">
+                  Repasse líquido: {formatKwanza(rep.valor_repasse_liquido_kz)} Kz
+                  {rep.desconto_faltas_kz ? ` (faltas −${formatKwanza(rep.desconto_faltas_kz)} Kz)` : ''}
+                </p>
+                <p className="text-xs font-mono text-slate-500 truncate" title={rep.iban_destino}>
+                  IBAN: {rep.iban_destino}
+                </p>
               </li>
             );
           })}

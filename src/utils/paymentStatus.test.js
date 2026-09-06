@@ -7,6 +7,7 @@ import {
   allowsAssiduidadeFaltasForAcordo,
   canTransitionPayment,
   computePayoutLiquidoKz,
+  computePlatformFeeKz,
   computeRepasseLiquidoKz,
   labelEstadoPagamento,
   helpEstadoPagamento,
@@ -33,6 +34,11 @@ describe('paymentStatus — máquina de estados PACOTE ENG #5', () => {
   it('computePayoutLiquidoKz aplica take-rate sobre valor do acordo (sem defaults)', () => {
     expect(computePayoutLiquidoKz(43000)).toBe(38700);
     expect(computePayoutLiquidoKz(77000)).toBe(69300);
+  });
+
+  it('computePlatformFeeKz retém ~10% do GMV', () => {
+    expect(computePlatformFeeKz(43000)).toBe(4300);
+    expect(computePlatformFeeKz(50000)).toBe(5000);
   });
 
   it('allowsContactReveal só após em_custodia (ou liquidado)', () => {
