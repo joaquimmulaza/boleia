@@ -139,3 +139,21 @@ export function getPlatformIban() {
   }
   return iban.trim();
 }
+
+/**
+ * URL assinada para preview do comprovativo (bucket privado).
+ * @param {string | null | undefined} storagePath
+ * @returns {Promise<string | null>}
+ */
+export async function getComprovativoSignedUrl(storagePath) {
+  if (typeof storagePath !== 'string' || !storagePath.trim()) {
+    return null;
+  }
+
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(storagePath.trim(), 300);
+
+  if (error) throw error;
+  return data?.signedUrl ?? null;
+}
