@@ -9,12 +9,47 @@
  * - inbox `passageiro` → sentido B (motorista criou) → hub /passageiro
  * - inbox `motorista` → sentido A (passageiro/grupo criou) → hub /motorista
  * - sem inbox (legado) → /motorista
+ *
+ * PACOTE ENG #16 — pagamento, adenda, renovação, liquidação → /acordos?openAcordoId&focus
  */
+
+/** Estados de adenda que exigem foco na secção «Alteração de preço». */
+const ADENDA_PENDENTE_ESTADOS = new Set([
+  'pendente_passageiro',
+  'pendente_contraparte',
+  'pendente_motorista',
+]);
+
+/**
+ * Deep link para detalhe de acordo com secção opcional.
+ * @param {Record<string, unknown> | null | undefined} metadata
+ * @param {string | null | undefined} focus pagamento | adenda | renovacao
+ * @returns {string}
+ */
+export function acordosDeepLink(metadata, focus) {
+  const params = new URLSearchParams();
+  if (metadata?.acordo_id) {
+    params.set('openAcordoId', String(metadata.acordo_id));
+  }
+  if (focus) {
+    params.set('focus', focus);
+  }
+  const qs = params.toString();
+  return qs ? `/acordos?${qs}` : '/acordos';
+}
 
 export const notificationRouteMap = {
   agreement_update: (metadata) => {
-    return metadata?.acordo_id ? `/acordos?openAcordoId=${metadata.acordo_id}` : '/acordos';
+    const adendaEstado = String(metadata?.adenda_estado || '').toLowerCase();
+    if (ADENDA_PENDENTE_ESTADOS.has(adendaEstado)) {
+      return acordosDeepLink(metadata, 'adenda');
+    }
+    return acordosDeepLink(metadata, null);
   },
+  adenda_pending: (metadata) => acordosDeepLink(metadata, 'adenda'),
+  payment_update: (metadata) => acordosDeepLink(metadata, 'pagamento'),
+  renewal_available: (metadata) => acordosDeepLink(metadata, 'renovacao'),
+  payout_liquidated: (metadata) => acordosDeepLink(metadata, 'pagamento'),
   /**
    * Deep link da contraparte (não do criador).
    * metadata.inbox: 'passageiro' (sentido B) | 'motorista' (sentido A).

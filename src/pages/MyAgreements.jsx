@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowRight, Clock, Users, ChevronRight, ShieldCheck, Pencil, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -284,18 +284,49 @@ const MyAgreements = () => {
     void syncPendingLeaves();
   }, [isOnline, syncPendingLeaves]);
 
+  const pendingFocusRef = useRef(/** @type {string | null} */ (null));
+
   useEffect(() => {
     if (isLoading || acordos.length === 0) return;
     const params = new URLSearchParams(location.search);
     const openAcordoId = params.get('openAcordoId') || location.state?.openAcordoId;
+    const focus = params.get('focus');
     if (openAcordoId) {
       const found = acordos.find((a) => a.id === openAcordoId);
       if (found) {
         setSelected(found);
+        if (focus) {
+          pendingFocusRef.current = focus;
+        }
         navigate(location.pathname, { replace: true, state: {} });
       }
     }
   }, [isLoading, acordos, location.search, location.state, navigate, location.pathname]);
+
+  useEffect(() => {
+    if (!selected || !pendingFocusRef.current) return;
+
+    const focus = pendingFocusRef.current;
+    pendingFocusRef.current = null;
+
+    /** @type {Record<string, string>} */
+    const focusTestIds = {
+      pagamento: 'acordo-pagamento-panel',
+      adenda: 'adenda-pendente',
+      renovacao: 'renovacao-periodo-panel',
+    };
+    const testId = focusTestIds[focus];
+    if (!testId) return undefined;
+
+    const frameId = requestAnimationFrame(() => {
+      document.querySelector(`[data-testid="${testId}"]`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [selected]);
 
   const activos = acordos.filter((a) => isActivo(a.estado));
   const outros = acordos.filter((a) => !isActivo(a.estado));
