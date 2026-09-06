@@ -7,8 +7,10 @@ import {
   getAgreementsForPassenger,
   leavePassenger,
   renegotiateAgreementPricing,
+  proposeAgreementAdenda,
   acceptAgreementAdenda,
   rejectAgreementAdenda,
+  terminateAgreement,
 } from '../services/AgreementService';
 import { listPending } from '../services/offlineQueue';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
@@ -18,6 +20,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 import ConfirmationModal from '../components/ConfirmationModal';
+import TerminateAgreementModal from '../components/TerminateAgreementModal';
 import { Button } from '../components/ui/button';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
@@ -29,6 +32,43 @@ import { resolveAgreementPricing } from '../utils/resolveAgreementPricing';
  */
 function isActivo(estado) {
   return String(estado || '').toLowerCase() === 'activo';
+}
+
+/**
+ * @param {string | null | undefined} estado
+ * @returns {boolean}
+ */
+function isCancelamentoPendente(estado) {
+  return String(estado || '').toLowerCase() === 'cancelamento_pendente';
+}
+
+/**
+ * Rótulo humano do estado do acordo (sem snake_case na UI).
+ * @param {string | null | undefined} estado
+ * @returns {string}
+ */
+function estadoAcordoLabel(estado) {
+  const e = String(estado || '').toLowerCase();
+  if (e === 'activo') return 'Activo';
+  if (e === 'cancelamento_pendente') return 'A terminar no fim do mês';
+  if (e === 'cancelado') return 'Cancelado';
+  if (e === 'cancelado_justificado') return 'Terminado';
+  return estado || '—';
+}
+
+/**
+ * @param {{ estado?: string, created_by?: string } | null | undefined} adenda
+ * @param {string | undefined} userId
+ * @param {boolean} isMotorista
+ * @returns {boolean}
+ */
+function isAdendaCreator(adenda, userId, isMotorista) {
+  if (!adenda || !userId) return false;
+  if (adenda.created_by) return adenda.created_by === userId;
+  const estado = String(adenda.estado || '').toLowerCase();
+  if (estado === 'pendente_passageiro') return isMotorista;
+  if (estado === 'pendente_contraparte') return !isMotorista;
+  return false;
 }
 
 /**
@@ -125,6 +165,11 @@ const MyAgreements = () => {
   const [adendaModalOpen, setAdendaModalOpen] = useState(false);
   const [adendaBusy, setAdendaBusy] = useState(false);
   const [adendaError, setAdendaError] = useState('');
+  const [terminateOpen, setTerminateOpen] = useState(false);
+  const [terminateBusy, setTerminateBusy] = useState(false);
+  const [terminateError, setTerminateError] = useState('');
+  const [terminateFeedback, setTerminateFeedback] = useState({ type: '', text: '' });
+  const [consensualModalOpen, setConsensualModalOpen] = useState(false);
 
   const syncPendingLeaves = useCallback(async () => {
     try {
@@ -207,14 +252,14 @@ const MyAgreements = () => {
    * @param {typeof selected} acordo
    */
   const openAdendaForm = (acordo) => {
-    const nActivos = countActivos(acordo) || acordo?.n_passageiros_contrato || 1;
+    const nContrato = acordo?.n_passageiros_contrato || countActivos(acordo) || 1;
     setAdendaModo('POR_PASSAGEIRO');
     setAdendaValor(
       acordo?.valor_mensal_por_passageiro_kz != null
         ? String(acordo.valor_mensal_por_passageiro_kz)
         : '',
     );
-    setAdendaN(String(nActivos));
+    setAdendaN(String(nContrato));
     setAdendaError('');
     setAdendaFormOpen(true);
   };
@@ -272,15 +317,28 @@ const MyAgreements = () => {
     setAdendaBusy(true);
     setAdendaError('');
     try {
-      await renegotiateAgreementPricing(selected.id, {
+      const isMotorista = tipoPerfil === 'Motorista';
+      const submitAdenda = isMotorista
+        ? renegotiateAgreementPricing
+        : proposeAgreementAdenda;
+      const result = await submitAdenda(selected.id, {
         modo_preco: adendaModo,
         valor_ask_kz: valor,
         n_passageiros: n,
       });
-      setMessage({
-        type: 'success',
-        text: 'Proposta de novo preço enviada. Fica à espera da aceitação do passageiro.',
-      });
+      if (result?.offlineQueued) {
+        setMessage({
+          type: 'offline',
+          text: 'Alteração agendada offline. Será sincronizada assim que recuperar rede.',
+        });
+      } else {
+        setMessage({
+          type: 'success',
+          text: isMotorista
+            ? 'Proposta de novo preço enviada. Fica à espera da aceitação do passageiro.'
+            : 'Proposta de novo preço enviada. Fica à espera da aceitação do motorista.',
+        });
+      }
       const acordoId = selected.id;
       closeAdendaForm();
       const refreshed = await carregar();
@@ -295,16 +353,77 @@ const MyAgreements = () => {
     }
   };
 
+  /**
+   * @param {{ modo: 'aviso_previo' | 'consensual' | 'justa_causa', justificativa?: string }} input
+   */
+  const handleConfirmTerminate = async (input) => {
+    if (!selected || terminateBusy) return;
+    setTerminateBusy(true);
+    setTerminateError('');
+    try {
+      const payload =
+        input.modo === 'justa_causa'
+          ? { modo: input.modo, justificativa: input.justificativa }
+          : { modo: input.modo };
+      const result = await terminateAgreement(selected.id, payload);
+      setTerminateOpen(false);
+      setConsensualModalOpen(false);
+      setTerminateError('');
+      const feedback = result?.offlineQueued
+        ? { type: 'offline', text: 'Aguardando sincronização…' }
+        : result?.rescisao_aguarda_confirmacao
+          ? {
+              type: 'success',
+              text: 'Pedido enviado. O acordo só termina quando a outra parte confirmar.',
+            }
+          : result?.rescisao_concluida
+            ? { type: 'success', text: 'Acordo terminado.' }
+            : {
+                type: 'success',
+                text: 'O acordo continua activo até ao último dia deste mês.',
+              };
+      setTerminateFeedback(feedback);
+      setMessage(feedback);
+      const acordoId = selected.id;
+      const refreshed = await carregar();
+      const updated = refreshed.find((a) => a.id === acordoId);
+      setSelected(updated || null);
+    } catch (err) {
+      console.error('Erro ao rescindir acordo:', err);
+      const text = err.message || getFriendlyErrorMessage(err);
+      if (terminateOpen) {
+        setTerminateError(text);
+      } else {
+        setConsensualModalOpen(false);
+        setTerminateFeedback({ type: 'error', text });
+        setMessage({ type: 'error', text });
+      }
+    } finally {
+      setTerminateBusy(false);
+    }
+  };
+
+  const handleConfirmConsensual = async () => {
+    await handleConfirmTerminate({ modo: 'consensual' });
+  };
+
   const handleAcceptAdenda = async () => {
     const adendaId = selected?.adenda_pendente?.id;
     if (!adendaId || adendaBusy) return;
     setAdendaBusy(true);
     try {
-      await acceptAgreementAdenda(adendaId);
-      setMessage({
-        type: 'success',
-        text: 'Alteração aceite. O novo preço aplica-se a partir do próximo mês.',
-      });
+      const result = await acceptAgreementAdenda(adendaId);
+      setMessage(
+        result?.offlineQueued
+          ? {
+              type: 'offline',
+              text: 'Alteração agendada offline. Será sincronizada assim que recuperar rede.',
+            }
+          : {
+              type: 'success',
+              text: 'Alteração aceite. O novo preço aplica-se a partir do próximo mês.',
+            },
+      );
       const acordoId = selected.id;
       const refreshed = await carregar();
       const updated = refreshed.find((a) => a.id === acordoId);
@@ -322,11 +441,18 @@ const MyAgreements = () => {
     if (!adendaId || adendaBusy) return;
     setAdendaBusy(true);
     try {
-      await rejectAgreementAdenda(adendaId);
-      setMessage({
-        type: 'success',
-        text: 'Alteração rejeitada. Mantém-se o preço combinado actual.',
-      });
+      const result = await rejectAgreementAdenda(adendaId);
+      setMessage(
+        result?.offlineQueued
+          ? {
+              type: 'offline',
+              text: 'Alteração agendada offline. Será sincronizada assim que recuperar rede.',
+            }
+          : {
+              type: 'success',
+              text: 'Alteração rejeitada. Mantém-se o preço combinado actual.',
+            },
+      );
       const acordoId = selected.id;
       const refreshed = await carregar();
       const updated = refreshed.find((a) => a.id === acordoId);
@@ -352,6 +478,7 @@ const MyAgreements = () => {
     const origem = oferta?.origin_name || 'Origem';
     const destino = oferta?.destination_name || 'Destino';
     const activo = isActivo(acordo.estado);
+    const aTerminar = isCancelamentoPendente(acordo.estado);
     const leavePending = Boolean(pendingLeaveIds[acordo.id]);
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
     const quotaCard =
@@ -372,13 +499,15 @@ const MyAgreements = () => {
           <div className="flex flex-wrap items-center gap-2">
             <span
               className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                activo
-                  ? 'bg-emerald-100 text-emerald-800'
-                  : 'bg-slate-100 text-slate-600'
-              }`}
-            >
-              {activo ? 'Activo' : acordo.estado}
-            </span>
+                    activo
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : aTerminar
+                        ? 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200'
+                        : 'bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  {estadoAcordoLabel(acordo.estado)}
+                </span>
             {leavePending && (
               <span
                 className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200"
@@ -428,15 +557,33 @@ const MyAgreements = () => {
     const linhas = selected.acordos_passageiros || [];
     const nLinhas = selected.n_passageiros_contrato || linhas.length || 0;
     const activo = isActivo(selected.estado);
+    const aTerminar = isCancelamentoPendente(selected.estado);
     const isPassageiro = tipoPerfil === 'Passageiro';
     const isMotorista = tipoPerfil === 'Motorista';
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
     const quotaDestaque =
       minhaLinha?.quota_mensal_kz ?? selected.valor_mensal_por_passageiro_kz;
     const leavePending = Boolean(pendingLeaveIds[selected.id]);
-    const podeSair =
-      isPassageiro && activo && (!minhaLinha || isActivo(minhaLinha.estado));
-    const podeRenegociar = isMotorista && activo;
+    const isPassageiroActivo =
+      isPassageiro && (!minhaLinha || isActivo(minhaLinha.estado));
+    const podeSair = isPassageiroActivo && activo;
+    const podeRenegociar = activo && (isMotorista || isPassageiroActivo);
+    const podeRescindir = activo && (isMotorista || isPassageiroActivo);
+    const adenda = selected.adenda_pendente;
+    const adendaEstado = String(adenda?.estado || '').toLowerCase();
+    const adendaPendenteDecisao =
+      adendaEstado === 'pendente_passageiro' || adendaEstado === 'pendente_contraparte';
+    const souCriadorAdenda = isAdendaCreator(adenda, user?.id, isMotorista);
+    const possoDecidirAdenda =
+      adendaPendenteDecisao &&
+      !souCriadorAdenda &&
+      ((adendaEstado === 'pendente_passageiro' && isPassageiroActivo) ||
+        (adendaEstado === 'pendente_contraparte' && isMotorista));
+    const consensualPendente =
+      activo &&
+      String(selected.rescisao_modo || '').toLowerCase() === 'consensual' &&
+      Boolean(selected.rescisao_solicitada_por);
+    const souSolicitanteRescisao = selected.rescisao_solicitada_por === user?.id;
 
     const valorNum = Number.parseInt(String(adendaValor), 10);
     const nNum = Number.parseInt(String(adendaN), 10);
@@ -477,10 +624,12 @@ const MyAgreements = () => {
                   className={`text-xs font-bold px-2.5 py-1 rounded-full ${
                     activo
                       ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-slate-100 text-slate-600'
+                      : aTerminar
+                        ? 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200'
+                        : 'bg-slate-100 text-slate-600'
                   }`}
                 >
-                  {activo ? 'Activo' : selected.estado}
+                  {estadoAcordoLabel(selected.estado)}
                 </span>
                 {leavePending && (
                   <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900">
@@ -497,6 +646,20 @@ const MyAgreements = () => {
               {origem} → {destino}
             </p>
           </div>
+
+          {terminateFeedback.text ? (
+            <FeedbackAlert
+              type={
+                terminateFeedback.type === 'success'
+                  ? 'success'
+                  : terminateFeedback.type === 'offline'
+                    ? 'offline'
+                    : 'error'
+              }
+              text={terminateFeedback.text}
+              className="mb-0"
+            />
+          ) : null}
 
           <section className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 p-4 space-y-4">
             {(horaPartida || origem || destino) && (
@@ -549,30 +712,53 @@ const MyAgreements = () => {
               </strong>
             </div>
 
-            {selected.adenda_pendente && (
+            {aTerminar ? (
+              <FeedbackAlert
+                type="success"
+                className="mb-0"
+                text={`O acordo continua activo até ${
+                  selected.rescisao_effective_on
+                    ? formatMesAdenda(selected.rescisao_effective_on)
+                    : 'o último dia deste mês'
+                }. As vagas mantêm-se ocupadas.`}
+              />
+            ) : null}
+
+            {consensualPendente && souSolicitanteRescisao ? (
+              <FeedbackAlert
+                type="success"
+                className="mb-0"
+                text="A aguardar confirmação da outra parte."
+              />
+            ) : null}
+
+            {adenda && (
               <div
                 data-testid="adenda-pendente"
                 className="rounded-xl border border-amber-200/90 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 space-y-1"
               >
-                {String(selected.adenda_pendente.estado || '').toLowerCase() ===
-                'pendente_passageiro' ? (
+                {adendaPendenteDecisao ? (
                   <>
                     <p className="text-sm font-bold text-slate-900 dark:text-white">
-                      {isPassageiro
-                        ? 'Proposta de novo preço'
-                        : 'À espera da aceitação do passageiro'}
+                      {souCriadorAdenda
+                        ? isMotorista
+                          ? 'À espera da aceitação do passageiro'
+                          : 'A aguardar resposta da outra parte'
+                        : possoDecidirAdenda
+                          ? 'Proposta de novo preço'
+                          : 'A aguardar resposta da outra parte'}
                     </p>
                     <p className="text-sm text-slate-600 dark:text-slate-300">
                       Cada um pagaria{' '}
                       <span className="tabular-nums font-semibold">
-                        {formatKwanza(selected.adenda_pendente.valor_mensal_por_passageiro_kz)} Kz
+                        {formatKwanza(adenda.valor_mensal_por_passageiro_kz)} Kz
                       </span>
-                      {selected.adenda_pendente.effective_from
-                        ? ` a partir de ${formatMesAdenda(selected.adenda_pendente.effective_from)}`
+                      {adenda.effective_from
+                        ? ` a partir de ${formatMesAdenda(adenda.effective_from)}`
                         : ' a partir do próximo mês'}
                       .
                     </p>
-                    {isPassageiro && (
+                    {possoDecidirAdenda && (
                       <div className="mt-3 flex flex-col gap-3">
                         <Button
                           type="button"
@@ -596,20 +782,19 @@ const MyAgreements = () => {
                 ) : (
                   <>
                     <p className="text-sm font-bold text-slate-900 dark:text-white">
-                      Novo preço a partir de{' '}
-                      {formatMesAdenda(selected.adenda_pendente.effective_from)}
+                      Novo preço a partir de {formatMesAdenda(adenda.effective_from)}
                     </p>
                     <p className="text-sm text-slate-600 dark:text-slate-300">
                       Cada um paga{' '}
                       <span className="tabular-nums font-semibold">
-                        {formatKwanza(selected.adenda_pendente.valor_mensal_por_passageiro_kz)} Kz
+                        {formatKwanza(adenda.valor_mensal_por_passageiro_kz)} Kz
                       </span>
                     </p>
-                    {selected.adenda_pendente.valor_mensal_total_kz != null && (
+                    {adenda.valor_mensal_total_kz != null && (
                       <p className="text-xs text-slate-500">
                         Total{' '}
                         <span className="tabular-nums font-medium">
-                          {formatKwanza(selected.adenda_pendente.valor_mensal_total_kz)} Kz
+                          {formatKwanza(adenda.valor_mensal_total_kz)} Kz
                         </span>
                         . O mês corrente mantém as quotas já combinadas.
                       </p>
@@ -769,7 +954,7 @@ const MyAgreements = () => {
                   className="h-11 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 outline-none focus:ring-2 focus:ring-primary/50 tabular-nums"
                 />
                 <span className="text-xs font-normal text-slate-400">
-                  Por omissão: passageiros activos
+                  Por omissão: o número combinado no acordo
                 </span>
               </label>
 
@@ -827,39 +1012,67 @@ const MyAgreements = () => {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full h-11 rounded-xl font-bold border-primary/30 text-primary hover:bg-primary/5"
+                className="w-full min-h-12 rounded-xl font-bold border-primary/30 text-primary hover:bg-primary/5"
                 onClick={() => openAdendaForm(selected)}
               >
-                <Pencil size={16} aria-hidden="true" /> Renegociar preço
+                <Pencil size={16} aria-hidden="true" />
+                {isMotorista ? 'Renegociar preço' : 'Propor Reajuste de Preço'}
               </Button>
             )}
             {activo && (
               <Button
                 type="button"
                 variant="secondary"
-                className="w-full h-11 rounded-xl font-bold"
+                className="w-full min-h-12 rounded-xl font-bold"
                 onClick={() => navigate(`/faltas/${selected.id}`)}
               >
                 <Clock size={16} aria-hidden="true" /> Registar falta
               </Button>
             )}
+            {consensualPendente && !souSolicitanteRescisao && (isMotorista || isPassageiroActivo) ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full min-h-12 rounded-xl font-bold border-amber-300 text-amber-900 hover:bg-amber-50"
+                disabled={terminateBusy}
+                onClick={() => setConsensualModalOpen(true)}
+              >
+                Confirmar fim do acordo
+              </Button>
+            ) : null}
             {podeSair && (
               <Button
                 type="button"
                 variant="outline"
-                className="w-full h-11 rounded-xl font-bold text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                className="w-full min-h-12 rounded-xl font-bold text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
                 disabled={leavePending}
                 onClick={() => setLeaveModalOpen(true)}
               >
                 Sair do acordo
               </Button>
             )}
+            {podeRescindir ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full min-h-12 rounded-xl font-bold mt-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+                disabled={terminateBusy}
+                onClick={() => {
+                  setTerminateError('');
+                  setTerminateFeedback({ type: '', text: '' });
+                  setTerminateOpen(true);
+                }}
+              >
+                Rescindir acordo
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="ghost"
-              className="w-full h-11 rounded-xl font-bold text-slate-500"
+              className="w-full min-h-12 rounded-xl font-bold text-slate-500"
               onClick={() => {
                 closeAdendaForm();
+                setTerminateFeedback({ type: '', text: '' });
                 setSelected(null);
               }}
             >
@@ -877,7 +1090,13 @@ const MyAgreements = () => {
 
       {message.text ? (
         <FeedbackAlert
-          type={message.type === 'success' ? 'success' : 'error'}
+          type={
+            message.type === 'success'
+              ? 'success'
+              : message.type === 'offline'
+                ? 'offline'
+                : 'error'
+          }
           text={message.text}
           data-testid="agreements-feedback"
         />
@@ -927,11 +1146,43 @@ const MyAgreements = () => {
         busy={adendaBusy}
         variant="primary"
         title="Confirmar novo preço?"
-        message="A proposta fica à espera da aceitação do passageiro. Depois, aplica-se a partir do próximo mês; o mês corrente mantém as quotas já combinadas."
+        message={
+          tipoPerfil === 'Motorista'
+            ? 'A proposta fica à espera da aceitação do passageiro. Depois, aplica-se a partir do próximo mês; o mês corrente mantém as quotas já combinadas.'
+            : 'A proposta fica à espera da aceitação do motorista. Depois, aplica-se a partir do próximo mês; o mês corrente mantém as quotas já combinadas.'
+        }
         confirmText="Confirmar"
         onConfirm={handleConfirmAdenda}
         onCancel={() => {
           if (!adendaBusy) setAdendaModalOpen(false);
+        }}
+      />
+
+      {terminateOpen ? (
+        <TerminateAgreementModal
+          isOpen
+          acordo={selected}
+          busy={terminateBusy}
+          error={terminateError}
+          onConfirm={handleConfirmTerminate}
+          onCancel={() => {
+            if (!terminateBusy) {
+              setTerminateOpen(false);
+              setTerminateError('');
+            }
+          }}
+        />
+      ) : null}
+
+      <ConfirmationModal
+        isOpen={consensualModalOpen}
+        busy={terminateBusy}
+        title="Confirmar fim do acordo?"
+        message="A outra parte pediu para terminar já. Se confirmares, o acordo acaba imediatamente para todos os passageiros."
+        confirmText="Confirmar fim"
+        onConfirm={handleConfirmConsensual}
+        onCancel={() => {
+          if (!terminateBusy) setConsensualModalOpen(false);
         }}
       />
     </PageShell>

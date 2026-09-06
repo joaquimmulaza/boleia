@@ -13,7 +13,11 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   createAgreementFromProposal,
+  getAgreementsForDriver,
   leavePassenger,
+  proposeAgreementAdenda,
+  respondAgreementAdenda,
+  terminateAgreement,
 } from '../services/AgreementService.js';
 import { promoteWaitlist } from '../services/WaitlistService.js';
 import { computeFaltaDesconto } from '../utils/faltaDesconto.js';
@@ -652,5 +656,277 @@ describe('Marketplace audit — G12 UI hubs sem jargon', () => {
     expect(stripComments(readSrc('../utils/ofertaLabels.js'))).toMatch(
       /Por passageiro/,
     );
+  });
+});
+
+/**
+ * 1.º dia do mês seguinte (espelho de `effective_from` / `rescisao_effective_on`).
+ * @returns {string} ISO date `AAAA-MM-01`
+ */
+function primeiroDiaMesSeguinte() {
+  const hoje = new Date();
+  const proximo = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 1);
+  const mes = String(proximo.getMonth() + 1).padStart(2, '0');
+  return `${proximo.getFullYear()}-${mes}-01`;
+}
+
+/**
+ * Espelho da fórmula do trigger `trg_ofertas_recalc_vagas`:
+ * ocupadas = passageiros `activo` em acordos `activo` ou `cancelamento_pendente`.
+ * @param {{ vagas_totais: number }} oferta
+ * @param {{ estado: string, acordo_estado: string }[]} passageiros
+ * @returns {number}
+ */
+function vagasDisponiveisEsperadas(oferta, passageiros) {
+  const ocupadas = passageiros.filter(
+    (p) =>
+      String(p.estado).toLowerCase() === 'activo' &&
+      ['activo', 'cancelamento_pendente'].includes(String(p.acordo_estado).toLowerCase()),
+  ).length;
+  return oferta.vagas_totais - ocupadas;
+}
+
+describe('Marketplace audit — §22 G16 adenda bilateral nunca retroactiva', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+  });
+
+  it('G16 — passageiro propõe: fica pendente_contraparte, preço do mês corrente intacto e anterior supersedida', async () => {
+    const effectiveFrom = primeiroDiaMesSeguinte();
+    const acordoLive = {
+      id: 'acordo-16',
+      estado: 'activo',
+      modo_preco: 'POR_PASSAGEIRO',
+      // Divisor congelado do contrato, mesmo com só 2 passageiros activos.
+      n_passageiros_contrato: 3,
+      valor_mensal_por_passageiro_kz: 40000,
+      valor_mensal_total_kz: 120000,
+      acordos_adendas: [
+        {
+          id: 'adenda-antiga',
+          estado: 'pendente_passageiro',
+          applied_at: null,
+          superseded_at: '2026-09-06T09:00:00Z',
+          valor_mensal_por_passageiro_kz: 42000,
+        },
+        {
+          id: 'adenda-nova',
+          estado: 'pendente_contraparte',
+          effective_from: effectiveFrom,
+          applied_at: null,
+          superseded_at: null,
+          valor_mensal_por_passageiro_kz: 45000,
+          previo_valor_mensal_por_passageiro_kz: 40000,
+        },
+      ],
+    };
+
+    supabase.rpc.mockResolvedValue({ data: 'acordo-16', error: null });
+    supabase.from.mockImplementation((table) => {
+      if (table === 'acordos') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({ data: acordoLive, error: null }),
+            }),
+          }),
+        };
+      }
+      return {};
+    });
+
+    const result = await proposeAgreementAdenda('acordo-16', {
+      modo_preco: 'POR_PASSAGEIRO',
+      valor_ask_kz: 45000,
+    });
+
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      'propose_agreement_adenda',
+      expect.objectContaining({
+        p_acordo_id: 'acordo-16',
+        p_valor_ask_kz: 45000,
+        p_n_passageiros: 3,
+        p_idempotency_key: expect.any(String),
+      }),
+    );
+
+    // Mês corrente: preço e divisor congelados.
+    expect(result.valor_mensal_por_passageiro_kz).toBe(40000);
+    expect(result.valor_mensal_total_kz).toBe(120000);
+    expect(result.n_passageiros_contrato).toBe(3);
+
+    // Novo preço agendado para o 1.º dia do mês seguinte, à espera da contraparte.
+    expect(result.adenda_pendente.id).toBe('adenda-nova');
+    expect(result.adenda_pendente.estado).toBe('pendente_contraparte');
+    expect(result.adenda_pendente.applied_at).toBeNull();
+    expect(result.adenda_pendente.effective_from).toBe(effectiveFrom);
+    expect(Date.parse(result.adenda_pendente.effective_from)).toBeGreaterThan(Date.now());
+  });
+});
+
+describe('Marketplace audit — §22 G17 rejeição mantém o acordo intacto', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+  });
+
+  it('G17 — contraparte rejeita: adenda rejeitada, preço e quotas do acordo inalterados', async () => {
+    const acordoLive = {
+      id: 'acordo-17',
+      estado: 'activo',
+      n_passageiros_contrato: 3,
+      valor_mensal_por_passageiro_kz: 40000,
+      valor_mensal_total_kz: 120000,
+    };
+    const quotasAntes = [
+      { passenger_id: 'pax-1', quota_mensal_kz: 40000 },
+      { passenger_id: 'pax-2', quota_mensal_kz: 40000 },
+      { passenger_id: 'pax-3', quota_mensal_kz: 40000 },
+    ];
+
+    supabase.rpc.mockResolvedValue({ data: 'adenda-17', error: null });
+    supabase.from.mockImplementation((table) => {
+      if (table === 'acordos_adendas') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  id: 'adenda-17',
+                  acordo_id: 'acordo-17',
+                  estado: 'rejeitada',
+                  applied_at: null,
+                  valor_mensal_por_passageiro_kz: 45000,
+                  previo_valor_mensal_por_passageiro_kz: 40000,
+                },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      return {};
+    });
+
+    const adenda = await respondAgreementAdenda('adenda-17', false);
+
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      'reject_agreement_adenda',
+      expect.objectContaining({
+        p_adenda_id: 'adenda-17',
+        p_idempotency_key: expect.any(String),
+      }),
+    );
+    expect(adenda.estado).toBe('rejeitada');
+    expect(adenda.applied_at).toBeNull();
+
+    // Acordo continua no preço combinado; quotas congeladas.
+    expect(acordoLive.valor_mensal_por_passageiro_kz).toBe(40000);
+    expect(acordoLive.valor_mensal_total_kz).toBe(120000);
+    expect(quotasAntes.map((q) => q.quota_mensal_kz)).toEqual([40000, 40000, 40000]);
+  });
+
+  it('G17 — criador da adenda não pode rejeitar (erro do servidor propagado)', async () => {
+    supabase.rpc.mockResolvedValue({
+      data: null,
+      error: { message: 'Só a contraparte pode rejeitar esta adenda.' },
+    });
+
+    await expect(respondAgreementAdenda('adenda-17', false)).rejects.toThrow(
+      /só a contraparte/i,
+    );
+  });
+});
+
+describe('Marketplace audit — §22 G18 aviso prévio e libertação de vagas', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+  });
+
+  it('G18 — aviso prévio mantém vagas ocupadas até ao dia 1; apply_due liberta capacidade', async () => {
+    const effectiveOn = primeiroDiaMesSeguinte();
+    const oferta = { id: 'of-18', vagas_totais: 3 };
+
+    // 1) Rescisão com aviso prévio → cancelamento_pendente (passageiro continua activo).
+    supabase.rpc.mockResolvedValue({ data: 'acordo-18', error: null });
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: {
+              id: 'acordo-18',
+              oferta_id: 'of-18',
+              estado: 'cancelamento_pendente',
+              rescisao_modo: 'aviso_previo',
+              rescisao_solicitada_por: 'driver-18',
+              rescisao_effective_on: effectiveOn,
+              cancelado_em: null,
+            },
+            error: null,
+          }),
+        }),
+      }),
+    });
+
+    const pendente = await terminateAgreement('acordo-18', { modo: 'aviso_previo' });
+
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      'terminate_agreement',
+      expect.objectContaining({
+        p_acordo_id: 'acordo-18',
+        p_modo: 'aviso_previo',
+        p_idempotency_key: expect.any(String),
+      }),
+    );
+    expect(pendente.estado).toBe('cancelamento_pendente');
+    expect(pendente.rescisao_effective_on).toBe(effectiveOn);
+    expect(pendente.cancelado_em).toBeNull();
+    expect(pendente.rescisao_concluida).toBe(false);
+
+    // Capacidade: passageiro continua activo e a vaga continua ocupada (S22-CAP-04).
+    expect(
+      vagasDisponiveisEsperadas(oferta, [
+        { estado: 'activo', acordo_estado: 'cancelamento_pendente' },
+      ]),
+    ).toBe(2);
+
+    // 2) Dia 1 — a listagem dispara o lazy `apply_due_agreement_terminations`.
+    vi.clearAllMocks();
+    supabase.rpc.mockResolvedValue({ data: 1, error: null });
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          order: vi.fn().mockResolvedValue({
+            data: [
+              {
+                id: 'acordo-18',
+                oferta_id: 'of-18',
+                estado: 'cancelado',
+                cancelado_em: '2026-10-01T00:05:00Z',
+                acordos_passageiros: [{ passenger_id: 'pax-18', estado: 'saiu' }],
+              },
+            ],
+            error: null,
+          }),
+        }),
+      }),
+    });
+
+    const acordos = await getAgreementsForDriver('driver-18');
+
+    expect(supabase.rpc.mock.calls.map(([name]) => name)).toContain(
+      'apply_due_agreement_terminations',
+    );
+    expect(acordos[0].estado).toBe('cancelado');
+    expect(acordos[0].cancelado_em).toBeTruthy();
+
+    // Capacidade libertada: nenhum passageiro activo em acordo vivo.
+    expect(
+      vagasDisponiveisEsperadas(oferta, [
+        { estado: 'saiu', acordo_estado: 'cancelado' },
+      ]),
+    ).toBe(3);
   });
 });

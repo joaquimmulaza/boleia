@@ -31,7 +31,10 @@ export function isNetworkFailure(error) {
  *     | 'accept_proposal'
  *     | 'leave_grupo_membro'
  *     | 'renegotiate_agreement_pricing'
+ *     | 'propose_agreement_adenda'
  *     | 'accept_agreement_adenda'
+ *     | 'reject_agreement_adenda'
+ *     | 'terminate_agreement'
  *     | string,
  *   args: Record<string, unknown>,
  *   accessToken: string,

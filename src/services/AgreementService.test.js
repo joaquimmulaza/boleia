@@ -3,8 +3,11 @@ import {
   createAgreementFromProposal,
   leavePassenger,
   renegotiateAgreementPricing,
+  proposeAgreementAdenda,
+  respondAgreementAdenda,
   acceptAgreementAdenda,
   rejectAgreementAdenda,
+  terminateAgreement,
   getAgreementsForDriver,
   getAgreementsForPassenger,
 } from './AgreementService.js';
@@ -243,11 +246,11 @@ describe('AgreementService', () => {
       return { acordo };
     }
 
-    it('após leave (N activos=3) agenda adenda sem mutar preço do mês corrente', async () => {
+    it('após leave (N activos=3 ≠ N_contrato=4) usa o divisor congelado do contrato', async () => {
       const pricing = resolveAgreementPricing({
         modo_preco: 'TOTAL_ACORDO',
         valor_ask_kz: 90000,
-        n_passageiros: 3,
+        n_passageiros: 4,
       });
       mockRenegotiateFlow({
         activosCount: 3,
@@ -262,7 +265,7 @@ describe('AgreementService', () => {
           adenda_pendente: {
             effective_from: '2026-10-01',
             modo_preco: 'TOTAL_ACORDO',
-            n_passageiros_contrato: 3,
+            n_passageiros_contrato: 4,
             valor_mensal_total_kz: pricing.valor_mensal_total_kz,
             valor_mensal_por_passageiro_kz: pricing.valor_mensal_por_passageiro_kz,
             previo_valor_mensal_total_kz: 120000,
@@ -283,12 +286,15 @@ describe('AgreementService', () => {
           p_acordo_id: 'acordo-1',
           p_modo_preco: 'TOTAL_ACORDO',
           p_valor_ask_kz: 90000,
-          p_n_passageiros: 3,
+          // Divisor = n_passageiros_contrato (4), nunca o COUNT de activos (3).
+          p_n_passageiros: 4,
           p_idempotency_key: expect.stringMatching(
             /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
           ),
         }),
       );
+      // Nunca conta passageiros activos para descobrir o divisor.
+      expect(supabase.from).not.toHaveBeenCalledWith('acordos_passageiros');
       // Live (mês corrente) intacto
       expect(result.n_passageiros_contrato).toBe(4);
       expect(result.valor_mensal_total_kz).toBe(120000);
@@ -296,9 +302,9 @@ describe('AgreementService', () => {
       // Novo preço só na adenda pendente (próximo mês)
       expect(result.adenda_pendente.effective_from).toBe('2026-10-01');
       expect(result.adenda_pendente.valor_mensal_total_kz).toBe(90000);
-      expect(result.adenda_pendente.n_passageiros_contrato).toBe(3);
+      expect(result.adenda_pendente.n_passageiros_contrato).toBe(4);
       expect(result.adenda_pendente.previo_valor_mensal_total_kz).toBe(120000);
-      expect(pricing.quotas).toEqual([30000, 30000, 30000]);
+      expect(pricing.quotas).toEqual([22500, 22500, 22500, 22500]);
     });
 
     it('POR_PASSAGEIRO resolve pricing e agenda adenda (live intacto)', async () => {
@@ -614,6 +620,9 @@ describe('AgreementService', () => {
 
       expect(supabase.rpc).toHaveBeenCalledWith('reject_agreement_adenda', {
         p_adenda_id: 'adenda-1',
+        p_idempotency_key: expect.stringMatching(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+        ),
       });
       expect(result.estado).toBe('rejeitada');
     });
@@ -632,6 +641,340 @@ describe('AgreementService', () => {
     });
   });
 
+  describe('proposeAgreementAdenda (adenda bilateral)', () => {
+    /**
+     * @param {{ acordo?: object, rpcError?: { message: string } | null }} [opts]
+     */
+    function mockProposeFlow(opts = {}) {
+      const acordo = opts.acordo ?? {
+        id: 'acordo-1',
+        modo_preco: 'POR_PASSAGEIRO',
+        n_passageiros_contrato: 2,
+        valor_mensal_total_kz: 80000,
+        valor_mensal_por_passageiro_kz: 40000,
+        estado: 'activo',
+        acordos_adendas: [
+          {
+            id: 'adenda-nova',
+            estado: 'pendente_contraparte',
+            effective_from: '2026-10-01',
+            valor_mensal_por_passageiro_kz: 45000,
+            applied_at: null,
+            superseded_at: null,
+          },
+        ],
+      };
+
+      supabase.rpc.mockResolvedValue(
+        opts.rpcError
+          ? { data: null, error: opts.rpcError }
+          : { data: 'acordo-1', error: null },
+      );
+      supabase.from.mockImplementation((table) => {
+        if (table === 'acordos') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({ data: acordo, error: null }),
+              }),
+            }),
+          };
+        }
+        return {};
+      });
+      return { acordo };
+    }
+
+    it('passageiro activo propõe: chama propose_agreement_adenda com divisor do contrato', async () => {
+      mockProposeFlow();
+
+      const result = await proposeAgreementAdenda('acordo-1', {
+        modo_preco: 'POR_PASSAGEIRO',
+        valor_ask_kz: 45000,
+      });
+
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        'propose_agreement_adenda',
+        expect.objectContaining({
+          p_acordo_id: 'acordo-1',
+          p_modo_preco: 'POR_PASSAGEIRO',
+          p_valor_ask_kz: 45000,
+          p_n_passageiros: 2,
+          p_idempotency_key: expect.stringMatching(
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+          ),
+        }),
+      );
+      // Preço do mês corrente intacto; novo valor só na adenda pendente.
+      expect(result.valor_mensal_por_passageiro_kz).toBe(40000);
+      expect(result.adenda_pendente.estado).toBe('pendente_contraparte');
+      expect(result.adenda_pendente.applied_at).toBeNull();
+    });
+
+    it('propaga erro quando quem propõe não é parte do acordo', async () => {
+      mockProposeFlow({
+        rpcError: { message: 'Sem permissão para renegociar este acordo.' },
+      });
+
+      await expect(
+        proposeAgreementAdenda('acordo-1', {
+          modo_preco: 'POR_PASSAGEIRO',
+          valor_ask_kz: 45000,
+          n_passageiros: 2,
+        }),
+      ).rejects.toThrow(/sem permissão/i);
+    });
+
+    it('em falha de rede enfileira propose_agreement_adenda', async () => {
+      Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+
+      const result = await proposeAgreementAdenda('acordo-offline-propose', {
+        modo_preco: 'POR_PASSAGEIRO',
+        valor_ask_kz: 45000,
+        n_passageiros: 2,
+      });
+
+      expect(result.offlineQueued).toBe(true);
+      expect(result.idempotency_key).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      );
+      expect(supabase.rpc).not.toHaveBeenCalled();
+    });
+
+    it('exige acordoId e input de preço', async () => {
+      await expect(
+        proposeAgreementAdenda('', { modo_preco: 'POR_PASSAGEIRO', valor_ask_kz: 1 }),
+      ).rejects.toThrow(/acordo/i);
+      await expect(proposeAgreementAdenda('acordo-1', null)).rejects.toThrow(
+        /obrigatór/i,
+      );
+    });
+  });
+
+  describe('respondAgreementAdenda', () => {
+    function mockAdendaSelect(adenda) {
+      supabase.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: adenda, error: null }),
+          }),
+        }),
+      });
+    }
+
+    it('accept=true delega em accept_agreement_adenda', async () => {
+      supabase.rpc.mockResolvedValue({ data: 'adenda-1', error: null });
+      mockAdendaSelect({ id: 'adenda-1', estado: 'aceite', applied_at: null });
+
+      const result = await respondAgreementAdenda('adenda-1', true);
+
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        'accept_agreement_adenda',
+        expect.objectContaining({ p_adenda_id: 'adenda-1' }),
+      );
+      expect(result.estado).toBe('aceite');
+    });
+
+    it('accept=false delega em reject_agreement_adenda com idempotência', async () => {
+      supabase.rpc.mockResolvedValue({ data: 'adenda-1', error: null });
+      mockAdendaSelect({ id: 'adenda-1', estado: 'rejeitada', applied_at: null });
+
+      const result = await respondAgreementAdenda('adenda-1', false);
+
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        'reject_agreement_adenda',
+        expect.objectContaining({
+          p_adenda_id: 'adenda-1',
+          p_idempotency_key: expect.any(String),
+        }),
+      );
+      expect(result.estado).toBe('rejeitada');
+    });
+
+    it('propaga erro quando o criador tenta decidir a própria adenda', async () => {
+      supabase.rpc.mockResolvedValue({
+        data: null,
+        error: { message: 'Só a contraparte pode aceitar esta adenda.' },
+      });
+
+      await expect(respondAgreementAdenda('adenda-1', true)).rejects.toThrow(
+        /só a contraparte/i,
+      );
+    });
+
+    it('exige id da adenda', async () => {
+      await expect(respondAgreementAdenda('', true)).rejects.toThrow(/adenda/i);
+    });
+  });
+
+  describe('terminateAgreement', () => {
+    /**
+     * @param {object} acordo
+     * @param {{ message: string } | null} [rpcError]
+     */
+    function mockTerminateFlow(acordo, rpcError = null) {
+      supabase.rpc.mockResolvedValue(
+        rpcError ? { data: null, error: rpcError } : { data: acordo.id, error: null },
+      );
+      supabase.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: acordo, error: null }),
+          }),
+        }),
+      });
+    }
+
+    it('aviso prévio deixa o acordo em cancelamento pendente até ao dia 1', async () => {
+      mockTerminateFlow({
+        id: 'acordo-1',
+        oferta_id: 'of-1',
+        estado: 'cancelamento_pendente',
+        rescisao_modo: 'aviso_previo',
+        rescisao_solicitada_por: 'driver-1',
+        rescisao_effective_on: '2026-10-01',
+        cancelado_em: null,
+      });
+
+      const result = await terminateAgreement('acordo-1', { modo: 'aviso_previo' });
+
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        'terminate_agreement',
+        expect.objectContaining({
+          p_acordo_id: 'acordo-1',
+          p_modo: 'aviso_previo',
+          p_justificativa: null,
+          p_idempotency_key: expect.stringMatching(
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+          ),
+        }),
+      );
+      expect(result.estado).toBe('cancelamento_pendente');
+      expect(result.rescisao_effective_on).toBe('2026-10-01');
+      expect(result.rescisao_concluida).toBe(false);
+      expect(result.rescisao_aguarda_confirmacao).toBe(false);
+    });
+
+    it('consensual: 1.º passo fica à espera da confirmação da outra parte', async () => {
+      mockTerminateFlow({
+        id: 'acordo-1',
+        oferta_id: 'of-1',
+        estado: 'activo',
+        rescisao_modo: 'consensual',
+        rescisao_solicitada_por: 'driver-1',
+        rescisao_effective_on: null,
+        cancelado_em: null,
+      });
+
+      const result = await terminateAgreement('acordo-1', { modo: 'consensual' });
+
+      expect(result.estado).toBe('activo');
+      expect(result.rescisao_aguarda_confirmacao).toBe(true);
+      expect(result.rescisao_concluida).toBe(false);
+    });
+
+    it('consensual: confirmação da contraparte encerra o acordo (mesmo acordo_id devolvido)', async () => {
+      mockTerminateFlow({
+        id: 'acordo-1',
+        oferta_id: 'of-1',
+        estado: 'cancelado',
+        rescisao_modo: 'consensual',
+        rescisao_solicitada_por: 'driver-1',
+        rescisao_effective_on: '2026-09-06',
+        cancelado_em: '2026-09-06T10:00:00Z',
+      });
+
+      const result = await terminateAgreement('acordo-1', { modo: 'consensual' });
+
+      expect(result.estado).toBe('cancelado');
+      expect(result.rescisao_concluida).toBe(true);
+      expect(result.rescisao_aguarda_confirmacao).toBe(false);
+      expect(result.cancelado_em).toBeTruthy();
+    });
+
+    it('justa causa com motivo válido devolve acordo cancelado justificado', async () => {
+      mockTerminateFlow({
+        id: 'acordo-1',
+        oferta_id: 'of-1',
+        estado: 'cancelado_justificado',
+        rescisao_modo: 'justa_causa',
+        rescisao_justificativa: 'avaria_veiculo',
+        cancelado_em: '2026-09-06T10:00:00Z',
+      });
+
+      const result = await terminateAgreement('acordo-1', {
+        modo: 'justa_causa',
+        justificativa: 'avaria_veiculo',
+      });
+
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        'terminate_agreement',
+        expect.objectContaining({
+          p_modo: 'justa_causa',
+          p_justificativa: 'avaria_veiculo',
+        }),
+      );
+      expect(result.estado).toBe('cancelado_justificado');
+      expect(result.rescisao_concluida).toBe(true);
+    });
+
+    it('recusa justa causa sem justificativa antes de chamar a RPC', async () => {
+      await expect(
+        terminateAgreement('acordo-1', { modo: 'justa_causa' }),
+      ).rejects.toThrow(/justa causa exige uma justificativa/i);
+      expect(supabase.rpc).not.toHaveBeenCalled();
+    });
+
+    it('recusa justificativa fora do conjunto permitido', async () => {
+      await expect(
+        terminateAgreement('acordo-1', {
+          modo: 'justa_causa',
+          justificativa: 'não gostei',
+        }),
+      ).rejects.toThrow(/justificativa/i);
+      expect(supabase.rpc).not.toHaveBeenCalled();
+    });
+
+    it('recusa modo de rescisão desconhecido', async () => {
+      await expect(
+        terminateAgreement('acordo-1', { modo: 'imediato' }),
+      ).rejects.toThrow(/modo de rescisão/i);
+      expect(supabase.rpc).not.toHaveBeenCalled();
+    });
+
+    it('exige acordoId', async () => {
+      await expect(
+        terminateAgreement('', { modo: 'aviso_previo' }),
+      ).rejects.toThrow(/acordo/i);
+      expect(supabase.rpc).not.toHaveBeenCalled();
+    });
+
+    it('propaga erro de autorização da RPC', async () => {
+      supabase.rpc.mockResolvedValue({
+        data: null,
+        error: { message: 'Sem permissão para rescindir este acordo.' },
+      });
+
+      await expect(
+        terminateAgreement('acordo-1', { modo: 'aviso_previo' }),
+      ).rejects.toThrow(/sem permissão/i);
+    });
+
+    it('em falha de rede enfileira terminate_agreement e devolve offlineQueued', async () => {
+      Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+
+      const result = await terminateAgreement('acordo-offline-terminate', {
+        modo: 'aviso_previo',
+      });
+
+      expect(result.offlineQueued).toBe(true);
+      expect(result.idempotency_key).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      );
+      expect(supabase.rpc).not.toHaveBeenCalled();
+    });
+  });
+
   describe('listagens', () => {
     it('getAgreementsForDriver filtra por driver_id', async () => {
       const mockOrder = vi.fn().mockResolvedValue({ data: [{ id: 'a1' }], error: null });
@@ -640,6 +983,35 @@ describe('AgreementService', () => {
           eq: vi.fn().mockReturnValue({ order: mockOrder }),
         }),
       });
+      const result = await getAgreementsForDriver('driver-1');
+      expect(result).toHaveLength(1);
+    });
+
+    it('getAgreementsForDriver aplica adendas e rescisões devidas (lazy dia 1)', async () => {
+      supabase.rpc.mockResolvedValue({ data: 0, error: null });
+      const mockOrder = vi.fn().mockResolvedValue({ data: [{ id: 'a1' }], error: null });
+      supabase.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({ order: mockOrder }),
+        }),
+      });
+
+      await getAgreementsForDriver('driver-1');
+
+      const chamadas = supabase.rpc.mock.calls.map(([name]) => name);
+      expect(chamadas).toContain('apply_due_agreement_adendas');
+      expect(chamadas).toContain('apply_due_agreement_terminations');
+    });
+
+    it('listagem não rebenta se o lazy de rescisões falhar', async () => {
+      supabase.rpc.mockRejectedValue(new Error('rpc indisponível'));
+      const mockOrder = vi.fn().mockResolvedValue({ data: [{ id: 'a1' }], error: null });
+      supabase.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({ order: mockOrder }),
+        }),
+      });
+
       const result = await getAgreementsForDriver('driver-1');
       expect(result).toHaveLength(1);
     });
@@ -657,6 +1029,25 @@ describe('AgreementService', () => {
       });
       const result = await getAgreementsForPassenger('pax-1');
       expect(result[0].id).toBe('a1');
+    });
+
+    it('getAgreementsForPassenger também aplica rescisões devidas', async () => {
+      supabase.rpc.mockResolvedValue({ data: 0, error: null });
+      supabase.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({
+              data: [{ acordo_id: 'a1', acordos: { id: 'a1', estado: 'activo' } }],
+              error: null,
+            }),
+          }),
+        }),
+      });
+
+      await getAgreementsForPassenger('pax-1');
+
+      const chamadas = supabase.rpc.mock.calls.map(([name]) => name);
+      expect(chamadas).toContain('apply_due_agreement_terminations');
     });
   });
 });

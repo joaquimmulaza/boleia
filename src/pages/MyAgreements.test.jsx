@@ -25,8 +25,13 @@ vi.mock('../services/AgreementService', () => ({
   getAgreementsForPassenger: vi.fn(),
   leavePassenger: vi.fn(),
   renegotiateAgreementPricing: vi.fn(),
+  proposeAgreementAdenda: vi.fn(),
   acceptAgreementAdenda: vi.fn(),
   rejectAgreementAdenda: vi.fn(),
+  respondAgreementAdenda: vi.fn(),
+  terminateAgreement: vi.fn(),
+  RESCISAO_MODOS: ['aviso_previo', 'consensual', 'justa_causa'],
+  RESCISAO_JUSTIFICATIVAS: ['faltas_excessivas', 'avaria_veiculo', 'seguranca'],
 }));
 
 vi.mock('../services/offlineQueue', () => ({
@@ -43,8 +48,10 @@ import {
   getAgreementsForPassenger,
   leavePassenger,
   renegotiateAgreementPricing,
+  proposeAgreementAdenda,
   acceptAgreementAdenda,
   rejectAgreementAdenda,
+  terminateAgreement,
 } from '../services/AgreementService';
 import { listPending } from '../services/offlineQueue';
 
@@ -131,6 +138,13 @@ describe('MyAgreements — marketplace 1:N', () => {
     getAgreementsForDriver.mockResolvedValue([acordoMotorista]);
     getAgreementsForPassenger.mockResolvedValue([]);
     listPending.mockResolvedValue([]);
+    proposeAgreementAdenda.mockResolvedValue({ id: 'acordo-1' });
+    terminateAgreement.mockResolvedValue({
+      id: 'acordo-1',
+      estado: 'cancelamento_pendente',
+      rescisao_concluida: false,
+      rescisao_aguarda_confirmacao: false,
+    });
   });
 
   it('lista acordos activos com copy humana', async () => {
@@ -437,7 +451,7 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
     expect(within(dialog).getByText(/Cada um paga/i)).toBeInTheDocument();
     expect(within(dialog).getByText(/45\.?\s?000 Kz/i)).toBeInTheDocument();
     expect(within(dialog).getByText(/Como fica/i).closest('div')).toHaveTextContent(
-      /Total\s+90[\s.]?000\s*Kz/i,
+      /Total\s+135[\s.]?000\s*Kz/i,
     );
     expect(within(dialog).queryByText(/POR_PASSAGEIRO/i)).not.toBeInTheDocument();
     expect(within(dialog).queryByText(/TOTAL_ACORDO/i)).not.toBeInTheDocument();
@@ -754,3 +768,265 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
     expect(within(dialog).queryByRole('button', { name: /Rejeitar Alteração/i })).not.toBeInTheDocument();
   });
 });
+
+describe('MyAgreements — §22 adenda bilateral e rescisão', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+    getAgreementsForDriver.mockResolvedValue([acordoMotorista]);
+    getAgreementsForPassenger.mockResolvedValue([]);
+    listPending.mockResolvedValue([]);
+    proposeAgreementAdenda.mockResolvedValue({ id: 'acordo-pax' });
+    terminateAgreement.mockResolvedValue({
+      id: 'acordo-1',
+      estado: 'cancelamento_pendente',
+      rescisao_modo: 'aviso_previo',
+      rescisao_concluida: false,
+      rescisao_aguarda_confirmacao: false,
+    });
+  });
+
+  it('passageiro activo vê Propor Reajuste de Preço e não Renegociar preço', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByRole('button', { name: /Propor Reajuste de Preço/i })).toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: /Renegociar preço/i })).not.toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: /Rescindir acordo/i })).toBeInTheDocument();
+  });
+
+  it('passageiro propõe adenda com o número combinado do acordo', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Propor Reajuste de Preço/i }));
+
+    const dialog = screen.getByRole('dialog', { name: /Detalhe do acordo/i });
+    fireEvent.change(within(dialog).getByLabelText(/Valor mensal/i), {
+      target: { value: '38000' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: /Rever e confirmar/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
+
+    await waitFor(() => {
+      expect(proposeAgreementAdenda).toHaveBeenCalledWith('acordo-pax', {
+        modo_preco: 'POR_PASSAGEIRO',
+        valor_ask_kz: 38000,
+        n_passageiros: 3,
+      });
+    });
+  });
+
+  it('motorista vê Aceitar e Rejeitar quando a adenda está à espera dele', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        adenda_pendente: {
+          id: 'adenda-pax',
+          estado: 'pendente_contraparte',
+          created_by: 'pax-1',
+          effective_from: '2026-10-01',
+          valor_mensal_por_passageiro_kz: 38000,
+          valor_mensal_total_kz: 114000,
+          applied_at: null,
+        },
+      },
+    ]);
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByRole('button', { name: /Aceitar Alteração/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: /Rejeitar Alteração/i })).toBeInTheDocument();
+  });
+
+  it('criador da adenda vê A aguardar resposta sem CTAs de decisão', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([
+      {
+        ...acordoPassageiro,
+        adenda_pendente: {
+          id: 'adenda-pax',
+          estado: 'pendente_contraparte',
+          created_by: 'pax-viewer',
+          effective_from: '2026-10-01',
+          valor_mensal_por_passageiro_kz: 38000,
+          valor_mensal_total_kz: 114000,
+          applied_at: null,
+        },
+      },
+    ]);
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByTestId('adenda-pendente')).toHaveTextContent(
+      /A aguardar resposta da outra parte/i,
+    );
+    expect(within(dialog).queryByRole('button', { name: /Aceitar Alteração/i })).not.toBeInTheDocument();
+  });
+
+  it('motorista confirma aviso prévio pelo modal de rescisão', async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Rescindir acordo/i }));
+
+    const modal = screen.getByRole('dialog', { name: /Rescindir acordo/i });
+    fireEvent.click(within(modal).getByRole('radio', { name: /Aviso prévio/i }));
+    fireEvent.click(within(modal).getByRole('button', { name: /Confirmar rescisão/i }));
+
+    await waitFor(() => {
+      expect(terminateAgreement).toHaveBeenCalledWith('acordo-1', { modo: 'aviso_previo' });
+    });
+  });
+
+  it('acordo a terminar no fim do mês mostra estado humano e esconde Rescindir', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        estado: 'cancelamento_pendente',
+        rescisao_modo: 'aviso_previo',
+        rescisao_effective_on: '2026-10-01',
+      },
+    ]);
+
+    renderPage();
+    expect(await screen.findByText(/A terminar no fim do mês/i)).toBeInTheDocument();
+    expect(screen.queryByText(/cancelamento_pendente/i)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).queryByRole('button', { name: /Rescindir acordo/i })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: /Renegociar preço/i })).not.toBeInTheDocument();
+    expect(within(dialog).getByText(/continua activ[oa] até/i)).toBeInTheDocument();
+    const bannerTerminar = within(dialog).getByText(/continua activ[oa] até/i).closest('[role="status"]');
+    expect(bannerTerminar).toBeTruthy();
+    expect(bannerTerminar).not.toHaveAttribute('data-variant', 'offline');
+    expect(within(dialog).queryByText(/Aviso de rede:/i)).not.toBeInTheDocument();
+  });
+
+  it('pedido consensual pendente não usa aviso de rede', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        rescisao_modo: 'consensual',
+        rescisao_solicitada_por: 'driver-1',
+      },
+    ]);
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const banner = within(dialog)
+      .getByText(/A aguardar confirmação da outra parte/i)
+      .closest('[role="status"]');
+    expect(banner).toBeTruthy();
+    expect(banner).not.toHaveAttribute('data-variant', 'offline');
+    expect(within(dialog).queryByText(/Aviso de rede:/i)).not.toBeInTheDocument();
+  });
+
+  it('contraparte confirma rescisão consensual', async () => {
+    terminateAgreement.mockResolvedValue({
+      id: 'acordo-1',
+      estado: 'cancelado',
+      rescisao_modo: 'consensual',
+      rescisao_concluida: true,
+      rescisao_aguarda_confirmacao: false,
+    });
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        rescisao_modo: 'consensual',
+        rescisao_solicitada_por: 'pax-1',
+      },
+    ]);
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Confirmar fim do acordo/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Confirmar fim$/i }));
+
+    await waitFor(() => {
+      expect(terminateAgreement).toHaveBeenCalledWith('acordo-1', { modo: 'consensual' });
+    });
+  });
+
+  it('adenda offline mostra FeedbackAlert role=status com copy de sincronização', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    proposeAgreementAdenda.mockResolvedValue({
+      id: 'acordo-pax',
+      offlineQueued: true,
+    });
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Propor Reajuste de Preço/i }));
+
+    const dialog = screen.getByRole('dialog', { name: /Detalhe do acordo/i });
+    fireEvent.change(within(dialog).getByLabelText(/Valor mensal/i), {
+      target: { value: '38000' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: /Rever e confirmar/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
+
+    const status = await screen.findByRole('status');
+    expect(status).toHaveTextContent(
+      /Alteração agendada offline\. Será sincronizada assim que recuperar rede\./,
+    );
+  });
+
+  it('erro de rescisão usa FeedbackAlert role=alert dentro do modal', async () => {
+    terminateAgreement.mockRejectedValue(new Error('Sem permissão para rescindir este acordo.'));
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Rescindir acordo/i }));
+
+    const modal = screen.getByRole('dialog', { name: /Rescindir acordo/i });
+    fireEvent.click(within(modal).getByRole('radio', { name: /Aviso prévio/i }));
+    fireEvent.click(within(modal).getByRole('button', { name: /Confirmar rescisão/i }));
+
+    const alert = await within(modal).findByRole('alert');
+    expect(alert).toHaveTextContent(/Sem permissão para rescindir este acordo/i);
+    expect(alert).toHaveAttribute('data-variant', 'error');
+    expect(screen.getByRole('dialog', { name: /Rescindir acordo/i })).toBeInTheDocument();
+  });
+
+  it('rescisão offline mostra Aguardando sincronização no detalhe visível', async () => {
+    terminateAgreement.mockResolvedValue({
+      id: 'acordo-1',
+      offlineQueued: true,
+    });
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Rescindir acordo/i }));
+
+    const modal = screen.getByRole('dialog', { name: /Rescindir acordo/i });
+    fireEvent.click(within(modal).getByRole('radio', { name: /Aviso prévio/i }));
+    fireEvent.click(within(modal).getByRole('button', { name: /Confirmar rescisão/i }));
+
+    await waitFor(() => {
+      expect(terminateAgreement).toHaveBeenCalledWith('acordo-1', { modo: 'aviso_previo' });
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: /Rescindir acordo/i })).not.toBeInTheDocument();
+    });
+
+    const detalhe = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const status = within(detalhe).getByRole('status');
+    expect(status).toHaveTextContent(/Aguardando sincronização/i);
+  });
+});
+

@@ -5,7 +5,10 @@ import {
   acceptAgreementAdenda,
   createAgreementFromProposal,
   leavePassenger,
+  proposeAgreementAdenda,
+  rejectAgreementAdenda,
   renegotiateAgreementPricing,
+  terminateAgreement,
 } from './AgreementService.js';
 import { cancelProposta } from './PropostaService.js';
 import { sairDoGrupo } from './GrupoService.js';
@@ -99,6 +102,59 @@ describe('OfflineSyncEngine', () => {
     const rows = await listQueueItems();
     expect(rows[0].rpc).toBe('accept_agreement_adenda');
     expect(rows[0].args.p_adenda_id).toBe('adenda-9');
+  });
+
+  it('quando a rede falha, propose_agreement_adenda fica na fila', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+
+    const result = await proposeAgreementAdenda('acordo-3', {
+      modo_preco: 'POR_PASSAGEIRO',
+      valor_ask_kz: 45000,
+      n_passageiros: 2,
+    });
+    expect(result.offlineQueued).toBe(true);
+
+    const rows = await listQueueItems();
+    expect(rows[0].rpc).toBe('propose_agreement_adenda');
+    expect(rows[0].args.p_acordo_id).toBe('acordo-3');
+    expect(rows[0].args.p_idempotency_key).toBe(result.idempotency_key);
+  });
+
+  it('quando a rede falha, reject_agreement_adenda fica na fila com p_idempotency_key', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+
+    const result = await rejectAgreementAdenda('adenda-10');
+    expect(result.offlineQueued).toBe(true);
+
+    const rows = await listQueueItems();
+    expect(rows[0].rpc).toBe('reject_agreement_adenda');
+    expect(rows[0].args.p_adenda_id).toBe('adenda-10');
+    expect(rows[0].args.p_idempotency_key).toBe(result.idempotency_key);
+  });
+
+  it('quando a rede falha, terminate_agreement fica na fila com modo e chave', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+
+    const result = await terminateAgreement('acordo-11', { modo: 'aviso_previo' });
+    expect(result.offlineQueued).toBe(true);
+
+    const rows = await listQueueItems();
+    expect(rows[0].rpc).toBe('terminate_agreement');
+    expect(rows[0].args.p_acordo_id).toBe('acordo-11');
+    expect(rows[0].args.p_modo).toBe('aviso_previo');
+    expect(rows[0].args.p_idempotency_key).toBe(result.idempotency_key);
+  });
+
+  it('rescisão consensual repetida offline não gera 2.ª chamada (evita confirmação acidental)', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+
+    const primeiro = await terminateAgreement('acordo-12', { modo: 'consensual' });
+    const segundo = await terminateAgreement('acordo-12', { modo: 'consensual' });
+
+    const rows = await listQueueItems();
+    expect(rows).toHaveLength(1);
+    expect(segundo.idempotency_key).toBe(primeiro.idempotency_key);
+    expect(rows[0].args.p_modo).toBe('consensual');
   });
 
   it('quando a rede falha, leave_grupo_membro fica na fila', async () => {
