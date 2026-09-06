@@ -537,7 +537,7 @@ describe('AgreementService', () => {
               data: {
                 id: 'adenda-1',
                 acordo_id: 'acordo-1',
-                estado: 'aceite',
+                estado: 'aceite_agendada',
                 effective_from: '2026-10-01',
                 applied_at: null,
                 aceite_em: '2026-09-05T16:00:00Z',
@@ -559,7 +559,7 @@ describe('AgreementService', () => {
           ),
         }),
       );
-      expect(result.estado).toBe('aceite');
+      expect(result.estado).toBe('aceite_agendada');
       expect(result.applied_at).toBeNull();
       expect(result.aceite_em).toBeTruthy();
     });
@@ -615,6 +615,9 @@ describe('AgreementService', () => {
 
       expect(supabase.rpc).toHaveBeenCalledWith('reject_agreement_adenda', {
         p_adenda_id: 'adenda-1',
+        p_idempotency_key: expect.stringMatching(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+        ),
       });
       expect(result.estado).toBe('rejeitada');
     });
