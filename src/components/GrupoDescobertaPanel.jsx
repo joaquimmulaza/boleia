@@ -20,14 +20,10 @@ const GrupoDescobertaPanel = ({ userId, excludeGrupoId = null, onPedidoEnviado }
   const [feedback, setFeedback] = useState({ type: '', text: '' });
 
   const carregar = useCallback(async () => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     try {
       const lista = await listGruposAbertos({
-        excludeOwnerId: userId,
+        excludeOwnerId: userId || undefined,
         excludeGrupoId: excludeGrupoId || undefined,
       });
       setGrupos(lista);
@@ -98,16 +94,24 @@ const GrupoDescobertaPanel = ({ userId, excludeGrupoId = null, onPedidoEnviado }
           const n = Number(p.n_candidato) || 0;
           const max = Number(g.n_maximo) || 4;
           const jaPediu = enviados.has(g.id);
+          const temOrigem = Boolean(p.origin_name?.trim());
+          const temDestino = Boolean(p.destination_name?.trim());
           return (
             <article
               key={g.id}
               className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 shadow-sm space-y-3"
             >
-              <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
-                <span>{p.origin_name || 'Origem'}</span>
-                <ArrowRight size={14} className="text-slate-400" aria-hidden="true" />
-                <span>{p.destination_name || 'Destino'}</span>
-              </div>
+              {temOrigem && temDestino ? (
+                <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+                  <span>{p.origin_name}</span>
+                  <ArrowRight size={14} className="text-slate-400" aria-hidden="true" />
+                  <span>{p.destination_name}</span>
+                </div>
+              ) : (
+                <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                  Rota não indicada na procura
+                </p>
+              )}
               <div className="flex flex-wrap gap-3 text-sm text-slate-500">
                 {p.preferred_time ? (
                   <span className="flex items-center gap-1">
@@ -122,7 +126,7 @@ const GrupoDescobertaPanel = ({ userId, excludeGrupoId = null, onPedidoEnviado }
               </div>
               {jaPediu ? (
                 <p className="text-sm font-medium text-emerald-700">Pedido enviado</p>
-              ) : (
+              ) : userId ? (
                 <button
                   type="button"
                   disabled={busyId === g.id}
@@ -131,7 +135,7 @@ const GrupoDescobertaPanel = ({ userId, excludeGrupoId = null, onPedidoEnviado }
                 >
                   Pedir entrada
                 </button>
-              )}
+              ) : null}
             </article>
           );
         })}
