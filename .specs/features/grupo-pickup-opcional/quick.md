@@ -1,5 +1,9 @@
 # Quick Task: Ponto de Recolha / Pickup Opcional em Grupos
 
+**Data:** 2026-09-06
+**Modo:** Quick
+**Causa:** `AddressInput` hardcodava `required`; label em `GrupoProcuraPanel` dizia «(opcional)».
+
 ## Contexto & Problema
 No fluxo de fallback de convite por telefone (`GrupoProcuraPanel.jsx`), o utilizador pode adicionar um membro ao grupo.
 A interface rotula o campo de recolha como «Ponto de recolha (opcional)». No entanto, anteriormente o componente `AddressInput.jsx` continha o atributo HTML `required` hardcoded no `<input>`, impedindo a submissão do formulário no browser quando o campo de recolha estava vazio (emitindo o erro nativo do browser de validação de formulário «Preencha este campo»).
@@ -35,3 +39,11 @@ Além disso, se strings vazias (`""`) ou espaços fossem passados, poderiam ser 
    - `AddressInput.test.jsx`: renderização com `required` por omissão e `required={false}` explícito.
    - `GrupoProcuraPanel.test.jsx`: submissão bem-sucedida com pickup vazio/em branco persistindo `null`.
    - `GrupoService.test.js`: coerção de strings vazias para `null` no `insert`/`update`.
+
+## Verify
+
+```bash
+npm run test:run -- src/components/AddressInput.test.jsx src/components/GrupoProcuraPanel.test.jsx src/components/GrupoDescobertaPanel.test.jsx src/services/GrupoService.test.js
+```
+
+Browser: grupo 1/4 → fallback → telefone → pickup vazio → submit sem «Preencha este campo.»

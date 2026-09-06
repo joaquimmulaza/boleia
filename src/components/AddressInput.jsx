@@ -9,6 +9,7 @@ const ICON_MAP = {
 };
 
 /**
+ * Campo de endereço com autocomplete Photon/OSM.
  * @param {{
  *   id?: string,
  *   name: string,

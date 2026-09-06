@@ -194,6 +194,71 @@ describe('GrupoProcuraPanel T31', () => {
     expect(container.textContent).not.toMatch(/N_actual|n_maximo|POR_PASSAGEIRO/i);
   });
 
+  it('fallback: ponto de recolha opcional — submit com pickup vazio envia null', async () => {
+    getGrupoByProcura.mockResolvedValue({
+      id: 'g-1',
+      procura_id: 'pr-1',
+      n_maximo: 4,
+    });
+    listMembrosGrupo
+      .mockResolvedValueOnce([
+        {
+          id: 'm-1',
+          passenger_id: 'pax-1',
+          estado: 'activo',
+          ordem_insercao: 0,
+          perfis: { nome_completo: 'Ana' },
+        },
+      ])
+      .mockResolvedValue([
+        {
+          id: 'm-1',
+          passenger_id: 'pax-1',
+          estado: 'activo',
+          ordem_insercao: 0,
+          perfis: { nome_completo: 'Ana' },
+        },
+        {
+          id: 'm-2',
+          passenger_id: 'pax-2',
+          estado: 'activo',
+          ordem_insercao: 1,
+          perfis: { nome_completo: 'Bruno' },
+        },
+      ]);
+    findPassageiroByTelefone.mockResolvedValue({
+      id: 'pax-2',
+      nome_completo: 'Bruno',
+    });
+    addMembroGrupo.mockResolvedValue({ id: 'm-2', passenger_id: 'pax-2' });
+
+    render(<GrupoProcuraPanel procura={procura} userId="pax-1" onGrupoChange={vi.fn()} />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /Fallback: Convidar por telefone/i }),
+    );
+
+    const pickup = screen.getByRole('textbox', { name: /Ponto de recolha \(opcional\)/i });
+    expect(pickup).not.toBeRequired();
+
+    fireEvent.change(screen.getByLabelText(/Telefone do colega/i), {
+      target: { value: '923766405' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Adicionar ao grupo/i }));
+
+    await waitFor(() => {
+      expect(addMembroGrupo).toHaveBeenCalledWith(
+        'g-1',
+        expect.objectContaining({
+          passenger_id: 'pax-2',
+          pickup_name: null,
+          pickup_lat: null,
+          pickup_lng: null,
+        }),
+      );
+    });
+  });
+
   it('grupo incompleto: copy a explicar que já se pode negociar', async () => {
     getGrupoByProcura.mockResolvedValue({
       id: 'g-1',
