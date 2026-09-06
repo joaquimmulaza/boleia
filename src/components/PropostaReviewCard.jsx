@@ -104,7 +104,7 @@ function PropostaReviewCard({
     review.proposta.modo_preco === 'TOTAL_ACORDO' ? 'Total do acordo' : 'Por passageiro';
   const { pricing, membros, titulo, avisoComposicao } = review;
   const nProposto = Number(review.proposta.n_passageiros_propostos) || 0;
-  const needsPicker = Boolean(review.requiresMemberSelection) && !isCriador;
+  const needsPicker = Boolean(review.requiresMemberSelection) && !isCriador && !isHistorico;
   const points = buildPreferentialMapPoints(
     needsPicker
       ? membros.filter((m) => selectedIds.includes(m.passenger_id))

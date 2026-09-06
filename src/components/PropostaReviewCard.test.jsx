@@ -348,4 +348,33 @@ describe('PropostaReviewCard', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
     expect(onAceitar).toHaveBeenCalledWith(undefined);
   });
+
+  it('modo historico não mostra picker de membros mesmo com requiresMemberSelection', () => {
+    render(
+      <PropostaReviewCard
+        review={buildReview({
+          requiresMemberSelection: true,
+          proposta: {
+            ...buildReview().proposta,
+            estado: 'aceite',
+            n_passageiros_propostos: 3,
+          },
+          membros: [
+            ...buildReview().membros,
+            {
+              passenger_id: 'p4',
+              nome: 'Diana Lima',
+              pickup_name: null,
+              quota_mensal_kz: null,
+            },
+          ],
+        })}
+        modo="historico"
+        secao="recebidas"
+      />,
+    );
+
+    expect(screen.queryByTestId('member-picker')).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+  });
 });

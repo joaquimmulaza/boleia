@@ -27,7 +27,7 @@ import {
   cancelProposta,
 } from '../services/PropostaService';
 import { createAgreementFromProposal } from '../services/AgreementService';
-import { enqueueWaitlist, listWaitlistByProcura } from '../services/WaitlistService';
+import { enqueueWaitlist, filterWaitlistEntriesVisiveis, listWaitlistByProcura } from '../services/WaitlistService';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { formatKwanza } from '../utils/formatKwanza';
 import { formatTime24h } from '../utils/formatTime';
@@ -397,16 +397,18 @@ const PassengerDashboard = () => {
     }
   };
 
-  const waitlistEstadoOferta = (ofertaId) =>
-    waitlistEntries.find((e) => e.oferta_id === ofertaId)?.estado ?? null;
+  const waitlistEntriesVisiveis = filterWaitlistEntriesVisiveis(waitlistEntries);
 
-  const temPromocaoWaitlist = waitlistEntries.some((e) => e.estado === 'notificada');
+  const waitlistEstadoOferta = (ofertaId) =>
+    waitlistEntriesVisiveis.find((e) => e.oferta_id === ofertaId)?.estado ?? null;
+
+  const temPromocaoWaitlist = waitlistEntriesVisiveis.some((e) => e.estado === 'notificada');
 
   const waitlistOfertaIds = new Set(matches.waitlist.map((o) => o.id));
-  const waitlistOrfas = waitlistEntries.filter((e) => !waitlistOfertaIds.has(e.oferta_id));
+  const waitlistOrfas = waitlistEntriesVisiveis.filter((e) => !waitlistOfertaIds.has(e.oferta_id));
 
   const temSecaoWaitlist =
-    waitlistEntries.length > 0 || matches.waitlist.length > 0 || temPromocaoWaitlist;
+    waitlistEntriesVisiveis.length > 0 || matches.waitlist.length > 0 || temPromocaoWaitlist;
 
   const nDisplayGrupo = grupo
     ? (membrosCount > 0 ? membrosCount : procura?.n_candidato ?? 1)
@@ -839,10 +841,9 @@ const PassengerDashboard = () => {
             <>
               <h2 className="text-lg font-bold text-balance">Ofertas compatíveis</h2>
               <p className="text-sm font-semibold text-slate-500">
-                {(() => {
-                  const n = matches.direct.length + matches.waitlist.length;
-                  return n === 1 ? '1 oferta compatível' : `${n} ofertas compatíveis`;
-                })()}
+                {matches.direct.length === 1
+                  ? '1 oferta compatível'
+                  : `${matches.direct.length} ofertas compatíveis`}
               </p>
 
               {matches.direct.map((oferta) => (
