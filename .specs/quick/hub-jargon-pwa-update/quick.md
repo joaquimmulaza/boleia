@@ -1,16 +1,11 @@
-# Quick — Hub jargon sweep + PWA update once-per-version
+# Quick — Hub jargon regression tests + PWA update once-per-version
 
-## A) Hub jargon
-- Substituir copy técnica visível nos hubs (nav principal): «oferta de capacidade», «capacidade pretendida», etc.
-- Manter identificadores internos / comentários de serviço.
-- Testes: banir `1:N|matchmaking|marketplace` + enums `N_*` / `POR_PASSAGEIRO` nas árvores landing+hub (espelhar PR #73).
+## A) Hub jargon (regression only)
+- Hubs já limpos em `a1d59c9` — sem `1:N` / `matchmaking` / `marketplace` na UI.
+- **Não** reescrever vocabulário de produto (oferta, procura, compatíveis, lista de espera).
+- Estender ban tests estilo PR #73 às árvores hub/dashboard.
 
-## B) PWA update
-- Modal «Atualização disponível» uma vez por versão (scriptURL do SW à espera).
-- «Agora não» persiste dismiss em `localStorage` até versão diferente.
-- «Atualizar agora» aplica SW + reload.
-- Sem re-prompt na mesma versão entre navegações.
-
-## Verificação
-- `npm run test:run` scoped + lint
-- Testes UpdatePrompt + pwaUpdateDismiss
+## B) PWA (delta principal)
+- Ficheiros: `UpdatePrompt.jsx` + `UpdatePrompt.test.jsx` apenas.
+- «Mais tarde» persiste `scriptURL` do SW à espera em `localStorage`.
+- Gate modal até worker à espera diferente; «Atualizar agora» → fluxo existente.

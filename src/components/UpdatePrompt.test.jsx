@@ -9,6 +9,7 @@ vi.mock('virtual:pwa-register/react', () => ({
 }));
 
 const WAITING_URL = 'https://app.test/sw.js?v=build-42';
+const DISMISS_STORAGE_KEY = 'pwa-update-dismissed';
 
 describe('UpdatePrompt Component (PWA)', () => {
   let updateServiceWorkerMock;
@@ -63,7 +64,7 @@ describe('UpdatePrompt Component (PWA)', () => {
 
     expect(await screen.findByText(/Atualização disponível/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Atualizar agora/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Agora não/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Mais tarde/i })).toBeInTheDocument();
   });
 
   it('Interação: deve chamar updateServiceWorker(true) ao clicar em "Atualizar agora"', async () => {
@@ -84,7 +85,7 @@ describe('UpdatePrompt Component (PWA)', () => {
     expect(updateServiceWorkerMock).toHaveBeenCalledWith(true);
   });
 
-  it('Interação: «Agora não» persiste dismiss da versão e esconde o prompt', async () => {
+  it('Interação: «Mais tarde» persiste dismiss da versão e esconde o prompt no remount', async () => {
     useRegisterSW.mockImplementation((options = {}) => {
       onNeedRefreshCallback = options.onNeedRefresh;
       return {
@@ -97,11 +98,11 @@ describe('UpdatePrompt Component (PWA)', () => {
     const { unmount } = render(<UpdatePrompt />);
     onNeedRefreshCallback?.();
 
-    fireEvent.click(await screen.findByRole('button', { name: /Agora não/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Mais tarde/i }));
 
     expect(updateServiceWorkerMock).not.toHaveBeenCalled();
     expect(setNeedRefreshMock).toHaveBeenCalledWith(false);
-    expect(localStorage.getItem('pwa-update-dismissed')).toBe(WAITING_URL);
+    expect(localStorage.getItem(DISMISS_STORAGE_KEY)).toBe(WAITING_URL);
 
     unmount();
 
@@ -123,16 +124,7 @@ describe('UpdatePrompt Component (PWA)', () => {
   });
 
   it('mostra de novo quando a versão à espera muda', async () => {
-    localStorage.setItem('pwa-update-dismissed', 'https://app.test/sw.js?v=build-41');
-
-    Object.defineProperty(navigator, 'serviceWorker', {
-      configurable: true,
-      value: {
-        ready: Promise.resolve({
-          waiting: { scriptURL: WAITING_URL },
-        }),
-      },
-    });
+    localStorage.setItem(DISMISS_STORAGE_KEY, 'https://app.test/sw.js?v=build-41');
 
     useRegisterSW.mockImplementation((options = {}) => {
       onNeedRefreshCallback = options.onNeedRefresh;

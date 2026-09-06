@@ -471,7 +471,7 @@ const PassengerDashboard = () => {
               <span className="text-sm font-semibold text-charcoal dark:text-slate-300">
                 Até quantas pessoas?
               </span>
-              <div className="flex flex-wrap gap-2" role="group" aria-label="Até quantas pessoas no grupo">
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Capacidade do grupo">
                 {CAPACIDADES_GRUPO.map((n) => (
                   <button
                     key={n}

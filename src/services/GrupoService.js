@@ -36,7 +36,7 @@ function normalizarNMaximo(value) {
   const n = value == null ? N_MAXIMO_DEFAULT : Number(value);
   if (!Number.isInteger(n) || n < N_MAXIMO_MIN || n > N_MAXIMO_MAX) {
     throw new Error(
-      `O tamanho do grupo deve ser entre ${N_MAXIMO_MIN} e ${N_MAXIMO_MAX} pessoas.`,
+      `A capacidade pretendida deve ser entre ${N_MAXIMO_MIN} e ${N_MAXIMO_MAX} pessoas.`,
     );
   }
   return n;

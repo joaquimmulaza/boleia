@@ -1,11 +1,46 @@
 import React, { useEffect, useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
-import {
-  clearDismissedUpdateVersion,
-  getDismissedUpdateVersion,
-  getWaitingUpdateVersion,
-  setDismissedUpdateVersion,
-} from '../utils/pwaUpdateDismiss';
+
+const DISMISS_STORAGE_KEY = 'pwa-update-dismissed';
+
+/**
+ * @returns {string | null}
+ */
+function getDismissedUpdateVersion() {
+  try {
+    return localStorage.getItem(DISMISS_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * @param {string} version
+ */
+function setDismissedUpdateVersion(version) {
+  if (!version) return;
+  try {
+    localStorage.setItem(DISMISS_STORAGE_KEY, version);
+  } catch {
+    // incognito / quota
+  }
+}
+
+function clearDismissedUpdateVersion() {
+  try {
+    localStorage.removeItem(DISMISS_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * @param {ServiceWorkerRegistration | null | undefined} registration
+ * @returns {string | null}
+ */
+function getWaitingUpdateVersion(registration) {
+  return registration?.waiting?.scriptURL ?? null;
+}
 
 const UpdatePrompt = () => {
   const [pendingVersion, setPendingVersion] = useState(null);
@@ -82,7 +117,7 @@ const UpdatePrompt = () => {
               onClick={handleDismiss}
               className="w-full bg-transparent hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-gray-300 font-medium py-3.5 px-4 rounded-full transition-colors focus:outline-none active:scale-[0.98]"
             >
-              Agora não
+              Mais tarde
             </button>
           </div>
         </div>

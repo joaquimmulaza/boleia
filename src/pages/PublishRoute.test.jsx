@@ -236,7 +236,7 @@ describe('PublishRoute — Publicar oferta', () => {
     expect(screen.queryByLabelText(/Origem/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Destino/i)).not.toBeInTheDocument();
     expect(
-      screen.getByText(/lugares, dias e horário — sem rota fixa/i),
+      screen.getByText(/capacidade, dias e horário — sem rota origem\/destino fixa/i),
     ).toBeInTheDocument();
     expect(screen.getByText(/residência não limita/i)).toBeInTheDocument();
 
