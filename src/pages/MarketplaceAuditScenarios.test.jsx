@@ -521,6 +521,7 @@ describe('Marketplace audit — G11 RLS sem UPDATE/DELETE client em tabelas crí
       /renegotiate_agreement_pricing/,
     );
     expect(stripComments(services.AgreementService)).toMatch(/accept_agreement_adenda/);
+    expect(stripComments(services.AgreementService)).toMatch(/terminate_agreement/);
     expect(stripComments(services.PropostaService)).toMatch(/cancel_proposal/);
     expect(stripComments(services.PropostaService)).toMatch(/reject_proposal/);
     expect(stripComments(services.WaitlistService)).toMatch(/promote_waitlist/);

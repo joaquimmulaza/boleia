@@ -696,6 +696,18 @@ describe('AgreementService', () => {
       await expect(terminateAgreement('', { modo: 'consensual' })).rejects.toThrow(/acordo/i);
       await expect(terminateAgreement('acordo-1', { modo: '' })).rejects.toThrow(/modo/i);
     });
+
+    it('em falha de rede enfileira terminate_agreement com idempotency_key', async () => {
+      Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+
+      const result = await terminateAgreement('acordo-1', { modo: 'aviso_previo' });
+
+      expect(result.offlineQueued).toBe(true);
+      expect(result.idempotency_key).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      );
+      expect(supabase.rpc).not.toHaveBeenCalled();
+    });
   });
 
   describe('listagens', () => {
