@@ -381,7 +381,16 @@ describe('PassengerDashboard — marketplace', () => {
       })),
     );
     cancelProposta.mockImplementation(async (id) => {
-      listPropostasByProcura.mockResolvedValue([]);
+      listPropostasByProcura.mockResolvedValue([
+        {
+          id: 'prop-out',
+          estado: 'cancelada',
+          created_by: 'pax-1',
+          modo_preco: 'TOTAL_ACORDO',
+          valor_mensal_ask_kz: 100000,
+          n_passageiros_propostos: 1,
+        },
+      ]);
       return { id, estado: 'cancelada' };
     });
 
@@ -403,6 +412,9 @@ describe('PassengerDashboard — marketplace', () => {
     });
     expect(await screen.findByTestId('passenger-feedback')).toHaveTextContent(/Proposta cancelada/i);
     expect(screen.getByTestId('passenger-feedback')).toHaveAttribute('role', 'status');
+    expect(await screen.findByText('Propostas concluídas')).toBeInTheDocument();
+    expect(screen.getByText('Cancelada')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Cancelar proposta/i })).not.toBeInTheDocument();
   });
 
   it('criar procura envia dias_semana e teto_mensal_kz ao interagir no formulário', async () => {
@@ -617,5 +629,95 @@ describe('PassengerDashboard — marketplace', () => {
     await waitFor(() => {
       expect(createAgreementFromProposal).toHaveBeenCalledWith('prop-b');
     });
+  });
+
+  it('mostra bucket lista de espera com empty state quando sem inscrições', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    listWaitlistByProcura.mockResolvedValue([]);
+    findCompatibleOfertas.mockResolvedValue({ direct: [], waitlist: [], incompatible: [] });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId('waitlist-bucket')).toBeInTheDocument();
+    expect(screen.getByText('Lista de espera')).toBeInTheDocument();
+    expect(screen.getByText(/Ainda não estás em nenhuma lista de espera/i)).toBeInTheDocument();
+  });
+
+  it('mostra propostas rejeitadas na secção concluídas', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    listPropostasByProcura.mockResolvedValue([
+      {
+        id: 'prop-rej',
+        estado: 'rejeitada',
+        created_by: 'pax-1',
+        modo_preco: 'POR_PASSAGEIRO',
+        valor_mensal_ask_kz: 50000,
+        n_passageiros_propostos: 1,
+      },
+    ]);
+    enrichPropostasForReview.mockImplementation(async (lista) =>
+      (lista || []).map((p) => ({
+        proposta: p,
+        titulo: 'Individual',
+        membros: [{ passenger_id: 'pax-1', nome: 'Tu', quota_mensal_kz: 50000 }],
+        pricing: {
+          valor_mensal_total_kz: 50000,
+          valor_mensal_por_passageiro_kz: 50000,
+          quotas: [50000],
+          temResto: false,
+        },
+        avisoComposicao: null,
+      })),
+    );
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Propostas concluídas')).toBeInTheDocument();
+    expect(screen.getByText('Rejeitada')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Cancelar proposta/i })).not.toBeInTheDocument();
+  });
+
+  it('proposta enviada aberta mostra chip Aguarda resposta', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    listPropostasByProcura.mockResolvedValue([
+      {
+        id: 'prop-open',
+        estado: 'aberta',
+        created_by: 'pax-1',
+        modo_preco: 'POR_PASSAGEIRO',
+        valor_mensal_ask_kz: 50000,
+        n_passageiros_propostos: 1,
+      },
+    ]);
+    enrichPropostasForReview.mockImplementation(async (lista) =>
+      (lista || []).map((p) => ({
+        proposta: p,
+        titulo: 'Individual',
+        membros: [{ passenger_id: 'pax-1', nome: 'Tu', quota_mensal_kz: 50000 }],
+        pricing: {
+          valor_mensal_total_kz: 50000,
+          valor_mensal_por_passageiro_kz: 50000,
+          quotas: [50000],
+          temResto: false,
+        },
+        avisoComposicao: null,
+      })),
+    );
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Aguarda resposta')).toBeInTheDocument();
   });
 });

@@ -21,7 +21,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import PropostaReviewCard from '../components/PropostaReviewCard';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
-import { filterPropostasParaInbox, filterPropostasEnviadas } from '../utils/propostaInbox';
+import { filterPropostasParaInbox, filterPropostasEnviadas, filterPropostasTerminadasRecebidas, filterPropostasTerminadasEnviadas } from '../utils/propostaInbox';
 import { formatIdaRegresso, formatTime24h } from '../utils/formatTime';
 
 function estadoChip(estado) {
@@ -80,6 +80,8 @@ const DriverDashboard = () => {
   const [ofertas, setOfertas] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [enviadas, setEnviadas] = useState([]);
+  const [terminadasRecebidas, setTerminadasRecebidas] = useState([]);
+  const [terminadasEnviadas, setTerminadasEnviadas] = useState([]);
   const [selectedOfertaId, setSelectedOfertaId] = useState(null);
   const [panel, setPanel] = useState(null); // 'propostas' | 'procuras' | null
   const [procurasMatch, setProcurasMatch] = useState({ direct: [], waitlist: [] });
@@ -118,24 +120,34 @@ const DriverDashboard = () => {
 
   const ofertaSeleccionada = ofertas.find((o) => o.id === selectedOfertaId) || null;
 
-  const handleVerPropostas = async (ofertaId) => {
+  const handleVerPropostas = async (ofertaId, opts = {}) => {
     setSelectedOfertaId(ofertaId);
     setPanel('propostas');
     setReviews([]);
     setEnviadas([]);
+    setTerminadasRecebidas([]);
+    setTerminadasEnviadas([]);
     setProcurasMatch({ direct: [], waitlist: [] });
     setLoadingPropostas(true);
-    setFeedback({ type: '', text: '' });
+    if (!opts.preserveFeedback) {
+      setFeedback({ type: '', text: '' });
+    }
     try {
       const lista = await listPropostasByOferta(ofertaId);
       const inbox = filterPropostasParaInbox(lista, user?.id);
       const minhas = filterPropostasEnviadas(lista, user?.id);
-      const [enrichedInbox, enrichedEnviadas] = await Promise.all([
+      const termRecebidas = filterPropostasTerminadasRecebidas(lista, user?.id);
+      const termEnviadas = filterPropostasTerminadasEnviadas(lista, user?.id);
+      const [enrichedInbox, enrichedEnviadas, enrichedTermR, enrichedTermE] = await Promise.all([
         enrichPropostasForReview(inbox),
         enrichPropostasForReview(minhas),
+        enrichPropostasForReview(termRecebidas),
+        enrichPropostasForReview(termEnviadas),
       ]);
       setReviews(enrichedInbox);
       setEnviadas(enrichedEnviadas);
+      setTerminadasRecebidas(enrichedTermR);
+      setTerminadasEnviadas(enrichedTermE);
     } catch (err) {
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
     } finally {
@@ -148,6 +160,8 @@ const DriverDashboard = () => {
     setPanel('procuras');
     setReviews([]);
     setEnviadas([]);
+    setTerminadasRecebidas([]);
+    setTerminadasEnviadas([]);
     setProcurasMatch({ direct: [], waitlist: [] });
     setLoadingProcuras(true);
     setFeedback({ type: '', text: '' });
@@ -222,7 +236,10 @@ const DriverDashboard = () => {
     setBusyId(propostaId);
     try {
       await rejectProposta(propostaId);
-      setReviews((prev) => prev.filter((r) => r.proposta.id !== propostaId));
+      setFeedback({ type: 'success', text: 'Proposta recusada.' });
+      if (selectedOfertaId) {
+        await handleVerPropostas(selectedOfertaId, { preserveFeedback: true });
+      }
     } catch (err) {
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
     } finally {
@@ -235,8 +252,10 @@ const DriverDashboard = () => {
     setFeedback({ type: '', text: '' });
     try {
       await cancelProposta(propostaId);
-      setEnviadas((prev) => prev.filter((r) => r.proposta.id !== propostaId));
       setFeedback({ type: 'success', text: 'Proposta cancelada.' });
+      if (selectedOfertaId) {
+        await handleVerPropostas(selectedOfertaId, { preserveFeedback: true });
+      }
       await carregar();
     } catch (err) {
       setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
@@ -406,8 +425,34 @@ const DriverDashboard = () => {
                   key={review.proposta.id}
                   review={review}
                   modo="criador"
+                  secao="enviadas"
                   busy={busyId === review.proposta.id || loadingPropostas}
                   onCancelar={() => handleCancelarEnviada(review.proposta.id)}
+                />
+              ))}
+            </div>
+          ) : null}
+
+          {!loadingPropostas && (terminadasRecebidas.length > 0 || terminadasEnviadas.length > 0) ? (
+            <div className="space-y-3" data-testid="propostas-terminadas">
+              <h2 className="text-lg font-bold text-balance">Propostas concluídas</h2>
+              <p className="text-sm text-slate-500 text-pretty">
+                Recusadas ou canceladas — já não podes actuar sobre estas propostas.
+              </p>
+              {terminadasRecebidas.map((review) => (
+                <PropostaReviewCard
+                  key={`tr-${review.proposta.id}`}
+                  review={review}
+                  modo="historico"
+                  secao="recebidas"
+                />
+              ))}
+              {terminadasEnviadas.map((review) => (
+                <PropostaReviewCard
+                  key={`te-${review.proposta.id}`}
+                  review={review}
+                  modo="historico"
+                  secao="enviadas"
                 />
               ))}
             </div>
@@ -485,13 +530,13 @@ const DriverDashboard = () => {
               ))}
 
               {procurasMatch.waitlist.length > 0 && (
-                <div className="space-y-3 pt-2">
+                <div className="space-y-3 pt-2" data-testid="waitlist-bucket">
                   <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide">
                     Lista de espera
                   </h3>
                   <p className="text-sm text-slate-500 text-pretty">
-                    Sem lugares suficientes agora. O grupo é maior que os lugares disponíveis
-                    nesta oferta — não podes propor acordo directo.
+                    Sem lugares suficientes agora. Estes grupos excedem os lugares
+                    disponíveis — não podes propor acordo directo.
                   </p>
                   {procurasMatch.waitlist.map((procura) => (
                     <section

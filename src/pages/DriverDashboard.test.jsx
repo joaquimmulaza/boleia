@@ -353,10 +353,18 @@ describe('DriverDashboard — marketplace', () => {
     listPropostasByOferta.mockResolvedValue([propostaEnviada]);
     enrichPropostasForReview.mockImplementation(async (lista) => {
       if (!lista?.length) return [];
-      if (lista[0].created_by === 'driver-1') return [reviewEnviada];
-      return [];
+      return lista.map((p) => ({
+        ...reviewEnviada,
+        proposta: p,
+        titulo: 'Individual',
+      }));
     });
-    cancelProposta.mockResolvedValue({ id: 'prop-own', estado: 'cancelada' });
+    cancelProposta.mockImplementation(async (id) => {
+      listPropostasByOferta.mockResolvedValue([
+        { ...propostaEnviada, estado: 'cancelada' },
+      ]);
+      return { id, estado: 'cancelada' };
+    });
 
     render(
       <MemoryRouter>
@@ -378,7 +386,38 @@ describe('DriverDashboard — marketplace', () => {
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: /Cancelar proposta/i })).not.toBeInTheDocument();
     });
+    expect(await screen.findByText('Propostas concluídas')).toBeInTheDocument();
+    expect(screen.getByText('Cancelada')).toBeInTheDocument();
     expect(listOfertasByDriver).toHaveBeenCalledTimes(2);
+  });
+
+  it('mostra proposta rejeitada na secção concluídas', async () => {
+    const propostaRejeitada = {
+      ...propostaAberta,
+      id: 'prop-rej',
+      created_by: 'driver-1',
+      estado: 'rejeitada',
+    };
+    listPropostasByOferta.mockResolvedValue([propostaRejeitada]);
+    enrichPropostasForReview.mockImplementation(async (lista) =>
+      (lista || []).map((p) => ({
+        ...reviewFixture,
+        proposta: p,
+        titulo: 'Individual',
+      })),
+    );
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Talatona');
+    fireEvent.click(screen.getByRole('button', { name: /Ver propostas/i }));
+
+    expect(await screen.findByText('Propostas concluídas')).toBeInTheDocument();
+    expect(screen.getByText('Rejeitada')).toBeInTheDocument();
   });
 
   it('não mostra no inbox propostas criadas pelo próprio motorista (sentido B)', async () => {
@@ -489,7 +528,7 @@ describe('DriverDashboard — marketplace', () => {
 
     expect(await screen.findByText('Benfica')).toBeInTheDocument();
     expect(screen.getByText('Viana')).toBeInTheDocument();
-    expect(screen.getByText(/Lista de espera/i)).toBeInTheDocument();
+    expect(screen.getByTestId('waitlist-bucket')).toBeInTheDocument();
     expect(screen.getByText(/Grupo maior que os lugares disponíveis/i)).toBeInTheDocument();
 
     const proporButtons = screen.getAllByRole('button', { name: /Propor acordo/i });
@@ -521,7 +560,7 @@ describe('DriverDashboard — marketplace', () => {
     fireEvent.click(screen.getByRole('button', { name: /Procuras compatíveis/i }));
 
     expect(await screen.findByText('Cacuaco')).toBeInTheDocument();
-    expect(screen.getByText(/Lista de espera/i)).toBeInTheDocument();
+    expect(screen.getByTestId('waitlist-bucket')).toBeInTheDocument();
     expect(screen.getByText(/Sem lugares suficientes agora/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Propor acordo/i })).not.toBeInTheDocument();
     expect(createProposta).not.toHaveBeenCalled();

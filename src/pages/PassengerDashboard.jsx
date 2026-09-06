@@ -35,6 +35,8 @@ import { markPermissionsEligible } from '../utils/permissionsPrompt';
 import {
   filterPropostasParaInbox,
   filterPropostasEnviadas,
+  filterPropostasTerminadasRecebidas,
+  filterPropostasTerminadasEnviadas,
 } from '../utils/propostaInbox';
 import { DIAS_SEMANA, DIAS_UTEIS_DEFAULT } from '../utils/diasSemana';
 import { getModoTetoPreferido, setModoTetoPreferido } from '../utils/procuraTetoPrefs';
@@ -92,6 +94,8 @@ const PassengerDashboard = () => {
   const [waitlistEntries, setWaitlistEntries] = useState([]);
   const [inboxReviews, setInboxReviews] = useState([]);
   const [enviadasReviews, setEnviadasReviews] = useState([]);
+  const [terminadasRecebidas, setTerminadasRecebidas] = useState([]);
+  const [terminadasEnviadas, setTerminadasEnviadas] = useState([]);
   const [loadingInbox, setLoadingInbox] = useState(false);
   const [view, setView] = useState('hub'); // hub | form | matches
   const [feedback, setFeedback] = useState({ type: '', text: '' });
@@ -140,12 +144,18 @@ const PassengerDashboard = () => {
           }
           const inbox = filterPropostasParaInbox(propostas, user.id);
           const enviadas = filterPropostasEnviadas(propostas, user.id);
-          const [enrichedInbox, enrichedEnviadas] = await Promise.all([
+          const termRecebidas = filterPropostasTerminadasRecebidas(propostas, user.id);
+          const termEnviadas = filterPropostasTerminadasEnviadas(propostas, user.id);
+          const [enrichedInbox, enrichedEnviadas, enrichedTermR, enrichedTermE] = await Promise.all([
             enrichPropostasForReview(inbox),
             enrichPropostasForReview(enviadas),
+            enrichPropostasForReview(termRecebidas),
+            enrichPropostasForReview(termEnviadas),
           ]);
           setInboxReviews(enrichedInbox);
           setEnviadasReviews(enrichedEnviadas);
+          setTerminadasRecebidas(enrichedTermR);
+          setTerminadasEnviadas(enrichedTermE);
           const result = await findCompatibleOfertas({
             preferred_time: String(activa.preferred_time).slice(0, 5),
             origin_lat: Number(activa.origin_lat),
@@ -165,6 +175,8 @@ const PassengerDashboard = () => {
         setMatches({ direct: [], waitlist: [] });
         setInboxReviews([]);
         setEnviadasReviews([]);
+        setTerminadasRecebidas([]);
+        setTerminadasEnviadas([]);
         setLoadingInbox(false);
       }
     } catch (err) {
@@ -363,7 +375,8 @@ const PassengerDashboard = () => {
     setBusyId(propostaId);
     try {
       await rejectProposta(propostaId);
-      setInboxReviews((prev) => prev.filter((r) => r.proposta.id !== propostaId));
+      setFeedback({ type: 'success', text: 'Proposta recusada.' });
+      await carregar();
     } catch (err) {
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
     } finally {
@@ -376,7 +389,6 @@ const PassengerDashboard = () => {
     setFeedback({ type: '', text: '' });
     try {
       await cancelProposta(propostaId);
-      setEnviadasReviews((prev) => prev.filter((r) => r.proposta.id !== propostaId));
       setFeedback({ type: 'success', text: 'Proposta cancelada.' });
       await carregar();
     } catch (err) {
@@ -390,6 +402,12 @@ const PassengerDashboard = () => {
     waitlistEntries.find((e) => e.oferta_id === ofertaId)?.estado ?? null;
 
   const temPromocaoWaitlist = waitlistEntries.some((e) => e.estado === 'notificada');
+
+  const waitlistOfertaIds = new Set(matches.waitlist.map((o) => o.id));
+  const waitlistOrfas = waitlistEntries.filter((e) => !waitlistOfertaIds.has(e.oferta_id));
+
+  const temSecaoWaitlist =
+    waitlistEntries.length > 0 || matches.waitlist.length > 0 || temPromocaoWaitlist;
 
   const nDisplayGrupo = grupo
     ? (membrosCount > 0 ? membrosCount : procura?.n_candidato ?? 1)
@@ -687,6 +705,68 @@ const PassengerDashboard = () => {
             excludeGrupoId={grupo?.id ?? null}
           />
 
+          <section className="space-y-3" data-testid="waitlist-bucket">
+            <h2 className="text-lg font-bold text-balance">Lista de espera</h2>
+            <p className="text-sm text-slate-500 text-pretty">
+              Quando não há lugares suficientes para o teu grupo, podes entrar em espera.
+              Se abrir vaga, recebes aviso — decides tu se propões acordo.
+            </p>
+
+            {temPromocaoWaitlist && (
+              <div
+                role="status"
+                className="rounded-xl px-4 py-3 text-sm font-medium bg-amber-50 text-amber-900 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800"
+              >
+                Abriu-se uma vaga numa oferta em que estás em espera. Podes propor
+                acordo — não foste aceite automaticamente.
+              </div>
+            )}
+
+            {loadingInbox ? (
+              <LoadingSkeleton />
+            ) : !temSecaoWaitlist ? (
+              <p className="text-sm text-slate-500">
+                Ainda não estás em nenhuma lista de espera. Vê ofertas compatíveis
+                abaixo — as sem lugares mostram o botão «Entrar na lista de espera».
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {matches.waitlist.map((oferta) => (
+                  <OfertaMatchCard
+                    key={oferta.id}
+                    oferta={oferta}
+                    variant="waitlist"
+                    waitlistEstado={waitlistEstadoOferta(oferta.id)}
+                    busy={busyId === oferta.id}
+                    onPropor={() => handlePropor(oferta)}
+                    onWaitlist={() => handleWaitlist(oferta)}
+                  />
+                ))}
+
+                {waitlistOrfas.map((entry) => {
+                  const chip =
+                    entry.estado === 'notificada'
+                      ? { label: 'Vaga aberta', className: 'bg-amber-100 text-amber-800' }
+                      : { label: 'Em espera', className: 'bg-slate-100 text-slate-600' };
+                  return (
+                    <div
+                      key={entry.id}
+                      className="rounded-xl px-4 py-3 border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between gap-2"
+                      data-testid="waitlist-entry-orfa"
+                    >
+                      <p className="text-sm text-slate-600 dark:text-slate-300">
+                        Inscrição activa nesta oferta
+                      </p>
+                      <span className={`text-xs font-bold px-2 py-1 rounded-full shrink-0 ${chip.className}`}>
+                        {chip.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-balance">Propostas recebidas</h2>
             {loadingInbox ? (
@@ -700,6 +780,7 @@ const PassengerDashboard = () => {
                 <PropostaReviewCard
                   key={review.proposta.id}
                   review={review}
+                  secao="recebidas"
                   busy={busyId === review.proposta.id}
                   onAceitar={(memberIds) => handleAceitarInbox(review.proposta.id, memberIds)}
                   onRecusar={() => handleRecusarInbox(review.proposta.id)}
@@ -722,6 +803,7 @@ const PassengerDashboard = () => {
                   key={review.proposta.id}
                   review={review}
                   modo="criador"
+                  secao="enviadas"
                   busy={busyId === review.proposta.id}
                   onCancelar={() => handleCancelarEnviada(review.proposta.id)}
                 />
@@ -729,8 +811,34 @@ const PassengerDashboard = () => {
             )}
           </section>
 
+          {(terminadasRecebidas.length > 0 || terminadasEnviadas.length > 0) && (
+            <section className="space-y-3" data-testid="propostas-terminadas">
+              <h2 className="text-lg font-bold text-balance">Propostas concluídas</h2>
+              <p className="text-sm text-slate-500 text-pretty">
+                Recusadas ou canceladas — já não podes actuar sobre estas propostas.
+              </p>
+              {terminadasRecebidas.map((review) => (
+                <PropostaReviewCard
+                  key={`tr-${review.proposta.id}`}
+                  review={review}
+                  modo="historico"
+                  secao="recebidas"
+                />
+              ))}
+              {terminadasEnviadas.map((review) => (
+                <PropostaReviewCard
+                  key={`te-${review.proposta.id}`}
+                  review={review}
+                  modo="historico"
+                  secao="enviadas"
+                />
+              ))}
+            </section>
+          )}
+
           {(view === 'matches' || view === 'hub') && (
             <>
+              <h2 className="text-lg font-bold text-balance">Ofertas compatíveis</h2>
               <p className="text-sm font-semibold text-slate-500">
                 {(() => {
                   const n = matches.direct.length + matches.waitlist.length;
@@ -747,35 +855,6 @@ const PassengerDashboard = () => {
                   onPropor={() => handlePropor(oferta)}
                 />
               ))}
-
-              {temPromocaoWaitlist && (
-                <div
-                  role="status"
-                  className="rounded-xl px-4 py-3 text-sm font-medium bg-amber-50 text-amber-900 border border-amber-200"
-                >
-                  Abriu-se uma vaga numa oferta em que estás em espera. Podes propor
-                  acordo — não foste aceite automaticamente.
-                </div>
-              )}
-
-              {matches.waitlist.length > 0 && (
-                <>
-                  <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide">
-                    Lista de espera
-                  </h3>
-                  {matches.waitlist.map((oferta) => (
-                    <OfertaMatchCard
-                      key={oferta.id}
-                      oferta={oferta}
-                      variant="waitlist"
-                      waitlistEstado={waitlistEstadoOferta(oferta.id)}
-                      busy={busyId === oferta.id}
-                      onPropor={() => handlePropor(oferta)}
-                      onWaitlist={() => handleWaitlist(oferta)}
-                    />
-                  ))}
-                </>
-              )}
 
               {matches.direct.length === 0 && matches.waitlist.length === 0 && (
                 <p className="text-sm text-slate-500 text-pretty">
