@@ -154,7 +154,7 @@ const VehicleSetup = () => {
           <p className="text-xs text-cool-gray dark:text-slate-500 px-1 text-pretty">
             Inclui o teu lugar. {vagasPassageiros != null
               ? `${vagasPassageiros} ${vagasPassageiros === 1 ? 'lugar disponível' : 'lugares disponíveis'} para passageiros.`
-              : 'Os lugares para passageiros são capacidade − 1.'}
+              : 'Os lugares para passageiros são o total menos o teu lugar.'}
           </p>
         </div>
 

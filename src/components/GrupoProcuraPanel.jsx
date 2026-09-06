@@ -282,7 +282,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
             <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200">
               Até quantas pessoas?
             </legend>
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Capacidade pretendida">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Até quantas pessoas">
               {CAPACIDADES.map((n) => (
                 <button
                   key={n}

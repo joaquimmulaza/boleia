@@ -182,7 +182,7 @@ const PublishRoute = () => {
 
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 text-pretty px-1">
         {ofertaFlexivel
-          ? 'Oferta flexível: capacidade, dias e horário — sem rota origem/destino fixa. A tua residência não limita a área.'
+          ? 'Oferta flexível: lugares, dias e horário — sem rota fixa. A tua residência não limita a área.'
           : 'Publica a tua rota casa–trabalho com origem e destino definidos.'}
       </p>
 
@@ -216,7 +216,7 @@ const PublishRoute = () => {
       </div>
       <p className="text-xs text-slate-500 dark:text-slate-400 mb-6 text-pretty px-1">
         {ofertaFlexivel
-          ? 'Capacidade e janela horária — sem origem/destino fixos.'
+          ? 'Lugares e janela horária — sem origem/destino fixos.'
           : 'Origem e destino obrigatórios na oferta fixa.'}
       </p>
 

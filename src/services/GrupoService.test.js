@@ -58,8 +58,8 @@ describe('GrupoService T31 — n_maximo e pedidos de entrada', () => {
   });
 
   it('createGrupo rejeita n_maximo fora de 2–8', async () => {
-    await expect(createGrupo('pr-1', 'X', 1)).rejects.toThrow(/capacidade/i);
-    await expect(createGrupo('pr-1', 'X', 9)).rejects.toThrow(/capacidade/i);
+    await expect(createGrupo('pr-1', 'X', 1)).rejects.toThrow(/tamanho do grupo/i);
+    await expect(createGrupo('pr-1', 'X', 9)).rejects.toThrow(/tamanho do grupo/i);
     expect(supabase.from).not.toHaveBeenCalled();
   });
 

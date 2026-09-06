@@ -298,7 +298,7 @@ const DriverDashboard = () => {
         <EmptyState
           icon={MapPin}
           title="Ainda sem ofertas"
-          message="Publica a tua primeira oferta de capacidade."
+          message="Publica a tua primeira oferta de boleia casa–trabalho."
           actionLabel="Publicar oferta"
           onAction={() => navigate('/publicar-trajeto')}
         />
