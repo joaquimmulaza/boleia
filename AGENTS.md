@@ -95,7 +95,7 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
 
 🏛️ Relatório de Estado da Arquitetura: Boleia Certa
 **Última Atualização:** 6 de Setembro de 2026 
-**Fase Atual:** Marketplace Oferta/Procura (Phase 6–7) + **Landing refresh** + **Agent loop Cursor** + **Graphify/Graphlore** + **Stitch + UI Skills** + **PWA Offline Wave 3–4**. Spec Wave 4: `.specs/features/pwa-offline-wave4/`.
+**Fase Atual:** Marketplace Oferta/Procura (Phase 6–7) + **Landing refresh** + **Agent loop Cursor** + **Graphify/Graphlore** + **Stitch + UI Skills** + **PWA Offline Wave 3–4** + **PACOTE ENG#8 cancelamento**. Spec ENG#8: `.specs/quick/pacote-eng-8-cancelamento/`.
 
 **O que já está implementado e validado:**
 1. **Infraestrutura e Backend (Supabase):**
@@ -118,6 +118,7 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
  * **Publicar oferta (T27+T34):** `PublishRoute` — dias + «Oferta flexível»; flexível **sem** OD (campos OD escondidos); fixa exige OD; `OfertaService.resolveOdFields`.
  * **Detalhe acordo (T28):** `MyAgreements` — bloco «Preço combinado»/congelado; lista N pax; destaque quota passageiro; falta só se activo; `ConfirmationModal` `busy`.
  * **Adenda (T29 + R3 + audit Task 6):** motorista → «Renegociar preço»; passageiro → CTAs «Aceitar Alteração» / «Rejeitar Alteração» (Fitts) quando `pendente_passageiro`; após aceite, banner «Novo preço a partir de …»; client `rejectAgreementAdenda` → RPC `reject_agreement_adenda` (remoto + migração `20260906120000_…`).
+ * **Cancelamento acordo (ENG#8 / s22):** RPC `terminate_agreement` (`aviso_previo` → `cancelamento_pendente` até fim do mês, vaga ocupada; `justa_causa` → `cancelado_justificado` imediato + `recount_oferta_vagas`); lazy `apply_due_agreement_terminations` no load; idempotência `p_idempotency_key`. Audit **G15** em `TerminateAuditG15.test.jsx`. UI polish Critiquito fora do slice.
  * **Deep linking:** `notificationRouter.js` — `proposal_received` → hub da **contraparte** (`metadata.inbox`: `passageiro`|`motorista`); `waitlist_promoted`, `match_available`, etc.
  * **AuthContext:** `{ session, user, loading, tipoPerfil, profile, refreshProfile }`.
  * **Design SoT:** Stitch MCP (one-project canónico «Boleia Certa» + Project Resolution) + UI Skills sync + shadcn (`src/components/ui/`) + Mobbin free-safe; v0/One só fallback (nunca por lista vazia). Ponte `.cursor/skills/boleia-stitch` + `skills/`. Penpot não é SoT.
