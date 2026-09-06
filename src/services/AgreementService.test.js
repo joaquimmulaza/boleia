@@ -696,7 +696,8 @@ describe('AgreementService', () => {
   });
 
   describe('listagens', () => {
-    it('getAgreementsForDriver filtra por driver_id', async () => {
+    it('getAgreementsForDriver filtra por driver_id e aplica lazy RPCs', async () => {
+      supabase.rpc.mockResolvedValue({ data: 0, error: null });
       const mockOrder = vi.fn().mockResolvedValue({ data: [{ id: 'a1' }], error: null });
       supabase.from.mockReturnValue({
         select: vi.fn().mockReturnValue({
@@ -705,9 +706,16 @@ describe('AgreementService', () => {
       });
       const result = await getAgreementsForDriver('driver-1');
       expect(result).toHaveLength(1);
+      expect(supabase.rpc).toHaveBeenCalledWith('apply_due_agreement_adendas', {
+        p_acordo_id: null,
+      });
+      expect(supabase.rpc).toHaveBeenCalledWith('apply_due_agreement_terminations', {
+        p_acordo_id: null,
+      });
     });
 
-    it('getAgreementsForPassenger via acordos_passageiros', async () => {
+    it('getAgreementsForPassenger via acordos_passageiros e aplica lazy RPCs', async () => {
+      supabase.rpc.mockResolvedValue({ data: 0, error: null });
       supabase.from.mockReturnValue({
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
@@ -720,6 +728,9 @@ describe('AgreementService', () => {
       });
       const result = await getAgreementsForPassenger('pax-1');
       expect(result[0].id).toBe('a1');
+      expect(supabase.rpc).toHaveBeenCalledWith('apply_due_agreement_terminations', {
+        p_acordo_id: null,
+      });
     });
   });
 });

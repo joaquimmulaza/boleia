@@ -48,6 +48,23 @@ async function applyDueAdendasBestEffort(acordoId = null) {
 }
 
 /**
+ * Aplica rescisões com effective_on já atingido (lazy). Best-effort.
+ * @param {string | null} [acordoId]
+ */
+async function applyDueTerminationsBestEffort(acordoId = null) {
+  try {
+    const res = await supabase.rpc('apply_due_agreement_terminations', {
+      p_acordo_id: acordoId,
+    });
+    if (res?.error) {
+      console.warn('Falha ao aplicar rescisões devidas:', res.error.message);
+    }
+  } catch (err) {
+    console.warn('Falha ao aplicar rescisões devidas:', err);
+  }
+}
+
+/**
  * Aceita proposta via RPC atómica (cria acordo 1:N + congela preços).
  * Só a contraparte pode aceitar (`created_by` bloqueado na RPC).
  * Em falha de rede, enfileira `accept_proposal` com idempotency_key.
@@ -379,6 +396,7 @@ export async function terminateAgreement(acordoId, input, options = {}) {
  */
 export async function getAgreementsForDriver(driverId) {
   await applyDueAdendasBestEffort(null);
+  await applyDueTerminationsBestEffort(null);
 
   const { data, error } = await supabase
     .from('acordos')
@@ -397,6 +415,7 @@ export async function getAgreementsForDriver(driverId) {
  */
 export async function getAgreementsForPassenger(passengerId) {
   await applyDueAdendasBestEffort(null);
+  await applyDueTerminationsBestEffort(null);
 
   const { data, error } = await supabase
     .from('acordos_passageiros')

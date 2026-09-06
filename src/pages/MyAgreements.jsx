@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowRight, Clock, Users, ChevronRight, ShieldCheck, Pencil } from 'lucide-react';
+import { ArrowRight, Clock, Users, ChevronRight, ShieldCheck, Pencil, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getAgreementsForDriver,
   getAgreementsForPassenger,
+  leavePassenger,
   terminateAgreement,
   renegotiateAgreementPricing,
   acceptAgreementAdenda,
   rejectAgreementAdenda,
 } from '../services/AgreementService';
+import { listPending } from '../services/offlineQueue';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import EmptyState from '../components/EmptyState';
 import FeedbackAlert from '../components/FeedbackAlert';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -126,6 +129,7 @@ const MyAgreements = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, tipoPerfil } = useAuth();
+  const { isOnline } = useNetworkStatus();
   const [message, setMessage] = useState({ type: '', text: '' });
   const [acordos, setAcordos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -138,6 +142,10 @@ const MyAgreements = () => {
   /** @type {['faltas_excessivas' | 'avaria_veiculo' | 'seguranca' | '', React.Dispatch<React.SetStateAction<'faltas_excessivas' | 'avaria_veiculo' | 'seguranca' | ''>>]} */
   const [terminateJustificativa, setTerminateJustificativa] = useState('');
   const [terminateBusy, setTerminateBusy] = useState(false);
+  const [leaveModalOpen, setLeaveModalOpen] = useState(false);
+  const [leaveBusy, setLeaveBusy] = useState(false);
+  /** @type {[Record<string, true>, React.Dispatch<React.SetStateAction<Record<string, true>>>]} */
+  const [pendingLeaveIds, setPendingLeaveIds] = useState({});
 
   const [adendaModo, setAdendaModo] = useState(
     /** @type {'POR_PASSAGEIRO' | 'TOTAL_ACORDO'} */ ('POR_PASSAGEIRO'),
@@ -157,6 +165,21 @@ const MyAgreements = () => {
     setTerminateJustificativa('');
     setTerminateBusy(false);
   };
+
+  const syncPendingLeaves = useCallback(async () => {
+    try {
+      const pending = await listPending();
+      const next = {};
+      for (const item of pending || []) {
+        if (item?.rpc !== 'leave_passenger') continue;
+        const acordoId = item?.args?.p_acordo_id;
+        if (acordoId) next[String(acordoId)] = true;
+      }
+      setPendingLeaveIds(next);
+    } catch {
+      /* fila indisponível — manter estado local */
+    }
+  }, []);
 
   const carregar = useCallback(async () => {
     if (!user?.id) {
@@ -184,6 +207,15 @@ const MyAgreements = () => {
   useEffect(() => {
     carregar();
   }, [carregar]);
+
+  useEffect(() => {
+    void syncPendingLeaves();
+  }, [syncPendingLeaves]);
+
+  useEffect(() => {
+    if (!isOnline) return;
+    void syncPendingLeaves();
+  }, [isOnline, syncPendingLeaves]);
 
   useEffect(() => {
     if (isLoading || acordos.length === 0) return;
@@ -225,6 +257,41 @@ const MyAgreements = () => {
     setAdendaN(String(nActivos));
     setAdendaError('');
     setAdendaFormOpen(true);
+  };
+
+  const handleLeaveSolo = async () => {
+    if (!selected || !user?.id || leaveBusy) return;
+    const acordoId = selected.id;
+    setLeaveBusy(true);
+    try {
+      const result = await leavePassenger(acordoId, user.id);
+      setLeaveModalOpen(false);
+      if (result?.offlineQueued) {
+        setPendingLeaveIds((prev) => ({ ...prev, [acordoId]: true }));
+        setMessage({
+          type: 'success',
+          text: 'Saída guardada. Sincronizamos quando a rede voltar.',
+        });
+        setSelected(null);
+        await carregar();
+        return;
+      }
+      setMessage({
+        type: 'success',
+        text: 'Saíste do acordo. A quota do mês mantém-se.',
+      });
+      setSelected(null);
+      setPendingLeaveIds((prev) => {
+        const next = { ...prev };
+        delete next[acordoId];
+        return next;
+      });
+      await carregar();
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+    } finally {
+      setLeaveBusy(false);
+    }
   };
 
   const handleTerminate = async (modoOverride, justificativaOverride) => {
@@ -379,6 +446,7 @@ const MyAgreements = () => {
     const origem = oferta?.origin_name || 'Origem';
     const destino = oferta?.destination_name || 'Destino';
     const activo = isActivo(acordo.estado);
+    const leavePending = Boolean(pendingLeaveIds[acordo.id]);
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
     const quotaCard =
       tipoPerfil === 'Passageiro'
@@ -405,6 +473,15 @@ const MyAgreements = () => {
             >
               {activo ? 'Activo' : acordo.estado}
             </span>
+            {leavePending && (
+              <span
+                className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200"
+                data-testid={`saida-pendente-${acordo.id}`}
+              >
+                <Loader2 size={12} className="animate-spin shrink-0" aria-hidden="true" />
+                Saída Pendente (A sincronizar...)
+              </span>
+            )}
           </div>
           <ChevronRight size={18} className="text-slate-400 shrink-0" aria-hidden="true" />
         </div>
@@ -454,6 +531,8 @@ const MyAgreements = () => {
       isPassageiro && activo && (!minhaLinha || isActivo(minhaLinha.estado));
     const podeRenegociar =
       activo && (isMotorista || (isPassageiro && podeSair));
+    const podeEncerrar = activo && (isMotorista || podeSair);
+    const leavePending = Boolean(pendingLeaveIds[selected.id]);
     const adenda = selected.adenda_pendente;
     const adendaAguardando = adenda && isAdendaAguardandoContraparte(adenda.estado);
     const mostrarCtAdenda =
@@ -513,6 +592,12 @@ const MyAgreements = () => {
                 {cancelamentoPendente && (
                   <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900">
                     Cancelamento pendente
+                  </span>
+                )}
+                {leavePending && (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900">
+                    <Loader2 size={12} className="animate-spin shrink-0" aria-hidden="true" />
+                    Saída Pendente (A sincronizar...)
                   </span>
                 )}
               </div>
@@ -902,9 +987,20 @@ const MyAgreements = () => {
                 type="button"
                 variant="outline"
                 className="w-full h-11 rounded-xl font-bold text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                disabled={leavePending}
+                onClick={() => setLeaveModalOpen(true)}
+              >
+                Sair só eu
+              </Button>
+            )}
+            {podeEncerrar && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-11 rounded-xl font-bold text-red-700 border-red-300 hover:bg-red-50 hover:text-red-800"
                 onClick={() => setTerminatePickerOpen(true)}
               >
-                Sair do acordo
+                Encerrar acordo
               </Button>
             )}
             <Button
@@ -974,11 +1070,11 @@ const MyAgreements = () => {
           >
             <div className="space-y-1">
               <h3 id="terminate-picker-title" className="text-lg font-bold">
-                Como queres sair?
+                Como queres encerrar o acordo?
               </h3>
               <p className="text-sm text-slate-500 text-pretty">
-                Escolhe a modalidade de rescisão. O mês corrente mantém as quotas já combinadas,
-                excepto em justa causa imediata.
+                Escolhe a modalidade de rescisão do acordo completo. Para sair só tu mantendo o
+                acordo para os restantes, usa «Sair só eu».
               </p>
             </div>
 
@@ -1130,6 +1226,18 @@ const MyAgreements = () => {
             setTerminateModo('');
             setTerminateJustificativa('');
           }
+        }}
+      />
+
+      <ConfirmationModal
+        isOpen={leaveModalOpen}
+        busy={leaveBusy}
+        title="Sair só tu?"
+        message="Saída individual: o acordo mantém-se activo para os restantes. A tua quota deste mês não é reembolsada."
+        confirmText="Sair"
+        onConfirm={handleLeaveSolo}
+        onCancel={() => {
+          if (!leaveBusy) setLeaveModalOpen(false);
         }}
       />
 

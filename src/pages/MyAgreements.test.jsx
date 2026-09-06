@@ -23,6 +23,7 @@ vi.mock('../contexts/AuthContext', () => ({
 vi.mock('../services/AgreementService', () => ({
   getAgreementsForDriver: vi.fn(),
   getAgreementsForPassenger: vi.fn(),
+  leavePassenger: vi.fn(),
   terminateAgreement: vi.fn(),
   renegotiateAgreementPricing: vi.fn(),
   acceptAgreementAdenda: vi.fn(),
@@ -41,6 +42,7 @@ vi.mock('../hooks/useNetworkStatus', () => ({
 import {
   getAgreementsForDriver,
   getAgreementsForPassenger,
+  leavePassenger,
   terminateAgreement,
   renegotiateAgreementPricing,
   acceptAgreementAdenda,
@@ -188,7 +190,8 @@ describe('MyAgreements — marketplace 1:N', () => {
     expect(within(ownRow).getByText('Tu Mesmo')).toBeInTheDocument();
     expect(within(ownRow).getByText(/40\.?\s?000 Kz/i)).toBeInTheDocument();
 
-    expect(within(dialog).getByRole('button', { name: /Sair do acordo/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: /Sair só eu/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: /Encerrar acordo/i })).toBeInTheDocument();
   });
 
   it('CTA Registar falta navega para /faltas/:id', async () => {
@@ -247,22 +250,68 @@ describe('MyAgreements — marketplace 1:N', () => {
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
     expect(within(dialog).queryByRole('button', { name: /Registar falta/i })).not.toBeInTheDocument();
-    expect(within(dialog).queryByRole('button', { name: /Sair do acordo/i })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: /Sair só eu/i })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: /Encerrar acordo/i })).not.toBeInTheDocument();
   });
 
-  it('passageiro activo: Sair abre modalidades de rescisão A/B/C', async () => {
+  it('passageiro activo: Encerrar acordo abre modalidades A/B/C', async () => {
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
 
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Sair do acordo/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Encerrar acordo/i }));
 
     const picker = await screen.findByTestId('terminate-modality-picker');
     expect(within(picker).getByText(/^Acordo amigável$/i)).toBeInTheDocument();
     expect(within(picker).getByText(/^Aviso prévio$/i)).toBeInTheDocument();
     expect(within(picker).getByText(/^Justa causa imediata$/i)).toBeInTheDocument();
+  });
+
+  it('passageiro activo: Sair só eu chama leavePassenger', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    leavePassenger.mockResolvedValue({ ok: true });
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Sair só eu/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Sair$/i }));
+
+    await waitFor(() => {
+      expect(leavePassenger).toHaveBeenCalledWith('acordo-pax', 'pax-viewer');
+    });
+    expect(
+      await screen.findByText(/Saíste do acordo\. A quota do mês mantém-se/i),
+    ).toBeInTheDocument();
+  });
+
+  it('leave offlineQueued: mostra Saída Pendente e desactiva Sair só eu', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    leavePassenger.mockResolvedValue({
+      offlineQueued: true,
+      id: 'acordo-pax',
+      idempotency_key: 'idem-leave-1',
+    });
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Sair só eu/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Sair$/i }));
+
+    await waitFor(() => {
+      expect(leavePassenger).toHaveBeenCalledWith('acordo-pax', 'pax-viewer');
+    });
+
+    expect(await screen.findByText(/Saída Pendente/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByRole('button', { name: /Sair só eu/i })).toBeDisabled();
   });
 
   it('passageiro escolhe aviso prévio e chama terminateAgreement', async () => {
@@ -273,7 +322,7 @@ describe('MyAgreements — marketplace 1:N', () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Sair do acordo/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Encerrar acordo/i }));
 
     const picker = await screen.findByTestId('terminate-modality-picker');
     fireEvent.click(within(picker).getByRole('button', { name: /Aviso prévio/i }));
@@ -299,7 +348,7 @@ describe('MyAgreements — marketplace 1:N', () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Sair do acordo/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Encerrar acordo/i }));
 
     const picker = await screen.findByTestId('terminate-modality-picker');
     fireEvent.click(within(picker).getByRole('button', { name: /Acordo amigável/i }));
@@ -343,7 +392,7 @@ describe('MyAgreements — marketplace 1:N', () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Sair do acordo/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Encerrar acordo/i }));
 
     const picker = await screen.findByTestId('terminate-modality-picker');
     fireEvent.click(within(picker).getByRole('button', { name: /Aviso prévio/i }));
@@ -364,13 +413,23 @@ describe('MyAgreements — marketplace 1:N', () => {
     });
   });
 
-  it('motorista não vê CTA Sair do acordo', async () => {
+  it('motorista activo vê Encerrar acordo (sem Sair só eu)', async () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
-    expect(within(dialog).queryByRole('button', { name: /Sair do acordo/i })).not.toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: /Encerrar acordo/i })).toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: /Sair só eu/i })).not.toBeInTheDocument();
+  });
+
+  it('motorista não vê Sair só eu', async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).queryByRole('button', { name: /Sair só eu/i })).not.toBeInTheDocument();
   });
 });
 

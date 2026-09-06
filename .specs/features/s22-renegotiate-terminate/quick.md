@@ -9,8 +9,8 @@
 |----|-----------|-------------|
 | R1 | Passageiro activo vê «Renegociar preço» e propõe adenda (`renegotiate_agreement_pricing` → `pendente_contraparte`) | Vitest MyAgreements + motorista vê CTAs aceitar/rejeitar |
 | R2 | Motorista responde adenda `pendente_contraparte` (aceitar/rejeitar) | Vitest MyAgreements |
-| R3 | «Sair do acordo» apresenta 3 modalidades A/B/C ligadas a `terminate_agreement` | Vitest + AgreementService.test |
-| R4 | Rescisão consensual pendente: contraparte confirma | Vitest banner + RPC |
+| R3 | «Encerrar acordo» apresenta 3 modalidades A/B/C via `terminate_agreement`; «Sair só eu» mantém `leave_passenger` | Vitest |
+| R4 | `apply_due_agreement_terminations` best-effort no load (par com adendas) | AgreementService.test |
 
 ## Fora do slice
 
