@@ -35,10 +35,16 @@ function AcordoContactosPanel({ contactos, loading = false }) {
       >
         <div className="flex items-start gap-2">
           <Lock size={18} className="text-amber-700 shrink-0 mt-0.5" aria-hidden="true" />
-          <div>
+          <div className="space-y-1">
             <p className="text-sm font-semibold text-slate-900 dark:text-white">Contactos bloqueados</p>
             <p className="text-xs text-slate-600 dark:text-slate-300 text-pretty">
               {contactos.motivo || 'Disponíveis após pagamento em custódia.'}
+            </p>
+            <p
+              className="text-xs font-medium text-amber-800 dark:text-amber-200 text-pretty"
+              data-testid="contactos-proximo-passo"
+            >
+              Próximo passo: envia o comprovativo de transferência na secção Pagamento mensal abaixo.
             </p>
           </div>
         </div>

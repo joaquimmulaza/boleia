@@ -354,6 +354,28 @@ describe('PassengerDashboard — marketplace', () => {
     expect(screen.getByTestId('passenger-feedback')).toHaveAttribute('data-variant', 'success');
   });
 
+  it('matching usa N_actual (membros) para capacidade, não n_candidato desactualizado', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 4 }]);
+    getGrupoByProcura.mockResolvedValue({ id: 'g-1', procura_id: 'pr-1', nome: 'Colegas', n_maximo: 4 });
+    listMembrosGrupo.mockResolvedValue([
+      { id: 'm-1', passenger_id: 'pax-1', estado: 'activo', ordem_insercao: 0 },
+      { id: 'm-2', passenger_id: 'pax-2', estado: 'activo', ordem_insercao: 1 },
+    ]);
+    findCompatibleOfertas.mockResolvedValue({ direct: [ofertaDirect], waitlist: [], incompatible: [] });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(findCompatibleOfertas).toHaveBeenCalledWith(
+        expect.objectContaining({ n_candidato: 2 }),
+      );
+    });
+  });
+
   it('ao propor com grupo de 3 envia grupo_id e N_actual = 3', async () => {
     listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 3 }]);
     getGrupoByProcura.mockResolvedValue({ id: 'g-1', procura_id: 'pr-1', nome: 'Colegas' });

@@ -623,7 +623,7 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
     expect(within(dialog).getByRole('button', { name: /Renegociar preço/i })).toBeInTheDocument();
   });
 
-  it('com adenda_pendente aceite mostra aviso do próximo mês e mantém preço corrente', async () => {
+  it('com adenda_pendente aceite mostra chip, comparação de preços e mantém preço corrente', async () => {
     getAgreementsForDriver.mockResolvedValue([
       {
         ...acordoMotorista,
@@ -647,8 +647,10 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
     expect(within(dialog).getByText(/Preço combinado/i)).toBeInTheDocument();
     expect(within(dialog).getByTestId('quota-destaque')).toHaveTextContent(/40/);
     const pendente = within(dialog).getByTestId('adenda-pendente');
-    expect(pendente).toHaveTextContent(/Novo preço a partir de/i);
-    expect(pendente).toHaveTextContent(/45/);
+    expect(within(pendente).getByTestId('adenda-chip')).toHaveTextContent(/Aceite vigora em/i);
+    expect(within(pendente).getByTestId('adenda-precos-comparacao')).toBeInTheDocument();
+    expect(within(pendente).getByText(/Preço actual/i)).toBeInTheDocument();
+    expect(within(pendente).getByText(/Preço futuro/i)).toBeInTheDocument();
   });
 
   it('erro de renegociação mostra role=alert junto ao form', async () => {
@@ -708,7 +710,7 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
     const pendente = within(dialog).getByTestId('adenda-pendente');
-    expect(pendente).toHaveTextContent(/proposta de novo preço/i);
+    expect(within(pendente).getByTestId('adenda-chip')).toHaveTextContent(/À espera tua/i);
     expect(within(dialog).getByRole('button', { name: /Aceitar Alteração/i })).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: /Rejeitar Alteração/i })).toBeInTheDocument();
   });
@@ -761,7 +763,7 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
     expect(await screen.findByText(/Adenda aceite|Alteração aceite/i)).toBeInTheDocument();
     const dialog = screen.getByRole('dialog', { name: /Detalhe do acordo/i });
     expect(within(dialog).getByTestId('adenda-pendente')).toHaveTextContent(
-      /Novo preço a partir de/i,
+      /Aceite vigora em/i,
     );
     expect(within(dialog).queryByRole('button', { name: /Aceitar Alteração/i })).not.toBeInTheDocument();
   });
@@ -858,7 +860,8 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
     const pendente = within(dialog).getByTestId('adenda-pendente');
-    expect(pendente).toHaveTextContent(/proposta de novo preço|passageiro propôs/i);
+    expect(within(pendente).getByTestId('adenda-chip')).toHaveTextContent(/À espera tua/i);
+    expect(pendente).toHaveTextContent(/Revisa a proposta/i);
     expect(within(dialog).getByRole('button', { name: /Aceitar Alteração/i })).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: /Rejeitar Alteração/i })).toBeInTheDocument();
   });
@@ -902,7 +905,7 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
     });
   });
 
-  it('motorista com adenda pendente_passageiro vê aviso sem CTA Aceitar', async () => {
+  it('motorista com adenda pendente_passageiro vê chip À espera deles sem CTA Aceitar', async () => {
     getAgreementsForDriver.mockResolvedValue([
       {
         ...acordoMotorista,
@@ -922,11 +925,30 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
-    expect(within(dialog).getByTestId('adenda-pendente')).toHaveTextContent(
-      /à espera|aguard|aceitação/i,
-    );
+    const pendente = within(dialog).getByTestId('adenda-pendente');
+    expect(within(pendente).getByTestId('adenda-chip')).toHaveTextContent(/À espera deles/i);
     expect(within(dialog).queryByRole('button', { name: /Aceitar Alteração/i })).not.toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: /Rejeitar Alteração/i })).not.toBeInTheDocument();
+  });
+
+  it('cancelamento_pendente mostra banner com data Luanda e vaga ocupada', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        estado: 'cancelamento_pendente',
+        rescisao_effective_on: '2026-10-01',
+      },
+    ]);
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const banner = within(dialog).getByTestId('cancelamento-pendente-banner');
+    expect(banner).toHaveTextContent(/30 de setembro de 2026/i);
+    expect(banner).toHaveTextContent(/vaga permanece ocupada/i);
+    expect(banner).toHaveTextContent(/quotas congeladas/i);
   });
 
   it('não expõe jargon de produto na UI de acordos', async () => {

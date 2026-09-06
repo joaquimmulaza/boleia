@@ -15,6 +15,9 @@ describe('AcordoContactosPanel', () => {
     );
     expect(screen.getByTestId('contactos-bloqueados')).toBeInTheDocument();
     expect(screen.queryByText('+244923000001')).not.toBeInTheDocument();
+    expect(screen.getByTestId('contactos-proximo-passo')).toHaveTextContent(
+      /envia o comprovativo/i,
+    );
   });
 
   it('mostra telefone do motorista após em_custodia', () => {
