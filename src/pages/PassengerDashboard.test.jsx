@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import PassengerDashboard from './PassengerDashboard';
 import { createProcura, createProcuraWithGrupo, listProcurasByOwner } from '../services/ProcuraService';
 import { findCompatibleOfertas } from '../services/MatchingService';
+import { listOfertasDisponiveis } from '../services/OfertaService';
 import { createProposta, listPropostasByProcura, enrichPropostasForReview, cancelProposta } from '../services/PropostaService';
 import { createAgreementFromProposal } from '../services/AgreementService';
 import { getGrupoByProcura, listMembrosGrupo } from '../services/GrupoService';
@@ -23,6 +24,10 @@ vi.mock('../services/ProcuraService', () => ({
 
 vi.mock('../services/MatchingService', () => ({
   findCompatibleOfertas: vi.fn().mockResolvedValue({ direct: [], waitlist: [], incompatible: [] }),
+}));
+
+vi.mock('../services/OfertaService', () => ({
+  listOfertasDisponiveis: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('../services/PropostaService', () => ({
@@ -108,22 +113,128 @@ describe('PassengerDashboard — marketplace', () => {
     listMembrosGrupo.mockResolvedValue([]);
     listWaitlistByProcura.mockResolvedValue([]);
     findCompatibleOfertas.mockResolvedValue({ direct: [], waitlist: [], incompatible: [] });
+    listOfertasDisponiveis.mockResolvedValue([]);
     listPropostasByProcura.mockResolvedValue([]);
     enrichPropostasForReview.mockResolvedValue([]);
   });
 
-  it('mostra empty state para criar procura', async () => {
+  it('sem procura activa mostra feed de ofertas e grupos (sem form obrigatório)', async () => {
+    listOfertasDisponiveis.mockResolvedValue([
+      {
+        id: 'of-browse',
+        origin_name: 'Talatona',
+        destination_name: 'Miramar',
+        departure_time: '07:15:00',
+        vagas_disponiveis: 3,
+        valor_mensal_ask_kz: 90000,
+        modo_preco: 'POR_PASSAGEIRO',
+        flexibilidade_rota: false,
+      },
+    ]);
+
     render(
       <MemoryRouter>
         <PassengerDashboard />
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('A minha procura')).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.getByText(/Sem procura activa/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Criar procura/i })).toBeInTheDocument();
-    });
+    expect(await screen.findByText('Explorar')).toBeInTheDocument();
+    expect(screen.getByText('Ofertas disponíveis')).toBeInTheDocument();
+    expect(screen.getByText('Talatona')).toBeInTheDocument();
+    expect(screen.getByText('Miramar')).toBeInTheDocument();
+    expect(screen.getByTestId('grupo-descoberta-panel')).toBeInTheDocument();
+    expect(screen.getByText('Grupos abertos')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Criar procura/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Sem procura activa/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Propor acordo/i })).not.toBeInTheDocument();
+    expect(findCompatibleOfertas).not.toHaveBeenCalled();
+    expect(listOfertasDisponiveis).toHaveBeenCalled();
+  });
+
+  it('feed browse inclui oferta flexível sem OD inventada', async () => {
+    listOfertasDisponiveis.mockResolvedValue([
+      {
+        id: 'of-flex',
+        flexibilidade_rota: true,
+        departure_time: '07:00:00',
+        vagas_disponiveis: 2,
+        valor_mensal_ask_kz: 70000,
+        modo_preco: 'POR_PASSAGEIRO',
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Oferta flexível')).toBeInTheDocument();
+    expect(screen.getByText('Sem origem/destino fixos')).toBeInTheDocument();
+    expect(screen.queryByText(/^Origem$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Destino$/)).not.toBeInTheDocument();
+  });
+
+  it('browse sem procura não mostra Propor acordo (só com procura activa)', async () => {
+    listOfertasDisponiveis.mockResolvedValue([
+      {
+        id: 'of-browse',
+        origin_name: 'Talatona',
+        destination_name: 'Miramar',
+        departure_time: '07:15:00',
+        vagas_disponiveis: 3,
+        valor_mensal_ask_kz: 90000,
+        modo_preco: 'POR_PASSAGEIRO',
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId('browse-ofertas-feed')).toBeInTheDocument();
+    expect(screen.getByTestId('oferta-match-browse')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Propor acordo/i })).not.toBeInTheDocument();
+    expect(createProposta).not.toHaveBeenCalled();
+  });
+
+  it('GrupoDescobertaPanel monta sem procura activa', async () => {
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId('grupo-descoberta-panel')).toBeInTheDocument();
+    expect(screen.getByText('Grupos abertos')).toBeInTheDocument();
+  });
+
+  it('grupos incompletos aparecem no feed browse', async () => {
+    const { listGruposAbertos } = await import('../services/GrupoService');
+    listGruposAbertos.mockResolvedValue([
+      {
+        id: 'g-open',
+        n_maximo: 4,
+        procuras: {
+          origin_name: 'Kilamba',
+          destination_name: 'Centro',
+          preferred_time: '07:30:00',
+          n_candidato: 2,
+          estado: 'activa',
+        },
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Grupo · 2 de 4')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Pedir entrada/i })).toBeInTheDocument();
   });
 
   it('empty de matches fala em horário e trajeto — sem «zona»', async () => {
@@ -820,7 +931,7 @@ describe('PassengerDashboard — marketplace', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText(/Sem procura activa/i)).toBeInTheDocument();
+    expect(await screen.findByText('Ofertas disponíveis')).toBeInTheDocument();
     expectNoUserFacingJargon(document.body.textContent);
   });
 

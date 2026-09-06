@@ -62,7 +62,7 @@ const GrupoDescobertaPanel = ({ userId, excludeGrupoId = null, onPedidoEnviado }
   };
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-3" data-testid="grupo-descoberta-panel">
       <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wide text-balance">
         Grupos abertos
       </h2>

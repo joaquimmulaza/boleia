@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowRight, Clock, Users, MapPin, Banknote } from 'lucide-react';
+import { ArrowRight, Clock, Users, Banknote } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AddressInput from '../components/AddressInput';
 import TimeInput from '../components/TimeInput';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
-import EmptyState from '../components/EmptyState';
 import FeedbackAlert from '../components/FeedbackAlert';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import GrupoProcuraPanel from '../components/GrupoProcuraPanel';
@@ -18,6 +17,7 @@ import {
   listProcurasByOwner,
 } from '../services/ProcuraService';
 import { findCompatibleOfertas } from '../services/MatchingService';
+import { listOfertasDisponiveis } from '../services/OfertaService';
 import { getGrupoByProcura, listMembrosGrupo } from '../services/GrupoService';
 import {
   createProposta,
@@ -91,6 +91,8 @@ const PassengerDashboard = () => {
   const [grupo, setGrupo] = useState(null);
   const [membrosCount, setMembrosCount] = useState(0);
   const [matches, setMatches] = useState({ direct: [], waitlist: [] });
+  const [browseOfertas, setBrowseOfertas] = useState([]);
+  const [loadingBrowse, setLoadingBrowse] = useState(false);
   const [waitlistEntries, setWaitlistEntries] = useState([]);
   const [inboxReviews, setInboxReviews] = useState([]);
   const [enviadasReviews, setEnviadasReviews] = useState([]);
@@ -179,6 +181,17 @@ const PassengerDashboard = () => {
         setTerminadasRecebidas([]);
         setTerminadasEnviadas([]);
         setLoadingInbox(false);
+        setLoadingBrowse(true);
+        try {
+          const ofertas = await listOfertasDisponiveis();
+          setBrowseOfertas(ofertas);
+        } catch (err) {
+          console.error(err);
+          setBrowseOfertas([]);
+          setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
+        } finally {
+          setLoadingBrowse(false);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -305,7 +318,14 @@ const PassengerDashboard = () => {
   };
 
   const handlePropor = async (oferta) => {
-    if (!procura) return;
+    if (!procura) {
+      setFeedback({
+        type: 'error',
+        text: 'Cria uma procura com origem, destino e horário antes de propor acordo.',
+      });
+      setView('form');
+      return;
+    }
     setBusyId(oferta.id);
     setFeedback({ type: '', text: '' });
 
@@ -335,7 +355,14 @@ const PassengerDashboard = () => {
   };
 
   const handleWaitlist = async (oferta) => {
-    if (!procura) return;
+    if (!procura) {
+      setFeedback({
+        type: 'error',
+        text: 'Cria uma procura com origem, destino e horário antes de entrar na lista de espera.',
+      });
+      setView('form');
+      return;
+    }
     setBusyId(oferta.id);
     try {
       await enqueueWaitlist({
@@ -419,11 +446,19 @@ const PassengerDashboard = () => {
   return (
     <PageShell>
       <PageHeader
-        title={view === 'form' ? 'Nova procura' : 'A minha procura'}
+        title={
+          view === 'form'
+            ? 'Nova procura'
+            : procura
+              ? 'A minha procura'
+              : 'Explorar'
+        }
         subtitle={
           view === 'form'
             ? 'Define a tua rota diária casa–trabalho.'
-            : 'Encontra ofertas compatíveis com o teu horário.'
+            : procura
+              ? 'Encontra ofertas compatíveis com o teu horário.'
+              : 'Vê motoristas e grupos disponíveis. A procura filtra e permite propor acordo.'
         }
         {...(view !== 'hub'
           ? { onBack: () => setView(procura ? 'matches' : 'hub') }
@@ -441,13 +476,41 @@ const PassengerDashboard = () => {
       {loading && <LoadingSkeleton />}
 
       {!loading && view === 'hub' && !procura && (
-        <EmptyState
-          icon={MapPin}
-          title="Sem procura activa"
-          message="Cria uma procura para ver ofertas compatíveis."
-          actionLabel="Criar procura"
-          onAction={() => setView('form')}
-        />
+        <div className="space-y-4">
+          <section className="space-y-3" data-testid="browse-ofertas-feed">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-lg font-bold text-balance">Ofertas disponíveis</h2>
+              <button
+                type="button"
+                className="text-sm font-bold text-primary shrink-0"
+                onClick={() => setView('form')}
+              >
+                Criar procura
+              </button>
+            </div>
+            <p className="text-sm text-slate-500 text-pretty">
+              Motoristas com lugares publicados. Cria uma procura quando quiseres filtrar e propor acordo.
+            </p>
+
+            {loadingBrowse ? (
+              <LoadingSkeleton />
+            ) : browseOfertas.length === 0 ? (
+              <p className="text-sm text-slate-500 text-pretty">
+                Ainda não há ofertas publicadas. Volta mais tarde.
+              </p>
+            ) : (
+              browseOfertas.map((oferta) => (
+                <OfertaMatchCard
+                  key={oferta.id}
+                  oferta={oferta}
+                  variant="browse"
+                />
+              ))
+            )}
+          </section>
+
+          <GrupoDescobertaPanel userId={user.id} />
+        </div>
       )}
 
       {!loading && view === 'form' && (
