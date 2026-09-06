@@ -1,12 +1,21 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import {
   firstDayNextMonthLuanda,
+  firstDayCurrentMonthLuanda,
   isAdendaBeforeEffectiveFrom,
 } from './adendaEffectiveFrom.js';
 
 describe('adendaEffectiveFrom', () => {
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  describe('firstDayCurrentMonthLuanda — mês corrente Luanda', () => {
+    it('devolve 1.º dia do mês em Africa/Luanda', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-09-15T12:00:00.000Z'));
+      expect(firstDayCurrentMonthLuanda()).toBe('2026-09-01');
+    });
   });
 
   describe('firstDayNextMonthLuanda — viragem de mês', () => {

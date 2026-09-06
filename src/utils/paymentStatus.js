@@ -166,6 +166,45 @@ export function helpEstadoPagamento(estado) {
  * @param {string | null | undefined} estado
  * @returns {string}
  */
+/**
+ * Estado legível de um repasse motorista registado.
+ * @param {{ liquidado_em?: string | null } | null | undefined} repasse
+ * @returns {string}
+ */
+export function labelEstadoRepasse(repasse) {
+  if (repasse?.liquidado_em) return 'Liquidado';
+  return 'Pendente';
+}
+
+/**
+ * Classes Tailwind para chip de estado de repasse.
+ * @param {{ liquidado_em?: string | null } | null | undefined} repasse
+ * @returns {string}
+ */
+export function chipClassEstadoRepasse(repasse) {
+  if (repasse?.liquidado_em) {
+    return 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100';
+  }
+  return 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-100';
+}
+
+/**
+ * Resumo de liquidação de período (contagens antes do batch).
+ * @param {Array<{ mes_referencia?: string, acordos?: { driver_id?: string } | null }>} custodiaRows
+ * @param {string} mesReferencia YYYY-MM-01
+ * @returns {{ pagamentos: number, motoristas: number }}
+ */
+export function resumoLiquidacaoPeriodo(custodiaRows, mesReferencia) {
+  const mes = String(mesReferencia || '').slice(0, 10);
+  const rows = (Array.isArray(custodiaRows) ? custodiaRows : []).filter(
+    (row) => String(row.mes_referencia || '').slice(0, 10) === mes,
+  );
+  const driverIds = new Set(
+    rows.map((row) => row.acordos?.driver_id).filter(Boolean),
+  );
+  return { pagamentos: rows.length, motoristas: driverIds.size };
+}
+
 export function chipClassEstadoPagamento(estado) {
   const e = String(estado || '').toLowerCase();
   switch (e) {
