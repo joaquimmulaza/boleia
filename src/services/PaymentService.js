@@ -40,6 +40,35 @@ export async function listPagamentosByAcordo(acordoId) {
  * Admin: fila de comprovativos à espera de validação.
  * @returns {Promise<object[]>}
  */
+/**
+ * Admin: pagamentos em custódia prontos para liquidação.
+ * @returns {Promise<object[]>}
+ */
+export async function listPagamentosEmCustodia() {
+  const { data, error } = await supabase
+    .from('pagamentos_acordo')
+    .select('*, acordos(oferta_id, driver_id), perfis!pagamentos_acordo_passenger_id_fkey(nome_completo, telefone)')
+    .eq('estado', 'em_custodia')
+    .order('validado_em', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Admin liquida pagamento (repasse ao motorista menos faltas on-platform).
+ * @param {string} pagamentoId
+ * @returns {Promise<string>}
+ */
+export async function adminLiquidatePayment(pagamentoId) {
+  const { data, error } = await supabase.rpc('admin_liquidate_payment', {
+    p_pagamento_id: pagamentoId,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
 export async function listPagamentosPendentesValidacao() {
   const { data, error } = await supabase
     .from('pagamentos_acordo')

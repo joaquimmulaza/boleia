@@ -4,19 +4,24 @@ import AdminPagamentos from './AdminPagamentos.jsx';
 
 vi.mock('../services/PaymentService', () => ({
   listPagamentosPendentesValidacao: vi.fn(),
+  listPagamentosEmCustodia: vi.fn(),
   adminValidatePayment: vi.fn(),
+  adminLiquidatePayment: vi.fn(),
   getComprovativoSignedUrl: vi.fn(),
 }));
 
 import {
   listPagamentosPendentesValidacao,
+  listPagamentosEmCustodia,
   adminValidatePayment,
+  adminLiquidatePayment,
   getComprovativoSignedUrl,
 } from '../services/PaymentService';
 
 describe('AdminPagamentos', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    listPagamentosEmCustodia.mockResolvedValue([]);
   });
 
   it('rejeitar abre modal em vez de window.prompt', async () => {
@@ -74,6 +79,32 @@ describe('AdminPagamentos', () => {
     await waitFor(() => {
       expect(getComprovativoSignedUrl).toHaveBeenCalledWith('uid/pag-2/foto.png');
       expect(screen.getByTestId('comprovativo-img-pag-2')).toBeInTheDocument();
+    });
+  });
+
+  it('lista pagamentos em custódia e liquida repasse', async () => {
+    listPagamentosPendentesValidacao.mockResolvedValue([]);
+    listPagamentosEmCustodia.mockResolvedValue([
+      {
+        id: 'pag-custodia',
+        valor_kz: 43000,
+        valor_payout_liquido_kz: 38700,
+        desconto_faltas_kz: 0,
+        perfis: { nome_completo: 'Ana' },
+      },
+    ]);
+    adminLiquidatePayment.mockResolvedValue('pag-custodia');
+
+    render(<AdminPagamentos />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('admin-fila-custodia')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('liquidar-pag-custodia'));
+
+    await waitFor(() => {
+      expect(adminLiquidatePayment).toHaveBeenCalledWith('pag-custodia');
     });
   });
 });
