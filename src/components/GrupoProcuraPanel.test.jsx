@@ -9,6 +9,7 @@ import {
   listMembrosGrupo,
   listPedidosPendentes,
   aprovarEntrada,
+  rejeitarEntrada,
   sairDoGrupo,
 } from '../services/GrupoService';
 import { findPassageiroByTelefone } from '../services/ProfileService';
@@ -541,6 +542,42 @@ describe('GrupoProcuraPanel T31', () => {
           pickup_lng: null,
         }),
       );
+    });
+  });
+
+  it('owner recusa pedido pendente', async () => {
+    getGrupoByProcura.mockResolvedValue({
+      id: 'g-1',
+      procura_id: 'pr-1',
+      n_maximo: 4,
+    });
+    listMembrosGrupo.mockResolvedValue([
+      {
+        id: 'm-1',
+        passenger_id: 'pax-1',
+        estado: 'activo',
+        ordem_insercao: 0,
+        perfis: { nome_completo: 'Ana' },
+      },
+    ]);
+    listPedidosPendentes
+      .mockResolvedValueOnce([
+        {
+          id: 'm-p',
+          passenger_id: 'pax-2',
+          estado: 'pendente',
+          perfis: { nome_completo: 'Bruno' },
+        },
+      ])
+      .mockResolvedValue([]);
+    rejeitarEntrada.mockResolvedValue({ id: 'm-p', estado: 'rejeitado' });
+
+    render(<GrupoProcuraPanel procura={procura} userId="pax-1" onGrupoChange={vi.fn()} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /Recusar/i }));
+
+    await waitFor(() => {
+      expect(rejeitarEntrada).toHaveBeenCalledWith('m-p');
     });
   });
 });

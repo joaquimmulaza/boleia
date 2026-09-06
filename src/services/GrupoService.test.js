@@ -64,13 +64,18 @@ describe('GrupoService T31 — n_maximo e pedidos de entrada', () => {
   });
 
   it('addMembroGrupo falha quando o grupo já está completo', async () => {
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'owner-1' } },
+      error: null,
+    });
+
     supabase.from.mockImplementation((table) => {
       if (table === 'grupos') {
         return {
           select: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnValue({
               single: vi.fn().mockResolvedValue({
-                data: { id: 'g-1', n_maximo: 2, procura_id: 'pr-1' },
+                data: { id: 'g-1', n_maximo: 2, procura_id: 'pr-1', procuras: { owner_id: 'owner-1' } },
                 error: null,
               }),
             }),
@@ -202,6 +207,11 @@ describe('GrupoService T31 — n_maximo e pedidos de entrada', () => {
   });
 
   it('addMembroGrupo com pickup vazio ou apenas espaços persiste pickup como null', async () => {
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'owner-1' } },
+      error: null,
+    });
+
     let insertedPayload = null;
     let membrosCalls = 0;
     supabase.from.mockImplementation((table) => {
@@ -210,7 +220,7 @@ describe('GrupoService T31 — n_maximo e pedidos de entrada', () => {
           select: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnValue({
               single: vi.fn().mockResolvedValue({
-                data: { id: 'g-1', procura_id: 'pr-1', n_maximo: 4 },
+                data: { id: 'g-1', procura_id: 'pr-1', n_maximo: 4, procuras: { owner_id: 'owner-1' } },
                 error: null,
               }),
             }),
@@ -795,8 +805,12 @@ describe('GrupoService — Task 2 hardening joins (estado activo)', () => {
     expect(insertPayload?.estado).not.toBe('activo');
     expect(pedido.estado).toBe('pendente');
 
-    // Bypass: insert com activo rejeitado por RLS / CHECK — erro propaga.
+    // Bypass: insert com activo rejeitado por RLS / guard owner — erro propaga.
     vi.clearAllMocks();
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'pax-pass' } },
+      error: null,
+    });
     let bypassCalls = 0;
     supabase.from.mockImplementation((table) => {
       if (table === 'grupos') {
@@ -804,7 +818,12 @@ describe('GrupoService — Task 2 hardening joins (estado activo)', () => {
           select: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnValue({
               single: vi.fn().mockResolvedValue({
-                data: { id: 'g-1', n_maximo: 4, procura_id: 'pr-1' },
+                data: {
+                  id: 'g-1',
+                  n_maximo: 4,
+                  procura_id: 'pr-1',
+                  procuras: { owner_id: 'owner-1' },
+                },
                 error: null,
               }),
             }),
@@ -842,10 +861,39 @@ describe('GrupoService — Task 2 hardening joins (estado activo)', () => {
 
     await expect(
       addMembroGrupo('g-1', { passenger_id: 'pax-pass', ordem_insercao: 1 }),
-    ).rejects.toMatchObject({
-      code: '42501',
-      message: expect.stringMatching(/row-level security|política|membros_grupo/i),
+    ).rejects.toThrow(/organizador/i);
+  });
+
+  it('addMembroGrupo exige organizador antes de insert directo activo', async () => {
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'intruso' } },
+      error: null,
     });
+
+    supabase.from.mockImplementation((table) => {
+      if (table === 'grupos') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  id: 'g-1',
+                  n_maximo: 4,
+                  procura_id: 'pr-1',
+                  procuras: { owner_id: 'owner-1' },
+                },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      return {};
+    });
+
+    await expect(
+      addMembroGrupo('g-1', { passenger_id: 'pax-2', ordem_insercao: 1 }),
+    ).rejects.toThrow(/organizador/i);
   });
 });
 
