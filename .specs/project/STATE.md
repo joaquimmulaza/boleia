@@ -14,6 +14,7 @@
 - RPC `accept_proposal` alinhada a `N_proposto` (LIMIT primeiros membros)
 - Waitlist: promoção = notif `waitlist_promoted` (RPC `promote_waitlist`), sem auto-aceitar
 - **T31 Done:** `grupos.n_maximo`; pedidos `pendente`/`rejeitado`; descoberta pública; telefone = fallback
+- **Ponto de Recolha Opcional (2026-09-06):** No fallback por telefone em `GrupoProcuraPanel`, telefone é obrigatório e ponto de recolha é opcional (`required={false}` em `AddressInput`). Submissão com recolha vazia persiste `null` em todas as camadas (`membros_grupo`, `GrupoService`, RPCs `accept_proposal`/`leave_grupo_membro` e BD).
 - **T29 Done:** RPC `renegotiate_agreement_pricing` + UI adenda em `/acordos` (único caminho mutar preços / N_contrato)
 - **T30 Done:** mapa N pontos preferenciais (MapLibre) em `PropostaReviewCard` antes do aceite
 - **T32 Done:** RPC `accept_proposal` / `reject_proposal` + RLS — `created_by` não aceita/rejeita; migration `marketplace_t32_accept_reject_contraparte`

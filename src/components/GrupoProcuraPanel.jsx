@@ -128,11 +128,27 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
       if (membros.some((m) => m.passenger_id === perfil.id)) {
         throw new Error('Este colega já está no grupo.');
       }
+      const cleanPickupName = pickup.pickup_name?.trim() || null;
+      const cleanPickupLat =
+        cleanPickupName &&
+        pickup.pickup_lat != null &&
+        pickup.pickup_lat !== '' &&
+        Number.isFinite(Number(pickup.pickup_lat))
+          ? Number(pickup.pickup_lat)
+          : null;
+      const cleanPickupLng =
+        cleanPickupName &&
+        pickup.pickup_lng != null &&
+        pickup.pickup_lng !== '' &&
+        Number.isFinite(Number(pickup.pickup_lng))
+          ? Number(pickup.pickup_lng)
+          : null;
+
       await addMembroGrupo(grupo.id, {
         passenger_id: perfil.id,
-        pickup_name: pickup.pickup_name?.trim() || null,
-        pickup_lat: pickup.pickup_lat ?? null,
-        pickup_lng: pickup.pickup_lng ?? null,
+        pickup_name: cleanPickupName,
+        pickup_lat: cleanPickupLat,
+        pickup_lng: cleanPickupLng,
         ordem_insercao: membros.length,
       });
       setTelefone('');
@@ -209,7 +225,12 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
   };
 
   const handlePickupChange = (e) => {
-    setPickup((prev) => ({ ...prev, pickup_name: e.target.value }));
+    const val = e.target.value;
+    setPickup((prev) => ({
+      ...prev,
+      pickup_name: val,
+      ...(!val || !val.trim() ? { pickup_lat: null, pickup_lng: null } : {}),
+    }));
   };
 
   if (loading) {
@@ -410,14 +431,14 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
                   <AddressInput
                     name="pickup_name"
                     label="Ponto de recolha (opcional)"
-                    value={pickup.pickup_name}
                     required={false}
+                    value={pickup.pickup_name}
                     onChange={handlePickupChange}
                     onSelectCoordinates={(c) =>
                       setPickup((prev) => ({
                         ...prev,
-                        pickup_lat: c.lat,
-                        pickup_lng: c.lng,
+                        pickup_lat: c?.lat != null ? Number(c.lat) : null,
+                        pickup_lng: c?.lng != null ? Number(c.lng) : null,
                       }))
                     }
                   />

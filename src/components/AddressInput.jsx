@@ -14,11 +14,11 @@ const ICON_MAP = {
  *   id?: string,
  *   name: string,
  *   label?: string,
- *   icon?: string,
+ *   icon?: 'location_on' | 'flag',
  *   placeholder?: string,
  *   value?: string,
- *   onChange: Function,
- *   onSelectCoordinates?: Function,
+ *   onChange: (e: { target: { name: string, value: string } }) => void,
+ *   onSelectCoordinates?: (coords: { lat: number, lng: number, [key: string]: any }) => void,
  *   required?: boolean,
  * }} props
  */
@@ -47,6 +47,7 @@ const AddressInput = ({
   const [inputValue, setInputValue] = useState(value || '');
   const [showDropdown, setShowDropdown] = useState(false);
   const wrapperRef = useRef(null);
+  const inputId = id || name;
 
   useEffect(() => {
     // Sincroniza o valor controlado externo com o input interno.
@@ -91,7 +92,7 @@ const AddressInput = ({
 
   return (
     <div className="flex flex-col w-full relative" ref={wrapperRef}>
-      <label className="flex flex-col w-full" htmlFor={id}>
+      <label className="flex flex-col w-full" htmlFor={inputId}>
         {label && (
           <span className="text-slate-900 dark:text-slate-200 text-sm font-semibold mb-2 ml-1">
             {label}
@@ -105,7 +106,7 @@ const AddressInput = ({
             />
           ) : null}
           <input
-            id={id}
+            id={inputId}
             type="text"
             name={name}
             required={required}

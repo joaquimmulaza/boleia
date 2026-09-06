@@ -607,6 +607,40 @@ describe('Marketplace audit — G12 UI hubs sem jargon', () => {
     expect(JSON.stringify(review)).not.toMatch(JARGON_UI);
   });
 
+  it('G13 — membros_grupo com pickup opcional/nulo em buildPropostaReview e buildPreferentialMapPoints', () => {
+    // Membros com pickup_name nulo ou vazio não devem quebrar revisão nem mapa
+    const membros = [
+      {
+        passenger_id: 'p1',
+        perfis: { nome_completo: 'Ana' },
+        pickup_name: null,
+        pickup_lat: null,
+        pickup_lng: null,
+      },
+      {
+        passenger_id: 'p2',
+        perfis: { nome_completo: 'Beto' },
+        pickup_name: 'Benfica',
+        pickup_lat: -8.9,
+        pickup_lng: 13.2,
+      },
+    ];
+
+    const review = buildPropostaReview(
+      {
+        grupo_id: 'g-1',
+        modo_preco: 'POR_PASSAGEIRO',
+        valor_mensal_ask_kz: 40000,
+        n_passageiros_propostos: 2,
+      },
+      membros,
+    );
+
+    expect(review.membros[0].pickup_name).toBeNull();
+    expect(review.membros[0].pickup_lat).toBeNull();
+    expect(review.membros[1].pickup_name).toBe('Benfica');
+  });
+
   it('helpers de hub (ofertaLabels / propostaReview) sem jargon em strings de UI', () => {
     for (const rel of ['../utils/ofertaLabels.js', '../utils/propostaReview.js']) {
       const code = stripComments(readSrc(rel));
