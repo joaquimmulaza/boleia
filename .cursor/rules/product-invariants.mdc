@@ -1,0 +1,49 @@
+---
+description: Invariantes de produto Boleia Certa — validar mudanças contra visão, quatro N e regras de marketplace. Always-on.
+alwaysApply: true
+---
+
+# Product invariants (Boleia Certa)
+
+Antes de alterar domínio, matching, propostas, acordos, preço, grupos ou copy relacionada:
+
+1. Ler `.specs/project/PROJECT.md` (visão condensada) e `.specs/project/STATE.md` (decisões actuais).
+2. Não inventar regras de negócio nem “facilitar” quebrando uma invariante.
+3. Conflito código ↔ visão → reportar e propor correção; não assumir que o código é a verdade absoluta.
+
+## Invariantes (não quebrar)
+
+1. Grupo = procura colectiva viva.
+2. Grupo incompleto pode negociar.
+3. Grupo pode continuar a crescer.
+4. Mudança de `N_actual` não muta proposta antiga.
+5. `N_proposto` é snapshot da proposta.
+6. `N_contrato` congela-se no aceite (só muda via adenda/renegociação explícita).
+7. `N_activos` = estado actual do acordo.
+8. Capacidade = lugares totais − passageiros activos.
+9. Sem acordo parcial quando N excede capacidade.
+10. `TOTAL_ACORDO` divide por `N_proposto` / `N_contrato`, nunca pela capacidade do veículo.
+11. Saída de passageiro não recalcula retroactivamente quotas dos restantes.
+12. Motorista flexível não é limitado pela residência.
+13. Motorista flexível não precisa de rota fixa (OD) para existir no marketplace.
+14. Oferta fixa usa OD no matching.
+15. Oferta flexível não depende de OD fixo.
+16. Passageiro e motorista podem iniciar propostas.
+17. Só a contraparte aceita/rejeita.
+18. O criador não aceita a própria proposta (UI + serviço + RPC + RLS).
+19. Telefone/WhatsApp não substituem o fluxo da plataforma.
+20. Nenhuma regra crítica só na UI — backend/RPC/RLS protege.
+
+## UI / copy
+
+- Mostrar «Oferta flexível» sem inventar Origem→Destino ou “zona” restritiva inexistente.
+- Copy humana: «Por passageiro», «Total do acordo», «Grupo · N pessoas» — nunca `N_actual`, `POR_PASSAGEIRO`, etc. na UI.
+- CTAs só para quem tem autorização.
+
+## Consistência
+
+Feature “feita” só se a regra for verdadeira em: Produto → Spec → BD → RPC/RLS → Serviços → UI → Testes.
+
+## Tick / loop
+
+Em `primeiro tick` / `tick local` / `tick cloud` / Automation: seguir `.cursor/skills/boleia-agent-loop/orchestrator/SKILL.md` e `.specs/loop/ESCALATION.md`. Merge em `main` nunca automático.
