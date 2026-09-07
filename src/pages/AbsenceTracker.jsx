@@ -234,7 +234,17 @@ const AbsenceTracker = () => {
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                   {falta.observacao || '-'}
-                  {falta.viagem ? ` · ${falta.viagem}` : ''}
+                  {falta.viagem
+                    ? ` · ${
+                      String(falta.viagem).toLowerCase() === 'ambas'
+                        ? 'Ida e regresso'
+                        : String(falta.viagem).toLowerCase() === 'ida'
+                          ? 'Só ida'
+                          : String(falta.viagem).toLowerCase() === 'regresso'
+                            ? 'Só regresso'
+                            : falta.viagem
+                    }`
+                    : ''}
                 </p>
               </div>
               <div className="text-right">

@@ -2,18 +2,18 @@
 
 ## Top 3
 
-1. **seat-before-custody** — Assento/`N_activos` não deve consumir capacidade definitiva antes de `em_custodia` — tipo: eng — DoD: spec + RPC/UI alinhados a anti-leakage — deps: merge #99
-2. **falta-ida-regresso-policy** — Decidir e alinhar desconto ida/regresso (código meia quota vs contrato «só ambas») — tipo: eng — DoD: decisão em STATE + trigger/UI — deps: decisão produto
-3. **admin-polish-critiquito** — Polish UX `/admin/pagamentos` — tipo: ui — DoD: Critiquito — deps: opcional
+1. **falta-ida-regresso-policy** — Meia quota (decisão produto) — tipo: eng — DoD: `.specs/quick/pacote-falta-ida-regresso/` — deps: nenhuma (em curso)
+2. **admin-polish-critiquito** — Polish UX `/admin/pagamentos` — tipo: ui — DoD: Critiquito — deps: opcional
+3. _(aguardar merge #100 seat-before-custody)_
 
 ## Quiet?
 
-- não — PR #99 aguarda merge humano; depois #1 eng = seat-before-custody
+- não — tick 23 falta-ida-regresso
 
 HANDOFF:
-FROM: orchestrator
-TO: human
-STATUS: NEED_HUMAN
-ARTIFACT: .specs/loop/TICK-20260907-21.md
-NEXT: Merge https://github.com/joaquimmulaza/boleia/pull/99
+FROM: pm
+TO: shipwright
+STATUS: DONE
+ARTIFACT: .specs/loop/BACKLOG.md
+NEXT: Executar falta-ida-regresso-policy
 MODE: local
