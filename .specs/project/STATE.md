@@ -44,10 +44,18 @@
 - Visual = v0 (One) + shadcn + UI Skills (+ Mobbin free-safe quando disponível)
 - Negócio = spec/planos (1:N; quatro Ns; preço dual congelado; grupo vivo; flexível sem zona; propostas bidireccionais)
 
+## Monetização / GTM (2026-09-07)
+
+- Take-rate ~10% + custódia (escrow) = modelo alvo MVP (ENG#5/#11/#13/#14 no código)
+- Admin valida comprovativo → `em_custodia` → liquidação; hard-gate contacto pós-custódia
+- ProxyPay / Multicaixa = **depois** do piloto (não bloquear MVP)
+- Detalhe roadmap: `ROADMAP.md`; memos: `memos/`
+
 ## Next Steps
-1. Commit T29 / T30 / T32 / T33 / T34 / T35 se o utilizador pedir (listas separadas no CHECKPOINT; sem lixo `.cline`/`.codex`)
-2. Phase 7 **completa** — sem tasks residual MVP flex
-3. **Não** implementar zonas/polígonos no MVP
+1. Cânone loop em git: `PROJECT.md` / `ROADMAP.md` / `.specs/loop/` / skills PM·Shipwright·Intel·Monetization (PR docs)
+2. Residual cosmético: copy «zona» no hub passageiro se ainda existir
+3. **Não** implementar zonas/polígonos no MVP; **não** merge automático em `main`
+4. AdminRoute race (#97) **merged** — retestar `/admin/pagamentos` em produção após deploy
 
 ## Key links
 - Plan: `.cursor/plans/marketplace_oferta_procura_74cbb52a.plan.md`
