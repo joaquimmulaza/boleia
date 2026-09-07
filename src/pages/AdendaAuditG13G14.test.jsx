@@ -8,6 +8,7 @@ import {
   acceptAgreementAdenda,
   rejectAgreementAdenda,
   respondAgreementAdenda,
+  cancelAgreementAdenda,
 } from '../services/AgreementService.js';
 import { firstDayNextMonthLuanda, isAdendaBeforeEffectiveFrom } from '../utils/adendaEffectiveFrom.js';
 import { supabase } from '../lib/supabase';
@@ -198,6 +199,33 @@ describe('Marketplace Renegotiation Audit — G13/G14', () => {
         p_accept: true,
         p_idempotency_key: expect.any(String),
       }),
+    );
+  });
+
+  it('G14b — cancelAgreementAdenda → cancelada_iniciador via RPC', async () => {
+    supabase.rpc.mockResolvedValue({ data: 'adenda-g13', error: null });
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: {
+              id: 'adenda-g13',
+              acordo_id: 'acordo-g13',
+              estado: 'cancelada_iniciador',
+              applied_at: null,
+            },
+            error: null,
+          }),
+        }),
+      }),
+    });
+
+    const adenda = await cancelAgreementAdenda('adenda-g13');
+
+    expect(String(adenda.estado).toLowerCase()).toBe('cancelada_iniciador');
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      'cancel_agreement_adenda',
+      expect.objectContaining({ p_adenda_id: 'adenda-g13' }),
     );
   });
 });

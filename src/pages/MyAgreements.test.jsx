@@ -31,6 +31,7 @@ vi.mock('../services/AgreementService', () => ({
   renegotiateAgreementPricing: vi.fn(),
   acceptAgreementAdenda: vi.fn(),
   rejectAgreementAdenda: vi.fn(),
+  cancelAgreementAdenda: vi.fn(),
 }));
 
 vi.mock('../services/offlineQueue', () => ({
@@ -62,6 +63,7 @@ import {
   renegotiateAgreementPricing,
   acceptAgreementAdenda,
   rejectAgreementAdenda,
+  cancelAgreementAdenda,
 } from '../services/AgreementService';
 import { listPending } from '../services/offlineQueue';
 import {
@@ -461,15 +463,50 @@ describe('MyAgreements — marketplace 1:N', () => {
 
     const picker = await screen.findByTestId('terminate-modality-picker');
     fireEvent.click(within(picker).getByRole('button', { name: /Acordo amigável/i }));
+
+    const vigencia = await screen.findByTestId('terminate-vigencia-picker');
+    fireEvent.click(within(vigencia).getByRole('button', { name: /Agora — ajuste proporcional/i }));
     fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
 
     await waitFor(() => {
-      expect(terminateAgreement).toHaveBeenCalledWith('acordo-pax', { modo: 'consensual' });
+      expect(terminateAgreement).toHaveBeenCalledWith('acordo-pax', {
+        modo: 'consensual',
+        vigencia: 'imediato',
+      });
     });
 
     const feedback = screen.getByTestId('agreements-feedback');
     expect(feedback).toHaveAttribute('data-variant', 'success');
     expect(feedback).toHaveTextContent(/guardada|Sincronizamos/i);
+  });
+
+  it('consensual fim deste mês envia vigencia fim_ciclo', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    terminateAgreement.mockResolvedValue({
+      id: 'acordo-pax',
+      estado: 'activo',
+      rescisao_modo: 'consensual',
+      rescisao_vigencia: 'fim_ciclo',
+    });
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Encerrar acordo/i }));
+
+    const picker = await screen.findByTestId('terminate-modality-picker');
+    fireEvent.click(within(picker).getByRole('button', { name: /Acordo amigável/i }));
+    const vigencia = await screen.findByTestId('terminate-vigencia-picker');
+    fireEvent.click(within(vigencia).getByRole('button', { name: /Fim deste mês/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
+
+    await waitFor(() => {
+      expect(terminateAgreement).toHaveBeenCalledWith('acordo-pax', {
+        modo: 'consensual',
+        vigencia: 'fim_ciclo',
+      });
+    });
   });
 
   it('cartão activo destaca a quota congelada com tipografia forte', async () => {
@@ -803,6 +840,59 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
     expect(within(pendente).getByTestId('adenda-chip')).toHaveTextContent(/À espera tua/i);
     expect(within(dialog).getByRole('button', { name: /Aceitar Alteração/i })).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: /Rejeitar Alteração/i })).toBeInTheDocument();
+  });
+
+  it('iniciador vê Anular renegociação e chama cancelAgreementAdenda', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        adenda_pendente: {
+          id: 'adenda-1',
+          estado: 'pendente_passageiro',
+          created_by: 'driver-1',
+          effective_from: '2026-10-01',
+          modo_preco: 'POR_PASSAGEIRO',
+          valor_mensal_por_passageiro_kz: 45000,
+          valor_mensal_total_kz: 135000,
+          applied_at: null,
+        },
+      },
+    ]);
+    cancelAgreementAdenda.mockResolvedValue({
+      id: 'adenda-1',
+      estado: 'cancelada_iniciador',
+    });
+    getAgreementsForDriver
+      .mockResolvedValueOnce([
+        {
+          ...acordoMotorista,
+          adenda_pendente: {
+            id: 'adenda-1',
+            estado: 'pendente_passageiro',
+            created_by: 'driver-1',
+            effective_from: '2026-10-01',
+            valor_mensal_por_passageiro_kz: 45000,
+            applied_at: null,
+          },
+        },
+      ])
+      .mockResolvedValueOnce([{ ...acordoMotorista, adenda_pendente: null }]);
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByTestId('anular-renegociacao-cta')).toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: /Aceitar Alteração/i })).not.toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByTestId('anular-renegociacao-cta'));
+    fireEvent.click(screen.getByRole('button', { name: /^Anular$/i }));
+
+    await waitFor(() => {
+      expect(cancelAgreementAdenda).toHaveBeenCalledWith('adenda-1');
+    });
+    expect(await screen.findByText(/Renegociação anulada/i)).toBeInTheDocument();
   });
 
   it('passageiro aceita adenda e actualiza o detalhe', async () => {

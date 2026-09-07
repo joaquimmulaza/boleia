@@ -2,24 +2,18 @@
 
 ## Top 3
 
-1. **merge-canon-docs** — Merge PR #98 (cânone PROJECT/loop) — tipo: docs — DoD: ficheiros em `main` — deps: humano
-2. **copy-zona-residual** — Remover copy «zona» residual no hub passageiro se ainda existir — tipo: ui — DoD: grep sem jargon de zona inventada — deps: após #98 opcional
-3. **ProxyPay** — Fora do MVP — tipo: biz
+1. **seat-before-custody** — Assento/`N_activos` não deve consumir capacidade definitiva antes de `em_custodia` — tipo: eng — DoD: spec + RPC/UI alinhados a anti-leakage — deps: merge #99
+2. **falta-ida-regresso-policy** — Decidir e alinhar desconto ida/regresso (código meia quota vs contrato «só ambas») — tipo: eng — DoD: decisão em STATE + trigger/UI — deps: decisão produto
+3. **admin-polish-critiquito** — Polish UX `/admin/pagamentos` — tipo: ui — DoD: Critiquito — deps: opcional
 
 ## Quiet?
 
-- sim após merge do PR #98 (nada eng urgente no ROADMAP)
-
-## Validação tick
-
-- #97 AdminRoute: já merged em `main`
-- Cânone loop: https://github.com/joaquimmulaza/boleia/pull/98
-- VERDICT review leve: APPROVE
+- não — PR #99 aguarda merge humano; depois #1 eng = seat-before-custody
 
 HANDOFF:
 FROM: orchestrator
 TO: human
 STATUS: NEED_HUMAN
-ARTIFACT: .specs/loop/TICK-20260907-20.md
-NEXT: Merge PR #98
+ARTIFACT: .specs/loop/TICK-20260907-21.md
+NEXT: Merge https://github.com/joaquimmulaza/boleia/pull/99
 MODE: local

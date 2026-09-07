@@ -51,9 +51,14 @@
 - ProxyPay / Multicaixa = **depois** do piloto (não bloquear MVP)
 - Detalhe roadmap: `ROADMAP.md`; memos: `memos/`
 
+## Adenda (clarificação 2026-09-07)
+- Motorista **e** passageiro podem **iniciar** renegociação de preço (`renegotiate_agreement_pricing`).
+- Só a **contraparte** aceita/rejeita; iniciador pode **anular** enquanto pendente (ENG#8b).
+- ROADMAP «contrapostos complexos» continua fora do MVP; o mínimo via `cancelada_substituta` + nova proposta basta.
+
 ## Next Steps
-1. Cânone loop em git: `PROJECT.md` / `ROADMAP.md` / `.specs/loop/` / skills PM·Shipwright·Intel·Monetization (PR docs)
-2. Residual cosmético: copy «zona» no hub passageiro se ainda existir
+1. **ENG#8b** — fecho S22: rescisão consensual A (imediato/pro-rata \| fim_ciclo) + anular adenda
+2. Próximos: assento antes de custódia; política ida/regresso (ver memo GAPS-20260907)
 3. **Não** implementar zonas/polígonos no MVP; **não** merge automático em `main`
 4. AdminRoute race (#97) **merged** — retestar `/admin/pagamentos` em produção após deploy
 
