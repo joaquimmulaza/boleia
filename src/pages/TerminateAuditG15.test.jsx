@@ -172,7 +172,9 @@ describe('Marketplace Termination Audit — G15', () => {
   });
 
   it('G15 — contrato SQL aviso_previo: não liberta vagas (sem recount_oferta_vagas)', () => {
-    const sql = readMigration('20260906114309_s22_terminate_agreement.sql');
+    const sql = readMigration(
+      '20260907180000_eng8b_s22_fecho_consensual_vigencia_cancel_adenda.sql',
+    );
     const avisoBlock = sql.slice(
       sql.indexOf("IF v_modo = 'aviso_previo'"),
       sql.indexOf("ELSIF v_modo = 'consensual'"),
@@ -184,7 +186,9 @@ describe('Marketplace Termination Audit — G15', () => {
   });
 
   it('G15 — contrato SQL justa_causa: liberta vagas via recount_oferta_vagas', () => {
-    const sql = readMigration('20260906114309_s22_terminate_agreement.sql');
+    const sql = readMigration(
+      '20260907180000_eng8b_s22_fecho_consensual_vigencia_cancel_adenda.sql',
+    );
     const justaBlock = sql.slice(
       sql.indexOf("estado = 'cancelado_justificado'"),
       sql.indexOf('v_mensagem := \'A outra parte rescindiu'),
@@ -207,12 +211,67 @@ describe('Marketplace Termination Audit — G15', () => {
     expect(applyBlock).toContain("estado = 'saiu'");
   });
 
-  it('G15 — contrato SQL idempotência: early return se chave já existe', () => {
-    const sql = readMigration('20260906114309_s22_terminate_agreement.sql');
+  it('G15 — consensual fim_ciclo envia p_vigencia e fica cancelamento_pendente', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-15T10:00:00.000Z'));
+    const effectiveFrom = firstDayNextMonthLuanda();
 
-    expect(sql).toMatch(
-      /IF p_idempotency_key IS NOT NULL[\s\S]*?RETURN p_acordo_id/,
+    supabase.rpc.mockResolvedValue({ data: 'acordo-g15', error: null });
+    mockAcordoSelect({
+      ...ACORDO_LIVE,
+      estado: 'cancelamento_pendente',
+      rescisao_modo: 'consensual',
+      rescisao_vigencia: 'fim_ciclo',
+      rescisao_effective_on: effectiveFrom,
+    });
+
+    const result = await terminateAgreement('acordo-g15', {
+      modo: 'consensual',
+      vigencia: 'fim_ciclo',
+    });
+
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      'terminate_agreement',
+      expect.objectContaining({
+        p_modo: 'consensual',
+        p_vigencia: 'fim_ciclo',
+      }),
     );
-    expect(sql).toContain("'terminate_agreement'");
+    expect(String(result.estado).toLowerCase()).toBe('cancelamento_pendente');
+  });
+
+  it('G15 — consensual imediato envia p_vigencia e encerra com cancelado', async () => {
+    supabase.rpc.mockResolvedValue({ data: 'acordo-g15', error: null });
+    mockAcordoSelect({
+      ...ACORDO_LIVE,
+      estado: 'cancelado',
+      rescisao_modo: 'consensual',
+      rescisao_vigencia: 'imediato',
+    });
+
+    const result = await terminateAgreement('acordo-g15', {
+      modo: 'consensual',
+      vigencia: 'imediato',
+    });
+
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      'terminate_agreement',
+      expect.objectContaining({
+        p_modo: 'consensual',
+        p_vigencia: 'imediato',
+      }),
+    );
+    expect(String(result.estado).toLowerCase()).toBe('cancelado');
+  });
+
+  it('G15 — contrato SQL ENG#8b: consensual imediato faz pro-rata; fim_ciclo agenda', () => {
+    const sql = readMigration(
+      '20260907180000_eng8b_s22_fecho_consensual_vigencia_cancel_adenda.sql',
+    );
+    expect(sql).toContain("p_vigencia text DEFAULT 'imediato'");
+    expect(sql).toContain("v_vigencia = 'fim_ciclo'");
+    expect(sql).toMatch(/ajuste proporcional/);
+    expect(sql).toContain('cancel_agreement_adenda');
+    expect(sql).toContain("estado = 'cancelada_iniciador'");
   });
 });

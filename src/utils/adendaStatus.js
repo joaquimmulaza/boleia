@@ -37,6 +37,7 @@ export function labelChipAdenda(estado, ctx = {}) {
   }
   if (e === 'rejeitada') return 'Rejeitada';
   if (e === 'cancelada_substituta') return 'Substituída';
+  if (e === 'cancelada_iniciador') return 'Anulada';
   if (e === 'em_vigor') return 'Em vigor';
   return estado || '—';
 }
@@ -58,6 +59,7 @@ export function chipClassAdenda(estado) {
     case 'rejeitada':
       return 'bg-red-100 text-red-900 dark:bg-red-950/50 dark:text-red-100';
     case 'cancelada_substituta':
+    case 'cancelada_iniciador':
       return 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200';
     case 'em_vigor':
       return 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100';

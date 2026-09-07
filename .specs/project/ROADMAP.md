@@ -17,9 +17,12 @@ Já em `main` (não reabrir como pacote eng):
 
 Ordem sugerida para o loop PM → Shipwright (1 pacote por tick):
 
-1. **Cânone docs/loop** — `PROJECT` / `ROADMAP` / `.specs/loop/` / skills produto (este tick)
-2. Hardening copy/UI residual (ex. “zona” se ainda existir)
-3. Polish admin UX (Critiquito) — opcional, fora do slice crítico
+1. **ENG#8b fecho S22** — rescisão consensual A (imediato/pro-rata \| fim_ciclo) + anular adenda iniciador (este tick)
+2. Assento / capacidade só “definitiva” após `em_custodia` (anti-leakage)
+3. Política desconto ida/regresso (alinhar contrato-exemplo vs meia quota)
+4. Polish admin UX (Critiquito) — opcional
+
+Já feito: cânone docs/loop (#98); copy «zona» guardada por testes.
 
 ## Depois
 
@@ -31,7 +34,7 @@ Ordem sugerida para o loop PM → Shipwright (1 pacote por tick):
 ## Fora do MVP / política permanente
 
 - Zonas/polígonos/raio residencial
-- Adenda bilateral completa iniciada por qualquer parte com contrapostos complexos (hoje motorista inicia preço)
+- Adenda com contrapostos complexos (mínimo: nova proposta + `cancelada_substituta`; ambos os papéis já iniciam preço)
 - Growth/social bots no loop (fase 2 do agent fleet)
 - **Merge automático em `main` — proibido permanentemente** (não é “adiável”; ver `.specs/loop/ESCALATION.md`)
 

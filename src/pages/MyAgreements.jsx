@@ -12,6 +12,7 @@ import {
   renegotiateAgreementPricing,
   acceptAgreementAdenda,
   rejectAgreementAdenda,
+  cancelAgreementAdenda,
 } from '../services/AgreementService';
 import { listPending } from '../services/offlineQueue';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
@@ -146,6 +147,16 @@ function souContraparteAdenda(adenda, isMotorista, isPassageiro) {
 }
 
 /**
+ * @param {{ created_by?: string } | null | undefined} adenda
+ * @param {string | undefined} userId
+ * @returns {boolean}
+ */
+function souIniciadorAdenda(adenda, userId) {
+  if (!adenda?.created_by || !userId) return false;
+  return adenda.created_by === userId;
+}
+
+/**
  * Gestão de acordos 1 motorista : N passageiros.
  */
 const MyAgreements = () => {
@@ -160,11 +171,15 @@ const MyAgreements = () => {
   const [terminatePickerOpen, setTerminatePickerOpen] = useState(false);
   const [terminateConfirmOpen, setTerminateConfirmOpen] = useState(false);
   const [terminateJustaPickerOpen, setTerminateJustaPickerOpen] = useState(false);
+  const [terminateVigenciaPickerOpen, setTerminateVigenciaPickerOpen] = useState(false);
   /** @type {['consensual' | 'aviso_previo' | 'justa_causa' | '', React.Dispatch<React.SetStateAction<'consensual' | 'aviso_previo' | 'justa_causa' | ''>>]} */
   const [terminateModo, setTerminateModo] = useState('');
   /** @type {['faltas_excessivas' | 'avaria_veiculo' | 'seguranca' | '', React.Dispatch<React.SetStateAction<'faltas_excessivas' | 'avaria_veiculo' | 'seguranca' | ''>>]} */
   const [terminateJustificativa, setTerminateJustificativa] = useState('');
+  /** @type {['imediato' | 'fim_ciclo' | '', React.Dispatch<React.SetStateAction<'imediato' | 'fim_ciclo' | ''>>]} */
+  const [terminateVigencia, setTerminateVigencia] = useState('');
   const [terminateBusy, setTerminateBusy] = useState(false);
+  const [cancelAdendaConfirmOpen, setCancelAdendaConfirmOpen] = useState(false);
   const [leaveModalOpen, setLeaveModalOpen] = useState(false);
   const [leaveBusy, setLeaveBusy] = useState(false);
   /** @type {[Record<string, true>, React.Dispatch<React.SetStateAction<Record<string, true>>>]} */
@@ -228,8 +243,10 @@ const MyAgreements = () => {
     setTerminatePickerOpen(false);
     setTerminateConfirmOpen(false);
     setTerminateJustaPickerOpen(false);
+    setTerminateVigenciaPickerOpen(false);
     setTerminateModo('');
     setTerminateJustificativa('');
+    setTerminateVigencia('');
     setTerminateBusy(false);
   };
 
@@ -392,7 +409,7 @@ const MyAgreements = () => {
     }
   };
 
-  const handleTerminate = async (modoOverride, justificativaOverride) => {
+  const handleTerminate = async (modoOverride, justificativaOverride, vigenciaOverride) => {
     if (!selected || terminateBusy) return;
     const modo = modoOverride || terminateModo;
     if (!modo) return;
@@ -407,6 +424,14 @@ const MyAgreements = () => {
           return;
         }
         input.justificativa = justificativa;
+      }
+      if (modo === 'consensual') {
+        const vigencia =
+          vigenciaOverride ||
+          terminateVigencia ||
+          selected.rescisao_vigencia ||
+          'imediato';
+        input.vigencia = vigencia;
       }
 
       const result = await terminateAgreement(selected.id, input);
@@ -423,11 +448,17 @@ const MyAgreements = () => {
       }
 
       const estado = String(result?.estado || '').toLowerCase();
+      const vigenciaFinal = String(result?.rescisao_vigencia || input.vigencia || '').toLowerCase();
       let text = 'Pedido de rescisão registado.';
       if (modo === 'consensual' && estado === 'activo') {
-        text = 'Pedido amigável enviado. A outra parte precisa de confirmar.';
+        text =
+          vigenciaFinal === 'fim_ciclo'
+            ? 'Pedido amigável (fim deste mês) enviado. A outra parte precisa de confirmar.'
+            : 'Pedido amigável (agora, com ajuste proporcional) enviado. A outra parte precisa de confirmar.';
       } else if (modo === 'consensual' && estado === 'cancelado') {
-        text = 'Acordo encerrado de forma amigável.';
+        text = 'Acordo encerrado de forma amigável com ajuste proporcional.';
+      } else if (modo === 'consensual' && estado === 'cancelamento_pendente') {
+        text = 'Encerramento amigável confirmado. O acordo mantém-se activo até ao fim deste mês.';
       } else if (modo === 'aviso_previo' || estado === 'cancelamento_pendente') {
         text = 'Rescisão agendada. O acordo mantém-se activo até ao fim deste mês.';
       } else if (modo === 'justa_causa' || estado === 'cancelado_justificado') {
@@ -590,6 +621,36 @@ const MyAgreements = () => {
     }
   };
 
+  const handleCancelAdenda = async () => {
+    const adendaId = selected?.adenda_pendente?.id;
+    if (!adendaId || adendaBusy) return;
+    setAdendaBusy(true);
+    try {
+      const result = await cancelAgreementAdenda(adendaId);
+      setCancelAdendaConfirmOpen(false);
+      if (result?.offlineQueued) {
+        setMessage({
+          type: 'success',
+          text: 'Anulação guardada. Sincronizamos quando a rede voltar.',
+        });
+      } else {
+        setMessage({
+          type: 'success',
+          text: 'Renegociação anulada. Mantém-se o preço combinado actual.',
+        });
+      }
+      const acordoId = selected.id;
+      const refreshed = await carregar();
+      const updated = refreshed.find((a) => a.id === acordoId);
+      if (updated) setSelected(updated);
+    } catch (err) {
+      console.error('Erro ao anular adenda:', err);
+      setMessage({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+    } finally {
+      setAdendaBusy(false);
+    }
+  };
+
   /**
    * @param {typeof selected} acordo
    */
@@ -703,11 +764,14 @@ const MyAgreements = () => {
     const adendaAguardando = adenda && isAdendaAguardandoContraparte(adenda.estado);
     const mostrarCtAdenda =
       adendaAguardando && souContraparteAdenda(adenda, isMotorista, isPassageiro);
+    const mostrarAnularAdenda =
+      adendaAguardando && souIniciadorAdenda(adenda, user?.id) && !mostrarCtAdenda;
     const rescisaoConsensualPendente =
       activo &&
       String(selected.rescisao_modo || '').toLowerCase() === 'consensual' &&
       selected.rescisao_solicitada_por &&
       selected.rescisao_solicitada_por !== user?.id;
+    const vigenciaConsensualPendente = String(selected.rescisao_vigencia || 'imediato').toLowerCase();
     const cancelamentoPendente =
       String(selected.estado || '').toLowerCase() === 'cancelamento_pendente';
     const cancelamentoCopy = cancelamentoPendente
@@ -920,6 +984,18 @@ const MyAgreements = () => {
                         </button>
                       </div>
                     )}
+                    {mostrarAnularAdenda && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="w-full min-h-11"
+                        disabled={adendaBusy}
+                        data-testid="anular-renegociacao-cta"
+                        onClick={() => setCancelAdendaConfirmOpen(true)}
+                      >
+                        Anular renegociação
+                      </Button>
+                    )}
                   </>
                 ) : (
                   <>
@@ -960,17 +1036,21 @@ const MyAgreements = () => {
                 data-testid="rescisao-consensual-pendente"
                 className="rounded-xl border border-amber-200/90 bg-amber-50/80 p-3 space-y-3"
               >
-                <p className="text-sm font-bold text-slate-900 dark:text-white">
+                <p className="text-sm font-bold text-slate-900 dark:text-white text-balance">
                   Pedido de encerramento amigável
                 </p>
                 <p className="text-sm text-slate-600 dark:text-slate-300 text-pretty">
-                  A outra parte quer encerrar o acordo de forma amigável. Confirma se concordas.
+                  {vigenciaConsensualPendente === 'fim_ciclo'
+                    ? 'A outra parte quer encerrar no fim deste mês. Confirma se concordas.'
+                    : 'A outra parte quer encerrar agora com ajuste proporcional das quotas. Confirma se concordas.'}
                 </p>
                 <Button
                   type="button"
                   className="w-full min-h-12"
                   disabled={terminateBusy}
-                  onClick={() => handleTerminate('consensual')}
+                  onClick={() =>
+                    handleTerminate('consensual', undefined, vigenciaConsensualPendente)
+                  }
                 >
                   Confirmar encerramento amigável
                 </Button>
@@ -1374,12 +1454,15 @@ const MyAgreements = () => {
                 onClick={() => {
                   setTerminateModo('consensual');
                   setTerminatePickerOpen(false);
-                  setTerminateConfirmOpen(true);
+                  setTerminateVigenciaPickerOpen(true);
                 }}
               >
-                <p className="font-bold text-slate-900 dark:text-white">Acordo amigável</p>
+                <p className="font-bold text-slate-900 dark:text-white text-balance">
+                  Acordo amigável
+                </p>
                 <p className="text-sm text-slate-500 mt-1 text-pretty">
-                  Pedes o encerramento e a outra parte confirma. Termina quando ambos concordam.
+                  Pedes o encerramento e a outra parte confirma. Escolhes se termina agora ou no fim
+                  deste mês.
                 </p>
               </button>
 
@@ -1490,19 +1573,91 @@ const MyAgreements = () => {
         </div>
       )}
 
+      {terminateVigenciaPickerOpen && (
+        <div className="fixed inset-0 z-modal flex items-end sm:items-center justify-center bg-black/40 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="terminate-vigencia-title"
+            data-testid="terminate-vigencia-picker"
+            className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl p-6 space-y-4 shadow-xl"
+          >
+            <div className="space-y-1">
+              <h3 id="terminate-vigencia-title" className="text-lg font-bold text-balance">
+                Quando termina?
+              </h3>
+              <p className="text-sm text-slate-500 text-pretty">
+                A outra parte tem de confirmar. Escolhe a vigência do encerramento amigável.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <button
+                type="button"
+                className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                onClick={() => {
+                  setTerminateVigencia('imediato');
+                  setTerminateVigenciaPickerOpen(false);
+                  setTerminateConfirmOpen(true);
+                }}
+              >
+                <p className="font-bold text-slate-900 dark:text-white text-balance">
+                  Agora — ajuste proporcional
+                </p>
+                <p className="text-sm text-slate-500 mt-1 text-pretty">
+                  Após confirmação, o acordo encerra já. As quotas deste mês ajustam-se aos dias
+                  úteis já decorridos.
+                </p>
+              </button>
+              <button
+                type="button"
+                className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                onClick={() => {
+                  setTerminateVigencia('fim_ciclo');
+                  setTerminateVigenciaPickerOpen(false);
+                  setTerminateConfirmOpen(true);
+                }}
+              >
+                <p className="font-bold text-slate-900 dark:text-white text-balance">
+                  Fim deste mês
+                </p>
+                <p className="text-sm text-slate-500 mt-1 text-pretty">
+                  Após confirmação, o serviço continua até ao último dia deste mês.
+                </p>
+              </button>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              onClick={() => {
+                setTerminateVigenciaPickerOpen(false);
+                setTerminatePickerOpen(true);
+                setTerminateVigencia('');
+              }}
+            >
+              Voltar
+            </Button>
+          </div>
+        </div>
+      )}
+
       <ConfirmationModal
         isOpen={terminateConfirmOpen}
         busy={terminateBusy}
         title={
           terminateModo === 'consensual'
-            ? 'Pedir encerramento amigável?'
+            ? terminateVigencia === 'fim_ciclo'
+              ? 'Pedir encerramento no fim do mês?'
+              : 'Pedir encerramento agora?'
             : terminateModo === 'aviso_previo'
               ? 'Confirmar aviso prévio?'
               : 'Confirmar justa causa?'
         }
         message={
           terminateModo === 'consensual'
-            ? 'Enviaremos o pedido à outra parte. Só termina quando ela confirmar.'
+            ? terminateVigencia === 'fim_ciclo'
+              ? 'Enviaremos o pedido à outra parte. Se confirmar, o acordo mantém-se activo até ao fim deste mês.'
+              : 'Enviaremos o pedido à outra parte. Se confirmar, o acordo encerra já com ajuste proporcional das quotas.'
             : terminateModo === 'aviso_previo'
               ? 'O acordo mantém-se activo até ao último dia deste mês. A quota deste mês não é reembolsada.'
               : 'O acordo termina de imediato se o motivo for válido. As quotas deste mês podem ser ajustadas proporcionalmente.'
@@ -1512,9 +1667,26 @@ const MyAgreements = () => {
         onCancel={() => {
           if (!terminateBusy) {
             setTerminateConfirmOpen(false);
-            setTerminateModo('');
-            setTerminateJustificativa('');
+            if (terminateModo === 'consensual') {
+              setTerminateVigenciaPickerOpen(true);
+            } else {
+              setTerminateModo('');
+              setTerminateJustificativa('');
+              setTerminateVigencia('');
+            }
           }
+        }}
+      />
+
+      <ConfirmationModal
+        isOpen={cancelAdendaConfirmOpen}
+        busy={adendaBusy}
+        title="Anular renegociação?"
+        message="A proposta de novo preço deixa de ficar pendente. O preço combinado actual mantém-se."
+        confirmText="Anular"
+        onConfirm={handleCancelAdenda}
+        onCancel={() => {
+          if (!adendaBusy) setCancelAdendaConfirmOpen(false);
         }}
       />
 
