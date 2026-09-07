@@ -21,27 +21,35 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  /** true enquanto há sessão e o perfil ainda não foi resolvido (sucesso ou falha). */
+  const [profileLoading, setProfileLoading] = useState(false);
 
   const fetchProfile = useCallback(async (userId) => {
     if (!userId) {
       setProfile(null);
+      setProfileLoading(false);
       return null;
     }
 
-    const { data, error } = await supabase
-      .from('perfis')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    setProfileLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('perfis')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-    if (error) {
-      console.warn('[AuthContext] Erro ao carregar perfil:', error);
-      setProfile(null);
-      return null;
+      if (error) {
+        console.warn('[AuthContext] Erro ao carregar perfil:', error);
+        setProfile(null);
+        return null;
+      }
+
+      setProfile(data);
+      return data;
+    } finally {
+      setProfileLoading(false);
     }
-
-    setProfile(data);
-    return data;
   }, []);
 
   const refreshProfile = useCallback(async () => {
@@ -53,18 +61,28 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let isMounted = true;
 
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
       if (!isMounted) return;
 
       setSession(initialSession);
       setUser(initialSession?.user || null);
-      setLoading(false);
 
       if (initialSession?.user?.id) {
-        void fetchProfile(initialSession.user.id);
+        // Marcar perfil a carregar ANTES de libertar loading da sessão
+        // (evita AdminRoute ver session ok + profile null + profileLoading false).
+        setProfileLoading(true);
+        setLoading(false);
+        await fetchProfile(initialSession.user.id);
+      } else {
+        setProfile(null);
+        setProfileLoading(false);
+        setLoading(false);
       }
     }).catch(() => {
-      if (isMounted) setLoading(false);
+      if (isMounted) {
+        setLoading(false);
+        setProfileLoading(false);
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -79,6 +97,7 @@ export function AuthProvider({ children }) {
             void fetchProfile(nextSession.user.id);
           } else {
             setProfile(null);
+            setProfileLoading(false);
           }
         }, 0);
       }
@@ -99,6 +118,7 @@ export function AuthProvider({ children }) {
     user,
     profile,
     loading,
+    profileLoading,
     tipoPerfil,
     refreshProfile,
   };
