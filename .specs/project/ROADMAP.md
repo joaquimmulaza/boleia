@@ -17,12 +17,10 @@ Já em `main` (não reabrir como pacote eng):
 
 Ordem sugerida para o loop PM → Shipwright (1 pacote por tick):
 
-1. **ENG#8b fecho S22** — rescisão consensual A (imediato/pro-rata \| fim_ciclo) + anular adenda iniciador (este tick)
-2. Assento / capacidade só “definitiva” após `em_custodia` (anti-leakage)
-3. Política desconto ida/regresso (alinhar contrato-exemplo vs meia quota)
-4. Polish admin UX (Critiquito) — opcional
+1. Política desconto ida/regresso (alinhar contrato-exemplo vs meia quota)
+2. Polish admin UX (Critiquito) — opcional
 
-Já feito: cânone docs/loop (#98); copy «zona» guardada por testes.
+Já feito: cânone docs (#98); ENG#8b S22 (#99); **seat-before-custody** soft-hold (#PR); copy «zona» guardada por testes.
 
 ## Depois
 

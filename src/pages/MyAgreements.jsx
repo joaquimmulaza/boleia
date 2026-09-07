@@ -61,12 +61,32 @@ function isActivo(estado) {
 }
 
 /**
+ * Soft-hold: lugar ocupado mas ainda não confirmado (até em_custodia).
+ * @param {string | null | undefined} estado
+ * @returns {boolean}
+ */
+function isReservado(estado) {
+  return String(estado || '').toLowerCase() === 'reservado';
+}
+
+/**
+ * Passageiro ainda no acordo (confirmado ou soft-hold).
+ * @param {string | null | undefined} estado
+ * @returns {boolean}
+ */
+function isNoAcordo(estado) {
+  const e = String(estado || '').toLowerCase();
+  return e === 'activo' || e === 'reservado';
+}
+
+/**
  * @param {string | null | undefined} estado
  * @returns {string}
  */
 function estadoPassageiroLabel(estado) {
   const e = String(estado || '').toLowerCase();
   if (e === 'activo') return 'Confirmado';
+  if (e === 'reservado') return 'Lugar reservado — aguarda pagamento';
   if (e === 'saiu') return 'Saiu';
   return estado || '—';
 }
@@ -744,9 +764,14 @@ const MyAgreements = () => {
     const quotaDestaque =
       minhaLinha?.quota_mensal_kz ?? selected.valor_mensal_por_passageiro_kz;
     const podeSair =
-      isPassageiro && activo && (!minhaLinha || isActivo(minhaLinha.estado));
+      isPassageiro && activo && (!minhaLinha || isNoAcordo(minhaLinha.estado));
+    const minhaReservada = Boolean(minhaLinha && isReservado(minhaLinha.estado));
+    const nConfirmados = linhas.filter((p) => isActivo(p.estado)).length;
     const podeRenegociar =
-      activo && (isMotorista || (isPassageiro && podeSair));
+      activo &&
+      nConfirmados >= 1 &&
+      !minhaReservada &&
+      (isMotorista || (isPassageiro && podeSair));
     const podeEncerrar = activo && (isMotorista || podeSair);
     const passageirosActivosIds = linhas
       .filter((p) => isActivo(p.estado))
@@ -852,6 +877,15 @@ const MyAgreements = () => {
             <p className="font-semibold text-slate-900 dark:text-white text-balance">
               {rota.origem} → {rota.destino}
             </p>
+            {minhaReservada ? (
+              <p
+                role="status"
+                data-testid="lugar-reservado-banner"
+                className="text-sm rounded-xl border border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-100 px-3 py-2"
+              >
+                Lugar reservado — aguarda pagamento. O lugar confirma-se quando o comprovativo for validado.
+              </p>
+            ) : null}
           </div>
 
           <section className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 p-4 space-y-4">

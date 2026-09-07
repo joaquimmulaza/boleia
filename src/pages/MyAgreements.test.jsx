@@ -399,6 +399,44 @@ describe('MyAgreements — marketplace 1:N', () => {
     ).toBeInTheDocument();
   });
 
+  it('passageiro reservado: mostra copy de lugar reservado e permite Sair só eu', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    const acordoReservado = {
+      ...acordoPassageiro,
+      acordos_passageiros: [
+        {
+          id: 'ap-1',
+          passenger_id: 'pax-viewer',
+          estado: 'reservado',
+          quota_mensal_kz: 40000,
+          perfis: { nome_completo: 'Tu Mesmo' },
+        },
+        {
+          id: 'ap-2',
+          passenger_id: 'pax-2',
+          estado: 'reservado',
+          quota_mensal_kz: 40000,
+          perfis: { nome_completo: 'João Pedro' },
+        },
+      ],
+    };
+    getAgreementsForPassenger.mockResolvedValue([acordoReservado]);
+    mockPagamentosGate(acordoReservado, 'pax-viewer', false);
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByTestId('lugar-reservado-banner')).toHaveTextContent(
+      /Lugar reservado — aguarda pagamento/i,
+    );
+    expect(within(dialog).getAllByText(/Lugar reservado — aguarda pagamento/i).length).toBeGreaterThan(0);
+    expect(within(dialog).getByRole('button', { name: /Sair só eu/i })).toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: /Renegociar preço/i })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: /Registar falta/i })).not.toBeInTheDocument();
+    expectNoUserFacingJargon(dialog.textContent);
+  });
+
   it('leave offlineQueued: mostra Saída Pendente e desactiva Sair só eu', async () => {
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
