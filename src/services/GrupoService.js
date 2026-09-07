@@ -198,6 +198,7 @@ export async function addMembroGrupo(grupoId, membro) {
     throw new Error('passenger_id é obrigatório.');
   }
 
+  await assertOwnerDoGrupo(grupoId);
   await assertTemVaga(grupoId);
 
   const pickupName = sanitizeOptionalText(membro.pickup_name);

@@ -70,4 +70,47 @@ describe('GrupoDescobertaPanel', () => {
     await screen.findByText(/Grupos abertos/i);
     expect(container.textContent).not.toMatch(/N_actual|n_maximo|N_candidato/i);
   });
+
+  it('sem userId autenticado não mostra CTA Pedir entrada', async () => {
+    listGruposAbertos.mockResolvedValue([
+      {
+        id: 'g-open',
+        n_maximo: 4,
+        procuras: {
+          owner_id: 'owner-2',
+          origin_name: 'Talatona',
+          destination_name: 'Mutual',
+          n_candidato: 2,
+          estado: 'activa',
+        },
+      },
+    ]);
+
+    render(<GrupoDescobertaPanel userId={null} />);
+
+    expect(await screen.findByText(/Talatona/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Pedir entrada/i })).not.toBeInTheDocument();
+  });
+
+  it('não inventa OD quando origem/destino ausentes', async () => {
+    listGruposAbertos.mockResolvedValue([
+      {
+        id: 'g-open',
+        n_maximo: 4,
+        procuras: {
+          owner_id: 'owner-2',
+          origin_name: null,
+          destination_name: null,
+          n_candidato: 2,
+          estado: 'activa',
+        },
+      },
+    ]);
+
+    const { container } = render(<GrupoDescobertaPanel userId="pax-me" />);
+
+    await screen.findByText(/Grupo · 2 de 4/i);
+    expect(container.textContent).not.toMatch(/\bOrigem\b|\bDestino\b/);
+    expect(screen.getByText(/Rota não indicada/i)).toBeInTheDocument();
+  });
 });

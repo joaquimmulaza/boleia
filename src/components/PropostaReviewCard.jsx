@@ -116,6 +116,17 @@ function PropostaReviewCard({
   const selectionOk = !needsPicker || selectedIds.length === nProposto;
   const canAceitar = Boolean(onAceitar) && selectionOk && !busy;
 
+  /** IDs a enviar no aceite: picker explícito ou lista completa do grupo quando N_actual = N. */
+  const resolveAceiteMemberIds = () => {
+    if (needsPicker) {
+      return selectedIds;
+    }
+    if (review.proposta.grupo_id) {
+      return membros.map((m) => m.passenger_id).filter(Boolean);
+    }
+    return undefined;
+  };
+
   /**
    * @param {string} passengerId
    */
@@ -319,7 +330,7 @@ function PropostaReviewCard({
           if (isCriador) {
             onCancelar?.();
           } else {
-            onAceitar?.(needsPicker ? selectedIds : undefined);
+            onAceitar?.(resolveAceiteMemberIds());
           }
         }}
         onCancel={() => setConfirmOpen(false)}

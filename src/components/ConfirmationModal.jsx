@@ -12,6 +12,7 @@ import React from 'react';
  *   cancelText?: string,
  *   busy?: boolean,
  *   variant?: 'destructive' | 'primary',
+ *   testId?: string,
  * }} props
  */
 const ConfirmationModal = ({
@@ -24,6 +25,7 @@ const ConfirmationModal = ({
   cancelText = 'Voltar',
   busy = false,
   variant = 'destructive',
+  testId,
 }) => {
   if (!isOpen) return null;
 
@@ -51,6 +53,7 @@ const ConfirmationModal = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
+        data-testid={testId}
         className="relative bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-100 animate-in fade-in zoom-in-95 duration-200"
       >
         <div className="px-6 pt-8 pb-6 text-center">

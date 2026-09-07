@@ -333,11 +333,36 @@ describe('PropostaReviewCard', () => {
     expect(onAceitar).toHaveBeenCalledWith(['p1', 'p2', 'p3']);
   });
 
-  it('sem requiresMemberSelection: onAceitar sem IDs (comportamento legado)', () => {
+  it('sem requiresMemberSelection com grupo: onAceitar envia IDs dos membros listados', () => {
     const onAceitar = vi.fn();
     render(
       <PropostaReviewCard
         review={buildReview({ requiresMemberSelection: false })}
+        busy={false}
+        onAceitar={onAceitar}
+        onRecusar={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Aceitar proposta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
+    expect(onAceitar).toHaveBeenCalledWith(['p1', 'p2', 'p3']);
+  });
+
+  it('proposta solo sem grupo: onAceitar sem IDs', () => {
+    const onAceitar = vi.fn();
+    render(
+      <PropostaReviewCard
+        review={buildReview({
+          requiresMemberSelection: false,
+          proposta: {
+            ...buildReview().proposta,
+            grupo_id: null,
+            n_passageiros_propostos: 1,
+          },
+          membros: [],
+          titulo: '1 passageiro',
+        })}
         busy={false}
         onAceitar={onAceitar}
         onRecusar={vi.fn()}

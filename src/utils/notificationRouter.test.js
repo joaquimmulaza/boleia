@@ -1,7 +1,49 @@
 import { describe, it, expect } from 'vitest';
-import { resolveNotificationRoute, notificationRouteMap } from './notificationRouter';
+import { resolveNotificationRoute, notificationRouteMap, acordosDeepLink } from './notificationRouter';
 
 describe('notificationRouter', () => {
+  describe('acordosDeepLink (ENG #16)', () => {
+    it('monta query openAcordoId + focus', () => {
+      expect(acordosDeepLink({ acordo_id: 'abc' }, 'pagamento')).toBe(
+        '/acordos?openAcordoId=abc&focus=pagamento',
+      );
+    });
+
+    it('sem acordo_id devolve /acordos com só focus', () => {
+      expect(acordosDeepLink({}, 'renovacao')).toBe('/acordos?focus=renovacao');
+    });
+  });
+
+  describe('payment_update / renewal / payout (ENG #16)', () => {
+    it('payment_update resolve secção pagamento', () => {
+      expect(
+        resolveNotificationRoute({
+          metadata: {
+            type: 'payment_update',
+            acordo_id: '123',
+            pagamento_id: 'pag-1',
+            estado: 'em_custodia',
+          },
+        }),
+      ).toBe('/acordos?openAcordoId=123&focus=pagamento');
+    });
+
+    it('renewal_available resolve secção renovação', () => {
+      expect(notificationRouteMap.renewal_available({ acordo_id: 'a-1' })).toBe(
+        '/acordos?openAcordoId=a-1&focus=renovacao',
+      );
+    });
+
+    it('agreement_update com adenda pendente usa focus adenda', () => {
+      expect(
+        notificationRouteMap.agreement_update({
+          acordo_id: 'a-1',
+          adenda_estado: 'pendente_contraparte',
+        }),
+      ).toBe('/acordos?openAcordoId=a-1&focus=adenda');
+    });
+  });
+
   describe('proposal_received (contraparte)', () => {
     it('sentido B (inbox passageiro) abre /passageiro', () => {
       expect(

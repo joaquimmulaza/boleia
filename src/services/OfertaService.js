@@ -146,6 +146,38 @@ export async function listOfertasByDriver(driverId) {
   return data || [];
 }
 
+/** Limite por defeito do feed browse (PACOTE ENG #7 / #82). */
+export const BROWSE_OFERTAS_DEFAULT_LIMIT = 50;
+
+/**
+ * Feed browse para passageiro autenticado — ofertas com vagas (exclui `cheia`).
+ * Sem matching geo; flexível mantém OD null (UI usa `labelRotaOferta`).
+ *
+ * @param {{ limit?: number, offset?: number }} [options]
+ * @returns {Promise<object[]>}
+ */
+export async function listOfertasDisponiveis(options = {}) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('Não autenticado.');
+  }
+
+  const limit = Number.isFinite(options.limit) ? options.limit : BROWSE_OFERTAS_DEFAULT_LIMIT;
+  const offset = Number.isFinite(options.offset) ? options.offset : 0;
+
+  const { data, error } = await supabase
+    .from('ofertas_capacidade')
+    .select('*')
+    .in('estado', ['disponivel', 'parcial'])
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  return data || [];
+}
+
 /**
  * @param {string} ofertaId
  */

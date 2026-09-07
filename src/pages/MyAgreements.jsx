@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowRight, Clock, Users, ChevronRight, ShieldCheck, Pencil, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,6 +7,8 @@ import {
   getAgreementsForPassenger,
   leavePassenger,
   terminateAgreement,
+  renewAgreementPeriod,
+  declineAgreementRenewal,
   renegotiateAgreementPricing,
   acceptAgreementAdenda,
   rejectAgreementAdenda,
@@ -24,6 +26,30 @@ import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { resolveAgreementPricing } from '../utils/resolveAgreementPricing';
 import { labelRotaOferta } from '../utils/ofertaLabels';
+import AcordoPagamentoPanel from '../components/AcordoPagamentoPanel';
+import AcordoContactosPanel from '../components/AcordoContactosPanel';
+import {
+  labelChipAdenda,
+  chipClassAdenda,
+  formatMesAdendaPt,
+} from '../utils/adendaStatus';
+import { copyCancelamentoPendente } from '../utils/rescisaoDisplay';
+import { isAdendaBeforeEffectiveFrom } from '../utils/adendaEffectiveFrom';
+import {
+  getPagamentoForPassageiro,
+  getAcordoContactos,
+  listPagamentosByAcordo,
+  getMesReferenciaAtual,
+} from '../services/PaymentService';
+import {
+  labelRenovacaoEstado,
+  podeRenovarPeriodo,
+  podeRecusarRenovacao,
+  formatProximoMesPt,
+} from '../utils/periodoRenovacao';
+import {
+  allowsAssiduidadeFaltasForAcordo,
+} from '../utils/paymentStatus';
 
 /**
  * @param {string | null | undefined} estado
@@ -90,15 +116,11 @@ function countActivos(acordo) {
 }
 
 /**
- * Rótulo do mês de vigência da adenda (ex. «outubro de 2026»).
  * @param {string | null | undefined} isoDate
  * @returns {string}
  */
 function formatMesAdenda(isoDate) {
-  if (!isoDate) return 'próximo mês';
-  const d = new Date(`${String(isoDate).slice(0, 10)}T12:00:00`);
-  if (Number.isNaN(d.getTime())) return 'próximo mês';
-  return d.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+  return formatMesAdendaPt(isoDate);
 }
 
 /**
@@ -157,6 +179,50 @@ const MyAgreements = () => {
   const [adendaModalOpen, setAdendaModalOpen] = useState(false);
   const [adendaBusy, setAdendaBusy] = useState(false);
   const [adendaError, setAdendaError] = useState('');
+  const [pagamento, setPagamento] = useState(/** @type {object | null} */ (null));
+  const [pagamentosAcordo, setPagamentosAcordo] = useState(/** @type {object[]} */ ([]));
+  const [contactos, setContactos] = useState(/** @type {object | null} */ (null));
+  const [pagamentoLoading, setPagamentoLoading] = useState(false);
+  const [contactosLoading, setContactosLoading] = useState(false);
+  const [renewBusy, setRenewBusy] = useState(false);
+  const [renewFeedback, setRenewFeedback] = useState(/** @type {{ type: 'success' | 'error', text: string } | null} */ (null));
+
+  const carregarPagamentoContactos = useCallback(async (acordo) => {
+    if (!acordo?.id || !user?.id) return;
+    setPagamentoLoading(true);
+    setContactosLoading(true);
+    try {
+      const pagamentos = await listPagamentosByAcordo(acordo.id);
+      setPagamentosAcordo(pagamentos);
+      const mesAtual = getMesReferenciaAtual();
+      if (tipoPerfil === 'Passageiro') {
+        const row = pagamentos.find(
+          (p) => p.passenger_id === user.id && String(p.mes_referencia || '').slice(0, 10) === mesAtual,
+        )
+          ?? await getPagamentoForPassageiro(acordo.id, user.id, mesAtual);
+        setPagamento(row);
+      } else {
+        setPagamento(null);
+      }
+      const payload = await getAcordoContactos(acordo.id);
+      setContactos(payload);
+    } catch (err) {
+      console.error('Erro ao carregar pagamento/contactos:', err);
+    } finally {
+      setPagamentoLoading(false);
+      setContactosLoading(false);
+    }
+  }, [user?.id, tipoPerfil]);
+
+  useEffect(() => {
+    if (selected) {
+      void carregarPagamentoContactos(selected);
+    } else {
+      setPagamento(null);
+      setPagamentosAcordo([]);
+      setContactos(null);
+    }
+  }, [selected, carregarPagamentoContactos]);
 
   const closeTerminateFlow = () => {
     setTerminatePickerOpen(false);
@@ -218,18 +284,49 @@ const MyAgreements = () => {
     void syncPendingLeaves();
   }, [isOnline, syncPendingLeaves]);
 
+  const pendingFocusRef = useRef(/** @type {string | null} */ (null));
+
   useEffect(() => {
     if (isLoading || acordos.length === 0) return;
     const params = new URLSearchParams(location.search);
     const openAcordoId = params.get('openAcordoId') || location.state?.openAcordoId;
+    const focus = params.get('focus');
     if (openAcordoId) {
       const found = acordos.find((a) => a.id === openAcordoId);
       if (found) {
         setSelected(found);
+        if (focus) {
+          pendingFocusRef.current = focus;
+        }
         navigate(location.pathname, { replace: true, state: {} });
       }
     }
   }, [isLoading, acordos, location.search, location.state, navigate, location.pathname]);
+
+  useEffect(() => {
+    if (!selected || !pendingFocusRef.current) return;
+
+    const focus = pendingFocusRef.current;
+    pendingFocusRef.current = null;
+
+    /** @type {Record<string, string>} */
+    const focusTestIds = {
+      pagamento: 'acordo-pagamento-panel',
+      adenda: 'adenda-pendente',
+      renovacao: 'renovacao-periodo-panel',
+    };
+    const testId = focusTestIds[focus];
+    if (!testId) return undefined;
+
+    const frameId = requestAnimationFrame(() => {
+      document.querySelector(`[data-testid="${testId}"]`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [selected]);
 
   const activos = acordos.filter((a) => isActivo(a.estado));
   const outros = acordos.filter((a) => !isActivo(a.estado));
@@ -344,6 +441,65 @@ const MyAgreements = () => {
       setMessage({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
     } finally {
       setTerminateBusy(false);
+    }
+  };
+
+  const handleRenewPeriod = async () => {
+    if (!selected || renewBusy) return;
+    setRenewBusy(true);
+    setRenewFeedback(null);
+    try {
+      const result = await renewAgreementPeriod(selected.id);
+      if (result?.offlineQueued) {
+        setRenewFeedback({
+          type: 'success',
+          text: 'Renovação guardada. Sincronizamos quando a rede voltar.',
+        });
+      } else {
+        const mes = result?.renovacao_proximo_mes || result?.mes_referencia;
+        setRenewFeedback({
+          type: 'success',
+          text: `Período renovado para ${formatProximoMesPt(mes)}. Pagamentos do novo ciclo criados.`,
+        });
+      }
+      const acordoId = selected.id;
+      const refreshed = await carregar();
+      const updated = refreshed.find((a) => a.id === acordoId);
+      if (updated) {
+        setSelected(updated);
+        await carregarPagamentoContactos(updated);
+      }
+    } catch (err) {
+      setRenewFeedback({
+        type: 'error',
+        text: err.message || getFriendlyErrorMessage(err),
+      });
+    } finally {
+      setRenewBusy(false);
+    }
+  };
+
+  const handleDeclineRenewal = async () => {
+    if (!selected || renewBusy) return;
+    setRenewBusy(true);
+    setRenewFeedback(null);
+    try {
+      await declineAgreementRenewal(selected.id);
+      setRenewFeedback({
+        type: 'success',
+        text: 'Acordo termina no fim deste ciclo mensal.',
+      });
+      const acordoId = selected.id;
+      const refreshed = await carregar();
+      const updated = refreshed.find((a) => a.id === acordoId);
+      if (updated) setSelected(updated);
+    } catch (err) {
+      setRenewFeedback({
+        type: 'error',
+        text: err.message || getFriendlyErrorMessage(err),
+      });
+    } finally {
+      setRenewBusy(false);
     }
   };
 
@@ -531,6 +687,17 @@ const MyAgreements = () => {
     const podeRenegociar =
       activo && (isMotorista || (isPassageiro && podeSair));
     const podeEncerrar = activo && (isMotorista || podeSair);
+    const passageirosActivosIds = linhas
+      .filter((p) => isActivo(p.estado))
+      .map((p) => p.passenger_id)
+      .filter(Boolean);
+    const pagamentosMes = pagamentosAcordo.filter(
+      (p) => String(p.mes_referencia || '').slice(0, 10) === getMesReferenciaAtual(),
+    );
+    const pagamentosGate = isPassageiro && pagamento ? [pagamento] : pagamentosMes;
+    const idsGate = isPassageiro ? [user?.id].filter(Boolean) : passageirosActivosIds;
+    const podeRegistarFaltas = activo
+      && allowsAssiduidadeFaltasForAcordo(pagamentosGate, idsGate);
     const leavePending = Boolean(pendingLeaveIds[selected.id]);
     const adenda = selected.adenda_pendente;
     const adendaAguardando = adenda && isAdendaAguardandoContraparte(adenda.estado);
@@ -543,6 +710,20 @@ const MyAgreements = () => {
       selected.rescisao_solicitada_por !== user?.id;
     const cancelamentoPendente =
       String(selected.estado || '').toLowerCase() === 'cancelamento_pendente';
+    const cancelamentoCopy = cancelamentoPendente
+      ? copyCancelamentoPendente(selected.rescisao_effective_on)
+      : null;
+    const adendaAntesVigencia =
+      adenda?.effective_from && isAdendaBeforeEffectiveFrom(adenda.effective_from);
+    const precoActualPassageiro =
+      selected.valor_mensal_por_passageiro_kz ?? quotaDestaque;
+    const podeRenovar = activo && podeRenovarPeriodo(selected);
+    const podeRecusarRenov = activo && podeRecusarRenovacao(selected);
+    const renovacaoRenovado =
+      String(selected.renovacao_estado || '').toLowerCase() === 'renovado';
+    const renovacaoRecusada =
+      String(selected.renovacao_estado || '').toLowerCase() === 'nao_renovar'
+      || String(selected.rescisao_modo || '').toLowerCase() === 'nao_renovacao';
 
     const valorNum = Number.parseInt(String(adendaValor), 10);
     const nNum = Number.parseInt(String(adendaN), 10);
@@ -663,33 +844,64 @@ const MyAgreements = () => {
             {selected.adenda_pendente && (
               <div
                 data-testid="adenda-pendente"
-                className="rounded-xl border border-amber-200/90 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 space-y-1"
+                className="rounded-xl border border-amber-200/90 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 space-y-2"
               >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">
+                    Alteração de preço
+                  </p>
+                  <span
+                    className={`text-xs font-bold px-2 py-1 rounded-full shrink-0 ${chipClassAdenda(adenda.estado)}`}
+                    data-testid="adenda-chip"
+                  >
+                    {labelChipAdenda(adenda.estado, {
+                      isMotorista,
+                      isPassageiro,
+                      effectiveFrom: adenda.effective_from,
+                    })}
+                  </span>
+                </div>
+
+                {adendaAntesVigencia ? (
+                  <div
+                    className="grid grid-cols-2 gap-2 text-xs"
+                    data-testid="adenda-precos-comparacao"
+                  >
+                    <div className="rounded-lg bg-white/80 dark:bg-slate-900/50 p-2">
+                      <p className="text-slate-500">Preço actual</p>
+                      <p className="font-bold tabular-nums text-slate-900 dark:text-white">
+                        {formatKwanza(precoActualPassageiro)} Kz
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-white/80 dark:bg-slate-900/50 p-2">
+                      <p className="text-slate-500">
+                        Preço futuro
+                        {adenda.effective_from
+                          ? ` (${formatMesAdenda(adenda.effective_from)})`
+                          : ''}
+                      </p>
+                      <p className="font-bold tabular-nums text-primary">
+                        {formatKwanza(adenda.valor_mensal_por_passageiro_kz)} Kz
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+
                 {adendaAguardando ? (
                   <>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">
+                    <p className="text-sm text-slate-600 dark:text-slate-300 text-pretty">
                       {mostrarCtAdenda
-                        ? 'Proposta de novo preço'
+                        ? 'Revisa a proposta abaixo antes de aceitar ou rejeitar.'
                         : String(adenda.estado || '').toLowerCase() === 'pendente_contraparte'
                           ? isMotorista
-                            ? 'Passageiro propôs um novo preço'
-                            : 'À espera da aceitação do motorista'
+                            ? 'O passageiro propôs um novo preço.'
+                            : 'À espera da aceitação do motorista.'
                           : isPassageiro
-                            ? 'Proposta de novo preço'
-                            : 'À espera da aceitação do passageiro'}
-                    </p>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">
-                      Cada um pagaria{' '}
-                      <span className="tabular-nums font-semibold">
-                        {formatKwanza(selected.adenda_pendente.valor_mensal_por_passageiro_kz)} Kz
-                      </span>
-                      {selected.adenda_pendente.effective_from
-                        ? ` a partir de ${formatMesAdenda(selected.adenda_pendente.effective_from)}`
-                        : ' a partir do próximo mês'}
-                      .
+                            ? 'O motorista propôs um novo preço.'
+                            : 'À espera da aceitação do passageiro.'}
                     </p>
                     {mostrarCtAdenda && (
-                      <div className="mt-3 flex flex-col gap-3">
+                      <div className="mt-1 flex flex-col gap-3">
                         <Button
                           type="button"
                           className="w-full min-h-12 text-base"
@@ -711,29 +923,37 @@ const MyAgreements = () => {
                   </>
                 ) : (
                   <>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">
-                      Novo preço a partir de{' '}
-                      {formatMesAdenda(selected.adenda_pendente.effective_from)}
+                    <p className="text-sm text-slate-600 dark:text-slate-300 text-pretty">
+                      {adendaAntesVigencia
+                        ? `O mês corrente mantém as quotas já combinadas até ${formatMesAdenda(adenda.effective_from)}.`
+                        : 'Novo preço em vigor neste acordo.'}
                     </p>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">
-                      Cada um paga{' '}
-                      <span className="tabular-nums font-semibold">
-                        {formatKwanza(selected.adenda_pendente.valor_mensal_por_passageiro_kz)} Kz
-                      </span>
-                    </p>
-                    {selected.adenda_pendente.valor_mensal_total_kz != null && (
+                    {selected.adenda_pendente.valor_mensal_total_kz != null && adendaAntesVigencia ? (
                       <p className="text-xs text-slate-500">
-                        Total{' '}
+                        Total futuro{' '}
                         <span className="tabular-nums font-medium">
                           {formatKwanza(selected.adenda_pendente.valor_mensal_total_kz)} Kz
                         </span>
-                        . O mês corrente mantém as quotas já combinadas.
                       </p>
-                    )}
+                    ) : null}
                   </>
                 )}
               </div>
             )}
+
+            {cancelamentoCopy ? (
+              <div
+                data-testid="cancelamento-pendente-banner"
+                className="rounded-xl border border-amber-200/90 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 space-y-1"
+              >
+                <p className="text-sm font-bold text-slate-900 dark:text-white">
+                  {cancelamentoCopy.titulo}
+                </p>
+                <p className="text-xs text-slate-600 dark:text-slate-300 text-pretty">
+                  {cancelamentoCopy.corpo}
+                </p>
+              </div>
+            ) : null}
 
             {rescisaoConsensualPendente && (
               <div
@@ -757,6 +977,68 @@ const MyAgreements = () => {
               </div>
             )}
           </section>
+
+          {(podeRenovar || renovacaoRenovado || renovacaoRecusada) && (
+            <section
+              className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 p-4 space-y-3"
+              data-testid="renovacao-periodo-panel"
+            >
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Renovação do período
+                </h3>
+                <p className="text-xs text-slate-500 text-pretty">
+                  {renovacaoRenovado
+                    ? `${labelRenovacaoEstado('renovado')} (${formatProximoMesPt(selected.renovacao_proximo_mes)}).`
+                    : renovacaoRecusada
+                      ? labelRenovacaoEstado('nao_renovar')
+                      : 'Confirma se o acordo continua no mês seguinte com os termos vigentes.'}
+                </p>
+              </div>
+
+              {renewFeedback ? (
+                <FeedbackAlert type={renewFeedback.type} text={renewFeedback.text} className="mb-0" />
+              ) : null}
+
+              {podeRenovar ? (
+                <div className="flex flex-col gap-2">
+                  <Button
+                    type="button"
+                    className="w-full min-h-11"
+                    disabled={renewBusy}
+                    data-testid="renovar-periodo-cta"
+                    onClick={handleRenewPeriod}
+                  >
+                    {renewBusy ? (
+                      <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+                    ) : null}
+                    Renovar próximo período
+                  </Button>
+                  {podeRecusarRenov ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full min-h-11 text-slate-600"
+                      disabled={renewBusy}
+                      data-testid="nao-renovar-periodo-cta"
+                      onClick={handleDeclineRenewal}
+                    >
+                      Não renovar
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
+            </section>
+          )}
+
+          {isPassageiro && activo ? (
+            <AcordoPagamentoPanel
+              pagamento={pagamentoLoading ? null : pagamento}
+              onUpdated={() => carregarPagamentoContactos(selected)}
+            />
+          ) : null}
+
+          <AcordoContactosPanel contactos={contactos} loading={contactosLoading} />
 
           <div className="border-t border-slate-100 dark:border-slate-800" role="separator" />
 
@@ -971,7 +1253,7 @@ const MyAgreements = () => {
                 <Pencil size={16} aria-hidden="true" /> Renegociar preço
               </Button>
             )}
-            {activo && (
+            {activo && podeRegistarFaltas ? (
               <Button
                 type="button"
                 variant="secondary"
@@ -980,7 +1262,15 @@ const MyAgreements = () => {
               >
                 <Clock size={16} aria-hidden="true" /> Registar falta
               </Button>
-            )}
+            ) : null}
+            {activo && !podeRegistarFaltas && !pagamentoLoading ? (
+              <p
+                className="text-xs text-slate-500 text-pretty px-1"
+                data-testid="faltas-gate-pagamento"
+              >
+                Registo de faltas disponível após pagamento validado em custódia.
+              </p>
+            ) : null}
             {podeSair && (
               <Button
                 type="button"

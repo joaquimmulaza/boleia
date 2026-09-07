@@ -15,7 +15,9 @@ const Profile = () => {
     nome_completo: '',
     telefone: '',
     tipo_perfil: 'Passageiro',
-    avatar_url: ''
+    avatar_url: '',
+    iban: '',
+    iban_titular: '',
   });
   const [vehicleData, setVehicleData] = useState({
     id: null,
@@ -40,7 +42,9 @@ const Profile = () => {
             nome_completo: perfil.nome_completo || '',
             telefone: perfil.telefone || '',
             tipo_perfil: perfil.tipo_perfil || 'Passageiro',
-            avatar_url: perfil.avatar_url || ''
+            avatar_url: perfil.avatar_url || '',
+            iban: perfil.iban || '',
+            iban_titular: perfil.iban_titular || '',
           });
 
           if (perfil.tipo_perfil === 'Motorista') {
@@ -79,10 +83,16 @@ const Profile = () => {
     setFeedback(null);
 
     try {
-      await updateProfile(userId, {
+      /** @type {Record<string, string>} */
+      const updates = {
         nome_completo: profileData.nome_completo,
-        telefone: profileData.telefone
-      });
+        telefone: profileData.telefone,
+      };
+      if (profileData.tipo_perfil === 'Motorista') {
+        updates.iban = profileData.iban.trim();
+        updates.iban_titular = profileData.iban_titular.trim();
+      }
+      await updateProfile(userId, updates);
 
       if (profileData.tipo_perfil === 'Motorista') {
         await updateVehicle(userId, vehicleData.id, {
@@ -183,6 +193,40 @@ const Profile = () => {
             </div>
           </div>
         </div>
+
+        {profileData.tipo_perfil === 'Motorista' && (
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-slate-400 uppercase px-1">Dados bancários</h3>
+            <div className="bg-white dark:bg-slate-800/50 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700/50 overflow-hidden">
+              <div className="p-4 border-b border-slate-50 dark:border-slate-700/50 flex flex-col gap-1">
+                <label htmlFor="iban_titular" className="text-xs font-semibold text-slate-500 block">
+                  Titular da conta
+                </label>
+                <input
+                  id="iban_titular"
+                  type="text"
+                  name="iban_titular"
+                  value={profileData.iban_titular}
+                  onChange={handleChangeProfile}
+                  className="w-full bg-transparent border-none text-slate-900 dark:text-slate-100 font-medium focus:outline-none focus:ring-0 p-0"
+                  placeholder="Nome completo do titular"
+                />
+              </div>
+              <div className="p-4 flex flex-col gap-1">
+                <label htmlFor="iban" className="text-xs font-semibold text-slate-500 block">IBAN</label>
+                <input
+                  id="iban"
+                  type="text"
+                  name="iban"
+                  value={profileData.iban}
+                  onChange={handleChangeProfile}
+                  className="w-full bg-transparent border-none text-slate-900 dark:text-slate-100 font-medium focus:outline-none focus:ring-0 p-0 font-mono uppercase"
+                  placeholder="AO06…"
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {profileData.tipo_perfil === 'Motorista' && (
           <div className="space-y-4">

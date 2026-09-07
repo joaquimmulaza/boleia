@@ -7,6 +7,8 @@ import {
   getAgreementsForDriver,
   getAgreementsForPassenger,
 } from '../services/AgreementService';
+import { listPagamentosByAcordo } from '../services/PaymentService';
+import { allowsAssiduidadeFaltasForAcordo } from '../utils/paymentStatus';
 import LogAbsenceModal from '../components/LogAbsenceModal';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
@@ -27,6 +29,38 @@ const AbsenceTracker = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [podeRegistarFaltas, setPodeRegistarFaltas] = useState(false);
+  const [gateLoading, setGateLoading] = useState(false);
+
+  const carregarGatePagamento = useCallback(async () => {
+    if (!acordoId || !user?.id) {
+      setPodeRegistarFaltas(false);
+      return;
+    }
+    setGateLoading(true);
+    try {
+      const pagamentos = await listPagamentosByAcordo(acordoId);
+      let idsRequired = [];
+      if (tipoPerfil === 'Motorista') {
+        const acordos = await getAgreementsForDriver(user.id);
+        const acordo = (acordos || []).find((a) => a.id === acordoId);
+        idsRequired = (acordo?.acordos_passageiros || [])
+          .filter((p) => p.estado?.toLowerCase() === 'activo')
+          .map((p) => p.passenger_id)
+          .filter(Boolean);
+      } else {
+        idsRequired = [user.id];
+      }
+      setPodeRegistarFaltas(
+        allowsAssiduidadeFaltasForAcordo(pagamentos, idsRequired),
+      );
+    } catch (err) {
+      console.error('Erro ao verificar pagamento para faltas:', err);
+      setPodeRegistarFaltas(false);
+    } finally {
+      setGateLoading(false);
+    }
+  }, [acordoId, user?.id, tipoPerfil]);
 
   const carregarFaltas = useCallback(async () => {
     if (!acordoId) return;
@@ -68,10 +102,11 @@ const AbsenceTracker = () => {
   useEffect(() => {
     if (acordoId) {
       carregarFaltas();
+      void carregarGatePagamento();
     } else {
       carregarAcordosActivos();
     }
-  }, [acordoId, carregarFaltas, carregarAcordosActivos]);
+  }, [acordoId, carregarFaltas, carregarAcordosActivos, carregarGatePagamento]);
 
   const totalDesconto = faltas.reduce(
     (acc, falta) => acc + (Number(falta.desconto_kz) || 0),
@@ -233,15 +268,24 @@ const AbsenceTracker = () => {
 
       {acordoId && (
         <div className="fixed bottom-24 right-4 z-header">
-          <button
-            type="button"
-            onClick={() => setIsModalOpen(true)}
-            disabled={submitting}
-            className="bg-primary hover:bg-primary/90 text-white flex items-center gap-2 px-5 py-3.5 rounded-full shadow-lg shadow-primary/30 font-bold transition-all active:scale-95 disabled:opacity-60"
-          >
-            <Plus size={20} aria-hidden="true" />
-            <span>Registar Falta</span>
-          </button>
+          {podeRegistarFaltas ? (
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(true)}
+              disabled={submitting || gateLoading}
+              className="bg-primary hover:bg-primary/90 text-white flex items-center gap-2 px-5 py-3.5 rounded-full shadow-lg shadow-primary/30 font-bold transition-all active:scale-95 disabled:opacity-60"
+            >
+              <Plus size={20} aria-hidden="true" />
+              <span>Registar Falta</span>
+            </button>
+          ) : !gateLoading ? (
+            <p
+              className="max-w-[14rem] rounded-xl bg-slate-900/90 text-white text-xs p-3 shadow-lg text-pretty"
+              data-testid="faltas-gate-pagamento"
+            >
+              Registo de faltas disponível após pagamento validado em custódia.
+            </p>
+          ) : null}
         </div>
       )}
 
