@@ -56,11 +56,18 @@
 - Só a **contraparte** aceita/rejeita; iniciador pode **anular** enquanto pendente (ENG#8b).
 - ROADMAP «contrapostos complexos» continua fora do MVP; o mínimo via `cancelada_substituta` + nova proposta basta.
 
+## Faltas ida/regresso (2026-09-07) — decisão produto
+- **Opção 1 — Meia quota (canónica MVP):**
+  - `ambas` → 100% do dia (`quota / dias_uteis`)
+  - `ida` ou `regresso` → 50% (`quota / dias_uteis / 2`)
+- Minuta contrato §9 alinhada (local gitignore) + `.specs/quick/pacote-falta-ida-regresso/clausula-9-minuta.md`
+- Trigger `handle_falta_desconto` + `computeFaltaDesconto` + UI `/faltas`
+
 ## Next Steps
-1. **ENG#8b** — fecho S22: rescisão consensual A (imediato/pro-rata \| fim_ciclo) + anular adenda
-2. Próximos: assento antes de custódia; política ida/regresso (ver memo GAPS-20260907)
-3. **Não** implementar zonas/polígonos no MVP; **não** merge automático em `main`
-4. AdminRoute race (#97) **merged** — retestar `/admin/pagamentos` em produção após deploy
+1. Merge **PR #100** seat-before-custody (NEED_HUMAN)
+2. Merge PR falta-ida-regresso-policy (este tick)
+3. **Não** zonas/polígonos; **não** merge automático em `main`
+4. Admin polish Critiquito (opcional)
 
 ## Key links
 - Plan: `.cursor/plans/marketplace_oferta_procura_74cbb52a.plan.md`

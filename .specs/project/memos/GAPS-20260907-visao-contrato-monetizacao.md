@@ -22,8 +22,12 @@ Fontes: `Boleia_Certa_Visao_e_Fluxo_de_Produto.md`, `CONTRATO_PARTICULAR_…` (l
 
 | Gap | Origem | Notas |
 |-----|--------|-------|
-| Assento activo antes de `em_custodia` | info-product anti-leakage | Capacidade consumida no aceite |
-| Regra ida/regresso vs contrato §9 | Contrato | Código = meia quota; contrato = desconto só se faltou ambas — **decidir política** |
+| Assento activo antes de `em_custodia` | info-product anti-leakage | **PR #100** (NEED_HUMAN merge) |
+| Regra ida/regresso vs contrato §9 | Contrato | **Decisão 2026-09-07: Opção 1 meia quota** — tick 23 |
+
+## Decisão faltas ida/regresso (2026-09-07)
+
+**Canónica:** `ambas` = 100% do dia; `ida`/`regresso` = 50% (meia quota). Minuta §9 actualizada.
 
 ## P2 / residual
 
