@@ -313,7 +313,7 @@ BEGIN
   WHERE id = p_acordo_id;
 
   IF p_idempotency_key IS NOT NULL THEN
-    INSERT INTO public.rpc_idempotency (idempotency_key, rpc_name, entity_id, user_id)
+    INSERT INTO public.rpc_idempotency (idempotency_key, rpc_name, subject_id, user_id)
     VALUES (p_idempotency_key, 'renew_agreement_period', p_acordo_id, v_uid)
     ON CONFLICT (idempotency_key) DO NOTHING;
   END IF;
@@ -408,7 +408,7 @@ BEGIN
   WHERE id = p_acordo_id;
 
   IF p_idempotency_key IS NOT NULL THEN
-    INSERT INTO public.rpc_idempotency (idempotency_key, rpc_name, entity_id, user_id)
+    INSERT INTO public.rpc_idempotency (idempotency_key, rpc_name, subject_id, user_id)
     VALUES (p_idempotency_key, 'decline_agreement_renewal', p_acordo_id, v_uid)
     ON CONFLICT (idempotency_key) DO NOTHING;
   END IF;

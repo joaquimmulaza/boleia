@@ -29,19 +29,20 @@ describe('PaymentService', () => {
 
   it('getPagamentoForPassageiro devolve linha do acordo do passageiro', async () => {
     const row = { id: 'pag-1', estado: 'pendente_pagamento', valor_kz: 43000 };
+    const maybeSingle = vi.fn().mockResolvedValue({ data: row, error: null });
+    const eqMes = vi.fn().mockReturnValue({ maybeSingle });
+    const eqPax = vi.fn().mockReturnValue({ eq: eqMes });
+    const eqAcordo = vi.fn().mockReturnValue({ eq: eqPax });
     supabase.from.mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            maybeSingle: vi.fn().mockResolvedValue({ data: row, error: null }),
-          }),
-        }),
-      }),
+      select: vi.fn().mockReturnValue({ eq: eqAcordo }),
     });
 
     const result = await getPagamentoForPassageiro('acordo-1', 'pax-1');
     expect(result).toEqual(row);
     expect(supabase.from).toHaveBeenCalledWith('pagamentos_acordo');
+    expect(eqAcordo).toHaveBeenCalledWith('acordo_id', 'acordo-1');
+    expect(eqPax).toHaveBeenCalledWith('passenger_id', 'pax-1');
+    expect(eqMes).toHaveBeenCalledWith('mes_referencia', expect.any(String));
   });
 
   it('submitPaymentProof chama RPC submit_payment_proof', async () => {
