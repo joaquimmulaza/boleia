@@ -2,18 +2,18 @@
 
 ## Top 3
 
-1. **falta-ida-regresso-policy** — Meia quota (decisão produto) — tipo: eng — DoD: `.specs/quick/pacote-falta-ida-regresso/` — deps: nenhuma (em curso)
-2. **admin-polish-critiquito** — Polish UX `/admin/pagamentos` — tipo: ui — DoD: Critiquito — deps: opcional
-3. _(aguardar merge #100 seat-before-custody)_
+1. **admin-polish-critiquito** — Polish UX `/admin/pagamentos` — tipo: ui — DoD: Critiquito — deps: opcional
+2. _(aguardar merge #100 seat-before-custody)_
+3. _(aguardar merge #101 falta-ida-regresso)_
 
 ## Quiet?
 
-- não — tick 23 falta-ida-regresso
+- quase — PRs #100 e #101 NEED_HUMAN merge
 
 HANDOFF:
 FROM: pm
-TO: shipwright
-STATUS: DONE
+TO: human
+STATUS: NEED_HUMAN
 ARTIFACT: .specs/loop/BACKLOG.md
-NEXT: Executar falta-ida-regresso-policy
+NEXT: Merge #100 e #101
 MODE: local
