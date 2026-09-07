@@ -2,24 +2,24 @@
 
 ## Top 3
 
-1. **canon-project-specs** — Commit PROJECT/ROADMAP/loop skills + invariantes — tipo: docs — DoD: PR aberto com cânone do loop em `main` (merge humano) — deps: nenhuma
-2. **copy-zona-residual** — Remover copy «zona» residual no hub passageiro se ainda existir — tipo: ui — DoD: grep sem jargon de zona inventada; UI Skills/Stitch só se redesign — deps: opcional
-3. **ProxyPay** — Fora do MVP — tipo: biz — deps: pós-piloto
+1. **merge-canon-docs** — Merge PR #98 (cânone PROJECT/loop) — tipo: docs — DoD: ficheiros em `main` — deps: humano
+2. **copy-zona-residual** — Remover copy «zona» residual no hub passageiro se ainda existir — tipo: ui — DoD: grep sem jargon de zona inventada — deps: após #98 opcional
+3. **ProxyPay** — Fora do MVP — tipo: biz
 
 ## Quiet?
 
-- não — #97 merged; cânone do loop ainda untracked local
+- sim após merge do PR #98 (nada eng urgente no ROADMAP)
 
-## Notas PM
+## Validação tick
 
-- Custódia / admin pagamentos / IBAN (ROADMAP «Agora» 1–3) já cobertos por ENG#5/#11/#13/#14 + fix AdminRoute #97
-- PRs Sentinel antigos (#54–#63) fora do escopo deste tick (ruído; não priorizar)
-- `contexto-bot.md` = notas de conversa — **não** entra no PR de cânone
+- #97 AdminRoute: já merged em `main`
+- Cânone loop: https://github.com/joaquimmulaza/boleia/pull/98
+- VERDICT review leve: APPROVE
 
 HANDOFF:
-FROM: pm
-TO: shipwright
-STATUS: DONE
-ARTIFACT: .specs/loop/BACKLOG.md
-NEXT: Pacote #1 canon-project-specs — branch + PR docs; sem src/
+FROM: orchestrator
+TO: human
+STATUS: NEED_HUMAN
+ARTIFACT: .specs/loop/TICK-20260907-20.md
+NEXT: Merge PR #98
 MODE: local
