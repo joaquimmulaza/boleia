@@ -138,8 +138,66 @@ export async function listProcurasByOwner(ownerId) {
 }
 
 /**
+ * Actualiza procura activa via RPC (não muta n_candidato nem return_time omitido).
+ * @param {string} procuraId
+ * @param {{
+ *   preferred_time: string,
+ *   origin_name?: string | null,
+ *   origin_lat?: number | null,
+ *   origin_lng?: number | null,
+ *   destination_name?: string | null,
+ *   destination_lat?: number | null,
+ *   destination_lng?: number | null,
+ *   teto_mensal_kz?: number | null,
+ *   dias_semana?: number[] | null,
+ * }} formData
+ */
+export async function updateProcura(procuraId, formData) {
+  if (!procuraId) {
+    throw new Error('ID da procura é obrigatório.');
+  }
+  if (!formData?.preferred_time) {
+    throw new Error('Horário preferido é obrigatório.');
+  }
+
+  const diasSemana = Array.isArray(formData.dias_semana) && formData.dias_semana.length > 0
+    ? formData.dias_semana.map((d) => Number(d)).filter((d) => Number.isFinite(d))
+    : [1, 2, 3, 4, 5];
+
+  const { data, error } = await supabase.rpc('update_procura', {
+    p_procura_id: procuraId,
+    p_preferred_time: formData.preferred_time,
+    p_origin_name: formData.origin_name ?? null,
+    p_origin_lat: formData.origin_lat ?? null,
+    p_origin_lng: formData.origin_lng ?? null,
+    p_destination_name: formData.destination_name ?? null,
+    p_destination_lat: formData.destination_lat ?? null,
+    p_destination_lng: formData.destination_lng ?? null,
+    p_teto_mensal_kz: formData.teto_mensal_kz ?? null,
+    p_dias_semana: diasSemana,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Arquiva procura activa via RPC (propostas abertas → cancelada; waitlist → cancelada).
  * @param {string} procuraId
  */
+export async function cancelProcura(procuraId) {
+  if (!procuraId) {
+    throw new Error('ID da procura é obrigatório.');
+  }
+
+  const { data, error } = await supabase.rpc('cancel_procura', {
+    p_procura_id: procuraId,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
 export async function getProcura(procuraId) {
   const { data, error } = await supabase
     .from('procuras')

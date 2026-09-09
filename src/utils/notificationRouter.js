@@ -61,6 +61,8 @@ export const notificationRouteMap = {
     if (inbox === 'motorista') return '/motorista';
     return '/motorista';
   },
+  proposal_invalidated: (metadata) => notificationRouteMap.proposal_received(metadata),
+  proposal_cancelled: (metadata) => notificationRouteMap.proposal_received(metadata),
   waitlist_promoted: () => '/passageiro',
   match_available: () => '/passageiro',
 };

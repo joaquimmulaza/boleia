@@ -94,7 +94,7 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
 **REGRA ABSOLUTA:** Esta secção do documento (`CONTEXT.md` e `AGENTS.md`) tem de ser **obrigatoriamente atualizada** sempre que uma nova funcionalidade for implementada, refatorada ou corrigida. O objetivo central é garantir que qualquer Agente de IA que leia este ficheiro saiba com exatidão o ponto de situação do projeto, evitando redundâncias, reinvenção da roda ou duplicação de lógicas já existentes (DRY - Don't Repeat Yourself). Antes de iniciar qualquer tarefa, o agente deve assumir este relatório como a única fonte de verdade arquitetónica.
 
 🏛️ Relatório de Estado da Arquitetura: Boleia Certa
-**Última Atualização:** 6 de Setembro de 2026 
+**Última Atualização:** 8 de Setembro de 2026 
 **Fase Atual:** Marketplace Oferta/Procura (Phase 6–7) + **Landing refresh** + **Agent loop Cursor** + **Graphify/Graphlore** + **Stitch + UI Skills** + **PWA Offline Wave 3–4** + **PACOTE ENG#8 cancelamento**. Spec ENG#8: `.specs/quick/pacote-eng-8-cancelamento/`.
 
 **O que já está implementado e validado:**
@@ -147,5 +147,7 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
  * **PACOTE ENG #13 Liquidação período + repasse (2026-09-06):** tabela `repasses_motorista` (GMV, take-rate ~10%, repasse líquido, IBAN snapshot); RPC `admin_liquidate_period` (batch mês); `admin_liquidate_payment` idempotente + `repasse_id`; helpers `_liquidate_pagamento_row` / `_refresh_repasse_motorista`; `computePlatformFeeKz`; admin UI liquidação período + lista repasses. Migração `20260907030000_pacote_eng13_liquidacao_periodo_repasse.sql`. Spec: `.specs/features/pacote-eng-13-liquidacao/quick.md`.
 - **PACOTE ENG #14 Renovação M0→M1 (2026-09-06):** renovação explícita `renew_agreement_period` / `decline_agreement_renewal`; lazy `apply_due_agreement_non_renewals`; pagamentos UNIQUE `(acordo_passageiro_id, mes_referencia)`; termos via `_resolve_termos_vigentes_acordo` (adenda `em_vigor` ou acordo); CTAs em `MyAgreements`. Migração `20260907040000_pacote_eng14_renovacao_periodo.sql`. Spec: `.specs/features/pacote-eng-14-renovacao/quick.md`.
 - «Sair só eu» mantém `leave_passenger` (saída individual 1:N); «Encerrar acordo» usa `terminate_agreement` A/B/C. Lazy `apply_due_agreement_terminations` no load. Spec: `.specs/features/s22-renegotiate-terminate/quick.md`.
+
+ * **Editar/cancelar procura (2026-09-08):** CTA no hub passageiro; RPC `update_procura` / `cancel_procura` (MCP `20260908220000_…`). Snapshots de propostas intactos; incompatível de matching → `invalidada` + notif `proposal_invalidated`; arquivo → `cancelada` + `proposal_cancelled`. Teto baixo mantém proposta + chip «Acima do teto». Confirmação só com impacto. `return_time` e `n_candidato`/grupo não são mutados pela edição. Spec: `.specs/features/editar-procura/`.
 
 **Próximo:** Merge #100 seat-before-custody; TTL reservas; polish admin Critiquito. **Fora do MVP:** zonas/polígonos/raio residencial; adenda bilateral completa (hoje motorista inicia). Commits só se o utilizador pedir.

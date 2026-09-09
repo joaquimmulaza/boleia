@@ -63,6 +63,13 @@
 - Minuta contrato §9 alinhada (local gitignore) + `.specs/quick/pacote-falta-ida-regresso/clausula-9-minuta.md`
 - Trigger `handle_falta_desconto` + `computeFaltaDesconto` + UI `/faltas`
 
+## Editar procura activa (2026-09-08)
+- Dono edita OD/hora/dias/teto enquanto `activa`/`em_negociacao` e sem acordo activo
+- RPC `update_procura` / `cancel_procura`; propostas incompatíveis → `invalidada` (snapshot intacto)
+- Teto não invalida; UI «Acima do teto»; confirmação só se houver impacto
+- `return_time` reservado (não anular); `n_candidato` / grupo / `n_maximo` intocados
+- Spec: `.specs/features/editar-procura/`
+
 ## Next Steps
 1. Merge **PR #100** seat-before-custody (NEED_HUMAN)
 2. Merge PR falta-ida-regresso-policy (este tick)
