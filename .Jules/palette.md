@@ -1,0 +1,3 @@
+## 2023-10-27 - Unlabeled Icon-Only Buttons in Drawer UI
+**Learning:** Found that secondary UI elements, like buttons to close drawers or toggle minor settings, are prone to missing `aria-label`s, rendering them inaccessible to screen readers because they just have icons (e.g. `<X />`, `<BellRing />`).
+**Action:** When adding drawers or panels to the application, specifically check its header/close buttons for accessibility labels since these often rely entirely on visual icons (like 'X').
