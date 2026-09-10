@@ -2,9 +2,8 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import OnboardingPermissions from './OnboardingPermissions';
-import { createTestUser, deleteTestUser } from '../test/supabaseTestUtils';
+import { markPermissionsEligible } from '../utils/permissionsPrompt';
 
-// Mocks das APIs nativas do browser
 Object.defineProperty(global, 'Notification', {
   value: {
     permission: 'default',
@@ -23,118 +22,117 @@ Object.defineProperty(global.navigator, 'permissions', {
 Object.defineProperty(global.navigator, 'geolocation', {
   value: {
     getCurrentPosition: vi.fn().mockImplementation((success) =>
-      success({ coords: { latitude: -8.839988, longitude: 13.289437 } })
+      success({ coords: { latitude: -8.839988, longitude: 13.289437 } }),
     ),
   },
   writable: true,
 });
 
-// Mock parcial do Supabase Client para verificar chamadas de atualização
-vi.mock('@supabase/supabase-js', async (importOriginal) => {
-  const actual = await importOriginal();
-  return {
-    ...actual,
-    createClient: () => ({
-      auth: {
-        signUp: vi.fn().mockResolvedValue({ data: { user: { id: 'test-123' }, session: {} } }),
-        signInWithPassword: vi.fn(),
-        signOut: vi.fn(),
-      },
-      from: vi.fn().mockReturnValue({
-        update: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({ data: null, error: null }),
-        }),
-        delete: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({ data: null, error: null }),
-        })
-      }),
-    }),
-  };
-});
+const mockSubscribe = vi.fn().mockResolvedValue({ success: true });
+const mockRefreshProfile = vi.fn().mockResolvedValue(undefined);
 
-import { useAuth } from '../contexts/AuthContext';
-
-// Mock do hook useAuth
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: vi.fn(),
 }));
 
-const renderWithAuth = (ui, { user, session, profile }) => {
+vi.mock('../hooks/usePushNotifications', () => ({
+  usePushNotifications: () => ({
+    subscribe: mockSubscribe,
+    isSupported: true,
+  }),
+}));
+
+vi.mock('../lib/supabase', () => ({
+  supabase: {
+    from: vi.fn(() => ({
+      update: vi.fn(() => ({
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      })),
+    })),
+  },
+}));
+
+import { useAuth } from '../contexts/AuthContext';
+
+/**
+ * @param {object} [overrides]
+ */
+function renderWithAuth(overrides = {}) {
   useAuth.mockReturnValue({
-    user,
-    session,
-    profile, // In a real app this might be loaded elsewhere, but let's assume it's in the auth context or we mock it here.
+    user: { id: 'user-test-1' },
+    session: { access_token: 'jwt-test' },
+    profile: { onboarding_completed: false },
     loading: false,
-    tipoPerfil: 'passageiro'
+    tipoPerfil: 'Passageiro',
+    refreshProfile: mockRefreshProfile,
+    ...overrides,
   });
-  return render(ui);
-};
+  return render(<OnboardingPermissions />);
+}
 
-describe('OnboardingPermissions Integration', () => {
-  let testUser;
-
-  beforeEach(async () => {
+describe('OnboardingPermissions Integration (PWA push — fluxo 10)', () => {
+  beforeEach(() => {
     vi.clearAllMocks();
+    sessionStorage.clear();
     global.Notification.permission = 'default';
     global.navigator.permissions.query.mockResolvedValue({ state: 'prompt' });
-
-    // Tentar criar o user, o mock vai ser usado se o createClient for mockado
-    // Se o createTestUser bater na rede porque está fora do mock, tudo bem, vamos apenas simular.
-    testUser = await createTestUser();
   });
 
-  afterEach(async () => {
-    if (testUser?.user?.id) {
-      await deleteTestUser(testUser.user.id);
-    }
+  afterEach(() => {
+    sessionStorage.clear();
   });
 
-  it('Cenário A: NÃO deve renderizar se permissões nativas já forem granted', async () => {
+  it('Cenário A: NÃO renderiza se permissões nativas já forem granted', async () => {
     global.Notification.permission = 'granted';
     global.navigator.permissions.query.mockResolvedValue({ state: 'granted' });
+    markPermissionsEligible();
 
-    renderWithAuth(<OnboardingPermissions />, { user: testUser?.user, session: testUser?.session, profile: { onboarding_completed: false } });
+    renderWithAuth();
 
-    expect(screen.queryByText(/Ativar Recursos/i)).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText(/Ativar Recursos/i)).not.toBeInTheDocument();
+    });
   });
 
-  it('Cenário A (parte 2): NÃO deve renderizar se onboarding_completed for true', async () => {
-    renderWithAuth(<OnboardingPermissions />, { user: testUser?.user, session: testUser?.session, profile: { onboarding_completed: true } });
+  it('Cenário A (parte 2): NÃO renderiza se onboarding_completed for true', async () => {
+    markPermissionsEligible();
+    renderWithAuth({ profile: { onboarding_completed: true } });
 
-    expect(screen.queryByText(/Ativar Recursos/i)).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText(/Ativar Recursos/i)).not.toBeInTheDocument();
+    });
   });
 
-  it('Cenário B: Deve montar a UI de Soft Prompting no dashboard se as permissões forem default', async () => {
-    renderWithAuth(<OnboardingPermissions />, { user: testUser?.user, session: testUser?.session, profile: { onboarding_completed: false } });
+  it('Cenário B: monta soft prompt após acção relevante (markPermissionsEligible)', async () => {
+    renderWithAuth();
+    markPermissionsEligible();
 
     expect(await screen.findByText(/Ativar Recursos/i)).toBeInTheDocument();
     expect(screen.getByText(/Agora Não/i)).toBeInTheDocument();
   });
 
-  it('Cenário C: Clicar em "Ativar Recursos" deve disparar métodos nativos', async () => {
-    renderWithAuth(<OnboardingPermissions />, { user: testUser?.user, session: testUser?.session, profile: { onboarding_completed: false } });
+  it('Cenário C: "Ativar Recursos" dispara nativos + push subscribe', async () => {
+    renderWithAuth();
+    markPermissionsEligible();
 
-    const btnAtivar = await screen.findByText(/Ativar Recursos/i);
-    fireEvent.click(btnAtivar);
+    fireEvent.click(await screen.findByText(/Ativar Recursos/i));
 
     await waitFor(() => {
       expect(global.Notification.requestPermission).toHaveBeenCalled();
       expect(global.navigator.geolocation.getCurrentPosition).toHaveBeenCalled();
+      expect(mockSubscribe).toHaveBeenCalledWith('user-test-1');
     });
   });
 
-  it('Cenário D: Clicar em "Agora Não" deve fechar componente e persistir decisão', async () => {
-    renderWithAuth(<OnboardingPermissions />, { user: testUser?.user, session: testUser?.session, profile: { onboarding_completed: false } });
+  it('Cenário D: "Agora Não" fecha o modal e persiste onboarding_completed', async () => {
+    renderWithAuth();
+    markPermissionsEligible();
 
-    const btnAgoraNao = await screen.findByText(/Agora Não/i);
-    fireEvent.click(btnAgoraNao);
+    fireEvent.click(await screen.findByText(/Agora Não/i));
 
     await waitFor(() => {
-      // A UI deve fechar
       expect(screen.queryByText(/Ativar Recursos/i)).not.toBeInTheDocument();
-      // O update na tabela perfis deve ser chamado para atualizar o onboarding_completed
-      // Como não estamos a instanciar o real client mockado perfeitamente, não validamos os params extatemente,
-      // mas podemos validar que o botão tem a ação esperada de desmontar o componente localmente.
+      expect(mockRefreshProfile).toHaveBeenCalled();
     });
   });
 });
