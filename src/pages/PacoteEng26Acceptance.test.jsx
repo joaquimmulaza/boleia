@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import DriverDashboard from './DriverDashboard';
 import { listOfertasByDriver } from '../services/OfertaService';
+import { listProcurasDisponiveis } from '../services/ProcuraService';
 import { findCompatibleProcuras } from '../services/MatchingService';
 import { createProposta } from '../services/PropostaService';
 import { getAgreementsForDriver } from '../services/AgreementService';
@@ -31,6 +32,14 @@ vi.mock('../services/PropostaService', () => ({
   enrichPropostasForReview: vi.fn().mockResolvedValue([]),
   createProposta: vi.fn(),
 }));
+
+vi.mock('../services/ProcuraService', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    listProcurasDisponiveis: vi.fn().mockResolvedValue([]),
+  };
+});
 
 vi.mock('../services/MatchingService', () => ({
   findCompatibleProcuras: vi.fn().mockResolvedValue({ direct: [], waitlist: [], incompatible: [] }),
@@ -66,6 +75,7 @@ describe('PACOTE ENG #26 — hub motorista procuras e grupos', () => {
     listOfertasByDriver.mockResolvedValue([]);
     getAgreementsForDriver.mockResolvedValue([]);
     findCompatibleProcuras.mockResolvedValue({ direct: [], waitlist: [], incompatible: [] });
+    listProcurasDisponiveis.mockResolvedValue([]);
     createProposta.mockResolvedValue({ id: 'prop-b' });
   });
 
@@ -113,6 +123,15 @@ describe('PACOTE ENG #26 — hub motorista procuras e grupos', () => {
       waitlist: [],
       incompatible: [],
     });
+    listProcurasDisponiveis.mockResolvedValue([
+      {
+        id: 'pr-1',
+        origin_name: 'Kilamba',
+        destination_name: 'Baixa',
+        preferred_time: '07:10:00',
+        n_candidato: 1,
+      },
+    ]);
 
     render(
       <MemoryRouter>

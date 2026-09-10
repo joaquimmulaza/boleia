@@ -51,6 +51,25 @@ export function labelRotaOferta(oferta) {
  * }} procura
  * @returns {{ origem: string, destino: string }}
  */
+/**
+ * Rótulo curto para picker de oferta no hub motorista — dedupe flexível com horário.
+ * @param {{
+ *   origin_name?: string | null,
+ *   destination_name?: string | null,
+ *   flexibilidade_rota?: boolean,
+ *   departure_time?: string | null,
+ * }} oferta
+ * @param {(time: string | null | undefined) => string} [formatTime]
+ * @returns {string}
+ */
+export function labelOfertaPicker(oferta, formatTime = (t) => String(t || '').slice(0, 5)) {
+  if (oferta?.flexibilidade_rota) {
+    const hora = formatTime(oferta.departure_time);
+    return hora ? `Oferta flexível · ${hora}` : 'Oferta flexível';
+  }
+  return `${oferta?.origin_name || 'Origem'} → ${oferta?.destination_name || 'Destino'}`;
+}
+
 export function labelRotaProcura(procura) {
   const hasOd =
     procura?.origin_name &&

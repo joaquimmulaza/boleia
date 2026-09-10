@@ -123,6 +123,38 @@ export async function createProcuraWithGrupo(formData, grupoOpts = {}) {
   return data;
 }
 
+/** Limite por defeito do feed browse motorista (PACOTE ENG #27). */
+export const BROWSE_PROCURAS_DEFAULT_LIMIT = 50;
+
+/**
+ * Feed browse para motorista autenticado — procuras/grupos visíveis no marketplace.
+ * Estados: `activa` | `em_negociacao` (alinhado a MatchingService.findCompatibleProcuras).
+ *
+ * @param {{ limit?: number, offset?: number }} [options]
+ * @returns {Promise<object[]>}
+ */
+export async function listProcurasDisponiveis(options = {}) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('Não autenticado.');
+  }
+
+  const limit = Number.isFinite(options.limit) ? options.limit : BROWSE_PROCURAS_DEFAULT_LIMIT;
+  const offset = Number.isFinite(options.offset) ? options.offset : 0;
+
+  const { data, error } = await supabase
+    .from('procuras')
+    .select('*')
+    .in('estado', ['activa', 'em_negociacao'])
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  return data || [];
+}
+
 /**
  * @param {string} ownerId
  */
