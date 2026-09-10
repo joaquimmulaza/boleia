@@ -522,7 +522,7 @@ const DriverDashboard = () => {
                     onClick={() => handleVerProcuras(oferta)}
                     className="text-sm font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1"
                   >
-                    Procuras compatíveis <ChevronRight size={16} aria-hidden="true" />
+                    Procuras e grupos <ChevronRight size={16} aria-hidden="true" />
                   </button>
                   <button
                     type="button"
