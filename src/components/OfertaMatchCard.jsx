@@ -127,7 +127,7 @@ function OfertaMatchCard({
           <p className="text-xs text-slate-400">{labelModoPreco(oferta.modo_preco)}</p>
         </div>
 
-        {variant === 'direct' && onPropor ? (
+        {(variant === 'direct' || variant === 'browse') && onPropor ? (
           <button
             type="button"
             disabled={busy}

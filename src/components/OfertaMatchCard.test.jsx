@@ -132,7 +132,25 @@ describe('OfertaMatchCard — variante waitlist', () => {
 });
 
 describe('OfertaMatchCard — variante browse (feed sem procura)', () => {
-  it('mostra chip Publicada, preço e sem CTAs de acção', () => {
+  it('mostra chip Publicada, preço e CTA Propor acordo quando onPropor', () => {
+    const onPropor = vi.fn();
+    render(
+      <OfertaMatchCard
+        oferta={{ ...ofertaBase, flexibilidade_rota: true }}
+        variant="browse"
+        onPropor={onPropor}
+      />,
+    );
+
+    expect(screen.getByTestId('oferta-match-browse')).toBeInTheDocument();
+    expect(screen.getByText('Publicada')).toBeInTheDocument();
+    expect(screen.getByText('Oferta flexível')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Propor acordo/i }));
+    expect(onPropor).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: /Entrar na lista de espera/i })).not.toBeInTheDocument();
+  });
+
+  it('browse sem onPropor não mostra CTA (auth gate via callback)', () => {
     render(
       <OfertaMatchCard
         oferta={{ ...ofertaBase, flexibilidade_rota: true }}
@@ -140,11 +158,7 @@ describe('OfertaMatchCard — variante browse (feed sem procura)', () => {
       />,
     );
 
-    expect(screen.getByTestId('oferta-match-browse')).toBeInTheDocument();
-    expect(screen.getByText('Publicada')).toBeInTheDocument();
-    expect(screen.getByText('Oferta flexível')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Propor acordo/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Entrar na lista de espera/i })).not.toBeInTheDocument();
   });
 });
 

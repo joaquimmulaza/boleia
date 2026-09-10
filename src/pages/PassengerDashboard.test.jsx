@@ -148,7 +148,7 @@ describe('PassengerDashboard — marketplace', () => {
     expect(screen.getByText('Grupos abertos')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Criar procura/i })).toBeInTheDocument();
     expect(screen.queryByText(/Sem procura activa/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Propor acordo/i })).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Propor acordo/i })).toBeInTheDocument();
     expect(findCompatibleOfertas).not.toHaveBeenCalled();
     expect(listOfertasDisponiveis).toHaveBeenCalled();
   });
@@ -177,18 +177,29 @@ describe('PassengerDashboard — marketplace', () => {
     expect(screen.queryByText(/^Destino$/)).not.toBeInTheDocument();
   });
 
-  it('browse sem procura não mostra Propor acordo (só com procura activa)', async () => {
+  it('browse sem procura: CTA Propor acordo cria procura mínima + proposta', async () => {
     listOfertasDisponiveis.mockResolvedValue([
       {
         id: 'of-browse',
         origin_name: 'Talatona',
+        origin_lat: -8.916,
+        origin_lng: 13.234,
         destination_name: 'Miramar',
+        destination_lat: -8.82,
+        destination_lng: 13.25,
         departure_time: '07:15:00',
         vagas_disponiveis: 3,
         valor_mensal_ask_kz: 90000,
         modo_preco: 'POR_PASSAGEIRO',
+        flexibilidade_rota: false,
+        dias_semana: [1, 2, 3, 4, 5],
       },
     ]);
+    createProcura.mockResolvedValue({ id: 'pr-browse', n_candidato: 1, estado: 'activa' });
+    createProposta.mockResolvedValue({ id: 'prop-browse' });
+    listProcurasByOwner
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'pr-browse', n_candidato: 1, estado: 'activa' }]);
 
     render(
       <MemoryRouter>
@@ -197,9 +208,27 @@ describe('PassengerDashboard — marketplace', () => {
     );
 
     expect(await screen.findByTestId('browse-ofertas-feed')).toBeInTheDocument();
-    expect(screen.getByTestId('oferta-match-browse')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Propor acordo/i })).not.toBeInTheDocument();
-    expect(createProposta).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /Propor acordo/i }));
+
+    await waitFor(() => {
+      expect(createProcura).toHaveBeenCalledWith(
+        expect.objectContaining({
+          origin_name: 'Talatona',
+          destination_name: 'Miramar',
+          preferred_time: '07:15',
+        }),
+      );
+    });
+    await waitFor(() => {
+      expect(createProposta).toHaveBeenCalledWith(
+        expect.objectContaining({
+          oferta_id: 'of-browse',
+          procura_id: 'pr-browse',
+          valor_mensal_ask_kz: 90000,
+          modo_preco: 'POR_PASSAGEIRO',
+        }),
+      );
+    });
   });
 
   it('GrupoDescobertaPanel monta sem procura activa', async () => {

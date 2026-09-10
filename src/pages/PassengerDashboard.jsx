@@ -46,6 +46,7 @@ import { resolveCapacityN } from '../utils/capacityGate.js';
 import { canEditProcura } from '../utils/canEditProcura';
 import { countPropostasAInvalidar } from '../utils/procuraEditImpact';
 import { isPropostaAcimaDoTeto } from '../utils/isPropostaAcimaDoTeto';
+import { buildProcuraMinimaFromOferta } from '../utils/procuraFromOferta';
 import ConfirmationModal from '../components/ConfirmationModal';
 
 const CAPACIDADES_GRUPO = [2, 3, 4, 5, 6, 7, 8];
@@ -411,6 +412,34 @@ const PassengerDashboard = () => {
     return { nProposto: 1, grupoId: null, erro: null };
   };
 
+  /**
+   * Browse sem procura activa: cria procura mínima a partir da oferta e envia proposta.
+   * @param {object} oferta
+   */
+  const handleProporBrowse = async (oferta) => {
+    setBusyId(oferta.id);
+    setFeedback({ type: '', text: '' });
+
+    try {
+      const payload = buildProcuraMinimaFromOferta(oferta);
+      const criada = await createProcura(payload);
+      await createProposta({
+        oferta_id: oferta.id,
+        procura_id: criada.id,
+        grupo_id: null,
+        modo_preco: oferta.modo_preco,
+        valor_mensal_ask_kz: oferta.valor_mensal_ask_kz,
+        n_passageiros_propostos: 1,
+      });
+      setFeedback({ type: 'success', text: 'Proposta enviada ao motorista.' });
+      await carregar();
+    } catch (err) {
+      setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const handlePropor = async (oferta) => {
     if (!procura) {
       setFeedback({
@@ -585,7 +614,7 @@ const PassengerDashboard = () => {
               </button>
             </div>
             <p className="text-sm text-slate-500 text-pretty">
-              Motoristas com lugares publicados. Cria uma procura quando quiseres filtrar e propor acordo.
+              Motoristas com lugares publicados. Podes propor acordo directamente ou criar procura para filtrar matches.
             </p>
 
             {loadingBrowse ? (
@@ -600,6 +629,8 @@ const PassengerDashboard = () => {
                   key={oferta.id}
                   oferta={oferta}
                   variant="browse"
+                  busy={busyId === oferta.id}
+                  onPropor={() => handleProporBrowse(oferta)}
                 />
               ))
             )}
