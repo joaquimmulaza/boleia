@@ -193,30 +193,88 @@ export async function getOferta(ofertaId) {
 }
 
 /**
+ * Actualiza oferta via RPC (dono-only; propostas abertas incompatíveis → invalidada).
  * @param {string} ofertaId
- * @param {object} updates
+ * @param {{
+ *   departure_time: string,
+ *   return_time?: string | null,
+ *   modo_preco: string,
+ *   valor_mensal_ask_kz: number | string,
+ *   flexibilidade_rota?: boolean,
+ *   origin_name?: string | null,
+ *   origin_lat?: number | null,
+ *   origin_lng?: number | null,
+ *   destination_name?: string | null,
+ *   destination_lat?: number | null,
+ *   destination_lng?: number | null,
+ *   dias_semana?: number[] | null,
+ * }} formData
  */
-export async function updateOferta(ofertaId, updates) {
-  const allowed = { ...updates };
-  delete allowed.vagas_totais;
-  delete allowed.driver_id;
-  delete allowed.id;
-
-  if (allowed.flexibilidade_rota) {
-    allowed.origin_name = null;
-    allowed.origin_lat = null;
-    allowed.origin_lng = null;
-    allowed.destination_name = null;
-    allowed.destination_lat = null;
-    allowed.destination_lng = null;
+export async function updateOferta(ofertaId, formData) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('Não autenticado.');
+  }
+  if (!ofertaId) {
+    throw new Error('ID da oferta é obrigatório.');
+  }
+  if (!MODOS_PRECO.has(formData.modo_preco)) {
+    throw new Error('Modo de preço inválido.');
+  }
+  if (!formData.departure_time) {
+    throw new Error('Horário de partida é obrigatório.');
   }
 
-  const { data, error } = await supabase
-    .from('ofertas_capacidade')
-    .update({ ...allowed, updated_at: new Date().toISOString() })
-    .eq('id', ofertaId)
-    .select()
-    .single();
+  const ask = Number(formData.valor_mensal_ask_kz);
+  if (!Number.isInteger(ask) || ask < 0) {
+    throw new Error('Valor mensal em Kz inválido.');
+  }
+
+  const od = resolveOdFields(formData);
+  const diasSemana = Array.isArray(formData.dias_semana) && formData.dias_semana.length > 0
+    ? formData.dias_semana.map((d) => Number(d)).filter((d) => Number.isFinite(d))
+    : [1, 2, 3, 4, 5];
+
+  const { data, error } = await supabase.rpc('update_oferta', {
+    p_oferta_id: ofertaId,
+    p_departure_time: formData.departure_time,
+    p_return_time: formData.return_time ?? null,
+    p_modo_preco: formData.modo_preco,
+    p_valor_mensal_ask_kz: ask,
+    p_flexibilidade_rota: Boolean(formData.flexibilidade_rota),
+    p_origin_name: od.origin_name,
+    p_origin_lat: od.origin_lat,
+    p_origin_lng: od.origin_lng,
+    p_destination_name: od.destination_name,
+    p_destination_lat: od.destination_lat,
+    p_destination_lng: od.destination_lng,
+    p_dias_semana: diasSemana,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Despublica oferta (estado inactiva). Bloqueia se acordo activo.
+ * @param {string} ofertaId
+ */
+export async function cancelOferta(ofertaId) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('Não autenticado.');
+  }
+  if (!ofertaId) {
+    throw new Error('ID da oferta é obrigatório.');
+  }
+
+  const { data, error } = await supabase.rpc('cancel_oferta', {
+    p_oferta_id: ofertaId,
+  });
 
   if (error) throw error;
   return data;

@@ -12,7 +12,8 @@ import {
 import { createAgreementFromProposal } from '../services/AgreementService';
 import { findCompatibleProcuras } from '../services/MatchingService';
 import { getGrupoByProcura } from '../services/GrupoService';
-import { listOfertasByDriver } from '../services/OfertaService';
+import { listOfertasByDriver, cancelOferta } from '../services/OfertaService';
+import { getAgreementsForDriver } from '../services/AgreementService';
 import { supabase } from '../lib/supabase';
 import { expectNoUserFacingJargon } from '../test/jargonBan';
 
@@ -36,6 +37,8 @@ vi.mock('../services/OfertaService', async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
+    cancelOferta: vi.fn(),
+    updateOferta: vi.fn(),
     listOfertasByDriver: vi.fn().mockResolvedValue([
       {
         id: 'of-1',
@@ -70,6 +73,7 @@ vi.mock('../services/GrupoService', () => ({
 
 vi.mock('../services/AgreementService', () => ({
   createAgreementFromProposal: vi.fn(),
+  getAgreementsForDriver: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('../lib/supabase', () => ({
@@ -146,6 +150,8 @@ describe('DriverDashboard — marketplace', () => {
     getGrupoByProcura.mockResolvedValue(null);
     createProposta.mockResolvedValue({ id: 'prop-b' });
     cancelProposta.mockResolvedValue({ id: 'prop-own', estado: 'cancelada' });
+    getAgreementsForDriver.mockResolvedValue([]);
+    cancelOferta.mockResolvedValue({ id: 'of-1', estado: 'inactiva' });
   });
 
   it('esconde Publicar oferta quando não há veículo registado', async () => {
@@ -216,7 +222,7 @@ describe('DriverDashboard — marketplace', () => {
       expect(screen.getByText(/3 lugares disponíveis/i)).toBeInTheDocument();
       expect(screen.getByText(/Total do acordo/i)).toBeInTheDocument();
     });
-    expect(screen.getByRole('button', { name: /Publicar oferta/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Publicar oferta', exact: true })).toBeInTheDocument();
   });
 
   it('ao Ver propostas mostra título enriquecido e Aceitar', async () => {
@@ -747,6 +753,67 @@ describe('DriverDashboard — marketplace', () => {
       );
     });
     expect(await screen.findByText(/Proposta enviada ao passageiro/i)).toBeInTheDocument();
+  });
+
+  it('mostra Editar e Despublicar quando oferta activa', async () => {
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Talatona');
+    expect(screen.getByRole('button', { name: /Editar oferta/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Despublicar oferta/i })).toBeInTheDocument();
+  });
+
+  it('não mostra Editar quando oferta inactiva', async () => {
+    listOfertasByDriver.mockResolvedValue([
+      { ...ofertaFixa, estado: 'inactiva' },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Inactiva');
+    expect(screen.queryByRole('button', { name: /Editar oferta/i })).not.toBeInTheDocument();
+  });
+
+  it('bloqueia despublicar com acordo activo na oferta', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      { id: 'ac-1', oferta_id: 'of-1', estado: 'activo' },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Talatona');
+    expect(screen.getByRole('button', { name: /Editar oferta/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Despublicar oferta/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/Com acordo activo/i)).toBeInTheDocument();
+  });
+
+  it('despublicar confirma e chama cancelOferta', async () => {
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Talatona');
+    fireEvent.click(screen.getByRole('button', { name: /Despublicar oferta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Despublicar$/i }));
+
+    await waitFor(() => {
+      expect(cancelOferta).toHaveBeenCalledWith('of-1');
+    });
+    expect(await screen.findByText(/Oferta despublicada/i)).toBeInTheDocument();
   });
 
   it('não expõe jargon de produto na UI do hub motorista', async () => {

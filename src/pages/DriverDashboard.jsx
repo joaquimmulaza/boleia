@@ -2,7 +2,13 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { MapPin, AlertCircle, ArrowRight, Clock, Users, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { listOfertasByDriver, isOfertaFlexivel, labelOfertaRota } from '../services/OfertaService';
+import {
+  listOfertasByDriver,
+  isOfertaFlexivel,
+  labelOfertaRota,
+  cancelOferta,
+} from '../services/OfertaService';
+import { getAgreementsForDriver } from '../services/AgreementService';
 import {
   listPropostasByOferta,
   rejectProposta,
@@ -13,6 +19,7 @@ import {
 import { createAgreementFromProposal } from '../services/AgreementService';
 import { findCompatibleProcuras } from '../services/MatchingService';
 import { getGrupoByProcura } from '../services/GrupoService';
+import { getProcura } from '../services/ProcuraService';
 import { supabase } from '../lib/supabase';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
@@ -23,6 +30,9 @@ import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { filterPropostasParaInbox, filterPropostasEnviadas, filterPropostasTerminadasRecebidas, filterPropostasTerminadasEnviadas } from '../utils/propostaInbox';
 import { formatIdaRegresso, formatTime24h } from '../utils/formatTime';
+import { canEditOferta, canDespublicarOferta } from '../utils/canEditOferta';
+import ConfirmationModal from '../components/ConfirmationModal';
+import OfertaEditPanel from '../components/OfertaEditPanel';
 
 function estadoChip(estado) {
   const map = {
@@ -90,6 +100,12 @@ const DriverDashboard = () => {
   const [loadingProcuras, setLoadingProcuras] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', text: '' });
   const [busyId, setBusyId] = useState(null);
+  const [ofertasComAcordoActivo, setOfertasComAcordoActivo] = useState(() => new Set());
+  const [editingOfertaId, setEditingOfertaId] = useState(null);
+  const [confirmDespublicarId, setConfirmDespublicarId] = useState(null);
+  const [ofertaBusy, setOfertaBusy] = useState(false);
+  const [editPropostas, setEditPropostas] = useState([]);
+  const [editProcurasById, setEditProcurasById] = useState({});
 
   const carregar = useCallback(async () => {
     if (!user?.id) {
@@ -105,8 +121,21 @@ const DriverDashboard = () => {
 
       setHasVehicle(Boolean(veiculosData && veiculosData.length > 0));
 
-      const lista = await listOfertasByDriver(user.id);
+      const [lista, acordos] = await Promise.all([
+        listOfertasByDriver(user.id),
+        getAgreementsForDriver(user.id),
+      ]);
       setOfertas(lista);
+      const activos = new Set(
+        (acordos || [])
+          .filter((a) => {
+            const e = String(a?.estado || '').toLowerCase();
+            return e === 'activo' || e === 'cancelamento_pendente';
+          })
+          .map((a) => a.oferta_id)
+          .filter(Boolean),
+      );
+      setOfertasComAcordoActivo(activos);
     } catch (err) {
       console.error(err);
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
@@ -285,6 +314,53 @@ const DriverDashboard = () => {
     }
   };
 
+  const temAcordoActivo = (ofertaId) => ofertasComAcordoActivo.has(ofertaId);
+
+  const handleStartEditOferta = async (ofertaId) => {
+    setEditingOfertaId(ofertaId);
+    setSelectedOfertaId(null);
+    setDetailPanel(null);
+    setEditPropostas([]);
+    setEditProcurasById({});
+    try {
+      const propostas = await listPropostasByOferta(ofertaId);
+      setEditPropostas(propostas);
+      const procuraIds = [...new Set(propostas.map((p) => p.procura_id).filter(Boolean))];
+      if (procuraIds.length === 0) return;
+      const procuras = await Promise.all(procuraIds.map((id) => getProcura(id)));
+      setEditProcurasById(
+        Object.fromEntries(procuras.filter(Boolean).map((p) => [p.id, p])),
+      );
+    } catch (err) {
+      console.warn('Falha ao carregar propostas para preview de edição:', err);
+    }
+  };
+
+  const handleDespublicar = async (ofertaId) => {
+    setOfertaBusy(true);
+    setFeedback({ type: '', text: '' });
+    try {
+      await cancelOferta(ofertaId);
+      setConfirmDespublicarId(null);
+      setEditingOfertaId(null);
+      setFeedback({ type: 'success', text: 'Oferta despublicada.' });
+      await carregar();
+    } catch (err) {
+      setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+    } finally {
+      setOfertaBusy(false);
+    }
+  };
+
+  const handleOfertaSaved = async (actualizada) => {
+    setEditingOfertaId(null);
+    setFeedback({ type: 'success', text: 'Oferta actualizada.' });
+    await carregar();
+    if (selectedOfertaId === actualizada?.id) {
+      await handleVerPropostas(actualizada.id, { preserveFeedback: true });
+    }
+  };
+
   const handleCancelarEnviada = async (propostaId) => {
     setBusyId(propostaId);
     setFeedback({ type: '', text: '' });
@@ -457,6 +533,49 @@ const DriverDashboard = () => {
                   </button>
                 </div>
               </div>
+              {canEditOferta(oferta) ? (
+                <div className="flex flex-col gap-2 pt-2 border-t border-slate-50 dark:border-slate-800">
+                  {editingOfertaId !== oferta.id ? (
+                    <div className="flex flex-col gap-2">
+                      <button
+                        type="button"
+                        disabled={ofertaBusy}
+                        onClick={() => handleStartEditOferta(oferta.id)}
+                        className="w-full min-h-11 border border-slate-200 dark:border-slate-700 font-bold py-2.5 rounded-xl text-sm"
+                      >
+                        Editar oferta
+                      </button>
+                      {canDespublicarOferta(oferta, { temAcordoActivo: temAcordoActivo(oferta.id) }) ? (
+                        <button
+                          type="button"
+                          disabled={ofertaBusy}
+                          onClick={() => setConfirmDespublicarId(oferta.id)}
+                          className="w-full min-h-11 text-red-600 dark:text-red-400 font-semibold py-2 text-sm"
+                        >
+                          Despublicar oferta
+                        </button>
+                      ) : temAcordoActivo(oferta.id) ? (
+                        <p className="text-xs text-slate-500 text-pretty">
+                          Com acordo activo, encerra o acordo em Acordos antes de despublicar.
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <OfertaEditPanel
+                      oferta={oferta}
+                      busy={ofertaBusy}
+                      propostas={editPropostas}
+                      procurasById={editProcurasById}
+                      onCancel={() => {
+                        setEditingOfertaId(null);
+                        setEditPropostas([]);
+                        setEditProcurasById({});
+                      }}
+                      onSaved={handleOfertaSaved}
+                    />
+                  )}
+                </div>
+              ) : null}
             </section>
           );
         })}
@@ -707,6 +826,16 @@ const DriverDashboard = () => {
           ) : null}
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={Boolean(confirmDespublicarId)}
+        title="Despublicar oferta?"
+        message="A oferta deixa de aparecer no marketplace. Propostas abertas serão canceladas; acordos existentes mantêm-se."
+        confirmText="Despublicar"
+        onConfirm={() => handleDespublicar(confirmDespublicarId)}
+        onCancel={() => setConfirmDespublicarId(null)}
+        busy={ofertaBusy}
+      />
     </PageShell>
   );
 };

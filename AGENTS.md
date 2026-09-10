@@ -154,4 +154,6 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
 
 * **PACOTE ENG #18 1.º acordo (2026-09-10):** TTL reservas 72h (`apply_due_reserva_expiry`, estado `expirado`); gate liquidação IBAN+titular; guia ops admin B3. Spec: `.specs/quick/pacote-eng-18-primeiro-acordo/`.
 
+* **PACOTE ENG #25 ciclo de vida oferta (2026-09-10):** RPC `update_oferta` / `cancel_oferta`; `OfertaEditPanel` + CTAs Editar/Despublicar em `DriverDashboard`; propostas abertas só `invalidada`|`cancelada` (snapshot intacto); browse/matching exclui `inactiva`; guard acordo activo na despublicação. Spec: `.specs/quick/pacote-eng-25-oferta-lifecycle/`.
+
 **Próximo:** polish admin Critiquito. **Fora do MVP:** zonas/polígonos/raio residencial; adenda bilateral completa (hoje motorista inicia). Commits só se o utilizador pedir.
