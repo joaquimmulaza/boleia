@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { MapPin, AlertCircle, ArrowRight, Clock, Users, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -83,7 +83,8 @@ const DriverDashboard = () => {
   const [terminadasRecebidas, setTerminadasRecebidas] = useState([]);
   const [terminadasEnviadas, setTerminadasEnviadas] = useState([]);
   const [selectedOfertaId, setSelectedOfertaId] = useState(null);
-  const [panel, setPanel] = useState(null); // 'propostas' | 'procuras' | null
+  const [hubTab, setHubTab] = useState('ofertas'); // 'ofertas' | 'procuras'
+  const [detailPanel, setDetailPanel] = useState(null); // 'propostas' | null
   const [procurasMatch, setProcurasMatch] = useState({ direct: [], waitlist: [] });
   const [loadingPropostas, setLoadingPropostas] = useState(false);
   const [loadingProcuras, setLoadingProcuras] = useState(false);
@@ -118,11 +119,53 @@ const DriverDashboard = () => {
     carregar();
   }, [carregar]);
 
-  const ofertaSeleccionada = ofertas.find((o) => o.id === selectedOfertaId) || null;
+  const ofertasActivas = useMemo(
+    () => ofertas.filter((o) => o.estado !== 'inactiva'),
+    [ofertas],
+  );
+  const ofertaSeleccionada =
+    ofertasActivas.find((o) => o.id === selectedOfertaId) ||
+    ofertas.find((o) => o.id === selectedOfertaId) ||
+    null;
+
+  const carregarProcurasMatch = useCallback(async (oferta) => {
+    if (!oferta) {
+      setProcurasMatch({ direct: [], waitlist: [] });
+      return;
+    }
+    setLoadingProcuras(true);
+    try {
+      const result = await findCompatibleProcuras(oferta);
+      setProcurasMatch({
+        direct: result.direct || [],
+        waitlist: result.waitlist || [],
+      });
+    } catch (err) {
+      setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
+    } finally {
+      setLoadingProcuras(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (hubTab !== 'procuras' || isLoading || hasVehicle !== true) return;
+    if (ofertasActivas.length === 0) {
+      setProcurasMatch({ direct: [], waitlist: [] });
+      return;
+    }
+    const alvo =
+      ofertasActivas.find((o) => o.id === selectedOfertaId) || ofertasActivas[0];
+    if (!ofertasActivas.some((o) => o.id === selectedOfertaId)) {
+      setSelectedOfertaId(alvo.id);
+      return;
+    }
+    void carregarProcurasMatch(alvo);
+  }, [hubTab, isLoading, hasVehicle, selectedOfertaId, ofertasActivas, carregarProcurasMatch]);
 
   const handleVerPropostas = async (ofertaId, opts = {}) => {
     setSelectedOfertaId(ofertaId);
-    setPanel('propostas');
+    setHubTab('ofertas');
+    setDetailPanel('propostas');
     setReviews([]);
     setEnviadas([]);
     setTerminadasRecebidas([]);
@@ -155,27 +198,20 @@ const DriverDashboard = () => {
     }
   };
 
-  const handleVerProcuras = async (oferta) => {
+  const handleVerProcuras = (oferta) => {
+    setDetailPanel(null);
+    setHubTab('procuras');
     setSelectedOfertaId(oferta.id);
-    setPanel('procuras');
     setReviews([]);
     setEnviadas([]);
     setTerminadasRecebidas([]);
     setTerminadasEnviadas([]);
-    setProcurasMatch({ direct: [], waitlist: [] });
-    setLoadingProcuras(true);
     setFeedback({ type: '', text: '' });
-    try {
-      const result = await findCompatibleProcuras(oferta);
-      setProcurasMatch({
-        direct: result.direct || [],
-        waitlist: result.waitlist || [],
-      });
-    } catch (err) {
-      setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
-    } finally {
-      setLoadingProcuras(false);
-    }
+  };
+
+  const handleSeleccionarOfertaProcuras = (ofertaId) => {
+    setSelectedOfertaId(ofertaId);
+    setFeedback({ type: '', text: '' });
   };
 
   const handleProporB = async (procura) => {
@@ -279,7 +315,7 @@ const DriverDashboard = () => {
           : {})}
       />
 
-      {feedback.text && !selectedOfertaId && (
+      {feedback.text && !selectedOfertaId && hubTab === 'ofertas' && !detailPanel && (
         <div
           role="alert"
           className={`mb-4 rounded-xl px-4 py-3 text-sm font-medium ${
@@ -315,16 +351,59 @@ const DriverDashboard = () => {
 
       {isLoading && <LoadingSkeleton />}
 
-      {!isLoading && ofertas.length === 0 && hasVehicle === true && (
+      {!isLoading && hasVehicle === true && (
+        <div
+          className="mb-6 flex gap-2 border-b border-slate-100 dark:border-slate-800"
+          data-testid="driver-hub-tabs"
+          role="tablist"
+          aria-label="Secções do hub motorista"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={hubTab === 'ofertas'}
+            onClick={() => {
+              setHubTab('ofertas');
+              setDetailPanel(null);
+            }}
+            className={`px-4 py-2.5 text-sm font-bold border-b-2 -mb-px transition-colors ${
+              hubTab === 'ofertas'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            As minhas ofertas
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={hubTab === 'procuras'}
+            onClick={() => {
+              setDetailPanel(null);
+              setHubTab('procuras');
+            }}
+            className={`px-4 py-2.5 text-sm font-bold border-b-2 -mb-px transition-colors ${
+              hubTab === 'procuras'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            Procuras e grupos
+          </button>
+        </div>
+      )}
+
+      {hubTab === 'ofertas' && !isLoading && ofertas.length === 0 && hasVehicle === true && (
         <EmptyState
           icon={MapPin}
           title="Ainda sem ofertas"
-          message="Publica a tua primeira oferta de capacidade."
+          message="Publica a tua primeira oferta de capacidade. Depois vê procuras compatíveis no separador «Procuras e grupos»."
           actionLabel="Publicar oferta"
           onAction={() => navigate('/publicar-trajeto')}
         />
       )}
 
+      {hubTab === 'ofertas' && (
       <div className="space-y-4">
         {ofertas.map((oferta) => {
           const chip = estadoChip(oferta.estado);
@@ -382,8 +461,175 @@ const DriverDashboard = () => {
           );
         })}
       </div>
+      )}
 
-      {selectedOfertaId && panel === 'propostas' && (
+      {hubTab === 'procuras' && hasVehicle === true && (
+        <section className="space-y-4" data-testid="driver-procuras-grupos-section">
+          <div className="space-y-1">
+            <h2 className="text-lg font-bold text-balance">Procuras e grupos</h2>
+            <p className="text-sm text-slate-500 text-pretty">
+              Procuras e grupos compatíveis com a tua oferta. Envia proposta in-app — o passageiro aceita ou recusa.
+            </p>
+          </div>
+
+          {ofertasActivas.length === 0 ? (
+            <div
+              className="rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-3"
+              data-testid="driver-procuras-empty-sem-oferta"
+            >
+              <p className="text-sm text-slate-600 dark:text-slate-300 text-pretty">
+                Precisas de uma oferta activa publicada para ver procuras compatíveis e enviar propostas.
+                O marketplace não é só «Publicar» — aqui encontras quem procura boleia no teu horário.
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate('/publicar-trajeto')}
+                className="bg-primary hover:bg-primary/90 text-white text-sm font-bold py-2.5 px-4 rounded-lg"
+              >
+                Publicar oferta
+              </button>
+            </div>
+          ) : (
+            <>
+              {ofertasActivas.length > 1 && (
+                <div className="flex flex-wrap gap-2" data-testid="driver-procuras-oferta-picker">
+                  {ofertasActivas.map((oferta) => {
+                    const selected = oferta.id === selectedOfertaId;
+                    const rotulo = isOfertaFlexivel(oferta)
+                      ? 'Oferta flexível'
+                      : `${oferta.origin_name || 'Origem'} → ${oferta.destination_name || 'Destino'}`;
+                    return (
+                      <button
+                        key={oferta.id}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => handleSeleccionarOfertaProcuras(oferta.id)}
+                        className={`text-xs font-bold px-3 py-2 rounded-lg border ${
+                          selected
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                        }`}
+                      >
+                        {rotulo}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {ofertaSeleccionada && isOfertaFlexivel(ofertaSeleccionada) ? (
+                <p className="text-sm text-slate-500 text-pretty">
+                  Oferta flexível: matching por horário, dias e lugares — sem exigir origem/destino na tua oferta.
+                </p>
+              ) : null}
+
+              {feedback.text && (
+                <div
+                  role="alert"
+                  className={`rounded-xl px-4 py-3 text-sm font-medium ${
+                    feedback.type === 'success'
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      : 'bg-red-50 text-red-700 border border-red-200'
+                  }`}
+                >
+                  {feedback.text}
+                </div>
+              )}
+
+              {loadingProcuras ? (
+                <LoadingSkeleton />
+              ) : procurasMatch.direct.length === 0 && procurasMatch.waitlist.length === 0 ? (
+                <p className="text-sm text-slate-500" data-testid="driver-procuras-empty-match">
+                  Ainda não há procuras ou grupos compatíveis com esta oferta.
+                </p>
+              ) : (
+                <>
+                  {procurasMatch.direct.map((procura) => (
+                    <section
+                      key={procura.id}
+                      className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
+                      data-testid="driver-procura-match-card"
+                    >
+                      <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+                        <span>{procura.origin_name || 'Origem'}</span>
+                        <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
+                        <span>{procura.destination_name || 'Destino'}</span>
+                      </div>
+                      <div className="flex gap-3 text-sm text-slate-500">
+                        <span className="flex items-center gap-1">
+                          <Clock size={14} aria-hidden="true" />
+                          {formatTime24h(procura.preferred_time)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Users size={14} aria-hidden="true" />
+                          {labelProcuraN(procura.n_candidato ?? 1)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between pt-1">
+                        <div>
+                          <strong className="text-primary tabular-nums">
+                            {formatKwanza(ofertaSeleccionada?.valor_mensal_ask_kz)} Kz
+                          </strong>
+                          <p className="text-xs text-slate-400">
+                            {labelModo(ofertaSeleccionada?.modo_preco)}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={busyId === procura.id}
+                          onClick={() => handleProporB(procura)}
+                          className="bg-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl disabled:opacity-60"
+                        >
+                          Enviar proposta
+                        </button>
+                      </div>
+                    </section>
+                  ))}
+
+                  {procurasMatch.waitlist.length > 0 && (
+                    <div className="space-y-3 pt-2" data-testid="waitlist-bucket">
+                      <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide">
+                        Lista de espera
+                      </h3>
+                      <p className="text-sm text-slate-500 text-pretty">
+                        Sem lugares suficientes agora. Estes grupos excedem os lugares
+                        disponíveis — não podes enviar proposta directa.
+                      </p>
+                      {procurasMatch.waitlist.map((procura) => (
+                        <section
+                          key={procura.id}
+                          className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
+                        >
+                          <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+                            <span>{procura.origin_name || 'Origem'}</span>
+                            <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
+                            <span>{procura.destination_name || 'Destino'}</span>
+                          </div>
+                          <div className="flex gap-3 text-sm text-slate-500">
+                            <span className="flex items-center gap-1">
+                              <Clock size={14} aria-hidden="true" />
+                              {formatTime24h(procura.preferred_time)}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Users size={14} aria-hidden="true" />
+                              {labelProcuraN(procura.n_candidato ?? 1)}
+                            </span>
+                          </div>
+                          <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">
+                            Grupo maior que os lugares disponíveis
+                          </p>
+                        </section>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
+        </section>
+      )}
+
+      {selectedOfertaId && detailPanel === 'propostas' && (
         <div className="mt-8 space-y-6">
           <div className="space-y-3">
             <h2 className="text-lg font-bold text-balance">Rever propostas</h2>
@@ -459,116 +705,6 @@ const DriverDashboard = () => {
               ))}
             </div>
           ) : null}
-        </div>
-      )}
-
-      {selectedOfertaId && panel === 'procuras' && (
-        <div className="mt-8 space-y-3">
-          <h2 className="text-lg font-bold text-balance">Procuras compatíveis</h2>
-          <p className="text-sm text-slate-500 text-pretty">
-            {isOfertaFlexivel(ofertaSeleccionada)
-              ? 'Oferta flexível: procuras compatíveis por horário, dias e lugares. Propõe com o preço da tua oferta — o passageiro aceita ou recusa.'
-              : 'Propõe um acordo com o preço da tua oferta. O passageiro aceita ou recusa.'}
-          </p>
-          {feedback.text && (
-            <div
-              role="alert"
-              className={`rounded-xl px-4 py-3 text-sm font-medium ${
-                feedback.type === 'success'
-                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                  : 'bg-red-50 text-red-700 border border-red-200'
-              }`}
-            >
-              {feedback.text}
-            </div>
-          )}
-          {loadingProcuras ? (
-            <LoadingSkeleton />
-          ) : procurasMatch.direct.length === 0 && procurasMatch.waitlist.length === 0 ? (
-            <p className="text-sm text-slate-500">
-              Ainda não há procuras compatíveis com esta oferta.
-            </p>
-          ) : (
-            <>
-              {procurasMatch.direct.map((procura) => (
-                <section
-                  key={procura.id}
-                  className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
-                >
-                  <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
-                    <span>{procura.origin_name || 'Origem'}</span>
-                    <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
-                    <span>{procura.destination_name || 'Destino'}</span>
-                  </div>
-                  <div className="flex gap-3 text-sm text-slate-500">
-                    <span className="flex items-center gap-1">
-                      <Clock size={14} aria-hidden="true" />
-                      {formatTime24h(procura.preferred_time)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Users size={14} aria-hidden="true" />
-                      {labelProcuraN(procura.n_candidato ?? 1)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between pt-1">
-                    <div>
-                      <strong className="text-primary tabular-nums">
-                        {formatKwanza(ofertaSeleccionada?.valor_mensal_ask_kz)} Kz
-                      </strong>
-                      <p className="text-xs text-slate-400">
-                        {labelModo(ofertaSeleccionada?.modo_preco)}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={busyId === procura.id}
-                      onClick={() => handleProporB(procura)}
-                      className="bg-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl disabled:opacity-60"
-                    >
-                      Enviar proposta
-                    </button>
-                  </div>
-                </section>
-              ))}
-
-              {procurasMatch.waitlist.length > 0 && (
-                <div className="space-y-3 pt-2" data-testid="waitlist-bucket">
-                  <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide">
-                    Lista de espera
-                  </h3>
-                  <p className="text-sm text-slate-500 text-pretty">
-                    Sem lugares suficientes agora. Estes grupos excedem os lugares
-                    disponíveis — não podes propor acordo directo.
-                  </p>
-                  {procurasMatch.waitlist.map((procura) => (
-                    <section
-                      key={procura.id}
-                      className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
-                    >
-                      <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
-                        <span>{procura.origin_name || 'Origem'}</span>
-                        <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
-                        <span>{procura.destination_name || 'Destino'}</span>
-                      </div>
-                      <div className="flex gap-3 text-sm text-slate-500">
-                        <span className="flex items-center gap-1">
-                          <Clock size={14} aria-hidden="true" />
-                          {formatTime24h(procura.preferred_time)}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Users size={14} aria-hidden="true" />
-                          {labelProcuraN(procura.n_candidato ?? 1)}
-                        </span>
-                      </div>
-                      <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">
-                        Grupo maior que os lugares disponíveis
-                      </p>
-                    </section>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
         </div>
       )}
     </PageShell>

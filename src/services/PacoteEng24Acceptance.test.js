@@ -179,6 +179,14 @@ describe('PACOTE #24 — aceitação motorista feed + enviar proposta', () => {
       expect(src).toMatch(/Enviar proposta/);
       expect(src).not.toMatch(/Propor acordo/);
     });
+
+    it('DriverDashboard expõe tab/secção «Procuras e grupos» visível', () => {
+      const src = readSrc('src/pages/DriverDashboard.jsx');
+      expect(src).toMatch(/Procuras e grupos/);
+      expect(src).toMatch(/driver-hub-tabs/);
+      expect(src).toMatch(/driver-procuras-grupos-section/);
+      expect(src).toMatch(/driver-procuras-empty-sem-oferta/);
+    });
   });
 
   describe('ENG-24-3 — grupo incompleto negociável + snapshot N_proposto', () => {
