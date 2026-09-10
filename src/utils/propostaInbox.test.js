@@ -81,7 +81,7 @@ describe('filterPropostasTerminadasRecebidas', () => {
       ],
       userId,
     );
-    expect(result.map((p) => p.id)).toEqual(['a', 'b', 'c']);
+    expect(result.map((p) => p.id)).toEqual(['a', 'b', 'c', 'e']);
   });
 });
 

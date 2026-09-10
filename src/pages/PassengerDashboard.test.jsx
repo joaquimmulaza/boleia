@@ -3,7 +3,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import PassengerDashboard from './PassengerDashboard';
-import { createProcura, createProcuraWithGrupo, listProcurasByOwner } from '../services/ProcuraService';
+import { createProcura, createProcuraWithGrupo, listProcurasByOwner, updateProcura } from '../services/ProcuraService';
 import { findCompatibleOfertas } from '../services/MatchingService';
 import { listOfertasDisponiveis } from '../services/OfertaService';
 import { createProposta, listPropostasByProcura, enrichPropostasForReview, cancelProposta } from '../services/PropostaService';
@@ -20,6 +20,8 @@ vi.mock('../services/ProcuraService', () => ({
   createProcura: vi.fn(),
   createProcuraWithGrupo: vi.fn(),
   listProcurasByOwner: vi.fn().mockResolvedValue([]),
+  updateProcura: vi.fn(),
+  cancelProcura: vi.fn(),
 }));
 
 vi.mock('../services/MatchingService', () => ({
@@ -1014,5 +1016,181 @@ describe('PassengerDashboard — marketplace', () => {
     expect(screen.getAllByTestId('waitlist-entry-orfa')).toHaveLength(1);
     expect(screen.getByText('Em espera')).toBeInTheDocument();
     expect(screen.queryByText('Inscrição activa nesta oferta')).toBeInTheDocument();
+  });
+
+  it('mostra Editar e Cancelar procura quando activa', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('button', { name: /Editar procura/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Cancelar procura/i })).toBeInTheDocument();
+  });
+
+  it('não mostra Editar quando a procura está fechada', async () => {
+    listProcurasByOwner.mockResolvedValue([
+      { ...procuraBase, estado: 'fechada', n_candidato: 1 },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Explorar')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Editar procura/i })).not.toBeInTheDocument();
+  });
+
+  it('editar teto grava sem modal e recarrega matching', async () => {
+    listProcurasByOwner.mockResolvedValue([
+      { ...procuraBase, n_candidato: 1, teto_mensal_kz: 25000 },
+    ]);
+    updateProcura.mockResolvedValue({
+      ...procuraBase,
+      teto_mensal_kz: 18000,
+    });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Editar procura/i }));
+    expect(screen.getByRole('button', { name: /Guardar alterações/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Tipo de procura')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Teto mensal por passageiro'), {
+      target: { name: 'teto_mensal_kz', value: '18000' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Guardar alterações/i }));
+
+    await waitFor(() => {
+      expect(updateProcura).toHaveBeenCalledWith(
+        'pr-1',
+        expect.objectContaining({ teto_mensal_kz: 18000, preferred_time: '07:15' }),
+      );
+    });
+    expect(screen.queryByText(/deixam de corresponder/i)).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(findCompatibleOfertas).toHaveBeenCalled();
+    });
+  });
+
+  it('editar horário incompatível pede confirmação antes de gravar', async () => {
+    const ofertaFixa = {
+      id: 'of-1',
+      origin_name: 'Talatona',
+      destination_name: 'Miramar',
+      departure_time: '07:15:00',
+      origin_lat: -8.9,
+      origin_lng: 13.1,
+      destination_lat: -8.8,
+      destination_lng: 13.2,
+      vagas_disponiveis: 4,
+      flexibilidade_rota: false,
+      dias_semana: [1, 2, 3, 4, 5],
+    };
+    listProcurasByOwner.mockResolvedValue([
+      { ...procuraBase, n_candidato: 1, dias_semana: [1, 2, 3, 4, 5] },
+    ]);
+    findCompatibleOfertas.mockResolvedValue({
+      direct: [ofertaFixa],
+      waitlist: [],
+      incompatible: [],
+    });
+    listPropostasByProcura.mockResolvedValue([
+      {
+        id: 'prop-hora',
+        estado: 'aberta',
+        created_by: 'pax-1',
+        oferta_id: 'of-1',
+        modo_preco: 'POR_PASSAGEIRO',
+        valor_mensal_ask_kz: 20000,
+        n_passageiros_propostos: 1,
+      },
+    ]);
+    enrichPropostasForReview.mockImplementation(async (list) =>
+      (list || []).map((proposta) => ({
+        proposta,
+        titulo: '1 passageiro',
+        membros: [],
+        pricing: {
+          valor_mensal_total_kz: 20000,
+          valor_mensal_por_passageiro_kz: 20000,
+          quotas: [20000],
+        },
+      })),
+    );
+    updateProcura.mockResolvedValue({
+      ...procuraBase,
+      preferred_time: '08:00:00',
+    });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Editar procura/i }));
+    fireEvent.change(screen.getByLabelText('Hora preferida'), {
+      target: { name: 'preferred_time', value: '08:00' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Guardar alterações/i }));
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('1 proposta deixa de corresponder')).toBeInTheDocument();
+    expect(updateProcura).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: /Actualizar mesmo assim/i }));
+    await waitFor(() => {
+      expect(updateProcura).toHaveBeenCalledWith(
+        'pr-1',
+        expect.objectContaining({ preferred_time: '08:00' }),
+      );
+    });
+  });
+
+  it('mostra chip Acima do teto quando a proposta excede o teto', async () => {
+    listProcurasByOwner.mockResolvedValue([
+      { ...procuraBase, n_candidato: 1, teto_mensal_kz: 18000 },
+    ]);
+    listPropostasByProcura.mockResolvedValue([
+      {
+        id: 'prop-teto',
+        estado: 'aberta',
+        created_by: 'pax-1',
+        oferta_id: 'of-1',
+        modo_preco: 'POR_PASSAGEIRO',
+        valor_mensal_ask_kz: 25000,
+        n_passageiros_propostos: 1,
+      },
+    ]);
+    enrichPropostasForReview.mockImplementation(async (list) =>
+      (list || []).map((proposta) => ({
+        proposta,
+        titulo: '1 passageiro',
+        membros: [],
+        pricing: {
+          valor_mensal_total_kz: 25000,
+          valor_mensal_por_passageiro_kz: 25000,
+          quotas: [25000],
+        },
+      })),
+    );
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId('chip-acima-do-teto')).toHaveTextContent('Acima do teto');
   });
 });

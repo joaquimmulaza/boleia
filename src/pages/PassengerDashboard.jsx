@@ -15,6 +15,8 @@ import {
   createProcura,
   createProcuraWithGrupo,
   listProcurasByOwner,
+  updateProcura,
+  cancelProcura,
 } from '../services/ProcuraService';
 import { findCompatibleOfertas } from '../services/MatchingService';
 import { listOfertasDisponiveis } from '../services/OfertaService';
@@ -41,6 +43,10 @@ import {
 import { DIAS_SEMANA, DIAS_UTEIS_DEFAULT } from '../utils/diasSemana';
 import { getModoTetoPreferido, setModoTetoPreferido } from '../utils/procuraTetoPrefs';
 import { resolveCapacityN } from '../utils/capacityGate.js';
+import { canEditProcura } from '../utils/canEditProcura';
+import { countPropostasAInvalidar } from '../utils/procuraEditImpact';
+import { isPropostaAcimaDoTeto } from '../utils/isPropostaAcimaDoTeto';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const CAPACIDADES_GRUPO = [2, 3, 4, 5, 6, 7, 8];
 
@@ -118,6 +124,11 @@ const PassengerDashboard = () => {
   const [nMaximoGrupo, setNMaximoGrupo] = useState(4);
   const [modoTeto, setModoTeto] = useState(() => getModoTetoPreferido());
   const [modoTetoActivo, setModoTetoActivo] = useState(() => getModoTetoPreferido());
+  const [editing, setEditing] = useState(false);
+  const [ofertasById, setOfertasById] = useState({});
+  const [confirmEditN, setConfirmEditN] = useState(null);
+  const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
+  const [savingProcura, setSavingProcura] = useState(false);
 
   const carregar = useCallback(async () => {
     if (!user?.id) {
@@ -175,6 +186,11 @@ const PassengerDashboard = () => {
             dias_semana: activa.dias_semana,
           });
           setMatches({ direct: result.direct, waitlist: result.waitlist });
+          const index = {};
+          for (const ofe of [...result.direct, ...result.waitlist, ...result.incompatible]) {
+            if (ofe?.id) index[ofe.id] = ofe;
+          }
+          setOfertasById(index);
         } finally {
           setLoadingInbox(false);
         }
@@ -229,22 +245,23 @@ const PassengerDashboard = () => {
     });
   };
 
-  const handleCriarProcura = async (e) => {
-    e.preventDefault();
-    setFeedback({ type: '', text: '' });
+  /**
+   * @returns {{ ok: boolean, payload?: object, tetoNumero?: number | null }}
+   */
+  const buildProcuraPayload = () => {
     if (form.origin_lat == null || form.destination_lat == null) {
       setFeedback({
         type: 'error',
         text: 'Seleccione origem e destino na lista de sugestões.',
       });
-      return;
+      return { ok: false };
     }
     if (!form.dias_semana?.length) {
       setFeedback({
         type: 'error',
         text: 'Selecciona pelo menos um dia da semana.',
       });
-      return;
+      return { ok: false };
     }
     const tetoRaw = String(form.teto_mensal_kz || '').trim();
     let tetoNumero = null;
@@ -255,11 +272,13 @@ const PassengerDashboard = () => {
           type: 'error',
           text: 'O teto mensal deve ser um valor maior que 0 Kz.',
         });
-        return;
+        return { ok: false };
       }
     }
-    try {
-      const payload = {
+    return {
+      ok: true,
+      tetoNumero,
+      payload: {
         preferred_time: form.preferred_time,
         origin_name: form.origin_name,
         origin_lat: form.origin_lat,
@@ -269,8 +288,76 @@ const PassengerDashboard = () => {
         destination_lng: form.destination_lng,
         dias_semana: form.dias_semana,
         teto_mensal_kz: tetoNumero,
-      };
+      },
+    };
+  };
 
+  const prefillFormFromProcura = (row) => {
+    setForm({
+      preferred_time: String(row.preferred_time || '07:15').slice(0, 5),
+      origin_name: row.origin_name || '',
+      origin_lat: row.origin_lat ?? null,
+      origin_lng: row.origin_lng ?? null,
+      destination_name: row.destination_name || '',
+      destination_lat: row.destination_lat ?? null,
+      destination_lng: row.destination_lng ?? null,
+      dias_semana: Array.isArray(row.dias_semana) && row.dias_semana.length > 0
+        ? row.dias_semana.map((d) => Number(d))
+        : [...DIAS_UTEIS_DEFAULT],
+      teto_mensal_kz: row.teto_mensal_kz != null ? String(row.teto_mensal_kz) : '',
+    });
+  };
+
+  const persistProcuraUpdate = async (payload) => {
+    setSavingProcura(true);
+    try {
+      const actualizada = await updateProcura(procura.id, payload);
+      setModoTetoPreferido(modoTeto);
+      setModoTetoActivo(modoTeto);
+      setProcura(actualizada);
+      setEditing(false);
+      setView('hub');
+      setConfirmEditN(null);
+      await carregar();
+      setFeedback({ type: 'success', text: 'Procura actualizada.' });
+      return actualizada;
+    } catch (err) {
+      setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+      throw err;
+    } finally {
+      setSavingProcura(false);
+    }
+  };
+
+  const handleSubmitProcura = async (e) => {
+    e.preventDefault();
+    setFeedback({ type: '', text: '' });
+    const built = buildProcuraPayload();
+    if (!built.ok) return;
+
+    if (editing && procura) {
+      const nImpacto = countPropostasAInvalidar({
+        propostas: [...inboxReviews, ...enviadasReviews].map((r) => r.proposta),
+        ofertasById,
+        procura: built.payload,
+        nCandidato: grupo
+          ? (membrosCount > 0 ? membrosCount : procura.n_candidato ?? 1)
+          : procura.n_candidato ?? 1,
+      });
+      if (nImpacto > 0) {
+        setConfirmEditN(nImpacto);
+        return;
+      }
+      try {
+        await persistProcuraUpdate(built.payload);
+      } catch {
+        /* feedback já definido */
+      }
+      return;
+    }
+
+    const { payload } = built;
+    try {
       const criada = tipoProcura === 'grupo'
         ? await createProcuraWithGrupo(payload, {
             nome: 'O meu grupo',
@@ -455,14 +542,16 @@ const PassengerDashboard = () => {
       <PageHeader
         title={
           view === 'form'
-            ? 'Nova procura'
+            ? (editing ? 'Editar procura' : 'Nova procura')
             : procura
               ? 'A minha procura'
               : 'Explorar'
         }
         subtitle={
           view === 'form'
-            ? 'Define a tua rota diária casa–trabalho.'
+            ? (editing
+              ? 'Corrige origem, destino, horário, dias ou teto.'
+              : 'Define a tua rota diária casa–trabalho.')
             : procura
               ? 'Encontra ofertas compatíveis com o teu horário.'
               : 'Vê motoristas e grupos disponíveis. A procura filtra e permite propor acordo.'
@@ -521,7 +610,22 @@ const PassengerDashboard = () => {
       )}
 
       {!loading && view === 'form' && (
-        <form onSubmit={handleCriarProcura} className="space-y-4 bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 shadow-sm">
+        <form onSubmit={handleSubmitProcura} className="space-y-4 bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 shadow-sm">
+          {editing ? (
+            <button
+              type="button"
+              className="text-sm font-semibold text-primary"
+              onClick={() => {
+                setEditing(false);
+                setView('hub');
+                setConfirmEditN(null);
+              }}
+            >
+              Voltar
+            </button>
+          ) : null}
+          {!editing && (
+          <>
           <div
             className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1"
             role="group"
@@ -579,6 +683,8 @@ const PassengerDashboard = () => {
                 ))}
               </div>
             </div>
+          )}
+          </>
           )}
 
           <AddressInput
@@ -715,8 +821,9 @@ const PassengerDashboard = () => {
           <button
             type="submit"
             className="w-full bg-primary text-white font-bold py-4 rounded-xl"
+            disabled={savingProcura}
           >
-            Guardar procura
+            {editing ? 'Guardar alterações' : 'Guardar procura'}
           </button>
         </form>
       )}
@@ -764,6 +871,28 @@ const PassengerDashboard = () => {
             >
               Ver ofertas compatíveis
             </button>
+            {canEditProcura(procura) ? (
+              <>
+                <button
+                  type="button"
+                  className="w-full min-h-12 border border-slate-200 dark:border-slate-700 font-bold py-3.5 rounded-xl"
+                  onClick={() => {
+                    prefillFormFromProcura(procura);
+                    setEditing(true);
+                    setView('form');
+                  }}
+                >
+                  Editar procura
+                </button>
+                <button
+                  type="button"
+                  className="w-full min-h-12 text-red-600 dark:text-red-400 font-semibold py-3"
+                  onClick={() => setConfirmCancelOpen(true)}
+                >
+                  Cancelar procura
+                </button>
+              </>
+            ) : null}
           </section>
 
           <GrupoProcuraPanel
@@ -854,6 +983,11 @@ const PassengerDashboard = () => {
                   review={review}
                   secao="recebidas"
                   busy={busyId === review.proposta.id}
+                  acimaDoTeto={isPropostaAcimaDoTeto(
+                    review.proposta,
+                    procura.teto_mensal_kz,
+                    modoTetoActivo,
+                  )}
                   onAceitar={(memberIds) => handleAceitarInbox(review.proposta.id, memberIds)}
                   onRecusar={() => handleRecusarInbox(review.proposta.id)}
                 />
@@ -877,6 +1011,11 @@ const PassengerDashboard = () => {
                   modo="criador"
                   secao="enviadas"
                   busy={busyId === review.proposta.id}
+                  acimaDoTeto={isPropostaAcimaDoTeto(
+                    review.proposta,
+                    procura.teto_mensal_kz,
+                    modoTetoActivo,
+                  )}
                   onCancelar={() => handleCancelarEnviada(review.proposta.id)}
                 />
               ))
@@ -887,7 +1026,7 @@ const PassengerDashboard = () => {
             <section className="space-y-3" data-testid="propostas-terminadas">
               <h2 className="text-lg font-bold text-balance">Propostas concluídas</h2>
               <p className="text-sm text-slate-500 text-pretty">
-                Aceites, recusadas ou canceladas — já não podes actuar sobre estas propostas.
+                Aceites, recusadas, canceladas ou que já não correspondem — já não podes actuar sobre estas propostas.
               </p>
               {terminadasRecebidas.map((review) => (
                 <PropostaReviewCard
@@ -936,6 +1075,56 @@ const PassengerDashboard = () => {
           )}
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={confirmEditN != null && confirmEditN > 0}
+        title={
+          confirmEditN === 1
+            ? '1 proposta deixa de corresponder'
+            : `${confirmEditN} propostas deixam de corresponder`
+        }
+        message="O preço e o número de pessoas em cada uma não mudam; passam ao histórico como incompatíveis."
+        confirmText="Actualizar mesmo assim"
+        cancelText="Voltar"
+        variant="primary"
+        busy={savingProcura}
+        onCancel={() => setConfirmEditN(null)}
+        onConfirm={async () => {
+          const built = buildProcuraPayload();
+          if (!built.ok) return;
+          try {
+            await persistProcuraUpdate(built.payload);
+          } catch {
+            /* feedback já definido */
+          }
+        }}
+      />
+      <ConfirmationModal
+        isOpen={confirmCancelOpen}
+        title="Cancelar procura?"
+        message={`${inboxReviews.length + enviadasReviews.length} proposta(s) aberta(s) e ${waitlistEntriesVisiveis.length} inscrição(ões) em espera ficam sem efeito.`}
+        confirmText="Cancelar procura"
+        cancelText="Voltar"
+        variant="destructive"
+        busy={savingProcura}
+        onCancel={() => setConfirmCancelOpen(false)}
+        onConfirm={async () => {
+          if (!procura?.id) return;
+          setSavingProcura(true);
+          try {
+            await cancelProcura(procura.id);
+            setConfirmCancelOpen(false);
+            setEditing(false);
+            setView('hub');
+            await carregar();
+            setFeedback({ type: 'success', text: 'Procura cancelada.' });
+          } catch (err) {
+            setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+          } finally {
+            setSavingProcura(false);
+          }
+        }}
+      />
     </PageShell>
   );
 };

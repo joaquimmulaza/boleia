@@ -57,10 +57,23 @@
 - UI `/acordos`: «Lugar reservado — aguarda pagamento»; TTL de reservas: deferred.
 - Migração: `20260907190000_seat_before_custody_reservado.sql` (remoto).
 
+## Faltas ida/regresso (2026-09-07) — decisão produto
+- **Opção 1 — Meia quota (canónica MVP):**
+  - `ambas` → 100% do dia (`quota / dias_uteis`)
+  - `ida` ou `regresso` → 50% (`quota / dias_uteis / 2`)
+- Minuta contrato §9 alinhada (local gitignore) + `.specs/quick/pacote-falta-ida-regresso/clausula-9-minuta.md`
+- Trigger `handle_falta_desconto` + `computeFaltaDesconto` + UI `/faltas`
+
+## Editar procura activa (2026-09-08)
+- Dono edita OD/hora/dias/teto enquanto `activa`/`em_negociacao` e sem acordo activo
+- RPC `update_procura` / `cancel_procura`; propostas incompatíveis → `invalidada` (snapshot intacto)
+- Teto não invalida; UI «Acima do teto»; confirmação só se houver impacto
+- `return_time` reservado (não anular); `n_candidato` / grupo / `n_maximo` intocados
+- Spec: `.specs/features/editar-procura/`
+
 ## Next Steps
-1. Política ida/regresso (contrato §9 vs meia quota)
+1. TTL reservas (opcional) + polish admin Critiquito
 2. **Não** zonas/polígonos; **não** merge automático em `main`
-3. Admin polish Critiquito (opcional)
 
 ## Key links
 - Plan: `.cursor/plans/marketplace_oferta_procura_74cbb52a.plan.md`

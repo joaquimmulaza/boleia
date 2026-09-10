@@ -462,8 +462,9 @@ describe('Marketplace audit — G7 copy adenda «próximo mês»', () => {
       /aplica-se a partir do próximo mês; o mês corrente mantém as quotas/,
     );
     // Fallback de formatMesAdenda quando effective_from falta / inválido
-    expect(src).toMatch(/if \(!isoDate\) return 'próximo mês'/);
-    expect(src).toMatch(/Number\.isNaN\(d\.getTime\(\)\)\) return 'próximo mês'/);
+    const adendaStatusSrc = readFileSync(join(AUDIT_DIR, '../utils/adendaStatus.js'), 'utf8');
+    expect(adendaStatusSrc).toMatch(/if \(!isoDate\) return 'próximo mês'/);
+    expect(adendaStatusSrc).toMatch(/Number\.isNaN\(d\.getTime\(\)\)\) return 'próximo mês'/);
   });
 });
 

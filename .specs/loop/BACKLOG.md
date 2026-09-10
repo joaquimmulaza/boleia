@@ -2,18 +2,18 @@
 
 ## Top 3
 
-1. **falta-ida-regresso-policy** — Decidir e alinhar desconto ida/regresso — tipo: eng — DoD: decisão STATE + trigger/UI — deps: decisão produto
-2. **admin-polish-critiquito** — Polish UX `/admin/pagamentos` — tipo: ui — DoD: Critiquito — deps: opcional
+1. **admin-polish-critiquito** — Polish UX `/admin/pagamentos` — tipo: ui — DoD: Critiquito — deps: opcional
+2. _(slot livre)_
 3. _(slot livre)_
 
 ## Quiet?
 
-- quase — tick 22 seat-before-custody em PR (NEED_HUMAN merge)
+- quase — seat-before-custody em merge para main
 
 HANDOFF:
 FROM: pm
-TO: shipwright
+TO: human
 STATUS: DONE
 ARTIFACT: .specs/loop/BACKLOG.md
-NEXT: Merge PR seat-before-custody; depois falta-ida-regresso-policy
+NEXT: Polish admin Critiquito (opcional); TTL reservas (opcional)
 MODE: local
