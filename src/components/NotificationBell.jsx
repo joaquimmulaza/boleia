@@ -145,7 +145,8 @@ export default function NotificationBell() {
                 )}
                 <button 
                   onClick={() => setIsOpen(false)}
-                  className="p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                  aria-label="Fechar notificações"
+                  className="p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:focus-visible:ring-offset-slate-900"
                 >
                   <X size={20} />
                 </button>
