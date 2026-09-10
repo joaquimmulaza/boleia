@@ -4,6 +4,8 @@ import {
   createProcuraWithGrupo,
   listProcurasByOwner,
   getProcura,
+  updateProcura,
+  cancelProcura,
 } from './ProcuraService.js';
 import {
   createGrupo,
@@ -194,6 +196,61 @@ describe('ProcuraService', () => {
     ).rejects.toEqual({ message: 'Falha ao criar grupo.' });
     expect(supabase.from).not.toHaveBeenCalled();
   });
+
+  it('updateProcura chama RPC sem return_time nem n_candidato', async () => {
+    supabase.rpc.mockResolvedValue({
+      data: { id: 'pr-1', teto_mensal_kz: 18000, estado: 'activa' },
+      error: null,
+    });
+
+    const result = await updateProcura('pr-1', {
+      preferred_time: '17:00',
+      origin_name: 'Kero',
+      origin_lat: -8.9,
+      origin_lng: 13.1,
+      destination_name: 'UnIA',
+      destination_lat: -8.8,
+      destination_lng: 13.2,
+      dias_semana: [1, 2, 3, 4, 5],
+      teto_mensal_kz: 18000,
+    });
+
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      'update_procura',
+      expect.objectContaining({
+        p_procura_id: 'pr-1',
+        p_preferred_time: '17:00',
+        p_teto_mensal_kz: 18000,
+      }),
+    );
+    const args = supabase.rpc.mock.calls[0][1];
+    expect(args).not.toHaveProperty('p_return_time');
+    expect(args).not.toHaveProperty('p_n_candidato');
+    expect(result.teto_mensal_kz).toBe(18000);
+    expect(supabase.from).not.toHaveBeenCalled();
+  });
+
+  it('updateProcura propaga erro (procura fechada)', async () => {
+    supabase.rpc.mockResolvedValue({
+      data: null,
+      error: { message: 'Não é possível editar esta procura.' },
+    });
+    await expect(
+      updateProcura('pr-fechada', { preferred_time: '17:00' }),
+    ).rejects.toEqual({ message: 'Não é possível editar esta procura.' });
+  });
+
+  it('cancelProcura chama RPC cancel_procura', async () => {
+    supabase.rpc.mockResolvedValue({
+      data: { id: 'pr-1', estado: 'cancelada' },
+      error: null,
+    });
+    const result = await cancelProcura('pr-1');
+    expect(supabase.rpc).toHaveBeenCalledWith('cancel_procura', {
+      p_procura_id: 'pr-1',
+    });
+    expect(result.estado).toBe('cancelada');
+  });
 });
 
 describe('GrupoService', () => {
@@ -216,12 +273,15 @@ describe('GrupoService', () => {
   });
 
   it('addMembroGrupo insere membro e sincroniza N_candidato', async () => {
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'pax-1' } },
+    });
     const mockMembroSingle = vi.fn().mockResolvedValue({
       data: { id: 'm-1', grupo_id: 'g-1', passenger_id: 'pax-2', estado: 'activo' },
       error: null,
     });
     const mockGrupoSingle = vi.fn().mockResolvedValue({
-      data: { id: 'g-1', procura_id: 'pr-1', n_maximo: 4 },
+      data: { id: 'g-1', procura_id: 'pr-1', n_maximo: 4, procuras: { owner_id: 'pax-1' } },
       error: null,
     });
 

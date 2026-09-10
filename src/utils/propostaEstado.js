@@ -2,7 +2,7 @@
  * Labels e chips de estado de proposta (UI humana, PT-PT).
  */
 
-/** @typedef {'aberta' | 'rejeitada' | 'cancelada' | 'aceite'} EstadoProposta */
+/** @typedef {'aberta' | 'rejeitada' | 'cancelada' | 'aceite' | 'invalidada'} EstadoProposta */
 
 /**
  * @param {string | null | undefined} estado
@@ -29,6 +29,7 @@ export function labelEstadoProposta(estado, opts = {}) {
   if (e === 'rejeitada') return 'Rejeitada';
   if (e === 'cancelada') return 'Cancelada';
   if (e === 'aceite') return 'Aceite';
+  if (e === 'invalidada') return 'Já não corresponde à procura';
   return null;
 }
 
@@ -67,18 +68,24 @@ export function chipEstadoProposta(estado, opts = {}) {
       className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
     };
   }
+  if (e === 'invalidada') {
+    return {
+      label,
+      className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+    };
+  }
   return { label, className: 'bg-slate-100 text-slate-600' };
 }
 
 /**
- * Estados terminais visíveis no historico do hub (não inclui invalidada — sem writer UI).
+ * Estados terminais visíveis no historico do hub (inclui invalidada por edição da procura).
  *
  * @param {string | null | undefined} estado
  * @returns {boolean}
  */
 export function isPropostaHistorico(estado) {
   const e = normalizeEstadoProposta(estado);
-  return e === 'rejeitada' || e === 'cancelada' || e === 'aceite';
+  return e === 'rejeitada' || e === 'cancelada' || e === 'aceite' || e === 'invalidada';
 }
 
 /**

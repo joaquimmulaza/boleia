@@ -1,6 +1,8 @@
 # Contexto vivo — Boleia Certa
 
-Fonte de verdade arquitetónica e de estado: **`AGENTS.md`** (relatório na secção 9).
+Fonte de verdade arquitectónica e de estado: **`AGENTS.md`** (relatório na secção 9).
+
+**2026-09-08 — Editar/cancelar procura:** RPC `update_procura` / `cancel_procura`; spec `.specs/features/editar-procura/`.
 
 ## UX / UI (resumo)
 

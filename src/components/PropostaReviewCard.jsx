@@ -81,6 +81,7 @@ function countMembrosComPickup(membros) {
  *   onAceitar?: (selectedMemberIds?: string[]) => void,
  *   onRecusar?: () => void,
  *   onCancelar?: () => void,
+ *   acimaDoTeto?: boolean,
  * }} props
  */
 function PropostaReviewCard({
@@ -91,6 +92,7 @@ function PropostaReviewCard({
   onAceitar,
   onRecusar,
   onCancelar,
+  acimaDoTeto = false,
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState(/** @type {string[]} */ ([]));
@@ -149,14 +151,24 @@ function PropostaReviewCard({
         <h3 className="text-base font-bold text-slate-900 dark:text-white text-balance min-w-0">
           {titulo}
         </h3>
-        {estadoChip ? (
-          <span
-            className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${estadoChip.className}`}
-            data-testid="proposta-estado-chip"
-          >
-            {estadoChip.label}
-          </span>
-        ) : null}
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          {estadoChip ? (
+            <span
+              className={`text-xs font-bold px-2.5 py-1 rounded-full ${estadoChip.className}`}
+              data-testid="proposta-estado-chip"
+            >
+              {estadoChip.label}
+            </span>
+          ) : null}
+          {acimaDoTeto ? (
+            <span
+              className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+              data-testid="chip-acima-do-teto"
+            >
+              Acima do teto
+            </span>
+          ) : null}
+        </div>
       </div>
 
       <div className="space-y-2">

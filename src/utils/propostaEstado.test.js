@@ -29,12 +29,16 @@ describe('chipEstadoProposta', () => {
 });
 
 describe('isPropostaHistorico', () => {
-  it('inclui aceite, rejeitada e cancelada; exclui invalidada', () => {
+  it('inclui aceite, rejeitada, cancelada e invalidada', () => {
     expect(isPropostaHistorico('aceite')).toBe(true);
     expect(isPropostaHistorico('rejeitada')).toBe(true);
     expect(isPropostaHistorico('cancelada')).toBe(true);
+    expect(isPropostaHistorico('invalidada')).toBe(true);
     expect(isPropostaHistorico('aberta')).toBe(false);
-    expect(isPropostaHistorico('invalidada')).toBe(false);
+  });
+
+  it('label de invalidada é humana', () => {
+    expect(labelEstadoProposta('invalidada')).toBe('Já não corresponde à procura');
   });
 });
 

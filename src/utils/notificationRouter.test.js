@@ -71,6 +71,15 @@ describe('notificationRouter', () => {
       ).toBe('/motorista');
     });
 
+    it('proposal_invalidated e proposal_cancelled usam o mesmo inbox', () => {
+      expect(
+        notificationRouteMap.proposal_invalidated({ inbox: 'motorista' }),
+      ).toBe('/motorista');
+      expect(
+        notificationRouteMap.proposal_cancelled({ inbox: 'passageiro' }),
+      ).toBe('/passageiro');
+    });
+
     it('normaliza inbox com maiúsculas / espaços', () => {
       expect(
         notificationRouteMap.proposal_received({ inbox: ' Passageiro ' }),
