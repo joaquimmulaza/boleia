@@ -3,17 +3,17 @@
 ## Top 3
 
 1. **admin-polish-critiquito** — Polish UX `/admin/pagamentos` — tipo: ui — DoD: Critiquito — deps: opcional
-2. _(aguardar merge #100 seat-before-custody)_
-3. _(aguardar merge #101 falta-ida-regresso)_
+2. _(slot livre)_
+3. _(slot livre)_
 
 ## Quiet?
 
-- quase — PRs #100 e #101 NEED_HUMAN merge
+- quase — seat-before-custody em merge para main
 
 HANDOFF:
 FROM: pm
 TO: human
-STATUS: NEED_HUMAN
+STATUS: DONE
 ARTIFACT: .specs/loop/BACKLOG.md
-NEXT: Merge #100 e #101
+NEXT: Polish admin Critiquito (opcional); TTL reservas (opcional)
 MODE: local

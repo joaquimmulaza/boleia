@@ -51,10 +51,11 @@
 - ProxyPay / Multicaixa = **depois** do piloto (não bloquear MVP)
 - Detalhe roadmap: `ROADMAP.md`; memos: `memos/`
 
-## Adenda (clarificação 2026-09-07)
-- Motorista **e** passageiro podem **iniciar** renegociação de preço (`renegotiate_agreement_pricing`).
-- Só a **contraparte** aceita/rejeita; iniciador pode **anular** enquanto pendente (ENG#8b).
-- ROADMAP «contrapostos complexos» continua fora do MVP; o mínimo via `cancelada_substituta` + nova proposta basta.
+## Soft-hold anti-leakage (2026-09-07)
+- **Done (tick 22):** assento após aceite = `reservado` (ocupa capacidade); só passa a `activo` quando pagamento → `em_custodia`.
+- `oferta_ocupacao` conta `reservado` + `activo` (sem overbooking).
+- UI `/acordos`: «Lugar reservado — aguarda pagamento»; TTL de reservas: deferred.
+- Migração: `20260907190000_seat_before_custody_reservado.sql` (remoto).
 
 ## Faltas ida/regresso (2026-09-07) — decisão produto
 - **Opção 1 — Meia quota (canónica MVP):**
@@ -71,10 +72,8 @@
 - Spec: `.specs/features/editar-procura/`
 
 ## Next Steps
-1. Merge **PR #100** seat-before-custody (NEED_HUMAN)
-2. Merge PR falta-ida-regresso-policy (este tick)
-3. **Não** zonas/polígonos; **não** merge automático em `main`
-4. Admin polish Critiquito (opcional)
+1. TTL reservas (opcional) + polish admin Critiquito
+2. **Não** zonas/polígonos; **não** merge automático em `main`
 
 ## Key links
 - Plan: `.cursor/plans/marketplace_oferta_procura_74cbb52a.plan.md`

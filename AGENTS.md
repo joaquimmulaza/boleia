@@ -119,6 +119,7 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
  * **Detalhe acordo (T28):** `MyAgreements` — bloco «Preço combinado»/congelado; lista N pax; destaque quota passageiro; falta só se activo; `ConfirmationModal` `busy`.
  * **Adenda (T29 + R3 + audit Task 6):** motorista → «Renegociar preço»; passageiro → CTAs «Aceitar Alteração» / «Rejeitar Alteração» (Fitts) quando `pendente_passageiro`; após aceite, banner «Novo preço a partir de …»; client `rejectAgreementAdenda` → RPC `reject_agreement_adenda` (remoto + migração `20260906120000_…`).
  * **Cancelamento acordo (ENG#8 / s22 + ENG#8b):** RPC `terminate_agreement` — `aviso_previo` → `cancelamento_pendente`; `justa_causa` imediato; **consensual** com `p_vigencia` `imediato` (pro-rata) \| `fim_ciclo` (até fim do mês). RPC `cancel_agreement_adenda` → `cancelada_iniciador`. Lazy `apply_due_agreement_terminations` no load. Spec: `.specs/quick/pacote-eng-8b-s22-fecho/`.
+ * **seat-before-custody (tick 22):** `acordos_passageiros.estado` `reservado` após `accept_proposal` (ocupa vaga); promove a `activo` em `admin_validate_payment` ao entrar `em_custodia`. UI: «Lugar reservado — aguarda pagamento». Spec: `.specs/quick/pacote-seat-before-custody/`.
  * **Deep linking:** `notificationRouter.js` — `proposal_received` → hub da **contraparte** (`metadata.inbox`: `passageiro`|`motorista`); `waitlist_promoted`, `match_available`, etc.
  * **AuthContext:** `{ session, user, loading, tipoPerfil, profile, refreshProfile }`.
  * **Design SoT:** Stitch MCP (one-project canónico «Boleia Certa» + Project Resolution) + UI Skills sync + shadcn (`src/components/ui/`) + Mobbin free-safe; v0/One só fallback (nunca por lista vazia). Ponte `.cursor/skills/boleia-stitch` + `skills/`. Penpot não é SoT.
@@ -150,4 +151,4 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
 
  * **Editar/cancelar procura (2026-09-08):** CTA no hub passageiro; RPC `update_procura` / `cancel_procura` (MCP `20260908220000_…`). Snapshots de propostas intactos; incompatível de matching → `invalidada` + notif `proposal_invalidated`; arquivo → `cancelada` + `proposal_cancelled`. Teto baixo mantém proposta + chip «Acima do teto». Confirmação só com impacto. `return_time` e `n_candidato`/grupo não são mutados pela edição. Spec: `.specs/features/editar-procura/`.
 
-**Próximo:** Merge #100 seat-before-custody; TTL reservas; polish admin Critiquito. **Fora do MVP:** zonas/polígonos/raio residencial; adenda bilateral completa (hoje motorista inicia). Commits só se o utilizador pedir.
+**Próximo:** TTL reservas; polish admin Critiquito. **Fora do MVP:** zonas/polígonos/raio residencial; adenda bilateral completa (hoje motorista inicia). Commits só se o utilizador pedir.

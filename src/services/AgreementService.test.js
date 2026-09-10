@@ -220,7 +220,7 @@ describe('AgreementService', () => {
           return {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnValue({
-                eq: vi.fn().mockResolvedValue({
+                in: vi.fn().mockResolvedValue({
                   count: activosCount,
                   data: null,
                   error: null,
@@ -731,18 +731,20 @@ describe('AgreementService', () => {
 
     it('getAgreementsForPassenger via acordos_passageiros e aplica lazy RPCs', async () => {
       supabase.rpc.mockResolvedValue({ data: 0, error: null });
+      const inMock = vi.fn().mockResolvedValue({
+        data: [{ acordo_id: 'a1', acordos: { id: 'a1', estado: 'activo' } }],
+        error: null,
+      });
       supabase.from.mockReturnValue({
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
-            eq: vi.fn().mockResolvedValue({
-              data: [{ acordo_id: 'a1', acordos: { id: 'a1', estado: 'activo' } }],
-              error: null,
-            }),
+            in: inMock,
           }),
         }),
       });
       const result = await getAgreementsForPassenger('pax-1');
       expect(result[0].id).toBe('a1');
+      expect(inMock).toHaveBeenCalledWith('estado', ['activo', 'reservado']);
       expect(supabase.rpc).toHaveBeenCalledWith('apply_due_agreement_terminations', {
         p_acordo_id: null,
       });

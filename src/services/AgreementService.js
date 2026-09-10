@@ -223,7 +223,7 @@ export async function renegotiateAgreementPricing(acordoId, input, options = {})
       .from('acordos_passageiros')
       .select('*', { count: 'exact', head: true })
       .eq('acordo_id', acordoId)
-      .eq('estado', 'activo');
+      .in('estado', ['activo', 'reservado']);
 
     if (countError) throw countError;
     nPassageiros = count ?? 0;
@@ -624,7 +624,7 @@ export async function getAgreementsForPassenger(passengerId) {
       'acordo_id, estado, acordos(*, ofertas_capacidade(origin_name, destination_name, departure_time), acordos_adendas(*))',
     )
     .eq('passenger_id', passengerId)
-    .eq('estado', 'activo');
+    .in('estado', ['activo', 'reservado']);
 
   if (error) throw error;
   return (data || [])
