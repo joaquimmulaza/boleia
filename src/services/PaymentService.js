@@ -71,7 +71,9 @@ export async function listPagamentosByAcordo(acordoId) {
 export async function listPagamentosEmCustodia() {
   const { data, error } = await supabase
     .from('pagamentos_acordo')
-    .select('*, acordos(oferta_id, driver_id), perfis!pagamentos_acordo_passenger_id_fkey(nome_completo, telefone)')
+    .select(
+      '*, acordos(oferta_id, driver_id, perfis!acordos_driver_id_fkey(iban, iban_titular)), perfis!pagamentos_acordo_passenger_id_fkey(nome_completo, telefone)',
+    )
     .eq('estado', 'em_custodia')
     .order('validado_em', { ascending: true });
 

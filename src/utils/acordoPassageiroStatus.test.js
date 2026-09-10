@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   isActivoPassageiro,
   isReservadoPassageiro,
+  isExpiradoPassageiro,
   countPassageirosConfirmadosReservados,
   formatContagemPassageiros,
   labelChipEstadoPassageiro,
@@ -40,9 +41,15 @@ describe('acordoPassageiroStatus — piloto reservado', () => {
     expect(formatContagemPassageiros(0, 3)).toBe('Confirmados 0 · Reservados 3');
   });
 
+  it('isExpiradoPassageiro distingue TTL expirado', () => {
+    expect(isExpiradoPassageiro('expirado')).toBe(true);
+    expect(isExpiradoPassageiro('reservado')).toBe(false);
+  });
+
   it('labelChipEstadoPassageiro — labels humanas', () => {
     expect(labelChipEstadoPassageiro('activo')).toBe('Confirmado');
     expect(labelChipEstadoPassageiro('reservado')).toBe('Reservado');
+    expect(labelChipEstadoPassageiro('expirado')).toBe('Expirado');
     expect(labelChipEstadoPassageiro('saiu')).toBe('Saiu');
   });
 

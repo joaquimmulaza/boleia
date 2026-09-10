@@ -6,6 +6,41 @@
 /** Take-rate ~10% documentado para cálculo de payout líquido ao motorista. */
 export const TAKE_RATE_PCT = 0.1;
 
+/** TTL soft-hold reservado (horas) — espelha `reserva_ttl_hours()` na BD. */
+export const RESERVA_TTL_HORAS = 72;
+
+/**
+ * Motorista com IBAN + titular preenchidos (gate liquidação B4).
+ * @param {{ iban?: string | null, iban_titular?: string | null } | null | undefined} perfil
+ * @returns {boolean}
+ */
+export function motoristaTemIbanCompleto(perfil) {
+  const iban = String(perfil?.iban || '').trim();
+  const titular = String(perfil?.iban_titular || '').trim();
+  return iban.length > 0 && titular.length > 0;
+}
+
+/**
+ * Motoristas em custódia sem IBAN completo (aviso admin antes de liquidar).
+ * @param {Array<{ acordos?: { driver_id?: string, perfis?: { iban?: string, iban_titular?: string } | null } | null }>} custodiaRows
+ * @returns {Array<{ driverId: string }>}
+ */
+export function findMotoristasSemIban(custodiaRows) {
+  const rows = Array.isArray(custodiaRows) ? custodiaRows : [];
+  const byDriver = new Map();
+
+  for (const row of rows) {
+    const driverId = row.acordos?.driver_id;
+    if (!driverId || byDriver.has(driverId)) continue;
+    const perfil = row.acordos?.perfis;
+    if (!motoristaTemIbanCompleto(perfil)) {
+      byDriver.set(driverId, { driverId });
+    }
+  }
+
+  return [...byDriver.values()];
+}
+
 export const PAYMENT_STATES = Object.freeze({
   PENDENTE: 'pendente_pagamento',
   COMPROVATIVO: 'comprovativo_enviado',

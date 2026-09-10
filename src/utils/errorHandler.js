@@ -15,6 +15,12 @@ export function getFriendlyErrorMessage(error) {
   if (msg.includes('Failed to fetch')) {
     return 'Sem ligação à internet. Verifique a sua rede.';
   }
-  
+  if (/sem IBAN ou titular/i.test(msg)) {
+    return 'O motorista precisa de IBAN e titular no perfil antes de liquidar.';
+  }
+  if (/sem IBAN configurado/i.test(msg)) {
+    return 'O motorista precisa de IBAN no perfil antes de liquidar.';
+  }
+
   return 'Ocorreu um erro inesperado. Tente novamente.';
 }
