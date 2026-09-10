@@ -480,7 +480,7 @@ describe('DriverDashboard — marketplace', () => {
     expect(await screen.findByText('Kilamba')).toBeInTheDocument();
     expect(screen.getByText(/Grupo · 2 pessoas/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Propor acordo/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Enviar proposta/i }));
 
     await waitFor(() => {
       expect(createProposta).toHaveBeenCalledWith(
@@ -497,7 +497,7 @@ describe('DriverDashboard — marketplace', () => {
     expect(await screen.findByText(/Proposta enviada ao passageiro/i)).toBeInTheDocument();
   });
 
-  it('separa direct e waitlist: só direct tem «Propor acordo»', async () => {
+  it('separa direct e waitlist: só direct tem «Enviar proposta»', async () => {
     findCompatibleProcuras.mockResolvedValue({
       direct: [
         {
@@ -534,11 +534,11 @@ describe('DriverDashboard — marketplace', () => {
     expect(screen.getByTestId('waitlist-bucket')).toBeInTheDocument();
     expect(screen.getByText(/Grupo maior que os lugares disponíveis/i)).toBeInTheDocument();
 
-    const proporButtons = screen.getAllByRole('button', { name: /Propor acordo/i });
+    const proporButtons = screen.getAllByRole('button', { name: /Enviar proposta/i });
     expect(proporButtons).toHaveLength(1);
   });
 
-  it('waitlist sem direct: não mostra CTA «Propor acordo»', async () => {
+  it('waitlist sem direct: não mostra CTA «Enviar proposta»', async () => {
     findCompatibleProcuras.mockResolvedValue({
       direct: [],
       waitlist: [
@@ -565,7 +565,7 @@ describe('DriverDashboard — marketplace', () => {
     expect(await screen.findByText('Cacuaco')).toBeInTheDocument();
     expect(screen.getByTestId('waitlist-bucket')).toBeInTheDocument();
     expect(screen.getByText(/Sem lugares suficientes agora/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Propor acordo/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Enviar proposta/i })).not.toBeInTheDocument();
     expect(createProposta).not.toHaveBeenCalled();
   });
 
@@ -651,7 +651,7 @@ describe('DriverDashboard — marketplace', () => {
       screen.getByText(/compatíveis por horário, dias e lugares/i),
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Propor acordo/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Enviar proposta/i }));
 
     await waitFor(() => {
       expect(createProposta).toHaveBeenCalledWith(
