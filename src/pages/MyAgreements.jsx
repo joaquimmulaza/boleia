@@ -27,6 +27,7 @@ import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { resolveAgreementPricing } from '../utils/resolveAgreementPricing';
 import { labelRotaOferta } from '../utils/ofertaLabels';
+import { isOfertaFlexivel } from '../services/OfertaService';
 import AcordoPagamentoPanel from '../components/AcordoPagamentoPanel';
 import AcordoContactosPanel from '../components/AcordoContactosPanel';
 import {
@@ -961,7 +962,19 @@ const MyAgreements = () => {
           </div>
 
           <section className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 p-4 space-y-4">
-            {(horaPartida || rota.origem || rota.destino) && (
+            {isOfertaFlexivel(oferta) ? (
+              <div className="space-y-1 text-sm" data-testid="acordo-rota-flexivel">
+                {horaPartida ? (
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    <span className="text-slate-500">Horário: </span>
+                    <span className="font-bold tabular-nums">{horaPartida}</span>
+                  </p>
+                ) : null}
+                <p className="text-xs text-slate-600 dark:text-slate-300 text-pretty">
+                  Oferta flexível — sem origem/destino fixos.
+                </p>
+              </div>
+            ) : (horaPartida || rota.origem || rota.destino) ? (
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-xs text-slate-500">Partida</p>
@@ -975,7 +988,7 @@ const MyAgreements = () => {
                   <p className="text-xs text-slate-600 dark:text-slate-300">{rota.destino}</p>
                 </div>
               </div>
-            )}
+            ) : null}
 
             <div className="flex items-start gap-3 rounded-xl border border-emerald-200/80 bg-white dark:bg-slate-900 dark:border-emerald-900/40 p-3">
               <ShieldCheck
