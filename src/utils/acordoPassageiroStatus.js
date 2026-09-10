@@ -20,6 +20,14 @@ export function isReservadoPassageiro(estado) {
 }
 
 /**
+ * @param {string | null | undefined} estado
+ * @returns {boolean}
+ */
+export function isExpiradoPassageiro(estado) {
+  return String(estado || '').toLowerCase() === 'expirado';
+}
+
+/**
  * @param {Array<{ estado?: string }>} linhas
  * @returns {{ confirmados: number, reservados: number }}
  */
@@ -49,6 +57,7 @@ export function labelChipEstadoPassageiro(estado) {
   const e = String(estado || '').toLowerCase();
   if (e === 'activo') return 'Confirmado';
   if (e === 'reservado') return 'Reservado';
+  if (e === 'expirado') return 'Expirado';
   if (e === 'saiu') return 'Saiu';
   return estado || '—';
 }
@@ -65,6 +74,9 @@ export function chipClassEstadoPassageiro(estado) {
   }
   if (e === 'reservado') {
     return 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-100';
+  }
+  if (e === 'expirado') {
+    return 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400 line-through';
   }
   if (e === 'saiu') {
     return 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400';

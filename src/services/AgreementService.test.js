@@ -727,6 +727,9 @@ describe('AgreementService', () => {
       expect(supabase.rpc).toHaveBeenCalledWith('apply_due_agreement_terminations', {
         p_acordo_id: null,
       });
+      expect(supabase.rpc).toHaveBeenCalledWith('apply_due_reserva_expiry', {
+        p_acordo_id: null,
+      });
     });
 
     it('getAgreementsForPassenger via acordos_passageiros e aplica lazy RPCs', async () => {
@@ -744,8 +747,11 @@ describe('AgreementService', () => {
       });
       const result = await getAgreementsForPassenger('pax-1');
       expect(result[0].id).toBe('a1');
-      expect(inMock).toHaveBeenCalledWith('estado', ['activo', 'reservado']);
+      expect(inMock).toHaveBeenCalledWith('estado', ['activo', 'reservado', 'expirado']);
       expect(supabase.rpc).toHaveBeenCalledWith('apply_due_agreement_terminations', {
+        p_acordo_id: null,
+      });
+      expect(supabase.rpc).toHaveBeenCalledWith('apply_due_reserva_expiry', {
         p_acordo_id: null,
       });
     });

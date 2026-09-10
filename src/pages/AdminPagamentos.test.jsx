@@ -36,6 +36,45 @@ describe('AdminPagamentos', () => {
     vi.useRealTimers();
   });
 
+  it('tab validar mostra guia piloto B3', async () => {
+    listPagamentosPendentesValidacao.mockResolvedValue([]);
+
+    render(<AdminPagamentos />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('admin-piloto-ops-guia')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('admin-piloto-ops-guia')).toHaveTextContent(/Aprovar/i);
+    expect(screen.getByTestId('admin-piloto-ops-guia')).toHaveTextContent(/custódia/i);
+  });
+
+  it('tab custódia avisa motoristas sem IBAN completo (B4)', async () => {
+    listPagamentosPendentesValidacao.mockResolvedValue([]);
+    listPagamentosEmCustodia.mockResolvedValue([
+      {
+        id: 'pag-sem-iban',
+        valor_kz: 43000,
+        valor_payout_liquido_kz: 38700,
+        desconto_faltas_kz: 0,
+        mes_referencia: '2026-09-01',
+        perfis: { nome_completo: 'Ana' },
+        acordos: {
+          driver_id: 'drv-x',
+          perfis: { iban: '', iban_titular: '' },
+        },
+      },
+    ]);
+
+    render(<AdminPagamentos />);
+
+    fireEvent.click(screen.getByRole('tab', { name: /Custódia e liquidação/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('admin-iban-aviso')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('admin-iban-aviso')).toHaveTextContent(/IBAN completo/i);
+  });
+
   it('usa título e separadores «Pagamentos e repasses»', async () => {
     listPagamentosPendentesValidacao.mockResolvedValue([]);
 

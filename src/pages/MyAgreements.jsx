@@ -50,10 +50,12 @@ import {
 } from '../utils/periodoRenovacao';
 import {
   allowsAssiduidadeFaltasForAcordo,
+  RESERVA_TTL_HORAS,
 } from '../utils/paymentStatus';
 import {
   isActivoPassageiro,
   isReservadoPassageiro,
+  isExpiradoPassageiro,
   countPassageirosConfirmadosReservados,
   formatContagemPassageiros,
   labelChipEstadoPassageiro,
@@ -76,6 +78,14 @@ function isActivo(estado) {
  */
 function isReservado(estado) {
   return isReservadoPassageiro(estado);
+}
+
+/**
+ * @param {string | null | undefined} estado
+ * @returns {boolean}
+ */
+function isExpirado(estado) {
+  return isExpiradoPassageiro(estado);
 }
 
 /**
@@ -695,6 +705,7 @@ const MyAgreements = () => {
     const leavePending = Boolean(pendingLeaveIds[acordo.id]);
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
     const minhaReservadaCard = Boolean(minhaLinha && isReservado(minhaLinha.estado));
+    const minhaExpiradaCard = Boolean(minhaLinha && isExpirado(minhaLinha.estado));
     const quotaCard =
       tipoPerfil === 'Passageiro'
         ? (minhaLinha?.quota_mensal_kz ?? acordo.valor_mensal_por_passageiro_kz)
@@ -726,6 +737,14 @@ const MyAgreements = () => {
                 data-testid={`acordo-lugar-chip-${acordo.id}`}
               >
                 {labelChipEstadoPassageiro('reservado')}
+              </span>
+            ) : null}
+            {minhaExpiradaCard ? (
+              <span
+                className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoPassageiro('expirado')}`}
+                data-testid={`acordo-lugar-expirado-chip-${acordo.id}`}
+              >
+                {labelChipEstadoPassageiro('expirado')}
               </span>
             ) : null}
             {leavePending && (
@@ -784,6 +803,7 @@ const MyAgreements = () => {
     const podeSair =
       isPassageiro && activo && (!minhaLinha || isNoAcordo(minhaLinha.estado));
     const minhaReservada = Boolean(minhaLinha && isReservado(minhaLinha.estado));
+    const minhaExpirada = Boolean(minhaLinha && isExpirado(minhaLinha.estado));
     const { confirmados: nConfirmados, reservados: nReservados } =
       countPassageirosConfirmadosReservados(linhas);
     const contagemPassageiros = formatContagemPassageiros(nConfirmados, nReservados);
@@ -906,6 +926,18 @@ const MyAgreements = () => {
             <p className="font-semibold text-slate-900 dark:text-white text-balance">
               {rota.origem} → {rota.destino}
             </p>
+            {minhaExpirada ? (
+              <div
+                role="status"
+                data-testid="lugar-expirado-banner"
+                className="rounded-xl border border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300 px-3 py-3"
+              >
+                <p className="text-sm text-pretty">
+                  Reserva expirada — a vaga foi libertada por falta de pagamento dentro do prazo (
+                  {RESERVA_TTL_HORAS} h). Podes procurar nova oferta no início.
+                </p>
+              </div>
+            ) : null}
             {minhaReservada ? (
               <div
                 role="status"
@@ -913,7 +945,8 @@ const MyAgreements = () => {
                 className="rounded-xl border border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-100 px-3 py-3 space-y-2"
               >
                 <p className="text-sm text-pretty">
-                  Lugar reservado — aguarda pagamento. O lugar confirma-se quando o comprovativo for validado.
+                  Lugar reservado — aguarda pagamento em {RESERVA_TTL_HORAS} h. O lugar confirma-se quando o
+                  comprovativo for validado.
                 </p>
                 <Button
                   type="button"

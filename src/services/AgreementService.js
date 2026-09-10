@@ -73,6 +73,27 @@ async function applyDueTerminationsBestEffort(acordoId = null) {
  * Encerra acordos sem renovação explícita quando o ciclo expira (lazy). Best-effort.
  * @param {string | null} [acordoId]
  */
+/**
+ * Expira reservas soft-hold vencidas (lazy TTL B1). Best-effort.
+ * @param {string | null} [acordoId]
+ * @returns {Promise<number>} linhas expiradas
+ */
+export async function applyDueReservaExpiry(acordoId = null) {
+  try {
+    const res = await supabase.rpc('apply_due_reserva_expiry', {
+      p_acordo_id: acordoId,
+    });
+    if (res?.error) {
+      console.warn('Falha ao expirar reservas vencidas:', res.error.message);
+      return 0;
+    }
+    return Number(res?.data) || 0;
+  } catch (err) {
+    console.warn('Falha ao expirar reservas vencidas:', err);
+    return 0;
+  }
+}
+
 async function applyDueNonRenewalsBestEffort(acordoId = null) {
   try {
     const res = await supabase.rpc('apply_due_agreement_non_renewals', {
@@ -597,6 +618,7 @@ export async function getAgreementsForDriver(driverId) {
   await applyDueAdendasBestEffort(null);
   await applyDueTerminationsBestEffort(null);
   await applyDueNonRenewalsBestEffort(null);
+  await applyDueReservaExpiry(null);
 
   const { data, error } = await supabase
     .from('acordos')
@@ -617,6 +639,7 @@ export async function getAgreementsForPassenger(passengerId) {
   await applyDueAdendasBestEffort(null);
   await applyDueTerminationsBestEffort(null);
   await applyDueNonRenewalsBestEffort(null);
+  await applyDueReservaExpiry(null);
 
   const { data, error } = await supabase
     .from('acordos_passageiros')
@@ -624,7 +647,7 @@ export async function getAgreementsForPassenger(passengerId) {
       'acordo_id, estado, acordos(*, ofertas_capacidade(origin_name, destination_name, departure_time), acordos_adendas(*))',
     )
     .eq('passenger_id', passengerId)
-    .in('estado', ['activo', 'reservado']);
+    .in('estado', ['activo', 'reservado', 'expirado']);
 
   if (error) throw error;
   return (data || [])

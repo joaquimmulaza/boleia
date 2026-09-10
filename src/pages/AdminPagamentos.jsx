@@ -23,6 +23,7 @@ import {
   labelEstadoRepasse,
   chipClassEstadoRepasse,
   resumoLiquidacaoPeriodo,
+  findMotoristasSemIban,
 } from '../utils/paymentStatus';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 
@@ -56,6 +57,10 @@ const AdminPagamentos = () => {
   const resumoPeriodo = useMemo(
     () => resumoLiquidacaoPeriodo(custodiaRows, mesReferenciaAtual),
     [custodiaRows, mesReferenciaAtual],
+  );
+  const motoristasSemIban = useMemo(
+    () => findMotoristasSemIban(custodiaRows),
+    [custodiaRows],
   );
 
   const load = useCallback(async () => {
@@ -194,6 +199,28 @@ const AdminPagamentos = () => {
       </nav>
 
       {feedback ? <FeedbackAlert type={feedback.type} text={feedback.text} /> : null}
+
+      {activeTab === 'validar' ? (
+        <div
+          className="mb-4 rounded-xl border border-sky-200 bg-sky-50 text-sky-950 dark:border-sky-800/60 dark:bg-sky-950/30 dark:text-sky-100 px-4 py-3 text-sm space-y-1"
+          data-testid="admin-piloto-ops-guia"
+        >
+          <p className="font-semibold">Piloto — validar comprovativo</p>
+          <ol className="list-decimal list-inside space-y-0.5 text-pretty">
+            <li>Pré-visualizar o PDF do comprovativo.</li>
+            <li>Aprovar → pagamento em custódia e passageiro confirmado (activo).</li>
+            <li>Contactos desbloqueiam após custódia; rejeitar devolve o passageiro ao pagamento.</li>
+          </ol>
+        </div>
+      ) : null}
+
+      {activeTab === 'custodia' && motoristasSemIban.length > 0 ? (
+        <FeedbackAlert
+          type="error"
+          text={`${motoristasSemIban.length} motorista(s) em custódia sem IBAN completo no perfil — liquidação bloqueada até preencherem IBAN e titular em /perfil.`}
+          data-testid="admin-iban-aviso"
+        />
+      ) : null}
 
       {activeTab === 'validar' ? (
         loading ? (

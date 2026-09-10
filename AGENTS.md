@@ -152,4 +152,6 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
  * **Editar/cancelar procura (2026-09-08):** CTA no hub passageiro; RPC `update_procura` / `cancel_procura` (remoto `20260908225833_…`). Snapshots de propostas intactos; incompatível de matching → `invalidada` + notif `proposal_invalidated`; arquivo → `cancelada` + `proposal_cancelled`. Teto baixo mantém proposta + chip «Acima do teto». Confirmação só com impacto. `return_time` e `n_candidato`/grupo não são mutados pela edição. Spec: `.specs/features/editar-procura/`.
  * **Preview reconcile #2 (2026-09-10):** `supabase/migrations/` alinhado 1:1 com `schema_migrations` produção (`fdclrbcgytnuqcrpsevw`, 61 versões). Splits MCP (`190441…`, `225833`, eng7 `224444…`) no git; monolitos locais-only eng3/eng7 removidos. Sem DDL extra em produção. Spec: `.specs/quick/supabase-preview-reconcile-2/`.
 
-**Próximo:** TTL reservas; polish admin Critiquito. **Fora do MVP:** zonas/polígonos/raio residencial; adenda bilateral completa (hoje motorista inicia). Commits só se o utilizador pedir.
+* **PACOTE ENG #18 1.º acordo (2026-09-10):** TTL reservas 72h (`apply_due_reserva_expiry`, estado `expirado`); gate liquidação IBAN+titular; guia ops admin B3. Spec: `.specs/quick/pacote-eng-18-primeiro-acordo/`.
+
+**Próximo:** polish admin Critiquito. **Fora do MVP:** zonas/polígonos/raio residencial; adenda bilateral completa (hoje motorista inicia). Commits só se o utilizador pedir.
