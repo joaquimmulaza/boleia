@@ -8,6 +8,7 @@ import { dirname, join } from 'node:path';
 vi.mock('../lib/supabase', () => ({
   supabase: {
     from: vi.fn(),
+    rpc: vi.fn(),
   },
 }));
 
@@ -24,17 +25,20 @@ describe('AbsenceService (marketplace)', () => {
       passenger_id: 'pax-1',
       viagem: 'ambas',
     };
-    const mockSingle = vi.fn().mockResolvedValue({
+    supabase.rpc.mockResolvedValue({
       data: { id: 'f1', ...payload, desconto_kz: 1363.64 },
       error: null,
     });
-    supabase.from.mockReturnValue({
-      insert: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({ single: mockSingle }),
-      }),
-    });
 
     const result = await logAbsence(payload);
+    expect(supabase.rpc).toHaveBeenCalledWith('log_falta', {
+      p_id_acordo: 'acordo-1',
+      p_data_falta: '2026-09-04',
+      p_tipo: 'Passageiro',
+      p_observacao: null,
+      p_passenger_id: 'pax-1',
+      p_viagem: 'ambas',
+    });
     expect(result.viagem).toBe('ambas');
     expect(result.passenger_id).toBe('pax-1');
   });

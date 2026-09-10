@@ -196,6 +196,16 @@ describe('Agreements marketplace E2E (T25)', () => {
                   data: null,
                   error: null,
                 }),
+                in: vi.fn().mockResolvedValue({
+                  count: 3,
+                  data: null,
+                  error: null,
+                }),
+              }),
+              in: vi.fn().mockResolvedValue({
+                count: 3,
+                data: null,
+                error: null,
               }),
             }),
           };

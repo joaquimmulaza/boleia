@@ -159,6 +159,19 @@ describe('Marketplace Termination Audit — G15', () => {
             ],
             error: null,
           }),
+          in: vi.fn().mockResolvedValue({
+            data: [
+              {
+                acordo_id: 'acordo-g15',
+                acordos: {
+                  id: 'acordo-g15',
+                  estado: 'cancelado',
+                  rescisao_effective_on: '2026-09-01',
+                },
+              },
+            ],
+            error: null,
+          }),
         }),
       }),
     });
