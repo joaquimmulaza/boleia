@@ -1,5 +1,52 @@
 import { describe, it, expect } from 'vitest';
-import { buildProcuraMinimaFromOferta } from './procuraFromOferta.js';
+import {
+  buildProcuraMinimaFromOferta,
+  getPropostaBrowseGaps,
+} from './procuraFromOferta.js';
+
+describe('getPropostaBrowseGaps', () => {
+  it('oferta fixa completa: sem gaps', () => {
+    expect(
+      getPropostaBrowseGaps({
+        flexibilidade_rota: false,
+        origin_name: 'A',
+        origin_lat: 1,
+        origin_lng: 2,
+        destination_name: 'B',
+        destination_lat: 3,
+        destination_lng: 4,
+        departure_time: '07:15:00',
+      }),
+    ).toEqual([]);
+  });
+
+  it('oferta fixa sem OD: gap od', () => {
+    expect(
+      getPropostaBrowseGaps({
+        flexibilidade_rota: false,
+        origin_name: 'Talatona',
+        departure_time: '07:00:00',
+      }),
+    ).toEqual(['od']);
+  });
+
+  it('oferta flexível sem horário: gap time (nunca od)', () => {
+    expect(
+      getPropostaBrowseGaps({
+        flexibilidade_rota: true,
+      }),
+    ).toEqual(['time']);
+  });
+
+  it('oferta flexível com horário: sem gaps', () => {
+    expect(
+      getPropostaBrowseGaps({
+        flexibilidade_rota: true,
+        departure_time: '08:00:00',
+      }),
+    ).toEqual([]);
+  });
+});
 
 describe('buildProcuraMinimaFromOferta', () => {
   it('oferta fixa: copia OD, horário e dias da oferta', () => {
@@ -56,7 +103,27 @@ describe('buildProcuraMinimaFromOferta', () => {
     expect(payload.dias_semana).toEqual([1, 2, 3, 4, 5]);
   });
 
-  it('oferta fixa sem coordenadas lança erro', () => {
+  it('overrides do sheet preenchem OD em falta', () => {
+    const payload = buildProcuraMinimaFromOferta(
+      {
+        flexibilidade_rota: false,
+        departure_time: '07:15:00',
+      },
+      {
+        origin_name: 'Talatona',
+        origin_lat: -8.916,
+        origin_lng: 13.234,
+        destination_name: 'Miramar',
+        destination_lat: -8.82,
+        destination_lng: 13.25,
+      },
+    );
+
+    expect(payload.origin_name).toBe('Talatona');
+    expect(payload.destination_lat).toBe(-8.82);
+  });
+
+  it('oferta fixa sem coordenadas lança erro se overrides também incompletos', () => {
     expect(() =>
       buildProcuraMinimaFromOferta({
         flexibilidade_rota: false,

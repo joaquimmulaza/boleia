@@ -132,7 +132,12 @@ function OfertaMatchCard({
             type="button"
             disabled={busy}
             onClick={onPropor}
-            className="bg-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl disabled:opacity-60 shrink-0"
+            data-testid={variant === 'browse' ? 'browse-propor-acordo' : undefined}
+            className={
+              variant === 'browse'
+                ? 'bg-primary hover:bg-primary/90 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-primary/25 disabled:opacity-60 shrink-0'
+                : 'bg-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl disabled:opacity-60 shrink-0'
+            }
           >
             Propor acordo
           </button>

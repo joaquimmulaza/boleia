@@ -51,7 +51,7 @@ function toOfertaMatchInput(oferta) {
  *   dias_semana: number[] | null,
  * }}
  */
-function toProcuraMatchInput(procura) {
+export function toProcuraMatchInput(procura) {
   return {
     preferred_time: String(procura.preferred_time).slice(0, 5),
     origin_lat:
