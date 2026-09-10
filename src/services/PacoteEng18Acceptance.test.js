@@ -23,7 +23,11 @@ import { supabase } from '../lib/supabase';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS = join(ROOT, '../../supabase/migrations');
-const MIG = '20260910120000_pacote_eng18_ttl_reserva_iban_gate.sql';
+const MIG_ENG18 = [
+  '20260910100345_pacote_eng18_ttl_reserva_iban_gate.sql',
+  '20260910100358_pacote_eng18_ttl_reserva_iban_gate_part2.sql',
+  '20260910100408_pacote_eng18_ttl_reserva_iban_gate_part3.sql',
+];
 
 vi.mock('../lib/supabase', () => ({
   supabase: {
@@ -38,8 +42,8 @@ vi.mock('../lib/supabase', () => ({
 }));
 
 /** @returns {string} */
-function readMig() {
-  return readFileSync(join(MIGRATIONS, MIG), 'utf8');
+function readEng18Migrations() {
+  return MIG_ENG18.map((name) => readFileSync(join(MIGRATIONS, name), 'utf8')).join('\n');
 }
 
 describe('PACOTE ENG #18 — TTL reservas + admin piloto + IBAN liquidação', () => {
@@ -48,34 +52,36 @@ describe('PACOTE ENG #18 — TTL reservas + admin piloto + IBAN liquidação', (
   });
 
   describe('B1 — TTL reservas', () => {
-    it('migração existe com apply_due_reserva_expiry', () => {
-      expect(existsSync(join(MIGRATIONS, MIG))).toBe(true);
-      const sql = readMig();
+    it('migrações ENG#18 existem com apply_due_reserva_expiry', () => {
+      MIG_ENG18.forEach((name) => {
+        expect(existsSync(join(MIGRATIONS, name))).toBe(true);
+      });
+      const sql = readEng18Migrations();
       expect(sql).toMatch(/apply_due_reserva_expiry/);
       expect(sql).toMatch(/reservado_expira_em/);
       expect(sql).toMatch(/'expirado'/);
     });
 
     it('oferta_ocupacao não conta expirado (só activo + reservado)', () => {
-      const sql = readMig();
+      const sql = readEng18Migrations();
       expect(sql).toMatch(/oferta_ocupacao/);
       expect(sql).toMatch(/lower\(ap\.estado\) IN \('activo',\s*'reservado'\)/);
     });
 
     it('expiry liberta vaga e promove waitlist best-effort', () => {
-      const sql = readMig();
+      const sql = readEng18Migrations();
       expect(sql).toMatch(/recount_oferta_vagas/);
       expect(sql).toMatch(/promote_waitlist/);
     });
 
     it('não expira reserva com comprovativo em validação ou custódia', () => {
-      const sql = readMig();
+      const sql = readEng18Migrations();
       expect(sql).toMatch(/comprovativo_enviado/);
       expect(sql).toMatch(/em_custodia/);
     });
 
     it('accept_proposal define reservado_expira_em (TTL 72h)', () => {
-      const sql = readMig();
+      const sql = readEng18Migrations();
       expect(sql).toMatch(/accept_proposal/);
       expect(sql).toMatch(/reservado_expira_em/);
       expect(sql).toMatch(/72/);
@@ -124,14 +130,14 @@ describe('PACOTE ENG #18 — TTL reservas + admin piloto + IBAN liquidação', (
 
   describe('B4 — IBAN motorista obrigatório na liquidação', () => {
     it('SQL admin_liquidate_period exige iban e iban_titular', () => {
-      const sql = readMig();
+      const sql = readEng18Migrations();
       expect(sql).toMatch(/admin_liquidate_period/);
       expect(sql).toMatch(/iban_titular/);
       expect(sql).toMatch(/RAISE EXCEPTION.*IBAN/i);
     });
 
     it('SQL admin_liquidate_payment bloqueia sem IBAN completo', () => {
-      const sql = readMig();
+      const sql = readEng18Migrations();
       expect(sql).toMatch(/admin_liquidate_payment/);
       expect(sql).toMatch(/iban_titular/);
     });
