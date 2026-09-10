@@ -99,11 +99,12 @@ function setupPagamentosDefault(emCustodia = true) {
 function mockPagamentosGate(acordo, viewerId, emCustodia = true) {
   const estado = emCustodia ? 'em_custodia' : 'pendente_pagamento';
   const mesReferencia = getMesReferenciaAtual();
-  const activos = (acordo?.acordos_passageiros || []).filter(
-    (p) => String(p.estado || '').toLowerCase() === 'activo',
-  );
-  const pagamentos = activos.length > 0
-    ? activos.map((p) => ({
+  const noAcordo = (acordo?.acordos_passageiros || []).filter((p) => {
+    const e = String(p.estado || '').toLowerCase();
+    return e === 'activo' || e === 'reservado';
+  });
+  const pagamentos = noAcordo.length > 0
+    ? noAcordo.map((p) => ({
       id: `pag-${p.passenger_id}`,
       passenger_id: p.passenger_id,
       estado,
@@ -399,7 +400,7 @@ describe('MyAgreements — marketplace 1:N', () => {
     ).toBeInTheDocument();
   });
 
-  it('passageiro reservado: mostra copy de lugar reservado e permite Sair só eu', async () => {
+  it('passageiro reservado: chip âmbar, glossário, contagens e CTA pagamento', async () => {
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     const acordoReservado = {
       ...acordoPassageiro,
@@ -414,7 +415,7 @@ describe('MyAgreements — marketplace 1:N', () => {
         {
           id: 'ap-2',
           passenger_id: 'pax-2',
-          estado: 'reservado',
+          estado: 'activo',
           quota_mensal_kz: 40000,
           perfis: { nome_completo: 'João Pedro' },
         },
@@ -424,17 +425,127 @@ describe('MyAgreements — marketplace 1:N', () => {
     mockPagamentosGate(acordoReservado, 'pax-viewer', false);
 
     renderPage();
+
+    const cardChip = await screen.findByTestId('acordo-lugar-chip-acordo-pax');
+    expect(cardChip).toHaveTextContent('Reservado');
+    expect(cardChip.className).toMatch(/amber/);
+
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
     expect(within(dialog).getByTestId('lugar-reservado-banner')).toHaveTextContent(
       /Lugar reservado — aguarda pagamento/i,
     );
-    expect(within(dialog).getAllByText(/Lugar reservado — aguarda pagamento/i).length).toBeGreaterThan(0);
+    expect(within(dialog).getByTestId('lugar-reservado-pagamento-cta')).toBeInTheDocument();
+    expect(within(dialog).getByTestId('passageiros-contagem')).toHaveTextContent(
+      'Confirmados 1 · Reservados 1',
+    );
+    expect(within(dialog).getByTestId('estados-lugar-glossario')).toHaveTextContent(/Reservado/i);
+    expect(within(dialog).getByTestId('estados-lugar-glossario')).toHaveTextContent(/Confirmado/i);
+    expect(within(dialog).getByTestId('estados-lugar-glossario')).toHaveTextContent(/Em custódia/i);
+    expect(within(dialog).getByTestId('acordo-pagamento-panel')).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: /Sair só eu/i })).toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: /Renegociar preço/i })).not.toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: /Registar falta/i })).not.toBeInTheDocument();
     expectNoUserFacingJargon(dialog.textContent);
+  });
+
+  it('passageiro reservado: CTA pagamento faz scroll ao painel', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    const acordoReservado = {
+      ...acordoPassageiro,
+      acordos_passageiros: [
+        {
+          id: 'ap-1',
+          passenger_id: 'pax-viewer',
+          estado: 'reservado',
+          quota_mensal_kz: 40000,
+          perfis: { nome_completo: 'Tu Mesmo' },
+        },
+      ],
+    };
+    getAgreementsForPassenger.mockResolvedValue([acordoReservado]);
+    mockPagamentosGate(acordoReservado, 'pax-viewer', false);
+
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    fireEvent.click(within(dialog).getByTestId('lugar-reservado-pagamento-cta'));
+
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalled();
+    });
+  });
+
+  it('deep-link focus=pagamento abre acordo e foca painel de pagamento', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    const acordoReservado = {
+      ...acordoPassageiro,
+      acordos_passageiros: [
+        {
+          id: 'ap-1',
+          passenger_id: 'pax-viewer',
+          estado: 'reservado',
+          quota_mensal_kz: 40000,
+          perfis: { nome_completo: 'Tu Mesmo' },
+        },
+      ],
+    };
+    getAgreementsForPassenger.mockResolvedValue([acordoReservado]);
+    mockPagamentosGate(acordoReservado, 'pax-viewer', false);
+
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+
+    renderPage(['/acordos?openAcordoId=acordo-pax&focus=pagamento']);
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: /Detalhe do acordo/i })).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalled();
+    });
+    expect(screen.getByTestId('acordo-pagamento-section')).toBeInTheDocument();
+  });
+
+  it('motorista vê contagens Confirmados · Reservados e chips por passageiro', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+    const acordoMix = {
+      ...acordoMotorista,
+      acordos_passageiros: [
+        {
+          id: 'ap-1',
+          passenger_id: 'pax-1',
+          estado: 'activo',
+          quota_mensal_kz: 40000,
+          perfis: { nome_completo: 'Ana Costa' },
+        },
+        {
+          id: 'ap-2',
+          passenger_id: 'pax-2',
+          estado: 'reservado',
+          quota_mensal_kz: 40000,
+          perfis: { nome_completo: 'João Pedro' },
+        },
+      ],
+    };
+    getAgreementsForDriver.mockResolvedValue([acordoMix]);
+    mockPagamentosGate(acordoMix, undefined, true);
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByTestId('passageiros-contagem')).toHaveTextContent(
+      'Confirmados 1 · Reservados 1',
+    );
+    expect(within(dialog).getByTestId('passageiro-estado-chip-pax-2')).toHaveTextContent('Reservado');
+    expect(within(dialog).getByTestId('passageiro-estado-chip-pax-2').className).toMatch(/amber/);
+    expect(within(dialog).getByTestId('passageiro-estado-chip-pax-1')).toHaveTextContent('Confirmado');
   });
 
   it('leave offlineQueued: mostra Saída Pendente e desactiva Sair só eu', async () => {
