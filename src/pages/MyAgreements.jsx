@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowRight, Clock, Users, ChevronRight, ShieldCheck, Pencil, Loader2 } from 'lucide-react';
+import { Clock, Users, ChevronRight, ShieldCheck, Pencil, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getAgreementsForDriver,
@@ -28,6 +28,8 @@ import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { resolveAgreementPricing } from '../utils/resolveAgreementPricing';
 import { labelRotaOferta } from '../utils/ofertaLabels';
 import AcordoPagamentoPanel from '../components/AcordoPagamentoPanel';
+import RouteOdRow from '../components/RouteOdRow';
+import TruncatedText from '../components/TruncatedText';
 import AcordoContactosPanel from '../components/AcordoContactosPanel';
 import {
   labelChipAdenda,
@@ -702,11 +704,7 @@ const MyAgreements = () => {
           </div>
           <ChevronRight size={18} className="text-slate-400 shrink-0" aria-hidden="true" />
         </div>
-        <div className="flex items-center gap-2 font-bold">
-          <span>{rota.origem}</span>
-          <ArrowRight size={16} className="text-slate-400 shrink-0" aria-hidden="true" />
-          <span>{rota.destino}</span>
-        </div>
+        <RouteOdRow origem={rota.origem} destino={rota.destino} />
         <div className="flex justify-between items-end gap-2 text-sm text-slate-500">
           <span className="flex items-center gap-1">
             <Users size={14} aria-hidden="true" />
@@ -849,9 +847,11 @@ const MyAgreements = () => {
             <h2 id="acordo-detail-title" className="text-lg font-bold text-balance">
               Detalhe do acordo
             </h2>
-            <p className="font-semibold text-slate-900 dark:text-white text-balance">
-              {rota.origem} → {rota.destino}
-            </p>
+            <RouteOdRow
+              origem={rota.origem}
+              destino={rota.destino}
+              className="text-base"
+            />
           </div>
 
           <section className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 p-4 space-y-4">
@@ -862,11 +862,17 @@ const MyAgreements = () => {
                   {horaPartida ? (
                     <p className="font-bold tabular-nums">{horaPartida}</p>
                   ) : null}
-                  <p className="text-xs text-slate-600 dark:text-slate-300">{rota.origem}</p>
+                  <TruncatedText
+                    text={rota.origem}
+                    className="text-xs font-normal text-slate-600 dark:text-slate-300"
+                  />
                 </div>
                 <div>
                   <p className="text-xs text-slate-500">Chegada</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300">{rota.destino}</p>
+                  <TruncatedText
+                    text={rota.destino}
+                    className="text-xs font-normal text-slate-600 dark:text-slate-300"
+                  />
                 </div>
               </div>
             )}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowRight, Clock, Users, Banknote } from 'lucide-react';
+import { Clock, Users, Banknote } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AddressInput from '../components/AddressInput';
 import TimeInput from '../components/TimeInput';
@@ -11,6 +11,7 @@ import GrupoProcuraPanel from '../components/GrupoProcuraPanel';
 import GrupoDescobertaPanel from '../components/GrupoDescobertaPanel';
 import OfertaMatchCard from '../components/OfertaMatchCard';
 import PropostaReviewCard from '../components/PropostaReviewCard';
+import RouteOdRow from '../components/RouteOdRow';
 import {
   createProcura,
   createProcuraWithGrupo,
@@ -833,16 +834,15 @@ const PassengerDashboard = () => {
           <section className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3">
             <div className="flex items-center justify-between gap-2">
               {chipProcura && (
-                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipProcura.className}`}>
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${chipProcura.className}`}>
                   {chipProcura.label}
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
-              <span>{procura.origin_name}</span>
-              <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
-              <span>{procura.destination_name}</span>
-            </div>
+            <RouteOdRow
+              origem={procura.origin_name}
+              destino={procura.destination_name}
+            />
             <div className="flex gap-3 text-sm text-slate-500 flex-wrap">
               <span className="flex items-center gap-1 tabular-nums">
                 <Clock size={14} aria-hidden="true" />

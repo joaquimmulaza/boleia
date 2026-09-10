@@ -295,7 +295,12 @@ describe('DriverDashboard — marketplace', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
 
     await waitFor(() => {
-      expect(createAgreementFromProposal).toHaveBeenCalledWith('prop-1');
+      expect(createAgreementFromProposal).toHaveBeenCalledWith(
+        'prop-1',
+        expect.objectContaining({
+          memberIds: ['p1', 'p2', 'p3'],
+        }),
+      );
     });
     expect(await screen.findByText(/Proposta aceite\. Acordo criado/i)).toBeInTheDocument();
   });

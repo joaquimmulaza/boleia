@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Users, UserPlus, MapPin } from 'lucide-react';
 import AddressInput from './AddressInput';
+import TruncatedText from './TruncatedText';
 import {
   createGrupo,
   addMembroGrupo,
@@ -333,9 +334,12 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
                     {m.passenger_id === userId ? ' (tu)' : ''}
                   </p>
                   {m.pickup_name ? (
-                    <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                      <MapPin size={12} aria-hidden="true" />
-                      {m.pickup_name}
+                    <p className="text-xs text-slate-500 flex items-start gap-1 mt-0.5 min-w-0">
+                      <MapPin size={12} className="mt-0.5 shrink-0" aria-hidden="true" />
+                      <TruncatedText
+                        text={m.pickup_name}
+                        className="font-normal text-xs text-slate-500"
+                      />
                     </p>
                   ) : null}
                 </div>

@@ -70,6 +70,21 @@
 - `return_time` reservado (não anular); `n_candidato` / grupo / `n_maximo` intocados
 - Spec: `.specs/features/editar-procura/`
 
+## Truncagem OD (2026-09-09)
+- Primitivo `TruncatedText` + CSS `.truncate-fade-y*` (multi-linha) para pickup/autocomplete/acordos
+- Spec: `.specs/quick/text-truncation-od/`
+
+## Seta OD centrada (2026-09-09) — superseded
+- Grelha `minmax(0,1fr)|auto|minmax(0,1fr)` — substituída por flex compacto (ver abaixo)
+- Spec: `.specs/quick/route-od-arrow-center/`
+
+## RouteOd flex compacto + fade condicional (2026-09-09)
+- `RouteOdRow`: flex row `w-fit max-w-full`; origem `text-end` / destino `text-start`; 1 linha; `max-w-[44%]`; seta `shrink-0 self-center`
+- Fade horizontal `.truncate-fade-x` só com `.is-truncated` (`scrollWidth > clientWidth`, ResizeObserver + rAF)
+- Cards: meta Clock/Users; `border-t` antes do preço; badge `shrink-0`
+- Stitch: screen `19eb9112bf1947bfbaca6d053097d5d2` (ofertas-compativeis-od-flex)
+- Spec: `.specs/quick/route-od-flex-compact/`
+
 ## Next Steps
 1. Merge **PR #100** seat-before-custody (NEED_HUMAN)
 2. Merge PR falta-ida-regresso-policy (este tick)

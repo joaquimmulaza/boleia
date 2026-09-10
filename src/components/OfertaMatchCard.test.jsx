@@ -143,6 +143,12 @@ describe('OfertaMatchCard — variante browse (feed sem procura)', () => {
     expect(screen.getByTestId('oferta-match-browse')).toBeInTheDocument();
     expect(screen.getByText('Publicada')).toBeInTheDocument();
     expect(screen.getByText('Oferta flexível')).toBeInTheDocument();
+    const odRow = screen.getByText('Oferta flexível').closest('[class*="w-fit"]');
+    expect(odRow).toBeTruthy();
+    expect(odRow.className).toMatch(/w-fit/);
+    expect(odRow.parentElement.className).toMatch(/min-w-0/);
+    expect(odRow.parentElement.className).toMatch(/flex-1/);
+    expect(screen.getByText('Publicada').className).toMatch(/shrink-0/);
     expect(screen.queryByRole('button', { name: /Propor acordo/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Entrar na lista de espera/i })).not.toBeInTheDocument();
   });

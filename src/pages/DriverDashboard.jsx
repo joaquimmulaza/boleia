@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MapPin, AlertCircle, ArrowRight, Clock, Users, ChevronRight } from 'lucide-react';
+import { MapPin, AlertCircle, Clock, Users, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { listOfertasByDriver, isOfertaFlexivel, labelOfertaRota } from '../services/OfertaService';
@@ -19,6 +19,7 @@ import PageShell from '../components/PageShell';
 import EmptyState from '../components/EmptyState';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PropostaReviewCard from '../components/PropostaReviewCard';
+import RouteOdRow from '../components/RouteOdRow';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { filterPropostasParaInbox, filterPropostasEnviadas, filterPropostasTerminadasRecebidas, filterPropostasTerminadasEnviadas } from '../utils/propostaInbox';
@@ -55,17 +56,16 @@ function OfertaRotaTitulo({ oferta }) {
   const flexLabel = labelOfertaRota(oferta);
   if (flexLabel) {
     return (
-      <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold">
-        <span>{flexLabel}</span>
+      <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold min-w-0">
+        <span className="min-w-0">{flexLabel}</span>
       </div>
     );
   }
   return (
-    <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold">
-      <span>{oferta.origin_name}</span>
-      <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
-      <span>{oferta.destination_name}</span>
-    </div>
+    <RouteOdRow
+      origem={oferta.origin_name}
+      destino={oferta.destination_name}
+    />
   );
 }
 
@@ -337,10 +337,10 @@ const DriverDashboard = () => {
             >
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${chip.className}`}>
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${chip.className}`}>
                     {chip.label}
                   </span>
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full shrink-0 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                     {tipoRota}
                   </span>
                 </div>
@@ -495,11 +495,10 @@ const DriverDashboard = () => {
                   key={procura.id}
                   className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
                 >
-                  <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
-                    <span>{procura.origin_name || 'Origem'}</span>
-                    <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
-                    <span>{procura.destination_name || 'Destino'}</span>
-                  </div>
+                  <RouteOdRow
+                    origem={procura.origin_name || 'Origem'}
+                    destino={procura.destination_name || 'Destino'}
+                  />
                   <div className="flex gap-3 text-sm text-slate-500">
                     <span className="flex items-center gap-1">
                       <Clock size={14} aria-hidden="true" />
@@ -510,7 +509,7 @@ const DriverDashboard = () => {
                       {labelProcuraN(procura.n_candidato ?? 1)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center justify-between gap-3 pt-1 border-t border-slate-50 dark:border-slate-800">
                     <div>
                       <strong className="text-primary tabular-nums">
                         {formatKwanza(ofertaSeleccionada?.valor_mensal_ask_kz)} Kz
@@ -523,7 +522,7 @@ const DriverDashboard = () => {
                       type="button"
                       disabled={busyId === procura.id}
                       onClick={() => handleProporB(procura)}
-                      className="bg-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl disabled:opacity-60"
+                      className="bg-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl disabled:opacity-60 shrink-0"
                     >
                       Propor acordo
                     </button>
@@ -545,11 +544,10 @@ const DriverDashboard = () => {
                       key={procura.id}
                       className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
                     >
-                      <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
-                        <span>{procura.origin_name || 'Origem'}</span>
-                        <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
-                        <span>{procura.destination_name || 'Destino'}</span>
-                      </div>
+                      <RouteOdRow
+                        origem={procura.origin_name || 'Origem'}
+                        destino={procura.destination_name || 'Destino'}
+                      />
                       <div className="flex gap-3 text-sm text-slate-500">
                         <span className="flex items-center gap-1">
                           <Clock size={14} aria-hidden="true" />

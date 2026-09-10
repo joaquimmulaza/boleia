@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Users, ArrowRight, Clock } from 'lucide-react';
+import { Users, Clock } from 'lucide-react';
 import { listGruposAbertos, pedirEntradaGrupo } from '../services/GrupoService';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
+import RouteOdRow from './RouteOdRow';
 
 /**
  * Descoberta de grupos públicos com vagas + pedir entrada.
@@ -102,11 +103,11 @@ const GrupoDescobertaPanel = ({ userId, excludeGrupoId = null, onPedidoEnviado }
               className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 shadow-sm space-y-3"
             >
               {temOrigem && temDestino ? (
-                <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
-                  <span>{p.origin_name}</span>
-                  <ArrowRight size={14} className="text-slate-400" aria-hidden="true" />
-                  <span>{p.destination_name}</span>
-                </div>
+                <RouteOdRow
+                  origem={p.origin_name}
+                  destino={p.destination_name}
+                  arrowSize={14}
+                />
               ) : (
                 <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
                   Rota não indicada na procura

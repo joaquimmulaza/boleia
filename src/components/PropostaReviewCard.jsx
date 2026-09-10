@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MapPin } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import PreferentialPointsMap from './PreferentialPointsMap';
+import TruncatedText from './TruncatedText';
 import { formatKwanza } from '../utils/formatKwanza';
 import { buildPreferentialMapPoints } from '../utils/propostaReview';
 import { chipEstadoProposta } from '../utils/propostaEstado';
@@ -220,9 +221,12 @@ function PropostaReviewCard({
                         {m.nome}
                       </span>
                       {m.pickup_name ? (
-                        <span className="flex items-start gap-1 text-xs text-slate-500 text-pretty">
+                        <span className="flex items-start gap-1 text-xs text-slate-500">
                           <MapPin size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
-                          <span>{m.pickup_name}</span>
+                          <TruncatedText
+                            text={m.pickup_name}
+                            className="font-normal text-xs text-slate-500"
+                          />
                         </span>
                       ) : null}
                     </span>
@@ -247,9 +251,12 @@ function PropostaReviewCard({
                   {m.nome}
                 </p>
                 {m.pickup_name ? (
-                  <p className="flex items-start gap-1 text-xs text-slate-500 text-pretty">
+                  <p className="flex items-start gap-1 text-xs text-slate-500">
                     <MapPin size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
-                    <span>{m.pickup_name}</span>
+                    <TruncatedText
+                      text={m.pickup_name}
+                      className="font-normal text-xs text-slate-500"
+                    />
                   </p>
                 ) : null}
                 {pricing.temResto && m.quota_mensal_kz != null ? (

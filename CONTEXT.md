@@ -4,6 +4,10 @@ Fonte de verdade arquitectónica e de estado: **`AGENTS.md`** (relatório na sec
 
 **2026-09-08 — Editar/cancelar procura:** RPC `update_procura` / `cancel_procura`; spec `.specs/features/editar-procura/`.
 
+**2026-09-09 — Truncagem OD:** `TruncatedText` (fade-y multi-linha) para pickup/autocomplete. Spec: `.specs/quick/text-truncation-od/`.
+
+**2026-09-09 — RouteOd flex + fade condicional:** `RouteOdRow` flex compacto 1 linha; fade-x só com `.is-truncated`; badge `shrink-0`. Spec: `.specs/quick/route-od-flex-compact/`. Stitch: `ofertas-compativeis-od-flex`.
+
 ## UX / UI (resumo)
 
 - **Penpot** = fonte de verdade do design. Antes de criar/alterar UI, consultar componentes, estilos e tokens existentes e privilegiar reutilização.

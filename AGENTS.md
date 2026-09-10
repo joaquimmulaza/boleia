@@ -94,7 +94,7 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
 **REGRA ABSOLUTA:** Esta secção do documento (`CONTEXT.md` e `AGENTS.md`) tem de ser **obrigatoriamente atualizada** sempre que uma nova funcionalidade for implementada, refatorada ou corrigida. O objetivo central é garantir que qualquer Agente de IA que leia este ficheiro saiba com exatidão o ponto de situação do projeto, evitando redundâncias, reinvenção da roda ou duplicação de lógicas já existentes (DRY - Don't Repeat Yourself). Antes de iniciar qualquer tarefa, o agente deve assumir este relatório como a única fonte de verdade arquitetónica.
 
 🏛️ Relatório de Estado da Arquitetura: Boleia Certa
-**Última Atualização:** 8 de Setembro de 2026 
+**Última Atualização:** 9 de Setembro de 2026 
 **Fase Atual:** Marketplace Oferta/Procura (Phase 6–7) + **Landing refresh** + **Agent loop Cursor** + **Graphify/Graphlore** + **Stitch + UI Skills** + **PWA Offline Wave 3–4** + **PACOTE ENG#8 cancelamento**. Spec ENG#8: `.specs/quick/pacote-eng-8-cancelamento/`.
 
 **O que já está implementado e validado:**
@@ -149,5 +149,8 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
 - «Sair só eu» mantém `leave_passenger` (saída individual 1:N); «Encerrar acordo» usa `terminate_agreement` A/B/C. Lazy `apply_due_agreement_terminations` no load. Spec: `.specs/features/s22-renegotiate-terminate/quick.md`.
 
  * **Editar/cancelar procura (2026-09-08):** CTA no hub passageiro; RPC `update_procura` / `cancel_procura` (MCP `20260908220000_…`). Snapshots de propostas intactos; incompatível de matching → `invalidada` + notif `proposal_invalidated`; arquivo → `cancelada` + `proposal_cancelled`. Teto baixo mantém proposta + chip «Acima do teto». Confirmação só com impacto. `return_time` e `n_candidato`/grupo não são mutados pela edição. Spec: `.specs/features/editar-procura/`.
+ * **Truncagem OD (2026-09-09):** `TruncatedText` (multi-linha fade-y) para pickup/autocomplete; `RouteOdRow` passou a flex compacto 1 linha (ver abaixo). Spec truncagem: `.specs/quick/text-truncation-od/`.
+ * **RouteOd flex + fade condicional (2026-09-09):** `RouteOdRow` — flex `w-fit`, origem/destino 1 linha `max-w-[44%]` + `title`, seta `shrink-0`, fade-x só com `.is-truncated` (ResizeObserver); badge `shrink-0` fora do grupo. Spec: `.specs/quick/route-od-flex-compact/`. Stitch: `ofertas-compativeis-od-flex`.
+ * **Seta OD centrada (superseded):** grelha 1fr documentada em `.specs/quick/route-od-arrow-center/` — substituída pelo flex compacto acima.
 
 **Próximo:** Merge #100 seat-before-custody; TTL reservas; polish admin Critiquito. **Fora do MVP:** zonas/polígonos/raio residencial; adenda bilateral completa (hoje motorista inicia). Commits só se o utilizador pedir.
