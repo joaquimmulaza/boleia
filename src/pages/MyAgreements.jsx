@@ -22,6 +22,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 import ConfirmationModal from '../components/ConfirmationModal';
+import ModalPortal from '../components/ModalPortal';
 import { Button } from '../components/ui/button';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
@@ -881,13 +882,14 @@ const MyAgreements = () => {
     }
 
     return (
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="acordo-detail-title"
-          className="w-full max-w-md max-h-[90dvh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl p-6 space-y-4 shadow-xl"
-        >
+      <ModalPortal>
+        <div className="fixed inset-0 z-modal flex items-end sm:items-center justify-center bg-black/40 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="acordo-detail-title"
+            className="w-full max-w-md max-h-[90dvh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl p-6 space-y-4 shadow-xl pb-safe"
+          >
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
@@ -1532,7 +1534,8 @@ const MyAgreements = () => {
             </Button>
           </div>
         </div>
-      </div>
+        </div>
+      </ModalPortal>
     );
   };
 
@@ -1576,14 +1579,15 @@ const MyAgreements = () => {
       {renderDetalhe()}
 
       {terminatePickerOpen && (
-        <div className="fixed inset-0 z-modal flex items-end sm:items-center justify-center bg-black/40 p-4">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="terminate-picker-title"
-            data-testid="terminate-modality-picker"
-            className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl p-6 space-y-4 shadow-xl"
-          >
+        <ModalPortal>
+          <div className="fixed inset-0 z-modal flex items-end sm:items-center justify-center bg-black/40 p-4">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="terminate-picker-title"
+              data-testid="terminate-modality-picker"
+              className="w-full max-w-md max-h-[90dvh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl p-6 space-y-4 shadow-xl pb-safe"
+            >
             <div className="space-y-1">
               <h3 id="terminate-picker-title" className="text-lg font-bold">
                 Como queres encerrar o acordo?
@@ -1654,19 +1658,21 @@ const MyAgreements = () => {
             >
               Voltar
             </Button>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {terminateJustaPickerOpen && (
-        <div className="fixed inset-0 z-modal flex items-end sm:items-center justify-center bg-black/40 p-4">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="justa-causa-title"
-            data-testid="terminate-justa-picker"
-            className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl p-6 space-y-4 shadow-xl"
-          >
+        <ModalPortal>
+          <div className="fixed inset-0 z-modal flex items-end sm:items-center justify-center bg-black/40 p-4">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="justa-causa-title"
+              data-testid="terminate-justa-picker"
+              className="w-full max-w-md max-h-[90dvh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl p-6 space-y-4 shadow-xl pb-safe"
+            >
             <h3 id="justa-causa-title" className="text-lg font-bold">
               Motivo da justa causa
             </h3>
@@ -1716,19 +1722,21 @@ const MyAgreements = () => {
                 Voltar
               </Button>
             </div>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {terminateVigenciaPickerOpen && (
-        <div className="fixed inset-0 z-modal flex items-end sm:items-center justify-center bg-black/40 p-4">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="terminate-vigencia-title"
-            data-testid="terminate-vigencia-picker"
-            className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl p-6 space-y-4 shadow-xl"
-          >
+        <ModalPortal>
+          <div className="fixed inset-0 z-modal flex items-end sm:items-center justify-center bg-black/40 p-4">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="terminate-vigencia-title"
+              data-testid="terminate-vigencia-picker"
+              className="w-full max-w-md max-h-[90dvh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl p-6 space-y-4 shadow-xl pb-safe"
+            >
             <div className="space-y-1">
               <h3 id="terminate-vigencia-title" className="text-lg font-bold text-balance">
                 Quando termina?
@@ -1784,8 +1792,9 @@ const MyAgreements = () => {
             >
               Voltar
             </Button>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       <ConfirmationModal

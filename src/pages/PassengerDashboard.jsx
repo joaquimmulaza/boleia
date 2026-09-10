@@ -5,6 +5,7 @@ import AddressInput from '../components/AddressInput';
 import TimeInput from '../components/TimeInput';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
+import OverlayShell from '../components/OverlayShell';
 import FeedbackAlert from '../components/FeedbackAlert';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import GrupoProcuraPanel from '../components/GrupoProcuraPanel';
@@ -1201,17 +1202,14 @@ const PassengerDashboard = () => {
         }}
       />
       {proporSheet ? (
-        <div
-          className="fixed inset-0 z-modal flex flex-col justify-end bg-slate-900/60 dark:bg-black/80"
-          data-testid="propor-browse-sheet"
+        <OverlayShell
+          variant="bottom"
+          overlayClassName="bg-slate-900/60 dark:bg-black/80"
+          panelClassName="bg-white dark:bg-slate-900 shadow-2xl px-5 pt-4 space-y-4"
+          testId="propor-browse-sheet"
+          onDismiss={() => setProporSheet(null)}
         >
-          <button
-            type="button"
-            className="flex-1 w-full cursor-default"
-            aria-label="Fechar"
-            onClick={() => setProporSheet(null)}
-          />
-          <div className="bg-white dark:bg-slate-900 rounded-t-xl shadow-2xl max-w-md mx-auto w-full px-5 pt-4 pb-8 space-y-4">
+          <div className="space-y-4">
             <div className="flex h-1.5 w-12 rounded-full bg-slate-200 dark:bg-slate-700 mx-auto" aria-hidden="true" />
             <h2 className="text-lg font-bold text-slate-900 dark:text-white text-balance">
               Dados em falta para propor
@@ -1299,7 +1297,7 @@ const PassengerDashboard = () => {
               </div>
             </form>
           </div>
-        </div>
+        </OverlayShell>
       ) : null}
 
       <ConfirmationModal

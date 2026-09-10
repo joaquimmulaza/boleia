@@ -24,6 +24,9 @@
   --input: #e2e8f0;
   --ring: #10b748;
   --radius: 0.625rem;
+  --bottom-nav-height: 4rem;
+  --bottom-nav-height-sm: 5rem;
+  --shell-bottom-inset: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
 }
 
 .dark {
@@ -125,6 +128,20 @@ body {
 .z-modal { z-index: var(--z-modal); }
 .z-drawer { z-index: var(--z-drawer); }
 .z-overlay { z-index: var(--z-overlay); }
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.pb-shell {
+  padding-bottom: var(--shell-bottom-inset);
+}
+
+@media (min-width: 640px) {
+  :root {
+    --shell-bottom-inset: calc(var(--bottom-nav-height-sm) + env(safe-area-inset-bottom, 0px));
+  }
+}
 
 /* Hora 24h — ocultar AM/PM em WebKit/Blink */
 .time-input-24h::-webkit-datetime-edit-ampm-field {

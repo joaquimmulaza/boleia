@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Bell, MapPin, Navigation } from 'lucide-react'
+import ModalPortal from './ModalPortal'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { usePushNotifications } from '../hooks/usePushNotifications'
@@ -154,19 +155,20 @@ const OnboardingPermissions = () => {
   if (!visible) return null
 
   return (
-    // Backdrop — dark translucent overlay (M3 scrim)
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Ative os Recursos Essenciais"
-      className="fixed inset-0 z-50 flex items-end justify-center"
-      style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
-      onClick={handleDismiss}
-    >
-      {/* Bottom Sheet — M3 Level 3 elevation, 24px top radius */}
+    <ModalPortal>
+      {/* Backdrop — dark translucent overlay (M3 scrim) */}
       <div
-        role="document"
-        className="w-full max-w-sm bg-white px-6 pb-8 shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Ative os Recursos Essenciais"
+        className="fixed inset-0 z-modal flex items-end justify-center"
+        style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+        onClick={handleDismiss}
+      >
+        {/* Bottom Sheet — M3 Level 3 elevation, 24px top radius */}
+        <div
+          role="document"
+          className="w-full max-w-sm max-h-[90dvh] overflow-y-auto bg-white px-6 pb-8 pb-safe shadow-2xl"
         style={{
           borderTopLeftRadius: '24px',
           borderTopRightRadius: '24px',
@@ -354,8 +356,9 @@ const OnboardingPermissions = () => {
           Podes alterar as permissões a qualquer momento nas definições do
           dispositivo.
         </p>
+        </div>
       </div>
-    </div>
+    </ModalPortal>
   )
 }
 
