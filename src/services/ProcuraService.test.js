@@ -3,6 +3,7 @@ import {
   createProcura,
   createProcuraWithGrupo,
   listProcurasByOwner,
+  listProcurasDisponiveis,
   getProcura,
   updateProcura,
   cancelProcura,
@@ -115,6 +116,25 @@ describe('ProcuraService', () => {
     });
     await listProcurasByOwner('pax-1');
     expect(supabase.from).toHaveBeenCalledWith('procuras');
+  });
+
+  it('listProcurasDisponiveis exige autenticação e filtra activa|em_negociacao', async () => {
+    supabase.auth.getUser.mockResolvedValue({ data: { user: null } });
+    await expect(listProcurasDisponiveis()).rejects.toThrow(/Não autenticado/i);
+
+    supabase.auth.getUser.mockResolvedValue({ data: { user: { id: 'driver-1' } } });
+    const mockRange = vi.fn().mockResolvedValue({ data: [{ id: 'pr-1', estado: 'activa' }], error: null });
+    const mockOrder = vi.fn().mockReturnValue({ range: mockRange });
+    const mockIn = vi.fn().mockReturnValue({ order: mockOrder });
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({ in: mockIn }),
+    });
+
+    const result = await listProcurasDisponiveis({ limit: 20, offset: 0 });
+    expect(supabase.from).toHaveBeenCalledWith('procuras');
+    expect(mockIn).toHaveBeenCalledWith('estado', ['activa', 'em_negociacao']);
+    expect(mockRange).toHaveBeenCalledWith(0, 19);
+    expect(result).toHaveLength(1);
   });
 
   it('getProcura devolve por id', async () => {

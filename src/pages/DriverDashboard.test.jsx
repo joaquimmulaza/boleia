@@ -12,7 +12,7 @@ import {
 import { createAgreementFromProposal } from '../services/AgreementService';
 import { findCompatibleProcuras } from '../services/MatchingService';
 import { getGrupoByProcura } from '../services/GrupoService';
-import { getProcura } from '../services/ProcuraService';
+import { getProcura, listProcurasDisponiveis } from '../services/ProcuraService';
 import { listOfertasByDriver, cancelOferta, updateOferta } from '../services/OfertaService';
 import { getAgreementsForDriver } from '../services/AgreementService';
 import { supabase } from '../lib/supabase';
@@ -77,9 +77,14 @@ vi.mock('../services/GrupoService', () => ({
   getGrupoByProcura: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock('../services/ProcuraService', () => ({
-  getProcura: vi.fn(),
-}));
+vi.mock('../services/ProcuraService', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    getProcura: vi.fn(),
+    listProcurasDisponiveis: vi.fn().mockResolvedValue([]),
+  };
+});
 
 vi.mock('../services/AgreementService', () => ({
   createAgreementFromProposal: vi.fn(),
@@ -173,6 +178,7 @@ describe('DriverDashboard — marketplace', () => {
       dias_semana: [1, 2, 3, 4, 5],
       n_candidato: 1,
     });
+    listProcurasDisponiveis.mockResolvedValue([]);
   });
 
   it('esconde Publicar oferta quando não há veículo registado', async () => {
@@ -510,16 +516,16 @@ describe('DriverDashboard — marketplace', () => {
   });
 
   it('com oferta activa: tab Procuras e grupos mostra feed e CTA Enviar proposta', async () => {
+    const procuraTab = {
+      id: 'pr-tab',
+      origin_name: 'Kilamba',
+      destination_name: 'Mutamba',
+      preferred_time: '07:10:00',
+      n_candidato: 1,
+    };
+    listProcurasDisponiveis.mockResolvedValue([procuraTab]);
     findCompatibleProcuras.mockResolvedValue({
-      direct: [
-        {
-          id: 'pr-tab',
-          origin_name: 'Kilamba',
-          destination_name: 'Mutamba',
-          preferred_time: '07:10:00',
-          n_candidato: 1,
-        },
-      ],
+      direct: [procuraTab],
       waitlist: [],
       incompatible: [],
     });
@@ -543,7 +549,8 @@ describe('DriverDashboard — marketplace', () => {
     });
   });
 
-  it('com oferta activa sem matches: empty state da secção Procuras e grupos', async () => {
+  it('com oferta activa sem procuras no marketplace: empty state todas', async () => {
+    listProcurasDisponiveis.mockResolvedValue([]);
     findCompatibleProcuras.mockResolvedValue({ direct: [], waitlist: [], incompatible: [] });
 
     render(
@@ -555,21 +562,53 @@ describe('DriverDashboard — marketplace', () => {
     await screen.findByText('Talatona');
     fireEvent.click(screen.getByRole('tab', { name: /Procuras e grupos/i }));
 
-    expect(await screen.findByTestId('driver-procuras-empty-match')).toBeInTheDocument();
+    expect(await screen.findByTestId('driver-procuras-empty-todas')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Enviar proposta/i })).not.toBeInTheDocument();
+  });
+
+  it('com toggle só compatíveis e zero matches: empty state filtrado', async () => {
+    listProcurasDisponiveis.mockResolvedValue([
+      {
+        id: 'pr-outra',
+        origin_name: 'Viana',
+        destination_name: 'Miramar',
+        preferred_time: '18:00:00',
+        n_candidato: 1,
+      },
+    ]);
+    findCompatibleProcuras.mockResolvedValue({
+      direct: [],
+      waitlist: [],
+      incompatible: [{ id: 'pr-outra' }],
+    });
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Talatona');
+    fireEvent.click(screen.getByRole('tab', { name: /Procuras e grupos/i }));
+    expect(await screen.findByText('Viana')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('driver-procuras-só-compatíveis'));
+
+    expect(await screen.findByTestId('driver-procuras-empty-filtrado')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Enviar proposta/i })).not.toBeInTheDocument();
   });
 
   it('lista procuras compatíveis e permite propor acordo (sentido B)', async () => {
+    const procuraGrupo = {
+      id: 'pr-9',
+      origin_name: 'Kilamba',
+      destination_name: 'Mutamba',
+      preferred_time: '07:10:00',
+      n_candidato: 2,
+    };
+    listProcurasDisponiveis.mockResolvedValue([procuraGrupo]);
     findCompatibleProcuras.mockResolvedValue({
-      direct: [
-        {
-          id: 'pr-9',
-          origin_name: 'Kilamba',
-          destination_name: 'Mutamba',
-          preferred_time: '07:10:00',
-          n_candidato: 2,
-        },
-      ],
+      direct: [procuraGrupo],
       waitlist: [],
       incompatible: [],
     });
@@ -606,25 +645,24 @@ describe('DriverDashboard — marketplace', () => {
   });
 
   it('separa direct e waitlist: só direct tem «Enviar proposta»', async () => {
+    const procuraDirect = {
+      id: 'pr-direct',
+      origin_name: 'Benfica',
+      destination_name: 'Baixa',
+      preferred_time: '07:00:00',
+      n_candidato: 1,
+    };
+    const procuraWait = {
+      id: 'pr-wait',
+      origin_name: 'Viana',
+      destination_name: 'Miramar',
+      preferred_time: '07:05:00',
+      n_candidato: 4,
+    };
+    listProcurasDisponiveis.mockResolvedValue([procuraDirect, procuraWait]);
     findCompatibleProcuras.mockResolvedValue({
-      direct: [
-        {
-          id: 'pr-direct',
-          origin_name: 'Benfica',
-          destination_name: 'Baixa',
-          preferred_time: '07:00:00',
-          n_candidato: 1,
-        },
-      ],
-      waitlist: [
-        {
-          id: 'pr-wait',
-          origin_name: 'Viana',
-          destination_name: 'Miramar',
-          preferred_time: '07:05:00',
-          n_candidato: 4,
-        },
-      ],
+      direct: [procuraDirect],
+      waitlist: [procuraWait],
       incompatible: [],
     });
 
@@ -647,17 +685,17 @@ describe('DriverDashboard — marketplace', () => {
   });
 
   it('waitlist sem direct: não mostra CTA «Enviar proposta»', async () => {
+    const procuraWait = {
+      id: 'pr-wait-only',
+      origin_name: 'Cacuaco',
+      destination_name: 'Mutamba',
+      preferred_time: '07:20:00',
+      n_candidato: 5,
+    };
+    listProcurasDisponiveis.mockResolvedValue([procuraWait]);
     findCompatibleProcuras.mockResolvedValue({
       direct: [],
-      waitlist: [
-        {
-          id: 'pr-wait-only',
-          origin_name: 'Cacuaco',
-          destination_name: 'Mutamba',
-          preferred_time: '07:20:00',
-          n_candidato: 5,
-        },
-      ],
+      waitlist: [procuraWait],
       incompatible: [],
     });
 
@@ -706,6 +744,13 @@ describe('DriverDashboard — marketplace', () => {
   });
 
   it('oferta flexível lista procuras compatíveis e envia proposta B', async () => {
+    const procuraFlex = {
+      id: 'pr-flex',
+      origin_name: 'Viana',
+      destination_name: 'Baixa',
+      preferred_time: '07:25:00',
+      n_candidato: 1,
+    };
     listOfertasByDriver.mockResolvedValue([
       {
         id: 'of-flex',
@@ -720,16 +765,9 @@ describe('DriverDashboard — marketplace', () => {
         dias_semana: [1, 2, 3, 4, 5],
       },
     ]);
+    listProcurasDisponiveis.mockResolvedValue([procuraFlex]);
     findCompatibleProcuras.mockResolvedValue({
-      direct: [
-        {
-          id: 'pr-flex',
-          origin_name: 'Viana',
-          destination_name: 'Baixa',
-          preferred_time: '07:25:00',
-          n_candidato: 1,
-        },
-      ],
+      direct: [procuraFlex],
       waitlist: [],
       incompatible: [],
     });

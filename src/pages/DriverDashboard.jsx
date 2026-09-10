@@ -19,7 +19,7 @@ import {
 import { createAgreementFromProposal } from '../services/AgreementService';
 import { findCompatibleProcuras } from '../services/MatchingService';
 import { getGrupoByProcura } from '../services/GrupoService';
-import { getProcura } from '../services/ProcuraService';
+import { getProcura, listProcurasDisponiveis } from '../services/ProcuraService';
 import { supabase } from '../lib/supabase';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
@@ -30,6 +30,7 @@ import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { filterPropostasParaInbox, filterPropostasEnviadas, filterPropostasTerminadasRecebidas, filterPropostasTerminadasEnviadas } from '../utils/propostaInbox';
 import { formatIdaRegresso, formatTime24h } from '../utils/formatTime';
+import { labelOfertaPicker } from '../utils/ofertaLabels';
 import { canEditOferta, canDespublicarOferta } from '../utils/canEditOferta';
 import ConfirmationModal from '../components/ConfirmationModal';
 import OfertaEditPanel from '../components/OfertaEditPanel';
@@ -95,7 +96,9 @@ const DriverDashboard = () => {
   const [selectedOfertaId, setSelectedOfertaId] = useState(null);
   const [hubTab, setHubTab] = useState('ofertas'); // 'ofertas' | 'procuras'
   const [detailPanel, setDetailPanel] = useState(null); // 'propostas' | null
-  const [procurasMatch, setProcurasMatch] = useState({ direct: [], waitlist: [] });
+  const [todasProcuras, setTodasProcuras] = useState([]);
+  const [sóCompatíveis, setSóCompatíveis] = useState(false);
+  const [procurasMatch, setProcurasMatch] = useState({ direct: [], waitlist: [], incompatible: [] });
   const [loadingPropostas, setLoadingPropostas] = useState(false);
   const [loadingProcuras, setLoadingProcuras] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', text: '' });
@@ -157,17 +160,23 @@ const DriverDashboard = () => {
     ofertas.find((o) => o.id === selectedOfertaId) ||
     null;
 
-  const carregarProcurasMatch = useCallback(async (oferta) => {
+  const carregarProcurasHub = useCallback(async (oferta) => {
     if (!oferta) {
-      setProcurasMatch({ direct: [], waitlist: [] });
+      setTodasProcuras([]);
+      setProcurasMatch({ direct: [], waitlist: [], incompatible: [] });
       return;
     }
     setLoadingProcuras(true);
     try {
-      const result = await findCompatibleProcuras(oferta);
+      const [todas, result] = await Promise.all([
+        listProcurasDisponiveis(),
+        findCompatibleProcuras(oferta),
+      ]);
+      setTodasProcuras(todas);
       setProcurasMatch({
         direct: result.direct || [],
         waitlist: result.waitlist || [],
+        incompatible: result.incompatible || [],
       });
     } catch (err) {
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
@@ -179,7 +188,8 @@ const DriverDashboard = () => {
   useEffect(() => {
     if (hubTab !== 'procuras' || isLoading || hasVehicle !== true) return;
     if (ofertasActivas.length === 0) {
-      setProcurasMatch({ direct: [], waitlist: [] });
+      setTodasProcuras([]);
+      setProcurasMatch({ direct: [], waitlist: [], incompatible: [] });
       return;
     }
     const alvo =
@@ -188,8 +198,24 @@ const DriverDashboard = () => {
       setSelectedOfertaId(alvo.id);
       return;
     }
-    void carregarProcurasMatch(alvo);
-  }, [hubTab, isLoading, hasVehicle, selectedOfertaId, ofertasActivas, carregarProcurasMatch]);
+    void carregarProcurasHub(alvo);
+  }, [hubTab, isLoading, hasVehicle, selectedOfertaId, ofertasActivas, carregarProcurasHub]);
+
+  const matchDirectIds = useMemo(
+    () => new Set(procurasMatch.direct.map((p) => p.id)),
+    [procurasMatch.direct],
+  );
+  const matchWaitlistIds = useMemo(
+    () => new Set(procurasMatch.waitlist.map((p) => p.id)),
+    [procurasMatch.waitlist],
+  );
+
+  const procurasVisiveis = useMemo(() => {
+    if (sóCompatíveis) {
+      return [...procurasMatch.direct, ...procurasMatch.waitlist];
+    }
+    return todasProcuras;
+  }, [sóCompatíveis, todasProcuras, procurasMatch.direct, procurasMatch.waitlist]);
 
   const handleVerPropostas = async (ofertaId, opts = {}) => {
     setSelectedOfertaId(ofertaId);
@@ -199,7 +225,8 @@ const DriverDashboard = () => {
     setEnviadas([]);
     setTerminadasRecebidas([]);
     setTerminadasEnviadas([]);
-    setProcurasMatch({ direct: [], waitlist: [] });
+    setProcurasMatch({ direct: [], waitlist: [], incompatible: [] });
+    setTodasProcuras([]);
     setLoadingPropostas(true);
     if (!opts.preserveFeedback) {
       setFeedback({ type: '', text: '' });
@@ -227,10 +254,11 @@ const DriverDashboard = () => {
     }
   };
 
-  const handleVerProcuras = (oferta) => {
+  const handleVerProcuras = (oferta, { sóCompatíveis: filtrarCompatíveis = true } = {}) => {
     setDetailPanel(null);
     setHubTab('procuras');
     setSelectedOfertaId(oferta.id);
+    setSóCompatíveis(filtrarCompatíveis);
     setReviews([]);
     setEnviadas([]);
     setTerminadasRecebidas([]);
@@ -519,10 +547,10 @@ const DriverDashboard = () => {
                 <div className="flex flex-wrap gap-3">
                   <button
                     type="button"
-                    onClick={() => handleVerProcuras(oferta)}
+                    onClick={() => handleVerProcuras(oferta, { sóCompatíveis: true })}
                     className="text-sm font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1"
                   >
-                    Procuras e grupos <ChevronRight size={16} aria-hidden="true" />
+                    Procuras compatíveis <ChevronRight size={16} aria-hidden="true" />
                   </button>
                   <button
                     type="button"
@@ -587,7 +615,9 @@ const DriverDashboard = () => {
           <div className="space-y-1">
             <h2 className="text-lg font-bold text-balance">Procuras e grupos</h2>
             <p className="text-sm text-slate-500 text-pretty">
-              Procuras e grupos compatíveis com a tua oferta. Envia proposta in-app — o passageiro aceita ou recusa.
+              {sóCompatíveis
+                ? 'Procuras e grupos compatíveis com a tua oferta. Envia proposta in-app — o passageiro aceita ou recusa.'
+                : 'Todas as procuras e grupos visíveis no marketplace. Envia proposta in-app quando houver compatibilidade com a tua oferta.'}
             </p>
           </div>
 
@@ -597,7 +627,7 @@ const DriverDashboard = () => {
               data-testid="driver-procuras-empty-sem-oferta"
             >
               <p className="text-sm text-slate-600 dark:text-slate-300 text-pretty">
-                Precisas de uma oferta activa publicada para ver procuras compatíveis e enviar propostas.
+                Precisas de uma oferta activa publicada para ver procuras e enviar propostas.
                 O marketplace não é só «Publicar» — aqui encontras quem procura boleia no teu horário.
               </p>
               <button
@@ -614,9 +644,7 @@ const DriverDashboard = () => {
                 <div className="flex flex-wrap gap-2" data-testid="driver-procuras-oferta-picker">
                   {ofertasActivas.map((oferta) => {
                     const selected = oferta.id === selectedOfertaId;
-                    const rotulo = isOfertaFlexivel(oferta)
-                      ? 'Oferta flexível'
-                      : `${oferta.origin_name || 'Origem'} → ${oferta.destination_name || 'Destino'}`;
+                    const rotulo = labelOfertaPicker(oferta, formatTime24h);
                     return (
                       <button
                         key={oferta.id}
@@ -636,11 +664,27 @@ const DriverDashboard = () => {
                 </div>
               )}
 
-              {ofertaSeleccionada && isOfertaFlexivel(ofertaSeleccionada) ? (
+              {ofertaSeleccionada &&
+              isOfertaFlexivel(ofertaSeleccionada) &&
+              ofertasActivas.length === 1 ? (
                 <p className="text-sm text-slate-500 text-pretty">
                   Oferta flexível: matching por horário, dias e lugares — sem exigir origem/destino na tua oferta.
                 </p>
               ) : null}
+
+              <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer w-fit">
+                <input
+                  type="checkbox"
+                  checked={sóCompatíveis}
+                  onChange={(e) => {
+                    setSóCompatíveis(e.target.checked);
+                    setFeedback({ type: '', text: '' });
+                  }}
+                  data-testid="driver-procuras-só-compatíveis"
+                  className="size-4 rounded border-slate-300 text-primary focus:ring-primary"
+                />
+                Só compatíveis com a minha oferta
+              </label>
 
               {feedback.text && (
                 <div
@@ -657,74 +701,32 @@ const DriverDashboard = () => {
 
               {loadingProcuras ? (
                 <LoadingSkeleton />
-              ) : procurasMatch.direct.length === 0 && procurasMatch.waitlist.length === 0 ? (
-                <p className="text-sm text-slate-500" data-testid="driver-procuras-empty-match">
+              ) : !sóCompatíveis && todasProcuras.length === 0 ? (
+                <p className="text-sm text-slate-500" data-testid="driver-procuras-empty-todas">
+                  Ainda não há procuras ou grupos no marketplace.
+                </p>
+              ) : sóCompatíveis && procurasVisiveis.length === 0 ? (
+                <p className="text-sm text-slate-500" data-testid="driver-procuras-empty-filtrado">
                   Ainda não há procuras ou grupos compatíveis com esta oferta.
                 </p>
               ) : (
                 <>
-                  {procurasMatch.direct.map((procura) => (
-                    <section
-                      key={procura.id}
-                      className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
-                      data-testid="driver-procura-match-card"
-                    >
-                      <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
-                        <span>{procura.origin_name || 'Origem'}</span>
-                        <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
-                        <span>{procura.destination_name || 'Destino'}</span>
-                      </div>
-                      <div className="flex gap-3 text-sm text-slate-500">
-                        <span className="flex items-center gap-1">
-                          <Clock size={14} aria-hidden="true" />
-                          {formatTime24h(procura.preferred_time)}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Users size={14} aria-hidden="true" />
-                          {labelProcuraN(procura.n_candidato ?? 1)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between pt-1">
-                        <div>
-                          <strong className="text-primary tabular-nums">
-                            {formatKwanza(ofertaSeleccionada?.valor_mensal_ask_kz)} Kz
-                          </strong>
-                          <p className="text-xs text-slate-400">
-                            {labelModo(ofertaSeleccionada?.modo_preco)}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          disabled={busyId === procura.id}
-                          onClick={() => handleProporB(procura)}
-                          className="bg-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl disabled:opacity-60"
-                        >
-                          Enviar proposta
-                        </button>
-                      </div>
-                    </section>
-                  ))}
-
-                  {procurasMatch.waitlist.length > 0 && (
-                    <div className="space-y-3 pt-2" data-testid="waitlist-bucket">
-                      <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide">
-                        Lista de espera
-                      </h3>
-                      <p className="text-sm text-slate-500 text-pretty">
-                        Sem lugares suficientes agora. Estes grupos excedem os lugares
-                        disponíveis — não podes enviar proposta directa.
-                      </p>
-                      {procurasMatch.waitlist.map((procura) => (
+                  {procurasVisiveis
+                    .filter((procura) => !matchWaitlistIds.has(procura.id))
+                    .map((procura) => {
+                      const isDirect = matchDirectIds.has(procura.id);
+                      return (
                         <section
                           key={procura.id}
                           className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
+                          data-testid="driver-procura-match-card"
                         >
                           <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
                             <span>{procura.origin_name || 'Origem'}</span>
                             <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
                             <span>{procura.destination_name || 'Destino'}</span>
                           </div>
-                          <div className="flex gap-3 text-sm text-slate-500">
+                          <div className="flex gap-3 text-sm text-slate-500 flex-wrap">
                             <span className="flex items-center gap-1">
                               <Clock size={14} aria-hidden="true" />
                               {formatTime24h(procura.preferred_time)}
@@ -733,14 +735,74 @@ const DriverDashboard = () => {
                               <Users size={14} aria-hidden="true" />
                               {labelProcuraN(procura.n_candidato ?? 1)}
                             </span>
+                            {!isDirect && !sóCompatíveis ? (
+                              <span className="text-xs font-medium text-slate-400">
+                                Sem compatibilidade com esta oferta
+                              </span>
+                            ) : null}
                           </div>
-                          <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">
-                            Grupo maior que os lugares disponíveis
-                          </p>
+                          <div className="flex items-center justify-between pt-1">
+                            <div>
+                              <strong className="text-primary tabular-nums">
+                                {formatKwanza(ofertaSeleccionada?.valor_mensal_ask_kz)} Kz
+                              </strong>
+                              <p className="text-xs text-slate-400">
+                                {labelModo(ofertaSeleccionada?.modo_preco)}
+                              </p>
+                            </div>
+                            {isDirect ? (
+                              <button
+                                type="button"
+                                disabled={busyId === procura.id}
+                                onClick={() => handleProporB(procura)}
+                                className="bg-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl disabled:opacity-60"
+                              >
+                                Enviar proposta
+                              </button>
+                            ) : null}
+                          </div>
                         </section>
-                      ))}
+                      );
+                    })}
+
+                  {procurasVisiveis.some((p) => matchWaitlistIds.has(p.id)) ? (
+                    <div className="space-y-3 pt-2" data-testid="waitlist-bucket">
+                      <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide">
+                        Lista de espera
+                      </h3>
+                      <p className="text-sm text-slate-500 text-pretty">
+                        Sem lugares suficientes agora. Estes grupos excedem os lugares
+                        disponíveis — não podes enviar proposta directa.
+                      </p>
+                      {procurasVisiveis
+                        .filter((procura) => matchWaitlistIds.has(procura.id))
+                        .map((procura) => (
+                          <section
+                            key={procura.id}
+                            className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
+                          >
+                            <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+                              <span>{procura.origin_name || 'Origem'}</span>
+                              <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
+                              <span>{procura.destination_name || 'Destino'}</span>
+                            </div>
+                            <div className="flex gap-3 text-sm text-slate-500">
+                              <span className="flex items-center gap-1">
+                                <Clock size={14} aria-hidden="true" />
+                                {formatTime24h(procura.preferred_time)}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Users size={14} aria-hidden="true" />
+                                {labelProcuraN(procura.n_candidato ?? 1)}
+                              </span>
+                            </div>
+                            <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">
+                              Grupo maior que os lugares disponíveis
+                            </p>
+                          </section>
+                        ))}
                     </div>
-                  )}
+                  ) : null}
                 </>
               )}
             </>
