@@ -1,9 +1,11 @@
--- PACOTE ENG #3: accept_proposal — fallback grupo N_actual=N, guards órfãos, picker quando N_actual>N
+-- Reconciled from remote supabase_migrations.schema_migrations (project fdclrbcgytnuqcrpsevw)
+-- Source: production migration history sync — 20260907190530 seat_before_custody_accept_proposal
+-- Do not rename; Supabase Preview CI requires exact version match.
 
 CREATE OR REPLACE FUNCTION public.accept_proposal(
   p_proposta_id uuid,
-  p_member_ids uuid[] DEFAULT NULL,
-  p_idempotency_key uuid DEFAULT NULL
+  p_member_ids uuid[] DEFAULT NULL::uuid[],
+  p_idempotency_key uuid DEFAULT NULL::uuid
 )
 RETURNS uuid
 LANGUAGE plpgsql
@@ -17,7 +19,6 @@ DECLARE
   v_ocupadas integer;
   v_disponiveis integer;
   v_n integer;
-  v_n_activos integer;
   v_total integer;
   v_base integer;
   v_resto integer;
@@ -62,23 +63,7 @@ BEGIN
     RAISE EXCEPTION 'Oferta não encontrada.';
   END IF;
 
-  SELECT * INTO v_procura FROM public.procuras WHERE id = v_prop.procura_id FOR UPDATE;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Procura não encontrada.';
-  END IF;
-
-  IF lower(v_procura.estado) = 'fechada' THEN
-    RAISE EXCEPTION 'Procura já fechada.';
-  END IF;
-
-  IF EXISTS (
-    SELECT 1 FROM public.acordos
-    WHERE procura_id = v_prop.procura_id
-      AND lower(estado) = 'activo'
-  ) THEN
-    RAISE EXCEPTION 'Já existe um acordo activo para esta procura.';
-  END IF;
-
+  SELECT * INTO v_procura FROM public.procuras WHERE id = v_prop.procura_id;
   IF v_uid IS DISTINCT FROM v_oferta.driver_id AND v_uid IS DISTINCT FROM v_procura.owner_id THEN
     RAISE EXCEPTION 'Sem permissão para aceitar esta proposta.';
   END IF;
@@ -87,8 +72,8 @@ BEGIN
   FROM public.acordos_passageiros ap
   JOIN public.acordos a ON a.id = ap.acordo_id
   WHERE a.oferta_id = v_oferta.id
-    AND lower(a.estado) = 'activo'
-    AND lower(ap.estado) = 'activo';
+    AND lower(a.estado) IN ('activo', 'cancelamento_pendente')
+    AND lower(ap.estado) IN ('activo', 'reservado');
 
   v_disponiveis := v_oferta.vagas_totais - v_ocupadas;
   v_n := v_prop.n_passageiros_propostos;
@@ -124,34 +109,7 @@ BEGIN
   IF v_prop.grupo_id IS NOT NULL THEN
     v_ids := COALESCE(p_member_ids, ARRAY[]::uuid[]);
 
-    IF cardinality(v_ids) = 0 THEN
-      SELECT COALESCE(COUNT(*), 0)::integer INTO v_n_activos
-      FROM public.membros_grupo
-      WHERE grupo_id = v_prop.grupo_id
-        AND lower(estado) = 'activo';
-
-      IF v_n_activos > v_n THEN
-        RAISE EXCEPTION
-          'O grupo tem mais pessoas do que esta proposta cobre. Escolhe exactamente % passageiro(s).',
-          v_n;
-      END IF;
-
-      SELECT COALESCE(array_agg(passenger_id ORDER BY ordem_insercao ASC, passenger_id ASC), ARRAY[]::uuid[])
-      INTO v_ids
-      FROM (
-        SELECT passenger_id, ordem_insercao
-        FROM public.membros_grupo
-        WHERE grupo_id = v_prop.grupo_id
-          AND lower(estado) = 'activo'
-        ORDER BY ordem_insercao ASC, passenger_id ASC
-        LIMIT v_n
-      ) picked;
-
-      IF cardinality(v_ids) IS DISTINCT FROM v_n THEN
-        RAISE EXCEPTION 'O grupo tem apenas % membros activos; a proposta exige %.',
-          COALESCE(cardinality(v_ids), 0), v_n;
-      END IF;
-    ELSIF cardinality(v_ids) IS DISTINCT FROM v_n THEN
+    IF cardinality(v_ids) IS DISTINCT FROM v_n THEN
       RAISE EXCEPTION 'Capacidade inconsistente com proposta';
     END IF;
 
@@ -190,7 +148,7 @@ BEGIN
         v_acordo_id, v_membro.passenger_id, v_quota, i,
         v_membro.pickup_name, v_membro.pickup_lat, v_membro.pickup_lng,
         v_membro.dropoff_name, v_membro.dropoff_lat, v_membro.dropoff_lng,
-        'activo'
+        'reservado'
       );
       i := i + 1;
     END LOOP;
@@ -208,30 +166,20 @@ BEGIN
     INSERT INTO public.acordos_passageiros (
       acordo_id, passenger_id, quota_mensal_kz, ordem_insercao, estado
     ) VALUES (
-      v_acordo_id, v_procura.owner_id, v_base, 0, 'activo'
+      v_acordo_id, v_procura.owner_id, v_base, 0, 'reservado'
     );
   END IF;
 
   INSERT INTO public.notificacoes (user_id, mensagem, tipo, metadata)
   SELECT
     ap.passenger_id,
-    'O teu acordo de boleia foi confirmado.',
+    'Acordo formado: o teu lugar está reservado. Confirma o pagamento para activar o lugar.',
     'success',
     jsonb_build_object('type', 'agreement_update', 'acordo_id', v_acordo_id)
   FROM public.acordos_passageiros ap
-  WHERE ap.acordo_id = v_acordo_id AND ap.estado = 'activo';
+  WHERE ap.acordo_id = v_acordo_id AND lower(ap.estado) = 'reservado';
 
-  v_disponiveis := v_oferta.vagas_totais - (v_ocupadas + v_n);
-  UPDATE public.ofertas_capacidade
-  SET
-    vagas_disponiveis = v_disponiveis,
-    estado = CASE
-      WHEN v_disponiveis = 0 THEN 'cheia'
-      WHEN v_disponiveis < vagas_totais THEN 'parcial'
-      ELSE 'disponivel'
-    END,
-    updated_at = now()
-  WHERE id = v_oferta.id;
+  PERFORM public.recount_oferta_vagas(v_oferta.id);
 
   UPDATE public.propostas
   SET
@@ -261,5 +209,3 @@ BEGIN
 END;
 $function$;
 
-REVOKE ALL ON FUNCTION public.accept_proposal(uuid, uuid[], uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.accept_proposal(uuid, uuid[], uuid) TO authenticated;

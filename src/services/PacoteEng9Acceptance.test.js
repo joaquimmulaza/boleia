@@ -77,7 +77,7 @@ describe('PACOTE ENG #9 — waitlist vs capacidade / N_proposto', () => {
     });
 
     it('SQL accept_proposal bloqueia quando v_n > v_disponiveis', () => {
-      const sql = readMigration('20260906220000_pacote_eng3_accept_proposal_atomic.sql');
+      const sql = readMigration('20260907190530_seat_before_custody_accept_proposal.sql');
       expect(sql).toMatch(/IF v_n > v_disponiveis THEN/);
       expect(sql).toMatch(/Vagas insuficientes para este grupo\. Use lista de espera\./);
     });
@@ -125,7 +125,7 @@ describe('PACOTE ENG #9 — waitlist vs capacidade / N_proposto', () => {
     });
 
     it('SQL promote_waitlist não referencia acordos nem accept_proposal', () => {
-      const sql = readMigration('20260906230000_pacote_eng9_promote_waitlist_capacity_gate.sql');
+      const sql = readMigration('20260906225225_pacote_eng9_promote_waitlist_capacity_gate.sql');
       expect(sql).not.toMatch(/accept_proposal/);
       expect(sql).not.toMatch(/INSERT INTO public\.acordos/);
       expect(sql).toMatch(/estado = 'notificada'/);
@@ -134,7 +134,7 @@ describe('PACOTE ENG #9 — waitlist vs capacidade / N_proposto', () => {
 
   describe('3 — Promoção segue fluxo proposta/aceite (sem atalho)', () => {
     it('promote_waitlist SQL exige vagas >= n_candidato antes de notificar', () => {
-      const sql = readMigration('20260906230000_pacote_eng9_promote_waitlist_capacity_gate.sql');
+      const sql = readMigration('20260906225225_pacote_eng9_promote_waitlist_capacity_gate.sql');
       expect(sql).toMatch(/v_n_required := GREATEST\(COALESCE\(v_procura\.n_candidato, 1\), 1\)/);
       expect(sql).toMatch(/IF v_disponiveis < v_n_required THEN/);
       expect(sql).toMatch(/RETURN NULL;/);
@@ -224,7 +224,7 @@ describe('PACOTE ENG #9 — waitlist vs capacidade / N_proposto', () => {
     });
 
     it('accept_proposal SQL usa snapshot da proposta', () => {
-      const sql = readMigration('20260906220000_pacote_eng3_accept_proposal_atomic.sql');
+      const sql = readMigration('20260907190530_seat_before_custody_accept_proposal.sql');
       expect(sql).toMatch(/v_base := v_prop\.valor_mensal_ask_kz/);
       expect(sql).toMatch(/v_n := v_prop\.n_passageiros_propostos/);
     });

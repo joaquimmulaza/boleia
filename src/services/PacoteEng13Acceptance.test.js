@@ -46,14 +46,14 @@ describe('PACOTE ENG #13 — liquidação período + repasse motorista', () => {
 
   describe('1 — Liquidação só GMV on-platform (em_custodia)', () => {
     it('SQL admin_liquidate_period só processa em_custodia', () => {
-      const sql = readMigration('20260907030000_pacote_eng13_liquidacao_periodo_repasse.sql');
+      const sql = readMigration('20260906231204_pacote_eng13_liquidacao_periodo_repasse.sql');
       expect(sql).toMatch(/admin_liquidate_period/);
       expect(sql).toMatch(/em_custodia/);
       expect(sql).not.toMatch(/pendente_pagamento.*liquidado/s);
     });
 
     it('SQL admin_liquidate_payment rejeita estados fora de custódia', () => {
-      const sql = readMigration('20260907030000_pacote_eng13_liquidacao_periodo_repasse.sql');
+      const sql = readMigration('20260906231204_pacote_eng13_liquidacao_periodo_repasse.sql');
       expect(sql).toMatch(/admin_liquidate_payment/);
       expect(sql).toMatch(/em_custodia/);
     });
@@ -70,7 +70,7 @@ describe('PACOTE ENG #13 — liquidação período + repasse motorista', () => {
     });
 
     it('SQL repasses_motorista regista valor_plataforma_kz e valor_repasse_liquido_kz', () => {
-      const sql = readMigration('20260907030000_pacote_eng13_liquidacao_periodo_repasse.sql');
+      const sql = readMigration('20260906231204_pacote_eng13_liquidacao_periodo_repasse.sql');
       expect(sql).toMatch(/repasses_motorista/);
       expect(sql).toMatch(/valor_plataforma_kz/);
       expect(sql).toMatch(/valor_repasse_liquido_kz/);
@@ -100,7 +100,7 @@ describe('PACOTE ENG #13 — liquidação período + repasse motorista', () => {
     });
 
     it('SQL liquidação subtrai descontos de faltas do payout', () => {
-      const sql = readMigration('20260907030000_pacote_eng13_liquidacao_periodo_repasse.sql');
+      const sql = readMigration('20260906231204_pacote_eng13_liquidacao_periodo_repasse.sql');
       expect(sql).toMatch(/desconto_kz/);
       expect(sql).toMatch(/pagamento_em_custodia_para_falta|valor_payout_liquido_kz/);
     });
@@ -113,7 +113,7 @@ describe('PACOTE ENG #13 — liquidação período + repasse motorista', () => {
 
   describe('4 — IBAN motorista obrigatório para repasse', () => {
     it('SQL admin_liquidate_period exige IBAN no perfil do motorista', () => {
-      const sql = readMigration('20260907030000_pacote_eng13_liquidacao_periodo_repasse.sql');
+      const sql = readMigration('20260906231204_pacote_eng13_liquidacao_periodo_repasse.sql');
       expect(sql).toMatch(/iban/);
       expect(sql).toMatch(/RAISE EXCEPTION.*IBAN/i);
     });
@@ -121,12 +121,12 @@ describe('PACOTE ENG #13 — liquidação período + repasse motorista', () => {
 
   describe('5 — Admin, idempotência, valores do acordo', () => {
     it('SQL RPCs exigem is_platform_admin', () => {
-      const sql = readMigration('20260907030000_pacote_eng13_liquidacao_periodo_repasse.sql');
+      const sql = readMigration('20260906231204_pacote_eng13_liquidacao_periodo_repasse.sql');
       expect(sql).toMatch(/is_platform_admin/);
     });
 
     it('SQL admin_liquidate_payment suporta p_idempotency_key', () => {
-      const sql = readMigration('20260907030000_pacote_eng13_liquidacao_periodo_repasse.sql');
+      const sql = readMigration('20260906231204_pacote_eng13_liquidacao_periodo_repasse.sql');
       expect(sql).toMatch(/p_idempotency_key/);
       expect(sql).toMatch(/rpc_idempotency/);
     });
@@ -141,7 +141,7 @@ describe('PACOTE ENG #13 — liquidação período + repasse motorista', () => {
     });
 
     it('SQL usa valor_kz e valor_payout_liquido_kz da linha pagamento (sem defaults plataforma)', () => {
-      const sql = readMigration('20260907030000_pacote_eng13_liquidacao_periodo_repasse.sql');
+      const sql = readMigration('20260906231204_pacote_eng13_liquidacao_periodo_repasse.sql');
       expect(sql).toMatch(/valor_kz/);
       expect(sql).toMatch(/valor_payout_liquido_kz/);
       expect(sql).not.toMatch(/DEFAULT\s+\d{5,}/);
@@ -165,7 +165,7 @@ describe('PACOTE ENG #13 — liquidação período + repasse motorista', () => {
 
   describe('6 — Repasse regista pagamentos liquidados', () => {
     it('SQL pagamentos_acordo tem repasse_id FK', () => {
-      const sql = readMigration('20260907030000_pacote_eng13_liquidacao_periodo_repasse.sql');
+      const sql = readMigration('20260906231204_pacote_eng13_liquidacao_periodo_repasse.sql');
       expect(sql).toMatch(/repasse_id/);
       expect(sql).toMatch(/REFERENCES public\.repasses_motorista/);
     });

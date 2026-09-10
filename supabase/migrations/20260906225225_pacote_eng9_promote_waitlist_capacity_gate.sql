@@ -1,3 +1,5 @@
+-- Reconciled from remote supabase_migrations.schema_migrations (project fdclrbcgytnuqcrpsevw)
+-- Do not rename; Supabase Preview CI requires exact version match.
 -- PACOTE ENG #9: promote_waitlist só notifica quando há vagas >= N da procura (N_actual sync).
 -- Evita «vaga aberta» enganadora e qualquer atalho para acordo sem proposta/aceite.
 

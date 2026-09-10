@@ -1,3 +1,5 @@
+-- Reconciled from remote supabase_migrations.schema_migrations (project fdclrbcgytnuqcrpsevw)
+-- Do not rename; Supabase Preview CI requires exact version match.
 -- Editar / cancelar procura activa.
 -- Propostas: só estado invalidada|cancelada — nunca mutar snapshot (preço, N, oferta).
 -- return_time e n_candidato não são escritos por update_procura.

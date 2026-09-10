@@ -1,3 +1,5 @@
+-- Reconciled from remote supabase_migrations.schema_migrations (project fdclrbcgytnuqcrpsevw)
+-- Do not rename; Supabase Preview CI requires exact version match.
 -- PACOTE ENG #14 — renovação explícita M0→M1 sem recriar acordo
 -- Extends ENG #5 (pagamentos) + adendas em_vigor. Valores sempre do acordo/adenda — NUNCA defaults plataforma.
 

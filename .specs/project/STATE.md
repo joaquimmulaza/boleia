@@ -55,7 +55,8 @@
 - **Done (tick 22):** assento após aceite = `reservado` (ocupa capacidade); só passa a `activo` quando pagamento → `em_custodia`.
 - `oferta_ocupacao` conta `reservado` + `activo` (sem overbooking).
 - UI `/acordos`: «Lugar reservado — aguarda pagamento»; TTL de reservas: deferred.
-- Migração: `20260907190000_seat_before_custody_reservado.sql` (remoto).
+- Migração git: `20260907190000_seat_before_custody_reservado.sql` (versão remota vazia) + splits `20260907190441` / `449` / `530` / `551`.
+- **Preview reconcile #2 (2026-09-10):** 61 ficheiros = 61 `schema_migrations` produção. Spec: `.specs/quick/supabase-preview-reconcile-2/`.
 
 ## Faltas ida/regresso (2026-09-07) — decisão produto
 - **Opção 1 — Meia quota (canónica MVP):**

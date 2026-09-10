@@ -10,7 +10,7 @@ import { computeFaltaDesconto } from '../utils/faltaDesconto.js';
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const MIG = join(
   ROOT,
-  '../../supabase/migrations/20260907020000_pacote_eng11_assiduidade_faltadesconto_gate.sql',
+  '../../supabase/migrations/20260906230154_pacote_eng11_assiduidade_faltadesconto_gate.sql',
 );
 
 describe('falta-ida-regresso — meia quota canónica', () => {

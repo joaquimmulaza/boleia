@@ -47,7 +47,7 @@ describe('PACOTE ENG #14 — renovação período M0→M1', () => {
 
   describe('1 — Renovação explícita (RPC dedicada, auth)', () => {
     it('SQL define renew_agreement_period com auth.uid()', () => {
-      const sql = readMigration('20260907040000_pacote_eng14_renovacao_periodo.sql');
+      const sql = readMigration('20260907152236_pacote_eng14_renovacao_periodo.sql');
       expect(sql).toMatch(/renew_agreement_period/);
       expect(sql).toMatch(/auth\.uid\(\)/);
       expect(sql).toMatch(/Sem permissão para renovar/);
@@ -92,7 +92,7 @@ describe('PACOTE ENG #14 — renovação período M0→M1', () => {
 
   describe('2 — Herança termos vigentes (adenda em_vigor ou acordo)', () => {
     it('SQL _resolve_termos_vigentes_acordo prioriza adenda em_vigor', () => {
-      const sql = readMigration('20260907040000_pacote_eng14_renovacao_periodo.sql');
+      const sql = readMigration('20260907152236_pacote_eng14_renovacao_periodo.sql');
       expect(sql).toMatch(/_resolve_termos_vigentes_acordo/);
       expect(sql).toMatch(/em_vigor/);
       expect(sql).toMatch(/quota_mensal_kz/);
@@ -100,7 +100,7 @@ describe('PACOTE ENG #14 — renovação período M0→M1', () => {
     });
 
     it('SQL _create_pagamentos_periodo usa quota_mensal_kz do passageiro', () => {
-      const sql = readMigration('20260907040000_pacote_eng14_renovacao_periodo.sql');
+      const sql = readMigration('20260907152236_pacote_eng14_renovacao_periodo.sql');
       expect(sql).toMatch(/_create_pagamentos_periodo/);
       expect(sql).toMatch(/r\.quota_mensal_kz/);
       expect(sql).toMatch(/compute_payout_liquido_kz\(r\.quota_mensal_kz/);
@@ -109,7 +109,7 @@ describe('PACOTE ENG #14 — renovação período M0→M1', () => {
 
   describe('3 — Pagamento novo período (escrow path)', () => {
     it('SQL pagamentos UNIQUE por (acordo_passageiro_id, mes_referencia)', () => {
-      const sql = readMigration('20260907040000_pacote_eng14_renovacao_periodo.sql');
+      const sql = readMigration('20260907152236_pacote_eng14_renovacao_periodo.sql');
       expect(sql).toMatch(/pagamentos_acordo_passageiro_mes_uniq/);
       expect(sql).toMatch(/acordo_passageiro_id, mes_referencia/);
     });
@@ -129,7 +129,7 @@ describe('PACOTE ENG #14 — renovação período M0→M1', () => {
 
   describe('4 — Sem renovação → encerra ciclo sem órfãos', () => {
     it('SQL apply_due_agreement_non_renewals liberta vagas e waitlist', () => {
-      const sql = readMigration('20260907040000_pacote_eng14_renovacao_periodo.sql');
+      const sql = readMigration('20260907152236_pacote_eng14_renovacao_periodo.sql');
       expect(sql).toMatch(/apply_due_agreement_non_renewals/);
       expect(sql).toMatch(/recount_oferta_vagas/);
       expect(sql).toMatch(/promote_waitlist/);
@@ -137,7 +137,7 @@ describe('PACOTE ENG #14 — renovação período M0→M1', () => {
     });
 
     it('decline_agreement_renewal agenda cancelamento_pendente', () => {
-      const sql = readMigration('20260907040000_pacote_eng14_renovacao_periodo.sql');
+      const sql = readMigration('20260907152236_pacote_eng14_renovacao_periodo.sql');
       expect(sql).toMatch(/decline_agreement_renewal/);
       expect(sql).toMatch(/cancelamento_pendente/);
       expect(sql).toMatch(/nao_renovacao/);
@@ -165,7 +165,7 @@ describe('PACOTE ENG #14 — renovação período M0→M1', () => {
 
   describe('6 — Gate pagamentos mês corrente', () => {
     it('SQL pagamento_em_custodia_para_falta filtra mes_referencia', () => {
-      const sql = readMigration('20260907040000_pacote_eng14_renovacao_periodo.sql');
+      const sql = readMigration('20260907152236_pacote_eng14_renovacao_periodo.sql');
       expect(sql).toMatch(/pagamento_em_custodia_para_falta/);
       expect(sql).toMatch(/pg\.mes_referencia = v_mes/);
     });

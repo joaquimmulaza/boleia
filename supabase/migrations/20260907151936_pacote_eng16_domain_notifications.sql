@@ -1,3 +1,5 @@
+-- Reconciled from remote supabase_migrations.schema_migrations (project fdclrbcgytnuqcrpsevw)
+-- Do not rename; Supabase Preview CI requires exact version match.
 -- PACOTE ENG #16 — notificações domínio (pagamento, renovação, liquidação) + deep-links
 -- Reutiliza webhook notificacoes → send-push. Metadata sem OD.
 

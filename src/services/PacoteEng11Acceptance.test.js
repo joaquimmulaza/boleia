@@ -72,14 +72,14 @@ describe('PACOTE ENG #11 — assiduidade + faltaDesconto gate pagamento', () => 
     });
 
     it('SQL handle_falta_desconto zera desconto sem pagamento em custódia', () => {
-      const sql = readMigration('20260907020000_pacote_eng11_assiduidade_faltadesconto_gate.sql');
+      const sql = readMigration('20260906230154_pacote_eng11_assiduidade_faltadesconto_gate.sql');
       expect(sql).toMatch(/handle_falta_desconto/);
       expect(sql).toMatch(/em_custodia/);
       expect(sql).toMatch(/desconto_kz\s*:=\s*0/);
     });
 
     it('SQL log_falta rejeita sem pagamento em custódia', () => {
-      const sql = readMigration('20260907020000_pacote_eng11_assiduidade_faltadesconto_gate.sql');
+      const sql = readMigration('20260906230154_pacote_eng11_assiduidade_faltadesconto_gate.sql');
       expect(sql).toMatch(/log_falta/);
       expect(sql).toMatch(/em_custodia/);
       expect(sql).toMatch(/RAISE EXCEPTION/);
@@ -92,7 +92,7 @@ describe('PACOTE ENG #11 — assiduidade + faltaDesconto gate pagamento', () => 
     });
 
     it('SQL handle_falta_desconto mantém fórmula quota/dias_uteis', () => {
-      const sql = readMigration('20260907020000_pacote_eng11_assiduidade_faltadesconto_gate.sql');
+      const sql = readMigration('20260906230154_pacote_eng11_assiduidade_faltadesconto_gate.sql');
       expect(sql).toMatch(/valor_mensal_por_passageiro_kz/);
       expect(sql).toMatch(/dias_uteis_mes/);
       expect(sql).not.toMatch(/\/\s*4\.0/);
@@ -116,7 +116,7 @@ describe('PACOTE ENG #11 — assiduidade + faltaDesconto gate pagamento', () => 
     });
 
     it('SQL admin_liquidate_payment exige em_custodia e desconta faltas', () => {
-      const sql = readMigration('20260907020000_pacote_eng11_assiduidade_faltadesconto_gate.sql');
+      const sql = readMigration('20260906230154_pacote_eng11_assiduidade_faltadesconto_gate.sql');
       expect(sql).toMatch(/admin_liquidate_payment/);
       expect(sql).toMatch(/em_custodia/);
       expect(sql).toMatch(/liquidado/);
@@ -127,7 +127,7 @@ describe('PACOTE ENG #11 — assiduidade + faltaDesconto gate pagamento', () => 
 
   describe('4 — Valores do acordo (nunca defaults plataforma)', () => {
     it('SQL liquidação usa valor_payout_liquido_kz da linha pagamento', () => {
-      const sql = readMigration('20260907020000_pacote_eng11_assiduidade_faltadesconto_gate.sql');
+      const sql = readMigration('20260906230154_pacote_eng11_assiduidade_faltadesconto_gate.sql');
       expect(sql).toMatch(/valor_payout_liquido_kz/);
       expect(sql).not.toMatch(/DEFAULT\s+\d{4,}/);
     });

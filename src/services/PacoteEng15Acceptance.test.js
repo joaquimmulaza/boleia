@@ -10,7 +10,7 @@ import { supabase } from '../lib/supabase';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS = join(ROOT, '../../supabase/migrations');
-const ENG15_MIGRATION = '20260907050000_pacote_eng15_saida_parcial_passageiro.sql';
+const ENG15_MIGRATION = '20260907151859_pacote_eng15_saida_parcial_passageiro.sql';
 
 /** @param {string} filename */
 function readMigration(filename) {
