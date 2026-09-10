@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import OverlayShell from './OverlayShell';
 
 /**
  * Modal para motivo opcional ao rejeitar comprovativo (admin).
@@ -21,20 +22,18 @@ function RejeicaoComprovativoModal({ isOpen, busy = false, onConfirm, onCancel }
   };
 
   return (
-    <div className="fixed inset-0 z-modal flex items-end sm:items-center justify-center p-4">
-      <div
-        className="fixed inset-0 bg-black/80"
-        aria-hidden="true"
-        onClick={() => {
-          if (!busy) onCancel();
-        }}
-      />
+    <OverlayShell
+      variant="bottom"
+      dismissDisabled={busy}
+      onDismiss={onCancel}
+      testId="rejeicao-comprovativo-overlay"
+    >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="rejeicao-comprovativo-title"
         data-testid="rejeicao-comprovativo-modal"
-        className="relative w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 shadow-2xl overflow-hidden"
+        className="rounded-3xl bg-white dark:bg-slate-900 shadow-2xl overflow-hidden sm:rounded-3xl"
       >
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <h3
@@ -79,7 +78,7 @@ function RejeicaoComprovativoModal({ isOpen, busy = false, onConfirm, onCancel }
           </div>
         </form>
       </div>
-    </div>
+    </OverlayShell>
   );
 }
 

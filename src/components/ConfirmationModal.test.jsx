@@ -88,6 +88,22 @@ describe('ConfirmationModal', () => {
     expect(confirmBtn.className).toMatch(/bg-red-600/);
   });
 
+  it('renderiza via portal em document.body com z-modal', () => {
+    render(
+      <ConfirmationModal
+        isOpen
+        title="Teste"
+        message="Portal"
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    const dialog = screen.getByRole('dialog');
+    expect(document.body.contains(dialog)).toBe(true);
+    expect(document.body.querySelector('.z-modal')).toBeTruthy();
+  });
+
   it('variant primary: botão confirmar usa primary/emerald', () => {
     render(
       <ConfirmationModal

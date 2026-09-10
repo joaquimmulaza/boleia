@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown, Info } from 'lucide-react';
+import OverlayShell from './OverlayShell';
 
 /**
  * @typedef {'ida' | 'regresso' | 'ambas'} ViagemFalta
@@ -48,117 +49,120 @@ const LogAbsenceModal = ({ isOpen, onClose, onSubmit }) => {
   };
 
   return (
-    <div data-testid="modal-registar-falta" className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 flex flex-col justify-end z-modal font-display antialiased">
-      <div className="bg-white dark:bg-slate-900 rounded-t-xl overflow-hidden shadow-2xl max-w-md mx-auto w-full">
-        <div className="flex h-6 w-full items-center justify-center">
-          <div className="h-1.5 w-12 rounded-full bg-slate-200 dark:bg-slate-700"></div>
-        </div>
+    <OverlayShell
+      variant="bottom"
+      overlayClassName="bg-slate-900/60 dark:bg-black/80"
+      panelClassName="bg-white dark:bg-slate-900 shadow-2xl"
+      panelTestId="modal-registar-falta-panel"
+      testId="modal-registar-falta"
+      onDismiss={handleClose}
+    >
+      <div className="flex h-6 w-full items-center justify-center">
+        <div className="h-1.5 w-12 rounded-full bg-slate-200 dark:bg-slate-700" />
+      </div>
 
-        <div className="px-6 pt-2 pb-8">
-          <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Registar Falta</h3>
+      <div className="px-6 pt-2 pb-6">
+        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Registar Falta</h3>
 
-          <form className="space-y-5" onSubmit={handleSubmit}>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="dataFalta" className="text-sm font-semibold text-slate-700 dark:text-slate-300">Data</label>
-              <div className="relative flex items-center">
-                <input
-                  id="dataFalta"
-                  type="date"
-                  className="w-full h-14 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:ring-primary focus:border-primary text-base px-4 pr-12 dark:text-white outline-none"
-                  value={formData.dataFalta}
-                  onChange={(e) => setFormData({ ...formData, dataFalta: e.target.value })}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label htmlFor="tipoFalta" className="text-sm font-semibold text-slate-700 dark:text-slate-300">Tipo</label>
-              <div className="relative">
-                <select
-                  id="tipoFalta"
-                  className="w-full h-14 appearance-none bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:ring-primary focus:border-primary text-base px-4 dark:text-white outline-none"
-                  value={formData.tipo}
-                  onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                >
-                  <option value="Motorista">Motorista</option>
-                  <option value="Passageiro">Passageiro</option>
-                </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 size-5" aria-hidden="true" />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label htmlFor="viagemFalta" className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                Trajeto em falta
-              </label>
-              <div className="relative">
-                <select
-                  id="viagemFalta"
-                  data-testid="falta-viagem-select"
-                  className="w-full h-14 appearance-none bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:ring-primary focus:border-primary text-base px-4 dark:text-white outline-none"
-                  value={formData.viagem}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      viagem: /** @type {ViagemFalta} */ (e.target.value),
-                    })
-                  }
-                >
-                  <option value="ambas">Ida e regresso (dia completo)</option>
-                  <option value="ida">Só ida (meia quota)</option>
-                  <option value="regresso">Só regresso (meia quota)</option>
-                </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 size-5" aria-hidden="true" />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label htmlFor="observacao" className="text-sm font-semibold text-slate-700 dark:text-slate-300">Observação (opcional)</label>
-              <textarea
-                id="observacao"
-                className="w-full min-h-[120px] bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:ring-primary focus:border-primary text-base p-4 resize-none dark:text-white outline-none"
-                placeholder="Adicionar notas sobre a ausência..."
-                value={formData.observacao}
-                onChange={(e) => setFormData({ ...formData, observacao: e.target.value })}
+        <form className="space-y-5" onSubmit={handleSubmit}>
+          <div className="flex flex-col gap-2">
+            <label htmlFor="dataFalta" className="text-sm font-semibold text-slate-700 dark:text-slate-300">Data</label>
+            <div className="relative flex items-center">
+              <input
+                id="dataFalta"
+                type="date"
+                className="w-full h-14 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:ring-primary focus:border-primary text-base px-4 pr-12 dark:text-white outline-none"
+                value={formData.dataFalta}
+                onChange={(e) => setFormData({ ...formData, dataFalta: e.target.value })}
+                required
               />
             </div>
+          </div>
 
-            <div
-              className="p-4 bg-primary/5 border border-primary/10 rounded-xl flex items-start gap-3"
-              data-testid="falta-desconto-help"
+          <div className="flex flex-col gap-2">
+            <label htmlFor="tipoFalta" className="text-sm font-semibold text-slate-700 dark:text-slate-300">Tipo</label>
+            <div className="relative">
+              <select
+                id="tipoFalta"
+                className="w-full h-14 appearance-none bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:ring-primary focus:border-primary text-base px-4 dark:text-white outline-none"
+                value={formData.tipo}
+                onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+              >
+                <option value="Motorista">Motorista</option>
+                <option value="Passageiro">Passageiro</option>
+              </select>
+              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 size-5" aria-hidden="true" />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor="viagemFalta" className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              Trajeto em falta
+            </label>
+            <div className="relative">
+              <select
+                id="viagemFalta"
+                data-testid="falta-viagem-select"
+                className="w-full h-14 appearance-none bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:ring-primary focus:border-primary text-base px-4 dark:text-white outline-none"
+                value={formData.viagem}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    viagem: /** @type {ViagemFalta} */ (e.target.value),
+                  })
+                }
+              >
+                <option value="ambas">Ida e regresso (dia completo)</option>
+                <option value="ida">Só ida (meia quota)</option>
+                <option value="regresso">Só regresso (meia quota)</option>
+              </select>
+              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 size-5" aria-hidden="true" />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor="observacao" className="text-sm font-semibold text-slate-700 dark:text-slate-300">Observação (opcional)</label>
+            <textarea
+              id="observacao"
+              className="w-full min-h-[120px] bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:ring-primary focus:border-primary text-base p-4 resize-none dark:text-white outline-none"
+              placeholder="Adicionar notas sobre a ausência..."
+              value={formData.observacao}
+              onChange={(e) => setFormData({ ...formData, observacao: e.target.value })}
+            />
+          </div>
+
+          <div
+            className="p-4 bg-primary/5 border border-primary/10 rounded-xl flex items-start gap-3"
+            data-testid="falta-desconto-help"
+          >
+            <Info className="text-primary shrink-0 size-5 mt-0.5" aria-hidden="true" />
+            <p className="text-xs text-pretty text-slate-600 dark:text-slate-400 leading-relaxed">
+              Ida e regresso descontam o dia completo da quota.
+              Só ida ou só regresso descontam metade (meia quota).
+              O valor calcula-se automaticamente com a quota do acordo.
+            </p>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="flex-1 h-14 font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              title="Cancelar"
             >
-              <Info className="text-primary shrink-0 size-5 mt-0.5" aria-hidden="true" />
-              <p className="text-xs text-pretty text-slate-600 dark:text-slate-400 leading-relaxed">
-                Ida e regresso descontam o dia completo da quota.
-                Só ida ou só regresso descontam metade (meia quota).
-                O valor calcula-se automaticamente com a quota do acordo.
-              </p>
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <button
-                type="button"
-                onClick={handleClose}
-                className="flex-1 h-14 font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
-                title="Cancelar"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="flex-1 h-14 font-semibold bg-primary text-white hover:bg-primary/90 rounded-xl transition-colors shadow-lg shadow-primary/20"
-                title="Guardar"
-              >
-                Guardar
-              </button>
-            </div>
-          </form>
-        </div>
-
-        <div className="h-6 bg-white dark:bg-slate-900"></div>
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="flex-1 h-14 font-semibold bg-primary text-white hover:bg-primary/90 rounded-xl transition-colors shadow-lg shadow-primary/20"
+              title="Guardar"
+            >
+              Guardar
+            </button>
+          </div>
+        </form>
       </div>
-    </div>
+    </OverlayShell>
   );
 };
 
