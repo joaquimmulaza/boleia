@@ -51,13 +51,22 @@ import {
 import {
   allowsAssiduidadeFaltasForAcordo,
 } from '../utils/paymentStatus';
+import {
+  isActivoPassageiro,
+  isReservadoPassageiro,
+  countPassageirosConfirmadosReservados,
+  formatContagemPassageiros,
+  labelChipEstadoPassageiro,
+  chipClassEstadoPassageiro,
+  GLOSSARIO_ESTADOS_LUGAR,
+} from '../utils/acordoPassageiroStatus';
 
 /**
  * @param {string | null | undefined} estado
  * @returns {boolean}
  */
 function isActivo(estado) {
-  return String(estado || '').toLowerCase() === 'activo';
+  return isActivoPassageiro(estado);
 }
 
 /**
@@ -66,7 +75,7 @@ function isActivo(estado) {
  * @returns {boolean}
  */
 function isReservado(estado) {
-  return String(estado || '').toLowerCase() === 'reservado';
+  return isReservadoPassageiro(estado);
 }
 
 /**
@@ -84,11 +93,7 @@ function isNoAcordo(estado) {
  * @returns {string}
  */
 function estadoPassageiroLabel(estado) {
-  const e = String(estado || '').toLowerCase();
-  if (e === 'activo') return 'Confirmado';
-  if (e === 'reservado') return 'Lugar reservado — aguarda pagamento';
-  if (e === 'saiu') return 'Saiu';
-  return estado || '—';
+  return labelChipEstadoPassageiro(estado);
 }
 
 /**
@@ -323,6 +328,24 @@ const MyAgreements = () => {
 
   const pendingFocusRef = useRef(/** @type {string | null} */ (null));
 
+  /** @param {string} focus */
+  const scrollToAcordoFocus = useCallback((focus) => {
+    /** @type {Record<string, string>} */
+    const focusTestIds = {
+      pagamento: 'acordo-pagamento-section',
+      adenda: 'adenda-pendente',
+      renovacao: 'renovacao-periodo-panel',
+    };
+    const testId = focusTestIds[focus];
+    if (!testId) return;
+    requestAnimationFrame(() => {
+      document.querySelector(`[data-testid="${testId}"]`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+    });
+  }, []);
+
   useEffect(() => {
     if (isLoading || acordos.length === 0) return;
     const params = new URLSearchParams(location.search);
@@ -341,29 +364,15 @@ const MyAgreements = () => {
   }, [isLoading, acordos, location.search, location.state, navigate, location.pathname]);
 
   useEffect(() => {
-    if (!selected || !pendingFocusRef.current) return;
+    if (!selected || !pendingFocusRef.current) return undefined;
 
     const focus = pendingFocusRef.current;
+    if (focus === 'pagamento' && pagamentoLoading) return undefined;
+
     pendingFocusRef.current = null;
-
-    /** @type {Record<string, string>} */
-    const focusTestIds = {
-      pagamento: 'acordo-pagamento-panel',
-      adenda: 'adenda-pendente',
-      renovacao: 'renovacao-periodo-panel',
-    };
-    const testId = focusTestIds[focus];
-    if (!testId) return undefined;
-
-    const frameId = requestAnimationFrame(() => {
-      document.querySelector(`[data-testid="${testId}"]`)?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-      });
-    });
-
-    return () => cancelAnimationFrame(frameId);
-  }, [selected]);
+    scrollToAcordoFocus(focus);
+    return undefined;
+  }, [selected, scrollToAcordoFocus, pagamentoLoading, pagamento]);
 
   const activos = acordos.filter((a) => isActivo(a.estado));
   const outros = acordos.filter((a) => !isActivo(a.estado));
@@ -685,6 +694,7 @@ const MyAgreements = () => {
     const activo = isActivo(acordo.estado);
     const leavePending = Boolean(pendingLeaveIds[acordo.id]);
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
+    const minhaReservadaCard = Boolean(minhaLinha && isReservado(minhaLinha.estado));
     const quotaCard =
       tipoPerfil === 'Passageiro'
         ? (minhaLinha?.quota_mensal_kz ?? acordo.valor_mensal_por_passageiro_kz)
@@ -710,6 +720,14 @@ const MyAgreements = () => {
             >
               {activo ? 'Activo' : acordo.estado}
             </span>
+            {minhaReservadaCard ? (
+              <span
+                className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoPassageiro('reservado')}`}
+                data-testid={`acordo-lugar-chip-${acordo.id}`}
+              >
+                {labelChipEstadoPassageiro('reservado')}
+              </span>
+            ) : null}
             {leavePending && (
               <span
                 className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200"
@@ -766,7 +784,10 @@ const MyAgreements = () => {
     const podeSair =
       isPassageiro && activo && (!minhaLinha || isNoAcordo(minhaLinha.estado));
     const minhaReservada = Boolean(minhaLinha && isReservado(minhaLinha.estado));
-    const nConfirmados = linhas.filter((p) => isActivo(p.estado)).length;
+    const { confirmados: nConfirmados, reservados: nReservados } =
+      countPassageirosConfirmadosReservados(linhas);
+    const contagemPassageiros = formatContagemPassageiros(nConfirmados, nReservados);
+    const mostrarContagemPassageiros = nConfirmados + nReservados > 0;
     const podeRenegociar =
       activo &&
       nConfirmados >= 1 &&
@@ -863,6 +884,14 @@ const MyAgreements = () => {
                     Cancelamento pendente
                   </span>
                 )}
+                {minhaReservada ? (
+                  <span
+                    className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoPassageiro('reservado')}`}
+                    data-testid={`acordo-lugar-chip-${selected.id}`}
+                  >
+                    {labelChipEstadoPassageiro('reservado')}
+                  </span>
+                ) : null}
                 {leavePending && (
                   <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900">
                     <Loader2 size={12} className="animate-spin shrink-0" aria-hidden="true" />
@@ -878,13 +907,23 @@ const MyAgreements = () => {
               {rota.origem} → {rota.destino}
             </p>
             {minhaReservada ? (
-              <p
+              <div
                 role="status"
                 data-testid="lugar-reservado-banner"
-                className="text-sm rounded-xl border border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-100 px-3 py-2"
+                className="rounded-xl border border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-100 px-3 py-3 space-y-2"
               >
-                Lugar reservado — aguarda pagamento. O lugar confirma-se quando o comprovativo for validado.
-              </p>
+                <p className="text-sm text-pretty">
+                  Lugar reservado — aguarda pagamento. O lugar confirma-se quando o comprovativo for validado.
+                </p>
+                <Button
+                  type="button"
+                  className="w-full min-h-11"
+                  data-testid="lugar-reservado-pagamento-cta"
+                  onClick={() => scrollToAcordoFocus('pagamento')}
+                >
+                  Ir para pagamento
+                </Button>
+              </div>
             ) : null}
           </div>
 
@@ -1146,10 +1185,12 @@ const MyAgreements = () => {
           )}
 
           {isPassageiro && activo ? (
-            <AcordoPagamentoPanel
-              pagamento={pagamentoLoading ? null : pagamento}
-              onUpdated={() => carregarPagamentoContactos(selected)}
-            />
+            <div data-testid="acordo-pagamento-section">
+              <AcordoPagamentoPanel
+                pagamento={pagamentoLoading ? null : pagamento}
+                onUpdated={() => carregarPagamentoContactos(selected)}
+              />
+            </div>
           ) : null}
 
           <AcordoContactosPanel contactos={contactos} loading={contactosLoading} />
@@ -1158,9 +1199,32 @@ const MyAgreements = () => {
 
           {linhas.length > 0 ? (
             <section className="space-y-3">
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                Passageiros · {nLinhas || linhas.length}
-              </p>
+              <div className="space-y-1">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                  Passageiros · {nLinhas || linhas.length}
+                </p>
+                {mostrarContagemPassageiros ? (
+                  <p
+                    className="text-xs text-slate-500 tabular-nums"
+                    data-testid="passageiros-contagem"
+                  >
+                    {contagemPassageiros}
+                  </p>
+                ) : null}
+              </div>
+              <ul
+                className="rounded-xl border border-slate-100 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800"
+                data-testid="estados-lugar-glossario"
+              >
+                {GLOSSARIO_ESTADOS_LUGAR.map((item) => (
+                  <li key={item.termo} className="px-3 py-2 text-xs text-slate-500 text-pretty">
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                      {item.termo}:
+                    </span>{' '}
+                    {item.descricao}
+                  </li>
+                ))}
+              </ul>
               <ul className="space-y-2">
                 {linhas.map((p) => {
                   const nome = nomePassageiro(p);
@@ -1189,13 +1253,16 @@ const MyAgreements = () => {
                         <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                           {nome}
                         </p>
-                        <p
-                          className={`text-xs ${
-                            saiu ? 'text-slate-400' : 'text-emerald-700 dark:text-emerald-400'
-                          }`}
-                        >
-                          {estadoPassageiroLabel(p.estado)}
-                        </p>
+                        {!saiu ? (
+                          <span
+                            className={`inline-flex text-xs font-bold px-2 py-0.5 rounded-full mt-0.5 ${chipClassEstadoPassageiro(p.estado)}`}
+                            data-testid={`passageiro-estado-chip-${p.passenger_id}`}
+                          >
+                            {estadoPassageiroLabel(p.estado)}
+                          </span>
+                        ) : (
+                          <p className="text-xs text-slate-400">{estadoPassageiroLabel(p.estado)}</p>
+                        )}
                       </div>
                       <strong
                         className={`tabular-nums text-sm shrink-0 ${
