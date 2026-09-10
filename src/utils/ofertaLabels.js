@@ -40,3 +40,33 @@ export function labelRotaOferta(oferta) {
     destino: oferta?.destination_name || 'Destino',
   };
 }
+
+/**
+ * Label humana para procura no hub — flexível (OD null) alinhado a acordos/ofertas flex.
+ * @param {{
+ *   origin_name?: string | null,
+ *   destination_name?: string | null,
+ *   origin_lat?: number | null,
+ *   destination_lat?: number | null,
+ * }} procura
+ * @returns {{ origem: string, destino: string }}
+ */
+export function labelRotaProcura(procura) {
+  const hasOd =
+    procura?.origin_name &&
+    procura.origin_lat != null &&
+    procura?.destination_name &&
+    procura.destination_lat != null;
+
+  if (!hasOd) {
+    return {
+      origem: 'Procura flexível',
+      destino: 'Sem origem/destino fixos',
+    };
+  }
+
+  return {
+    origem: procura.origin_name,
+    destino: procura.destination_name,
+  };
+}

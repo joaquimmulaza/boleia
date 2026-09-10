@@ -18,7 +18,7 @@ import {
   updateProcura,
   cancelProcura,
 } from '../services/ProcuraService';
-import { findCompatibleOfertas } from '../services/MatchingService';
+import { findCompatibleOfertas, toProcuraMatchInput } from '../services/MatchingService';
 import { listOfertasDisponiveis } from '../services/OfertaService';
 import { getGrupoByProcura, listMembrosGrupo } from '../services/GrupoService';
 import {
@@ -46,7 +46,8 @@ import { resolveCapacityN } from '../utils/capacityGate.js';
 import { canEditProcura } from '../utils/canEditProcura';
 import { countPropostasAInvalidar } from '../utils/procuraEditImpact';
 import { isPropostaAcimaDoTeto } from '../utils/isPropostaAcimaDoTeto';
-import { buildProcuraMinimaFromOferta } from '../utils/procuraFromOferta';
+import { buildProcuraMinimaFromOferta, getPropostaBrowseGaps } from '../utils/procuraFromOferta';
+import { labelRotaProcura } from '../utils/ofertaLabels';
 import ConfirmationModal from '../components/ConfirmationModal';
 
 const CAPACIDADES_GRUPO = [2, 3, 4, 5, 6, 7, 8];
@@ -130,6 +131,9 @@ const PassengerDashboard = () => {
   const [confirmEditN, setConfirmEditN] = useState(null);
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
   const [savingProcura, setSavingProcura] = useState(false);
+  const [browseBusy, setBrowseBusy] = useState(false);
+  /** @type {[null | { oferta: object, gaps: Array<'time' | 'od'>, form: object }, Function]} */
+  const [proporSheet, setProporSheet] = useState(null);
 
   const carregar = useCallback(async () => {
     if (!user?.id) {
@@ -178,13 +182,8 @@ const PassengerDashboard = () => {
           setTerminadasRecebidas(enrichedTermR);
           setTerminadasEnviadas(enrichedTermE);
           const result = await findCompatibleOfertas({
-            preferred_time: String(activa.preferred_time).slice(0, 5),
-            origin_lat: Number(activa.origin_lat),
-            origin_lng: Number(activa.origin_lng),
-            destination_lat: Number(activa.destination_lat),
-            destination_lng: Number(activa.destination_lng),
+            ...toProcuraMatchInput(activa),
             n_candidato: nCapacidade,
-            dias_semana: activa.dias_semana,
           });
           setMatches({ direct: result.direct, waitlist: result.waitlist });
           const index = {};
@@ -413,31 +412,92 @@ const PassengerDashboard = () => {
   };
 
   /**
-   * Browse sem procura activa: cria procura mínima a partir da oferta e envia proposta.
    * @param {object} oferta
    */
-  const handleProporBrowse = async (oferta) => {
+  const openProporBrowseSheet = (oferta) => {
+    const gaps = getPropostaBrowseGaps(oferta);
+    if (gaps.length === 0) {
+      void submitProporBrowse(oferta, {});
+      return;
+    }
+    setProporSheet({
+      oferta,
+      gaps,
+      form: {
+        preferred_time: String(oferta.departure_time || '07:15').slice(0, 5),
+        origin_name: oferta.origin_name || '',
+        origin_lat: oferta.origin_lat ?? null,
+        origin_lng: oferta.origin_lng ?? null,
+        destination_name: oferta.destination_name || '',
+        destination_lat: oferta.destination_lat ?? null,
+        destination_lng: oferta.destination_lng ?? null,
+      },
+    });
+  };
+
+  /**
+   * Browse: cria procura mínima + proposta (valores da oferta).
+   * @param {object} oferta
+   * @param {object} overrides
+   */
+  const submitProporBrowse = async (oferta, overrides) => {
+    setBrowseBusy(true);
     setBusyId(oferta.id);
     setFeedback({ type: '', text: '' });
 
     try {
-      const payload = buildProcuraMinimaFromOferta(oferta);
+      const payload = buildProcuraMinimaFromOferta(oferta, overrides);
       const criada = await createProcura(payload);
-      await createProposta({
-        oferta_id: oferta.id,
-        procura_id: criada.id,
-        grupo_id: null,
-        modo_preco: oferta.modo_preco,
-        valor_mensal_ask_kz: oferta.valor_mensal_ask_kz,
-        n_passageiros_propostos: 1,
-      });
-      setFeedback({ type: 'success', text: 'Proposta enviada ao motorista.' });
+      try {
+        await createProposta({
+          oferta_id: oferta.id,
+          procura_id: criada.id,
+          grupo_id: null,
+          modo_preco: oferta.modo_preco,
+          valor_mensal_ask_kz: oferta.valor_mensal_ask_kz,
+          n_passageiros_propostos: 1,
+        });
+        setFeedback({ type: 'success', text: 'Proposta enviada ao motorista.' });
+      } catch (propErr) {
+        console.error(propErr);
+        setFeedback({
+          type: 'error',
+          text: 'Procura criada, mas não foi possível enviar a proposta. Vê «Propostas enviadas» ou tenta propor de novo.',
+        });
+      }
+      setProporSheet(null);
       await carregar();
     } catch (err) {
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
     } finally {
+      setBrowseBusy(false);
       setBusyId(null);
     }
+  };
+
+  const handleProporSheetSubmit = async (e) => {
+    e.preventDefault();
+    if (!proporSheet) return;
+
+    const { oferta, gaps, form } = proporSheet;
+    if (gaps.includes('time') && !form.preferred_time) {
+      setFeedback({ type: 'error', text: 'Indica o horário preferido.' });
+      return;
+    }
+    if (gaps.includes('od') && (form.origin_lat == null || form.destination_lat == null)) {
+      setFeedback({ type: 'error', text: 'Seleccione origem e destino na lista de sugestões.' });
+      return;
+    }
+
+    await submitProporBrowse(oferta, {
+      preferred_time: form.preferred_time,
+      origin_name: form.origin_name || null,
+      origin_lat: form.origin_lat,
+      origin_lng: form.origin_lng,
+      destination_name: form.destination_name || null,
+      destination_lat: form.destination_lat,
+      destination_lng: form.destination_lng,
+    });
   };
 
   const handlePropor = async (oferta) => {
@@ -583,7 +643,7 @@ const PassengerDashboard = () => {
               : 'Define a tua rota diária casa–trabalho.')
             : procura
               ? 'Encontra ofertas compatíveis com o teu horário.'
-              : 'Vê motoristas e grupos disponíveis. A procura filtra e permite propor acordo.'
+              : 'Explora ofertas e propõe acordo directamente — ou cria procura para filtrar matches.'
         }
         {...(view !== 'hub'
           ? { onBack: () => setView(procura ? 'matches' : 'hub') }
@@ -601,7 +661,17 @@ const PassengerDashboard = () => {
       {loading && <LoadingSkeleton />}
 
       {!loading && view === 'hub' && !procura && (
-        <div className="space-y-4">
+        <div className="space-y-4 relative">
+          {browseBusy ? (
+            <div
+              className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-white/70 dark:bg-slate-900/70"
+              role="status"
+              aria-live="polite"
+              data-testid="browse-busy-overlay"
+            >
+              <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">A enviar proposta…</p>
+            </div>
+          ) : null}
           <section className="space-y-3" data-testid="browse-ofertas-feed">
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-lg font-bold text-balance">Ofertas disponíveis</h2>
@@ -614,7 +684,7 @@ const PassengerDashboard = () => {
               </button>
             </div>
             <p className="text-sm text-slate-500 text-pretty">
-              Motoristas com lugares publicados. Podes propor acordo directamente ou criar procura para filtrar matches.
+              Toca «Propor acordo» numa oferta para enviar proposta já — ou «Criar procura» para filtrar por horário e trajeto.
             </p>
 
             {loadingBrowse ? (
@@ -630,7 +700,7 @@ const PassengerDashboard = () => {
                   oferta={oferta}
                   variant="browse"
                   busy={busyId === oferta.id}
-                  onPropor={() => handleProporBrowse(oferta)}
+                  onPropor={() => openProporBrowseSheet(oferta)}
                 />
               ))
             )}
@@ -869,10 +939,10 @@ const PassengerDashboard = () => {
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
-              <span>{procura.origin_name}</span>
-              <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
-              <span>{procura.destination_name}</span>
+            <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white min-w-0">
+              <span className="truncate">{labelRotaProcura(procura).origem}</span>
+              <ArrowRight size={16} className="text-slate-400 shrink-0" aria-hidden="true" />
+              <span className="truncate">{labelRotaProcura(procura).destino}</span>
             </div>
             <div className="flex gap-3 text-sm text-slate-500 flex-wrap">
               <span className="flex items-center gap-1 tabular-nums">
@@ -1130,6 +1200,108 @@ const PassengerDashboard = () => {
           }
         }}
       />
+      {proporSheet ? (
+        <div
+          className="fixed inset-0 z-modal flex flex-col justify-end bg-slate-900/60 dark:bg-black/80"
+          data-testid="propor-browse-sheet"
+        >
+          <button
+            type="button"
+            className="flex-1 w-full cursor-default"
+            aria-label="Fechar"
+            onClick={() => setProporSheet(null)}
+          />
+          <div className="bg-white dark:bg-slate-900 rounded-t-xl shadow-2xl max-w-md mx-auto w-full px-5 pt-4 pb-8 space-y-4">
+            <div className="flex h-1.5 w-12 rounded-full bg-slate-200 dark:bg-slate-700 mx-auto" aria-hidden="true" />
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white text-balance">
+              Dados em falta para propor
+            </h2>
+            <p className="text-sm text-slate-500 text-pretty">
+              {proporSheet.oferta.flexibilidade_rota
+                ? 'Indica o horário para completar a proposta — sem origem/destino fixos.'
+                : 'Completa origem, destino ou horário antes de enviar a proposta.'}
+            </p>
+            <form onSubmit={handleProporSheetSubmit} className="space-y-4">
+              {proporSheet.gaps.includes('time') ? (
+                <TimeInput
+                  name="preferred_time"
+                  label="Horário preferido"
+                  value={proporSheet.form.preferred_time}
+                  onChange={(e) =>
+                    setProporSheet((prev) => ({
+                      ...prev,
+                      form: { ...prev.form, preferred_time: e.target.value },
+                    }))
+                  }
+                />
+              ) : null}
+              {proporSheet.gaps.includes('od') ? (
+                <>
+                  <AddressInput
+                    name="origin_name"
+                    label="Origem"
+                    value={proporSheet.form.origin_name}
+                    onChange={(e) =>
+                      setProporSheet((prev) => ({
+                        ...prev,
+                        form: { ...prev.form, origin_name: e.target.value },
+                      }))
+                    }
+                    onSelectCoordinates={(c) =>
+                      setProporSheet((prev) => ({
+                        ...prev,
+                        form: {
+                          ...prev.form,
+                          origin_lat: c.lat,
+                          origin_lng: c.lng,
+                        },
+                      }))
+                    }
+                  />
+                  <AddressInput
+                    name="destination_name"
+                    label="Destino"
+                    value={proporSheet.form.destination_name}
+                    onChange={(e) =>
+                      setProporSheet((prev) => ({
+                        ...prev,
+                        form: { ...prev.form, destination_name: e.target.value },
+                      }))
+                    }
+                    onSelectCoordinates={(c) =>
+                      setProporSheet((prev) => ({
+                        ...prev,
+                        form: {
+                          ...prev.form,
+                          destination_lat: c.lat,
+                          destination_lng: c.lng,
+                        },
+                      }))
+                    }
+                  />
+                </>
+              ) : null}
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  className="flex-1 min-h-12 border border-slate-200 dark:border-slate-700 font-bold rounded-xl"
+                  onClick={() => setProporSheet(null)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 min-h-12 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl shadow-lg shadow-primary/25 disabled:opacity-60"
+                  disabled={browseBusy}
+                >
+                  Propor acordo
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
       <ConfirmationModal
         isOpen={confirmCancelOpen}
         title="Cancelar procura?"

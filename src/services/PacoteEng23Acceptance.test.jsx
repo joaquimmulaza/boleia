@@ -7,8 +7,12 @@ import { MemoryRouter } from 'react-router-dom';
 import PassengerDashboard from '../pages/PassengerDashboard.jsx';
 import OfertaMatchCard from '../components/OfertaMatchCard.jsx';
 import ProtectedRoute from '../components/ProtectedRoute.jsx';
-import { labelRotaOferta } from '../utils/ofertaLabels.js';
-import { buildProcuraMinimaFromOferta } from '../utils/procuraFromOferta.js';
+import { labelRotaOferta, labelRotaProcura } from '../utils/ofertaLabels.js';
+import {
+  buildProcuraMinimaFromOferta,
+  getPropostaBrowseGaps,
+} from '../utils/procuraFromOferta.js';
+import { toProcuraMatchInput } from './MatchingService.js';
 import { listProcurasByOwner, createProcura } from './ProcuraService.js';
 import { listOfertasDisponiveis } from './OfertaService.js';
 import { createProposta } from './PropostaService.js';
@@ -35,9 +39,13 @@ vi.mock('../services/OfertaService', () => ({
   isOfertaFlexivel: (o) => Boolean(o?.flexibilidade_rota),
 }));
 
-vi.mock('../services/MatchingService', () => ({
-  findCompatibleOfertas: vi.fn().mockResolvedValue({ direct: [], waitlist: [], incompatible: [] }),
-}));
+vi.mock('../services/MatchingService', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    findCompatibleOfertas: vi.fn().mockResolvedValue({ direct: [], waitlist: [], incompatible: [] }),
+  };
+});
 
 vi.mock('../services/GrupoService', () => ({
   getGrupoByProcura: vi.fn().mockResolvedValue(null),
@@ -211,6 +219,67 @@ describe('PACOTE #23 — propor acordo no browse', () => {
           }),
         );
       });
+    });
+  });
+
+  describe('follow-up Critiquito/Joaquim', () => {
+    it('toProcuraMatchInput: null lat permanece null (não 0)', () => {
+      const input = toProcuraMatchInput({
+        preferred_time: '07:00:00',
+        origin_lat: null,
+        origin_lng: null,
+        destination_lat: null,
+        destination_lng: null,
+      });
+      expect(input.origin_lat).toBeNull();
+      expect(input.destination_lat).toBeNull();
+    });
+
+    it('labelRotaProcura: procura flex sem OD vazios', () => {
+      expect(
+        labelRotaProcura({
+          origin_name: null,
+          origin_lat: null,
+          destination_name: null,
+          destination_lat: null,
+        }),
+      ).toEqual({
+        origem: 'Procura flexível',
+        destino: 'Sem origem/destino fixos',
+      });
+    });
+
+    it('browse CTA tem testid browse-propor-acordo (verde primary)', () => {
+      render(
+        <OfertaMatchCard
+          oferta={ofertaFixaBrowse}
+          variant="browse"
+          onPropor={() => {}}
+        />,
+      );
+      expect(screen.getByTestId('browse-propor-acordo')).toBeInTheDocument();
+    });
+
+    it('oferta fixa incompleta: abre sheet propor-browse', async () => {
+      listOfertasDisponiveis.mockResolvedValue([
+        {
+          ...ofertaFixaBrowse,
+          origin_lat: null,
+          origin_lng: null,
+          destination_lat: null,
+          destination_lng: null,
+        },
+      ]);
+
+      render(
+        <MemoryRouter>
+          <PassengerDashboard />
+        </MemoryRouter>,
+      );
+
+      fireEvent.click(await screen.findByTestId('browse-propor-acordo'));
+      expect(await screen.findByTestId('propor-browse-sheet')).toBeInTheDocument();
+      expect(getPropostaBrowseGaps({ flexibilidade_rota: false, origin_name: 'A', departure_time: '07:00' })).toContain('od');
     });
   });
 

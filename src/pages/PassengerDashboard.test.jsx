@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import PassengerDashboard from './PassengerDashboard';
 import { createProcura, createProcuraWithGrupo, listProcurasByOwner, updateProcura } from '../services/ProcuraService';
-import { findCompatibleOfertas } from '../services/MatchingService';
+import { findCompatibleOfertas, toProcuraMatchInput } from '../services/MatchingService';
 import { listOfertasDisponiveis } from '../services/OfertaService';
 import { createProposta, listPropostasByProcura, enrichPropostasForReview, cancelProposta } from '../services/PropostaService';
 import { createAgreementFromProposal } from '../services/AgreementService';
@@ -24,9 +24,13 @@ vi.mock('../services/ProcuraService', () => ({
   cancelProcura: vi.fn(),
 }));
 
-vi.mock('../services/MatchingService', () => ({
-  findCompatibleOfertas: vi.fn().mockResolvedValue({ direct: [], waitlist: [], incompatible: [] }),
-}));
+vi.mock('../services/MatchingService', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    findCompatibleOfertas: vi.fn().mockResolvedValue({ direct: [], waitlist: [], incompatible: [] }),
+  };
+});
 
 vi.mock('../services/OfertaService', () => ({
   listOfertasDisponiveis: vi.fn().mockResolvedValue([]),
@@ -229,6 +233,129 @@ describe('PassengerDashboard — marketplace', () => {
         }),
       );
     });
+  });
+
+  it('procura flex auto-criada: hub mostra label flexível (sem OD vazios)', async () => {
+    listProcurasByOwner.mockResolvedValue([
+      {
+        id: 'pr-flex',
+        estado: 'activa',
+        n_candidato: 1,
+        preferred_time: '07:00:00',
+        origin_name: null,
+        origin_lat: null,
+        origin_lng: null,
+        destination_name: null,
+        destination_lat: null,
+        destination_lng: null,
+        dias_semana: [1, 2, 3, 4, 5],
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Procura flexível')).toBeInTheDocument();
+    expect(screen.getByText('Sem origem/destino fixos')).toBeInTheDocument();
+  });
+
+  it('carregar procura flex: matching recebe origin_lat null (não 0)', async () => {
+    listProcurasByOwner.mockResolvedValue([
+      {
+        id: 'pr-flex',
+        estado: 'activa',
+        n_candidato: 1,
+        preferred_time: '07:00:00',
+        origin_lat: null,
+        origin_lng: null,
+        destination_lat: null,
+        destination_lng: null,
+        dias_semana: [1, 2, 3, 4, 5],
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(findCompatibleOfertas).toHaveBeenCalledWith(
+        expect.objectContaining({
+          origin_lat: null,
+          destination_lat: null,
+          n_candidato: 1,
+        }),
+      );
+    });
+    expect(toProcuraMatchInput({ origin_lat: null, destination_lat: null, preferred_time: '07:00' }).origin_lat).toBeNull();
+  });
+
+  it('oferta fixa incompleta: abre sheet em vez de erro silencioso', async () => {
+    listOfertasDisponiveis.mockResolvedValue([
+      {
+        id: 'of-incomplete',
+        origin_name: 'Talatona',
+        destination_name: 'Miramar',
+        departure_time: '07:15:00',
+        vagas_disponiveis: 2,
+        valor_mensal_ask_kz: 80000,
+        modo_preco: 'POR_PASSAGEIRO',
+        flexibilidade_rota: false,
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Propor acordo/i }));
+
+    expect(await screen.findByTestId('propor-browse-sheet')).toBeInTheDocument();
+    expect(screen.getByText(/Dados em falta para propor/i)).toBeInTheDocument();
+    expect(createProcura).not.toHaveBeenCalled();
+  });
+
+  it('createProposta falha após createProcura: feedback claro', async () => {
+    listOfertasDisponiveis.mockResolvedValue([
+      {
+        id: 'of-browse',
+        origin_name: 'Talatona',
+        origin_lat: -8.916,
+        origin_lng: 13.234,
+        destination_name: 'Miramar',
+        destination_lat: -8.82,
+        destination_lng: 13.25,
+        departure_time: '07:15:00',
+        vagas_disponiveis: 3,
+        valor_mensal_ask_kz: 90000,
+        modo_preco: 'POR_PASSAGEIRO',
+        flexibilidade_rota: false,
+      },
+    ]);
+    createProcura.mockResolvedValue({ id: 'pr-browse', n_candidato: 1, estado: 'activa' });
+    createProposta.mockRejectedValue(new Error('Falha RPC'));
+    listProcurasByOwner
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'pr-browse', n_candidato: 1, estado: 'activa', preferred_time: '07:15:00' }]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Propor acordo/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Procura criada, mas não foi possível enviar a proposta/i);
+    expect(createProcura).toHaveBeenCalled();
+    expect(createProposta).toHaveBeenCalled();
   });
 
   it('GrupoDescobertaPanel monta sem procura activa', async () => {
