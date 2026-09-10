@@ -244,6 +244,31 @@ describe('MyAgreements — marketplace 1:N', () => {
     expect(screen.queryByText(/^Destino$/)).not.toBeInTheDocument();
   });
 
+  it('detalhe de acordo flexível não usa rótulos Partida/Chegada (sem OD fictícia)', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        ofertas_capacidade: {
+          flexibilidade_rota: true,
+          departure_time: '07:15',
+          origin_name: null,
+          destination_name: null,
+        },
+      },
+    ]);
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Oferta flexível/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByText(/Oferta flexível — sem origem\/destino fixos/i)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/^Partida$/)).not.toBeInTheDocument();
+    expect(within(dialog).queryByText(/^Chegada$/)).not.toBeInTheDocument();
+    expect(within(dialog).queryByText(/^Origem$/)).not.toBeInTheDocument();
+    expect(within(dialog).queryByText(/^Destino$/)).not.toBeInTheDocument();
+  });
+
   it('motorista no detalhe vê N linhas com nome, quota Kz e estado humano', async () => {
     renderPage();
 
