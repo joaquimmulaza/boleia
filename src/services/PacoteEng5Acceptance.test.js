@@ -47,7 +47,7 @@ describe('PACOTE ENG #5 — pagamento escrow + gate contactos', () => {
 
   describe('1 — Estados de pagamento', () => {
     it('SQL define CHECK com os cinco estados', () => {
-      const sql = readMigration('20260907010000_pacote_eng5_pagamentos_escrow.sql');
+      const sql = readMigration('20260906224025_pacote_eng5_pagamentos_escrow.sql');
       expect(sql).toMatch(/pendente_pagamento/);
       expect(sql).toMatch(/comprovativo_enviado/);
       expect(sql).toMatch(/em_custodia/);
@@ -63,7 +63,7 @@ describe('PACOTE ENG #5 — pagamento escrow + gate contactos', () => {
 
   describe('2 — Storage privado com RLS', () => {
     it('migração cria bucket comprovativos-pagamento não público', () => {
-      const sql = readMigration('20260907010000_pacote_eng5_pagamentos_escrow.sql');
+      const sql = readMigration('20260906224025_pacote_eng5_pagamentos_escrow.sql');
       expect(sql).toMatch(/comprovativos-pagamento/);
       expect(sql).toMatch(/comprovativos-pagamento[\s\S]*false/);
       expect(sql).toMatch(/storage\.objects/i);
@@ -89,7 +89,7 @@ describe('PACOTE ENG #5 — pagamento escrow + gate contactos', () => {
     });
 
     it('SQL get_acordo_contactos só expõe telefone após em_custodia', () => {
-      const sql = readMigration('20260907010000_pacote_eng5_pagamentos_escrow.sql');
+      const sql = readMigration('20260906224025_pacote_eng5_pagamentos_escrow.sql');
       expect(sql).toMatch(/get_acordo_contactos/);
       expect(sql).toMatch(/em_custodia|liquidado/i);
     });
@@ -97,7 +97,7 @@ describe('PACOTE ENG #5 — pagamento escrow + gate contactos', () => {
 
   describe('4 — IBAN motorista no perfil', () => {
     it('migração adiciona iban e iban_titular a perfis', () => {
-      const sql = readMigration('20260907010000_pacote_eng5_pagamentos_escrow.sql');
+      const sql = readMigration('20260906224025_pacote_eng5_pagamentos_escrow.sql');
       expect(sql).toMatch(/iban_titular/);
       expect(sql).toMatch(/ALTER TABLE public\.perfis/);
     });
@@ -128,7 +128,7 @@ describe('PACOTE ENG #5 — pagamento escrow + gate contactos', () => {
     });
 
     it('SQL admin_validate_payment exige is_admin', () => {
-      const sql = readMigration('20260907010000_pacote_eng5_pagamentos_escrow.sql');
+      const sql = readMigration('20260906224025_pacote_eng5_pagamentos_escrow.sql');
       expect(sql).toMatch(/admin_validate_payment/);
       expect(sql).toMatch(/is_admin/);
     });
@@ -136,7 +136,7 @@ describe('PACOTE ENG #5 — pagamento escrow + gate contactos', () => {
 
   describe('6 — Valores do acordo (nunca defaults plataforma)', () => {
     it('trigger pagamento usa quota_mensal_kz da linha acordos_passageiros', () => {
-      const sql = readMigration('20260907010000_pacote_eng5_pagamentos_escrow.sql');
+      const sql = readMigration('20260906224025_pacote_eng5_pagamentos_escrow.sql');
       expect(sql).toMatch(/NEW\.quota_mensal_kz/);
       expect(sql).not.toMatch(/DEFAULT\s+\d{4,}/);
     });
@@ -152,7 +152,7 @@ describe('PACOTE ENG #5 — pagamento escrow + gate contactos', () => {
     });
 
     it('SQL compute_payout_liquido_kz espelha take-rate 0.10', () => {
-      const sql = readMigration('20260907010000_pacote_eng5_pagamentos_escrow.sql');
+      const sql = readMigration('20260906224025_pacote_eng5_pagamentos_escrow.sql');
       expect(sql).toMatch(/compute_payout_liquido_kz/);
       expect(sql).toMatch(/0\.10/);
     });

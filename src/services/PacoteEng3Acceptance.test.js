@@ -74,7 +74,7 @@ describe('PACOTE ENG #3 — aceite atómico acordo 1:N', () => {
     });
 
     it('SQL cancela propostas irmãs abertas da mesma procura após aceite', () => {
-      const sql = readMigration('20260906220000_pacote_eng3_accept_proposal_atomic.sql');
+      const sql = readMigration('20260907190530_seat_before_custody_accept_proposal.sql');
       expect(sql).toMatch(
         /UPDATE public\.propostas\s+SET estado = 'cancelada'[\s\S]*WHERE procura_id = v_prop\.procura_id/,
       );
@@ -83,7 +83,7 @@ describe('PACOTE ENG #3 — aceite atómico acordo 1:N', () => {
     });
 
     it('SQL fecha procura após aceite bem-sucedido', () => {
-      const sql = readMigration('20260906220000_pacote_eng3_accept_proposal_atomic.sql');
+      const sql = readMigration('20260907190530_seat_before_custody_accept_proposal.sql');
       expect(sql).toMatch(/UPDATE public\.procuras\s+SET estado = 'fechada'/);
     });
   });
@@ -119,7 +119,7 @@ describe('PACOTE ENG #3 — aceite atómico acordo 1:N', () => {
     });
 
     it('accept_proposal SQL usa v_prop.valor_mensal_ask_kz e v_prop.n_passageiros_propostos', () => {
-      const sql = readMigration('20260906220000_pacote_eng3_accept_proposal_atomic.sql');
+      const sql = readMigration('20260907190530_seat_before_custody_accept_proposal.sql');
       expect(sql).toMatch(/v_base := v_prop\.valor_mensal_ask_kz/);
       expect(sql).toMatch(/v_total := v_prop\.valor_mensal_ask_kz/);
       expect(sql).toMatch(/v_n := v_prop\.n_passageiros_propostos/);
@@ -159,7 +159,7 @@ describe('PACOTE ENG #3 — aceite atómico acordo 1:N', () => {
     });
 
     it('SQL devolve acordo cacheado quando p_idempotency_key já existe', () => {
-      const sql = readMigration('20260906220000_pacote_eng3_accept_proposal_atomic.sql');
+      const sql = readMigration('20260907190530_seat_before_custody_accept_proposal.sql');
       expect(sql).toMatch(/FROM public\.rpc_idempotency\s+WHERE idempotency_key = p_idempotency_key/);
       expect(sql).toMatch(/RETURN v_acordo_id/);
     });
@@ -188,14 +188,15 @@ describe('PACOTE ENG #3 — aceite atómico acordo 1:N', () => {
     });
 
     it('FOR UPDATE em proposta e oferta (locks para concorrência)', () => {
-      const sql = readMigration('20260906220000_pacote_eng3_accept_proposal_atomic.sql');
+      const sql = readMigration('20260907190530_seat_before_custody_accept_proposal.sql');
       expect(sql).toMatch(/FROM public\.propostas WHERE id = p_proposta_id FOR UPDATE/);
       expect(sql).toMatch(/FROM public\.ofertas_capacidade WHERE id = v_prop\.oferta_id FOR UPDATE/);
-      expect(sql).toMatch(/FROM public\.procuras WHERE id = v_prop\.procura_id FOR UPDATE/);
+      expect(sql).toMatch(/FROM public\.procuras WHERE id = v_prop\.procura_id;/);
+      expect(sql).not.toMatch(/FROM public\.procuras WHERE id = v_prop\.procura_id FOR UPDATE/);
     });
   });
 
-  describe('4 — Sem órfãos (guards procura/acordo; grupo fallback)', () => {
+  describe('4 — Sem órfãos (guards procura/acordo; grupo sem auto-select)', () => {
     it('propaga erro quando procura já fechada', async () => {
       supabase.rpc.mockResolvedValue({
         data: null,
@@ -217,22 +218,26 @@ describe('PACOTE ENG #3 — aceite atómico acordo 1:N', () => {
       );
     });
 
-    it('SQL bloqueia aceite se procura fechada ou acordo activo existente', () => {
-      const sql = readMigration('20260906220000_pacote_eng3_accept_proposal_atomic.sql');
-      expect(sql).toMatch(/IF lower\(v_procura\.estado\) = 'fechada'/);
-      expect(sql).toMatch(/Já existe um acordo activo para esta procura/);
+    it('SQL fecha a procura após aceite e cancela irmãs (sem duplicar acordo na mesma procura)', () => {
+      const sql = readMigration('20260907190530_seat_before_custody_accept_proposal.sql');
+      expect(sql).toMatch(/UPDATE public\.procuras\s+SET estado = 'fechada'/);
+      expect(sql).toMatch(
+        /UPDATE public\.propostas\s+SET estado = 'cancelada'[\s\S]*WHERE procura_id = v_prop\.procura_id/,
+      );
     });
 
-    it('grupo N_actual = N_proposto: fallback auto-select quando p_member_ids vazio', () => {
-      const sql = readMigration('20260906220000_pacote_eng3_accept_proposal_atomic.sql');
-      expect(sql).toMatch(/IF cardinality\(v_ids\) = 0 THEN/);
-      expect(sql).toMatch(/array_agg\(passenger_id ORDER BY ordem_insercao ASC/);
+    it('grupo: p_member_ids tem de coincidir com N_proposto (sem auto-select)', () => {
+      const sql = readMigration('20260907190530_seat_before_custody_accept_proposal.sql');
+      expect(sql).toMatch(/IF cardinality\(v_ids\) IS DISTINCT FROM v_n THEN/);
+      expect(sql).toMatch(/Capacidade inconsistente com proposta/);
+      expect(sql).not.toMatch(/array_agg\(passenger_id ORDER BY ordem_insercao ASC/);
     });
 
-    it('grupo N_actual > N_proposto: exige picker explícito (sem auto-select)', () => {
-      const sql = readMigration('20260906220000_pacote_eng3_accept_proposal_atomic.sql');
-      expect(sql).toMatch(/IF v_n_activos > v_n THEN/);
-      expect(sql).toMatch(/Escolhe exactamente % passageiro/);
+    it('grupo: inserções de passageiros ficam reservado (seat-before-custody)', () => {
+      const sql = readMigration('20260907190530_seat_before_custody_accept_proposal.sql');
+      expect(sql).toMatch(/INSERT INTO public\.acordos_passageiros/);
+      expect(sql).toMatch(/'reservado'/);
+      expect(sql).not.toMatch(/IF v_n_activos > v_n THEN/);
     });
 
     it('acceptProposal encaminha memberIds para RPC (composição explícita)', async () => {

@@ -1,3 +1,5 @@
+-- Reconciled from remote supabase_migrations.schema_migrations (project fdclrbcgytnuqcrpsevw)
+-- Do not rename; Supabase Preview CI requires exact version match.
 -- PACOTE ENG #11 — assiduidade/faltaDesconto gate pagamento + liquidação on-platform
 -- Sem em_custodia: sem desconto nem registo válido para repasse.
 

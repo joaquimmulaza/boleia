@@ -13,7 +13,7 @@ import {
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS = join(ROOT, '../../supabase/migrations');
-const ENG16_SQL = '20260907060000_pacote_eng16_domain_notifications.sql';
+const ENG16_SQL = '20260907151936_pacote_eng16_domain_notifications.sql';
 
 /** @param {string} filename */
 function readMigration(filename) {

@@ -1,11 +1,11 @@
--- PACOTE ENG #15 — saída parcial de passageiro no acordo 1:N
--- Um passageiro sai; N_activos desce (linha saiu); N_contrato e preços congelados intactos.
--- Vagas alinhadas a #8 cancelamento via recount_oferta_vagas (trigger recalc_vagas_disponiveis).
+-- Reconciled from remote supabase_migrations.schema_migrations (project fdclrbcgytnuqcrpsevw)
+-- Source: production migration history sync — 20260907190551 seat_before_custody_leave_passenger
+-- Do not rename; Supabase Preview CI requires exact version match.
 
 CREATE OR REPLACE FUNCTION public.leave_passenger(
   p_acordo_id uuid,
-  p_passenger_id uuid DEFAULT NULL,
-  p_idempotency_key uuid DEFAULT NULL
+  p_passenger_id uuid DEFAULT NULL::uuid,
+  p_idempotency_key uuid DEFAULT NULL::uuid
 )
 RETURNS uuid
 LANGUAGE plpgsql
@@ -59,11 +59,10 @@ BEGIN
     RAISE EXCEPTION 'Passageiro não pertence a este acordo.';
   END IF;
 
-  IF lower(v_row.estado) <> 'activo' THEN
+  IF lower(v_row.estado) NOT IN ('activo', 'reservado') THEN
     RAISE EXCEPTION 'Passageiro não está activo neste acordo.';
   END IF;
 
-  -- Saída parcial: só esta linha; cabeçalho activo + N_contrato + quotas congeladas intactos.
   UPDATE public.acordos_passageiros
   SET estado = 'saiu'
   WHERE id = v_row.id;
@@ -88,5 +87,3 @@ BEGIN
 END;
 $function$;
 
-REVOKE ALL ON FUNCTION public.leave_passenger(uuid, uuid, uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.leave_passenger(uuid, uuid, uuid) TO authenticated;

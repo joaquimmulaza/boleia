@@ -1,3 +1,5 @@
+-- Reconciled from remote supabase_migrations.schema_migrations (project fdclrbcgytnuqcrpsevw)
+-- Do not rename; Supabase Preview CI requires exact version match.
 -- PACOTE ENG #13 — liquidação período + registo repasse motorista + idempotência
 -- Extende ENG #5 (escrow) e ENG #11 (assiduidade gate). Valores sempre do acordo.
 

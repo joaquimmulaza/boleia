@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const SQL = readFileSync(
-  join(ROOT, '../../supabase/migrations/20260908220000_editar_procura_update_cancel_rpc.sql'),
+  join(ROOT, '../../supabase/migrations/20260908225833_editar_procura_update_cancel_rpc.sql'),
   'utf8',
 );
 

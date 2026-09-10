@@ -1,3 +1,5 @@
+-- Reconciled from remote supabase_migrations.schema_migrations (project fdclrbcgytnuqcrpsevw)
+-- Do not rename; Supabase Preview CI requires exact version match.
 -- PACOTE ENG #5 — pagamentos escrow, storage comprovativos, IBAN motorista, admin gate contactos
 -- Valores sempre de quota_mensal_kz (acordo); take-rate ~10% documentado no payout líquido.
 
