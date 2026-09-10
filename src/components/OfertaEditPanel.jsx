@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { Clock, History, Banknote } from 'lucide-react';
 import AddressInput from './AddressInput';
 import TimeInput from './TimeInput';
+import ConfirmationModal from './ConfirmationModal';
 import { updateOferta } from '../services/OfertaService';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { DIAS_SEMANA, DIAS_UTEIS_DEFAULT } from '../utils/diasSemana';
+import { countPropostasAInvalidarPorOferta } from '../utils/ofertaEditImpact';
 
 const OD_VAZIO = {
   origin_name: '',
@@ -23,9 +25,19 @@ const OD_VAZIO = {
  *   onCancel: () => void,
  *   onSaved: (oferta: object) => void,
  *   onSubmitStart?: () => void,
+ *   propostas?: object[],
+ *   procurasById?: Record<string, object>,
  * }} props
  */
-const OfertaEditPanel = ({ oferta, busy = false, onCancel, onSaved, onSubmitStart }) => {
+const OfertaEditPanel = ({
+  oferta,
+  busy = false,
+  onCancel,
+  onSaved,
+  onSubmitStart,
+  propostas = [],
+  procurasById = {},
+}) => {
   const [modoPreco, setModoPreco] = useState(oferta.modo_preco || 'POR_PASSAGEIRO');
   const [ofertaFlexivel, setOfertaFlexivel] = useState(Boolean(oferta.flexibilidade_rota));
   const [diasSemana, setDiasSemana] = useState(
@@ -46,6 +58,9 @@ const OfertaEditPanel = ({ oferta, busy = false, onCancel, onSaved, onSubmitStar
   });
   const [message, setMessage] = useState({ type: '', text: '' });
   const [saving, setSaving] = useState(false);
+  const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
+  const [pendingPayload, setPendingPayload] = useState(null);
+  const [confirmImpactN, setConfirmImpactN] = useState(null);
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -68,7 +83,65 @@ const OfertaEditPanel = ({ oferta, busy = false, onCancel, onSaved, onSubmitStar
     });
   };
 
-  const handleSubmit = async (e) => {
+  const buildPayload = () => {
+    const valor = parseInt(String(formData.valor_mensal_ask_kz).replace(/\D/g, ''), 10);
+    return {
+      modo_preco: modoPreco,
+      valor_mensal_ask_kz: valor,
+      origin_name: ofertaFlexivel ? null : formData.origin_name,
+      origin_lat: ofertaFlexivel ? null : formData.origin_lat,
+      origin_lng: ofertaFlexivel ? null : formData.origin_lng,
+      destination_name: ofertaFlexivel ? null : formData.destination_name,
+      destination_lat: ofertaFlexivel ? null : formData.destination_lat,
+      destination_lng: ofertaFlexivel ? null : formData.destination_lng,
+      departure_time: formData.departure_time,
+      return_time: formData.return_time || null,
+      dias_semana: diasSemana,
+      flexibilidade_rota: ofertaFlexivel,
+    };
+  };
+
+  const buildDraftOferta = (payload) => ({
+    departure_time: payload.departure_time,
+    return_time: payload.return_time,
+    flexibilidade_rota: payload.flexibilidade_rota,
+    origin_lat: payload.origin_lat,
+    origin_lng: payload.origin_lng,
+    destination_lat: payload.destination_lat,
+    destination_lng: payload.destination_lng,
+    vagas_disponiveis: oferta.vagas_disponiveis,
+    dias_semana: payload.dias_semana,
+  });
+
+  const snapshotConfirmCopy = (nImpacto) => {
+    const base =
+      'O valor negociado das propostas existentes não muda. Só novas propostas reflectem o preço actualizado.';
+    if (nImpacto != null && nImpacto > 0) {
+      const invalidadas =
+        nImpacto === 1
+          ? '1 proposta aberta deixa de corresponder e será invalidada.'
+          : `${nImpacto} propostas abertas deixam de corresponder e serão invalidadas.`;
+      return `${invalidadas} ${base}`;
+    }
+    return `Propostas abertas incompatíveis com estas alterações serão invalidadas. ${base}`;
+  };
+
+  const persistUpdate = async (payload) => {
+    setSaving(true);
+    onSubmitStart?.();
+    try {
+      const actualizada = await updateOferta(oferta.id, payload);
+      setConfirmSaveOpen(false);
+      setPendingPayload(null);
+      onSaved(actualizada);
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSubmit = (e) => {
     e.preventDefault();
     setMessage({ type: '', text: '' });
 
@@ -92,29 +165,18 @@ const OfertaEditPanel = ({ oferta, busy = false, onCancel, onSaved, onSubmitStar
       return;
     }
 
-    setSaving(true);
-    onSubmitStart?.();
-    try {
-      const actualizada = await updateOferta(oferta.id, {
-        modo_preco: modoPreco,
-        valor_mensal_ask_kz: valor,
-        origin_name: ofertaFlexivel ? null : formData.origin_name,
-        origin_lat: ofertaFlexivel ? null : formData.origin_lat,
-        origin_lng: ofertaFlexivel ? null : formData.origin_lng,
-        destination_name: ofertaFlexivel ? null : formData.destination_name,
-        destination_lat: ofertaFlexivel ? null : formData.destination_lat,
-        destination_lng: ofertaFlexivel ? null : formData.destination_lng,
-        departure_time: formData.departure_time,
-        return_time: formData.return_time || null,
-        dias_semana: diasSemana,
-        flexibilidade_rota: ofertaFlexivel,
-      });
-      onSaved(actualizada);
-    } catch (err) {
-      setMessage({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
-    } finally {
-      setSaving(false);
-    }
+    const payload = buildPayload();
+    const nImpacto =
+      propostas.length > 0
+        ? countPropostasAInvalidarPorOferta({
+            propostas,
+            procurasById,
+            oferta: buildDraftOferta(payload),
+          })
+        : null;
+    setConfirmImpactN(nImpacto);
+    setPendingPayload(payload);
+    setConfirmSaveOpen(true);
   };
 
   const isBusy = busy || saving;
@@ -230,6 +292,7 @@ const OfertaEditPanel = ({ oferta, busy = false, onCancel, onSaved, onSubmitStar
             onChange={handleChange}
             required
             disabled={isBusy}
+            aria-label="Hora de ida"
             className="h-11 rounded-lg bg-slate-50 dark:bg-slate-800 px-3"
           />
         </label>
@@ -242,6 +305,7 @@ const OfertaEditPanel = ({ oferta, busy = false, onCancel, onSaved, onSubmitStar
             value={formData.return_time}
             onChange={handleChange}
             disabled={isBusy}
+            aria-label="Hora de regresso"
             className="h-11 rounded-lg bg-slate-50 dark:bg-slate-800 px-3"
           />
         </label>
@@ -308,6 +372,31 @@ const OfertaEditPanel = ({ oferta, busy = false, onCancel, onSaved, onSubmitStar
           {saving ? 'A guardar…' : 'Guardar alterações'}
         </button>
       </div>
+
+      <ConfirmationModal
+        isOpen={confirmSaveOpen}
+        testId="oferta-edit-snapshot-confirm"
+        title={
+          confirmImpactN != null && confirmImpactN > 0
+            ? confirmImpactN === 1
+              ? '1 proposta deixa de corresponder'
+              : `${confirmImpactN} propostas deixam de corresponder`
+            : 'Guardar alterações à oferta?'
+        }
+        message={snapshotConfirmCopy(confirmImpactN)}
+        confirmText="Guardar alterações"
+        cancelText="Voltar"
+        variant="primary"
+        busy={saving}
+        onCancel={() => {
+          if (saving) return;
+          setConfirmSaveOpen(false);
+          setPendingPayload(null);
+        }}
+        onConfirm={() => {
+          if (pendingPayload) persistUpdate(pendingPayload);
+        }}
+      />
     </form>
   );
 };

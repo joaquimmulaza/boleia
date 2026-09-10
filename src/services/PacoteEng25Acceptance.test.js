@@ -167,7 +167,19 @@ describe('PACOTE ENG #25 — ciclo de vida oferta', () => {
     });
   });
 
-  describe('5 — Browse reflecte estado', () => {
+  describe('5 — Confirm snapshot ao editar', () => {
+    it('OfertaEditPanel exporta fluxo de confirm antes de persistir (componente testado)', () => {
+      const src = readFileSync(
+        join(ROOT, '../components/OfertaEditPanel.jsx'),
+        'utf8',
+      );
+      expect(src).toMatch(/oferta-edit-snapshot-confirm/);
+      expect(src).toMatch(/countPropostasAInvalidarPorOferta/);
+      expect(src).toMatch(/valor negociado das propostas existentes não muda/i);
+    });
+  });
+
+  describe('6 — Browse reflecte estado', () => {
     it('listOfertasDisponiveis exclui inactiva (só disponivel|parcial)', async () => {
       supabase.auth.getUser.mockResolvedValue({
         data: { user: { id: 'pax-1' } },

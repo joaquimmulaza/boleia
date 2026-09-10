@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import DriverDashboard from './DriverDashboard';
@@ -12,7 +12,8 @@ import {
 import { createAgreementFromProposal } from '../services/AgreementService';
 import { findCompatibleProcuras } from '../services/MatchingService';
 import { getGrupoByProcura } from '../services/GrupoService';
-import { listOfertasByDriver, cancelOferta } from '../services/OfertaService';
+import { getProcura } from '../services/ProcuraService';
+import { listOfertasByDriver, cancelOferta, updateOferta } from '../services/OfertaService';
 import { getAgreementsForDriver } from '../services/AgreementService';
 import { supabase } from '../lib/supabase';
 import { expectNoUserFacingJargon } from '../test/jargonBan';
@@ -24,13 +25,18 @@ vi.mock('../contexts/AuthContext', () => ({
 const ofertaFixa = {
   id: 'of-1',
   origin_name: 'Talatona',
+  origin_lat: -8.9,
+  origin_lng: 13.2,
   destination_name: 'Mutual',
+  destination_lat: -8.8,
+  destination_lng: 13.23,
   departure_time: '07:15',
   vagas_disponiveis: 3,
   modo_preco: 'TOTAL_ACORDO',
   valor_mensal_ask_kz: 120000,
   estado: 'parcial',
   flexibilidade_rota: false,
+  dias_semana: [1, 2, 3, 4, 5],
 };
 
 vi.mock('../services/OfertaService', async (importOriginal) => {
@@ -69,6 +75,10 @@ vi.mock('../services/MatchingService', () => ({
 
 vi.mock('../services/GrupoService', () => ({
   getGrupoByProcura: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock('../services/ProcuraService', () => ({
+  getProcura: vi.fn(),
 }));
 
 vi.mock('../services/AgreementService', () => ({
@@ -152,6 +162,17 @@ describe('DriverDashboard — marketplace', () => {
     cancelProposta.mockResolvedValue({ id: 'prop-own', estado: 'cancelada' });
     getAgreementsForDriver.mockResolvedValue([]);
     cancelOferta.mockResolvedValue({ id: 'of-1', estado: 'inactiva' });
+    updateOferta.mockResolvedValue({ ...ofertaFixa, departure_time: '08:00' });
+    getProcura.mockResolvedValue({
+      id: 'pr-1',
+      preferred_time: '07:00',
+      origin_lat: -8.9,
+      origin_lng: 13.2,
+      destination_lat: -8.8,
+      destination_lng: 13.23,
+      dias_semana: [1, 2, 3, 4, 5],
+      n_candidato: 1,
+    });
   });
 
   it('esconde Publicar oferta quando não há veículo registado', async () => {
@@ -797,6 +818,44 @@ describe('DriverDashboard — marketplace', () => {
     expect(screen.getByRole('button', { name: /Editar oferta/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Despublicar oferta/i })).not.toBeInTheDocument();
     expect(screen.getByText(/Com acordo activo/i)).toBeInTheDocument();
+  });
+
+  it('guardar edição mostra confirm snapshot antes de updateOferta', async () => {
+    listPropostasByOferta.mockResolvedValue([
+      { id: 'p1', estado: 'aberta', procura_id: 'pr-1', n_passageiros_propostos: 1 },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Talatona');
+    fireEvent.click(screen.getByRole('button', { name: /Editar oferta/i }));
+    expect(await screen.findByTestId('oferta-edit-panel')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/Hora de ida/i), {
+      target: { name: 'departure_time', value: '08:00' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Guardar alterações/i }));
+
+    expect(await screen.findByTestId('oferta-edit-snapshot-confirm')).toBeInTheDocument();
+    expect(screen.getByText(/valor negociado das propostas existentes não muda/i)).toBeInTheDocument();
+    expect(updateOferta).not.toHaveBeenCalled();
+
+    fireEvent.click(
+      within(screen.getByTestId('oferta-edit-snapshot-confirm')).getByRole('button', {
+        name: 'Guardar alterações',
+      }),
+    );
+
+    await waitFor(() => {
+      expect(updateOferta).toHaveBeenCalledWith(
+        'of-1',
+        expect.objectContaining({ departure_time: '08:00' }),
+      );
+    });
   });
 
   it('despublicar confirma e chama cancelOferta', async () => {
