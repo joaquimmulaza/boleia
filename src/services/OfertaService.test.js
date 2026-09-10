@@ -5,6 +5,7 @@ import {
   listOfertasDisponiveis,
   getOferta,
   updateOferta,
+  cancelOferta,
   isOfertaFlexivel,
   labelOfertaRota,
 } from './OfertaService.js';
@@ -13,6 +14,7 @@ import { supabase } from '../lib/supabase';
 vi.mock('../lib/supabase', () => ({
   supabase: {
     from: vi.fn(),
+    rpc: vi.fn(),
     auth: { getUser: vi.fn() },
   },
 }));
@@ -277,36 +279,51 @@ describe('OfertaService', () => {
   });
 
   describe('updateOferta', () => {
-    it('actualiza campos permitidos', async () => {
-      const mockSingle = vi.fn().mockResolvedValue({
-        data: { id: 'of-1', estado: 'inactiva' },
-        error: null,
+    beforeEach(() => {
+      supabase.auth.getUser.mockResolvedValue({
+        data: { user: { id: 'driver-1' } },
       });
-      const mockEq = vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({ single: mockSingle }),
-      });
-      const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
-      supabase.from.mockReturnValue({ update: mockUpdate });
-
-      const result = await updateOferta('of-1', { estado: 'inactiva' });
-      expect(mockUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({ estado: 'inactiva' }),
-      );
-      expect(result.estado).toBe('inactiva');
     });
 
-    it('oferta flexível: update com flexibilidade_rota anula OD (não persiste origem/destino)', async () => {
-      const mockSingle = vi.fn().mockResolvedValue({
+    it('actualiza via RPC update_oferta', async () => {
+      supabase.rpc.mockResolvedValue({
+        data: { id: 'of-1', departure_time: '08:00' },
+        error: null,
+      });
+
+      const result = await updateOferta('of-1', {
+        departure_time: '08:00',
+        modo_preco: 'POR_PASSAGEIRO',
+        valor_mensal_ask_kz: 40000,
+        flexibilidade_rota: false,
+        origin_name: 'A',
+        origin_lat: -8.9,
+        origin_lng: 13.2,
+        destination_name: 'B',
+        destination_lat: -8.8,
+        destination_lng: 13.23,
+      });
+
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        'update_oferta',
+        expect.objectContaining({
+          p_oferta_id: 'of-1',
+          p_departure_time: '08:00',
+        }),
+      );
+      expect(result.departure_time).toBe('08:00');
+    });
+
+    it('oferta flexível: RPC recebe OD null', async () => {
+      supabase.rpc.mockResolvedValue({
         data: { id: 'of-flex', flexibilidade_rota: true },
         error: null,
       });
-      const mockEq = vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({ single: mockSingle }),
-      });
-      const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
-      supabase.from.mockReturnValue({ update: mockUpdate });
 
       await updateOferta('of-flex', {
+        departure_time: '07:00',
+        modo_preco: 'TOTAL_ACORDO',
+        valor_mensal_ask_kz: 120000,
         flexibilidade_rota: true,
         origin_name: 'Talatona',
         origin_lat: -8.9,
@@ -316,17 +333,30 @@ describe('OfertaService', () => {
         destination_lng: 13.2,
       });
 
-      expect(mockUpdate).toHaveBeenCalledWith(
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        'update_oferta',
         expect.objectContaining({
-          flexibilidade_rota: true,
-          origin_name: null,
-          origin_lat: null,
-          origin_lng: null,
-          destination_name: null,
-          destination_lat: null,
-          destination_lng: null,
+          p_flexibilidade_rota: true,
+          p_origin_name: null,
+          p_destination_name: null,
         }),
       );
+    });
+  });
+
+  describe('cancelOferta', () => {
+    it('despublica via RPC cancel_oferta', async () => {
+      supabase.auth.getUser.mockResolvedValue({
+        data: { user: { id: 'driver-1' } },
+      });
+      supabase.rpc.mockResolvedValue({
+        data: { id: 'of-1', estado: 'inactiva' },
+        error: null,
+      });
+
+      const result = await cancelOferta('of-1');
+      expect(supabase.rpc).toHaveBeenCalledWith('cancel_oferta', { p_oferta_id: 'of-1' });
+      expect(result.estado).toBe('inactiva');
     });
   });
 });
