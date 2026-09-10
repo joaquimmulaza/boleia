@@ -12,10 +12,15 @@ Motorista (incl. oferta flexível) vê procuras/grupos compatíveis no hub `/mot
 
 ## Diff mínimo (reutiliza existente)
 - `MatchingService.findCompatibleProcuras` — matching dual fixa/flex (ENG#1)
-- `DriverDashboard` — painel «Procuras compatíveis» + `handleProporB` (ENG#2/#3)
+- `DriverDashboard` — **tab «Procuras e grupos»** sempre visível + feed in-app + `handleProporB` (ENG#2/#3)
 - `PropostaService.createProposta`, `GrupoService.getGrupoByProcura`
 - Testes: `PacoteEng24Acceptance.test.js` + extensão `DriverDashboard.test.jsx`
 - **Sem migração**
+
+## Follow-up Critiquito (PR #114)
+- Tab/secção «Procuras e grupos» no hub — não escondida atrás de só «Publicar»
+- Empty state sem oferta: copy «precisa oferta activa»
+- Feed + «Enviar proposta» in-app na tab com oferta activa
 
 ## Verificação
 

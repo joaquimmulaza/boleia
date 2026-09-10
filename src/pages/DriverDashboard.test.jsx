@@ -451,6 +451,87 @@ describe('DriverDashboard — marketplace', () => {
     expect(screen.getByRole('button', { name: /Cancelar proposta/i })).toBeInTheDocument();
   });
 
+  it('mostra separadores «As minhas ofertas» e «Procuras e grupos»', async () => {
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId('driver-hub-tabs')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /As minhas ofertas/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Procuras e grupos/i })).toBeInTheDocument();
+  });
+
+  it('sem ofertas: tab Procuras e grupos mostra copy de oferta activa necessária', async () => {
+    listOfertasByDriver.mockResolvedValue([]);
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole('tab', { name: /Procuras e grupos/i });
+    fireEvent.click(screen.getByRole('tab', { name: /Procuras e grupos/i }));
+
+    expect(await screen.findByTestId('driver-procuras-grupos-section')).toBeInTheDocument();
+    expect(screen.getByTestId('driver-procuras-empty-sem-oferta')).toBeInTheDocument();
+    expect(screen.getByText(/Precisas de uma oferta activa/i)).toBeInTheDocument();
+    expect(screen.getByText(/não é só «Publicar»/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Enviar proposta/i })).not.toBeInTheDocument();
+  });
+
+  it('com oferta activa: tab Procuras e grupos mostra feed e CTA Enviar proposta', async () => {
+    findCompatibleProcuras.mockResolvedValue({
+      direct: [
+        {
+          id: 'pr-tab',
+          origin_name: 'Kilamba',
+          destination_name: 'Mutamba',
+          preferred_time: '07:10:00',
+          n_candidato: 1,
+        },
+      ],
+      waitlist: [],
+      incompatible: [],
+    });
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Talatona');
+    fireEvent.click(screen.getByRole('tab', { name: /Procuras e grupos/i }));
+
+    expect(await screen.findByTestId('driver-procuras-grupos-section')).toBeInTheDocument();
+    expect(await screen.findByText('Kilamba')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Enviar proposta/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(findCompatibleProcuras).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'of-1' }),
+      );
+    });
+  });
+
+  it('com oferta activa sem matches: empty state da secção Procuras e grupos', async () => {
+    findCompatibleProcuras.mockResolvedValue({ direct: [], waitlist: [], incompatible: [] });
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Talatona');
+    fireEvent.click(screen.getByRole('tab', { name: /Procuras e grupos/i }));
+
+    expect(await screen.findByTestId('driver-procuras-empty-match')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Enviar proposta/i })).not.toBeInTheDocument();
+  });
+
   it('lista procuras compatíveis e permite propor acordo (sentido B)', async () => {
     findCompatibleProcuras.mockResolvedValue({
       direct: [
@@ -475,7 +556,7 @@ describe('DriverDashboard — marketplace', () => {
     );
 
     await screen.findByText('Talatona');
-    fireEvent.click(screen.getByRole('button', { name: /Procuras compatíveis/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Procuras e grupos/i }));
 
     expect(await screen.findByText('Kilamba')).toBeInTheDocument();
     expect(screen.getByText(/Grupo · 2 pessoas/i)).toBeInTheDocument();
@@ -527,7 +608,7 @@ describe('DriverDashboard — marketplace', () => {
     );
 
     await screen.findByText('Talatona');
-    fireEvent.click(screen.getByRole('button', { name: /Procuras compatíveis/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Procuras e grupos/i }));
 
     expect(await screen.findByText('Benfica')).toBeInTheDocument();
     expect(screen.getByText('Viana')).toBeInTheDocument();
@@ -560,7 +641,7 @@ describe('DriverDashboard — marketplace', () => {
     );
 
     await screen.findByText('Talatona');
-    fireEvent.click(screen.getByRole('button', { name: /Procuras compatíveis/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Procuras e grupos/i }));
 
     expect(await screen.findByText('Cacuaco')).toBeInTheDocument();
     expect(screen.getByTestId('waitlist-bucket')).toBeInTheDocument();
@@ -634,7 +715,7 @@ describe('DriverDashboard — marketplace', () => {
     );
 
     await screen.findByText('Oferta flexível');
-    fireEvent.click(screen.getByRole('button', { name: /Procuras compatíveis/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Procuras e grupos/i }));
 
     await waitFor(() => {
       expect(findCompatibleProcuras).toHaveBeenCalledWith(
@@ -648,7 +729,7 @@ describe('DriverDashboard — marketplace', () => {
     expect(await screen.findByText('Viana')).toBeInTheDocument();
     expect(screen.getByText(/Individual/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/compatíveis por horário, dias e lugares/i),
+      screen.getByText(/matching por horário, dias e lugares/i),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Enviar proposta/i }));
