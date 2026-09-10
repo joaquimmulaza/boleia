@@ -50,7 +50,7 @@ const Layout = () => {
       </header>
 
       {/* Área de Conteúdo */}
-      <main className="flex-1 min-h-0 overflow-y-auto pb-16 bg-background-light dark:bg-background-dark sm:pb-20 transition-colors">
+      <main className="flex-1 min-h-0 overflow-y-auto pb-shell bg-background-light dark:bg-background-dark transition-colors">
         <div className="w-full h-full min-h-full max-w-md mx-auto relative flex flex-col">
           <Outlet />
         </div>
