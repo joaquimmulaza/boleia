@@ -1,0 +1,3 @@
+## 2024-05-18 - Keyboard Accessibility for Empty State CTA
+**Learning:** Reusable components like `EmptyState` often overlook keyboard accessibility for their interactive elements if they're implemented as simple buttons without focus styles. This makes them difficult to use for keyboard-only users.
+**Action:** When creating or modifying reusable components that include interactive elements (buttons, links), always ensure they have explicit `focus-visible` styles defined using the existing design system classes (e.g., `focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2`).
