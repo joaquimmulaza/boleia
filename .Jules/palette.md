@@ -1,0 +1,3 @@
+## 2024-11-20 - Focus Rings on Icon Buttons
+**Learning:** In Tailwind CSS, using `focus:outline-none` on icon-only buttons to suppress the default browser focus ring effectively hides the button during keyboard navigation if a fallback is not provided. We must always provide a `focus-visible` fallback, often `focus-visible:ring-2 focus-visible:ring-primary`, and ensure the element has some `rounded` utility so the ring isn't weirdly squared out for circular icons.
+**Action:** When adding `focus:outline-none`, immediately add `focus-visible:ring-2` (along with ring color and offset) and a border radius (`rounded-md`, `rounded-full`, etc) to ensure the interactive element remains accessible via keyboard.
