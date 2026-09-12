@@ -99,7 +99,7 @@ export default function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors focus:outline-none"
+        className="relative p-2 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
         aria-label="Notificações"
         title="Notificações"
       >
@@ -159,7 +159,7 @@ export default function NotificationBell() {
               <div className="px-5 py-3 bg-gray-50 dark:bg-slate-800/50 flex justify-end shrink-0">
                 <button
                   onClick={markAllAsRead}
-                  className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors pointer-events-auto"
+                  className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors pointer-events-auto rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
                 >
                   Marcar todas lidas
                 </button>
@@ -200,7 +200,7 @@ export default function NotificationBell() {
                           e.stopPropagation();
                           deleteNotification(notif.id);
                         }}
-                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors shrink-0 ml-1"
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors shrink-0 ml-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
                         aria-label="Apagar notificação"
                         title="Apagar notificação"
                       >
