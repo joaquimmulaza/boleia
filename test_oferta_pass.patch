@@ -1,0 +1,12 @@
+--- src/services/OfertaService.js
++++ src/services/OfertaService.js
+@@ -34,8 +34,8 @@
+  */
+ function resolveOdFields(formData) {
+-  const isFlex = Boolean(formData.flexibilidade_rota);
+-  if (isFlex) {
++  const allowed = { flexibilidade_rota: Boolean(formData.flexibilidade_rota) };
++  if (allowed.flexibilidade_rota) {
+     return {
+       origin_name: null,
+       origin_lat: null,

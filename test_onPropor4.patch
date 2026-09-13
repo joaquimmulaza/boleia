@@ -1,0 +1,10 @@
+--- src/pages/PassengerDashboard.jsx
++++ src/pages/PassengerDashboard.jsx
+@@ -700,7 +700,6 @@
+                   oferta={oferta}
+                   variant="browse"
+                   busy={busyId === oferta.id}
+-                  onPropor={undefined}
+                 />
+               ))
+             )}
