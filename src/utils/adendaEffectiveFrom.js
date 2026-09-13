@@ -1,6 +1,15 @@
 /** Fuso horário canónico dos acordos Boleia (Luanda). */
 export const ADENDA_TIMEZONE = 'Africa/Luanda';
 
+// Caching the Intl.DateTimeFormat instance significantly improves performance
+// compared to instantiating it on every invocation.
+const cachedDateTimeFormat = new Intl.DateTimeFormat('en-CA', {
+  timeZone: ADENDA_TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
 /**
  * 1.º dia do mês corrente em Africa/Luanda (YYYY-MM-DD).
  *
@@ -8,12 +17,7 @@ export const ADENDA_TIMEZONE = 'Africa/Luanda';
  * @returns {string}
  */
 export function firstDayCurrentMonthLuanda(fromDate = new Date()) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: ADENDA_TIMEZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(fromDate);
+  const parts = cachedDateTimeFormat.formatToParts(fromDate);
 
   /** @type {Record<string, string>} */
   const map = {};
@@ -32,12 +36,7 @@ export function firstDayCurrentMonthLuanda(fromDate = new Date()) {
  * @returns {string}
  */
 export function firstDayNextMonthLuanda(fromDate = new Date()) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: ADENDA_TIMEZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(fromDate);
+  const parts = cachedDateTimeFormat.formatToParts(fromDate);
 
   /** @type {Record<string, string>} */
   const map = {};
@@ -61,12 +60,7 @@ export function firstDayNextMonthLuanda(fromDate = new Date()) {
  * @returns {boolean}
  */
 export function isAdendaBeforeEffectiveFrom(effectiveFrom, today = new Date()) {
-  const todayLuanda = new Intl.DateTimeFormat('en-CA', {
-    timeZone: ADENDA_TIMEZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(today);
+  const todayLuanda = cachedDateTimeFormat.format(today);
 
   return todayLuanda < effectiveFrom;
 }
