@@ -20,7 +20,7 @@ const PageHeader = ({ title, subtitle, onBack, actionLabel, onAction }) => (
             type="button"
             onClick={onBack}
             aria-label="Voltar"
-            className="size-10 shrink-0 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors bg-white shadow-sm border border-slate-200 dark:bg-slate-900 dark:border-slate-800"
+            className="size-10 shrink-0 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors bg-white shadow-sm border border-slate-200 dark:bg-slate-900 dark:border-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
           >
             <ArrowLeft size={20} className="text-slate-900 dark:text-slate-100" />
           </button>
@@ -36,7 +36,7 @@ const PageHeader = ({ title, subtitle, onBack, actionLabel, onAction }) => (
         <button
           type="button"
           onClick={onAction}
-          className="shrink-0 text-sm font-bold text-primary hover:text-primary/80 transition-colors"
+          className="shrink-0 text-sm font-bold text-primary hover:text-primary/80 transition-colors rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
         >
           {actionLabel}
         </button>
