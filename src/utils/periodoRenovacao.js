@@ -2,6 +2,13 @@
  * Estados e copy de renovação de período (PACOTE ENG #14).
  */
 
+// Caching the Intl.DateTimeFormat instance significantly improves performance
+// compared to instantiating it on every invocation.
+const mesFormatter = new Intl.DateTimeFormat('pt-PT', {
+  month: 'long',
+  year: 'numeric',
+});
+
 /**
  * @param {string | null | undefined} estado
  * @returns {string}
@@ -45,5 +52,5 @@ export function formatProximoMesPt(mesIso) {
   if (!mesIso) return '—';
   const d = new Date(`${mesIso}T12:00:00`);
   if (Number.isNaN(d.getTime())) return mesIso;
-  return d.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+  return mesFormatter.format(d);
 }
