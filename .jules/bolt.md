@@ -8,3 +8,7 @@
 ## 2024-09-12 - Intl.DateTimeFormat optimization
 **Learning:** Similar to `Intl.NumberFormat`, instantiating `Intl.DateTimeFormat` on every invocation is a significant performance bottleneck. In local benchmarks, instantiating it 10,000 times took ~1183ms, whereas using a cached instance took only ~56ms (a ~20x improvement).
 **Action:** Always cache `Intl.DateTimeFormat` globally within the module when creating date/time formatting utilities, instead of creating a new instance on every function call.
+## 2025-03-05 - Intl object caching
+
+**Learning:** `toLocaleDateString` and `toLocaleString` implicitly instantiate new `Intl` objects every time they are called, causing performance bottlenecks in frequently called functions.
+**Action:** Always cache `Intl.DateTimeFormat` or `Intl.NumberFormat` instances globally within the module and use their `.format()` methods.

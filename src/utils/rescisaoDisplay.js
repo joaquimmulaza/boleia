@@ -1,5 +1,13 @@
 import { ADENDA_TIMEZONE } from './adendaEffectiveFrom.js';
 
+// Caching the Intl.DateTimeFormat instance significantly improves performance
+const luandaDateFormatter = new Intl.DateTimeFormat('pt-PT', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: ADENDA_TIMEZONE,
+});
+
 /**
  * Formata data ISO (YYYY-MM-DD) em pt-PT com fuso Africa/Luanda.
  * @param {string | null | undefined} isoDate
@@ -9,12 +17,7 @@ export function formatDateLuandaPt(isoDate) {
   if (!isoDate) return null;
   const d = new Date(`${String(isoDate).slice(0, 10)}T12:00:00`);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleDateString('pt-PT', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: ADENDA_TIMEZONE,
-  });
+  return luandaDateFormatter.format(d);
 }
 
 /**
