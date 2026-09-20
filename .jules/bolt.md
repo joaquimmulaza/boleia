@@ -8,3 +8,6 @@
 ## 2024-09-12 - Intl.DateTimeFormat optimization
 **Learning:** Similar to `Intl.NumberFormat`, instantiating `Intl.DateTimeFormat` on every invocation is a significant performance bottleneck. In local benchmarks, instantiating it 10,000 times took ~1183ms, whereas using a cached instance took only ~56ms (a ~20x improvement).
 **Action:** Always cache `Intl.DateTimeFormat` globally within the module when creating date/time formatting utilities, instead of creating a new instance on every function call.
+## 2024-03-24 - [Avoid frequent Intl instantiations]
+**Learning:** Found multiple places in the codebase calling `Number.prototype.toLocaleString()` or `Date.prototype.toLocaleDateString()` inside loops or utility functions. These implicitly instantiate new `Intl` objects on every call, which creates a noticeable performance bottleneck.
+**Action:** Always instantiate `Intl.NumberFormat` or `Intl.DateTimeFormat` objects once at the module level (or globally) and reuse their `.format()` methods instead of relying on `.toLocaleString()` / `.toLocaleDateString()`.
