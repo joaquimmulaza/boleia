@@ -1,5 +1,12 @@
 import { ADENDA_TIMEZONE } from './adendaEffectiveFrom.js';
 
+// Cache the Intl.DateTimeFormat instance to improve performance
+const mesAdendaFormatter = new Intl.DateTimeFormat('pt-PT', {
+  month: 'long',
+  year: 'numeric',
+  timeZone: ADENDA_TIMEZONE,
+});
+
 /**
  * Formata mês de vigência (ex. «outubro de 2026») em pt-PT.
  * @param {string | null | undefined} isoDate — YYYY-MM-DD
@@ -9,11 +16,7 @@ export function formatMesAdendaPt(isoDate) {
   if (!isoDate) return 'próximo mês';
   const d = new Date(`${String(isoDate).slice(0, 10)}T12:00:00`);
   if (Number.isNaN(d.getTime())) return 'próximo mês';
-  return d.toLocaleDateString('pt-PT', {
-    month: 'long',
-    year: 'numeric',
-    timeZone: ADENDA_TIMEZONE,
-  });
+  return mesAdendaFormatter.format(d);
 }
 
 /**
