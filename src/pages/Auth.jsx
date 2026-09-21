@@ -89,6 +89,7 @@ const Auth = () => {
                   className={`flex w-full rounded-2xl border ${errors?.nome ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 dark:border-slate-700 focus:border-primary focus:ring-primary/10'} bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-slate-100 focus:ring-4 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-slate-500`}
                   placeholder="O seu nome completo"
                   type="text"
+                  autoComplete="name"
                   value={nome}
                   onChange={(e) => { setNome(e.target.value); if (errors?.nome) setErrors(prev => ({ ...prev, nome: '' })); }}
                   required
@@ -102,6 +103,7 @@ const Auth = () => {
                   className={`flex w-full rounded-2xl border ${errors?.telefone ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 dark:border-slate-700 focus:border-primary focus:ring-primary/10'} bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-slate-100 focus:ring-4 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400`}
                   placeholder="+244 9XX XXX XXX"
                   type="tel"
+                  autoComplete="tel"
                   value={telefone}
                   onChange={(e) => { setTelefone(e.target.value); if (errors?.telefone) setErrors(prev => ({ ...prev, telefone: '' })); }}
                   required
@@ -118,6 +120,7 @@ const Auth = () => {
               className={`flex w-full rounded-2xl border ${errors?.email ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 dark:border-slate-700 focus:border-primary focus:ring-primary/10'} bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-slate-100 focus:ring-4 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400`}
               placeholder="nome@email.com" 
               type="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => { setEmail(e.target.value); if (errors?.email) setErrors(prev => ({ ...prev, email: '' })); }}
               required
@@ -135,6 +138,7 @@ const Auth = () => {
                 className={`flex w-full rounded-2xl border ${errors?.password ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 dark:border-slate-700 focus:border-primary focus:ring-primary/10'} bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-slate-100 focus:ring-4 h-14 p-4 pr-12 text-base outline-none transition-all placeholder:text-gray-400`}
                 placeholder="••••••••" 
                 type={showPassword ? "text" : "password"}
+                autoComplete={isLogin ? "current-password" : "new-password"}
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); if (errors?.password) setErrors(prev => ({ ...prev, password: '' })); }}
                 required

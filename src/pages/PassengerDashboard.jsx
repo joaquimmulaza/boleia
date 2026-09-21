@@ -701,7 +701,7 @@ const PassengerDashboard = () => {
                   oferta={oferta}
                   variant="browse"
                   busy={busyId === oferta.id}
-                  onPropor={() => openProporBrowseSheet(oferta)}
+                  onPropor={user?.id ? () => openProporBrowseSheet(oferta) : undefined}
                 />
               ))
             )}
