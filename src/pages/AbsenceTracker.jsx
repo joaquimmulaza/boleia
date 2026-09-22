@@ -168,7 +168,7 @@ const AbsenceTracker = () => {
                   {acordo.n_passageiros_contrato === 1 ? 'pessoa' : 'pessoas'}
                 </p>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 tabular-nums">
-                  {Number(acordo.valor_mensal_por_passageiro_kz).toLocaleString('pt-PT')} Kz /
+                  {formatKwanza(acordo.valor_mensal_por_passageiro_kz)} Kz /
                   pessoa
                 </p>
               </div>
