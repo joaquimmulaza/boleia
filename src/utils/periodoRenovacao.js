@@ -37,6 +37,13 @@ export function podeRecusarRenovacao(acordo) {
   return true;
 }
 
+// Caching the Intl.DateTimeFormat instance significantly improves performance
+// compared to instantiating it on every invocation.
+const monthYearFormatter = new Intl.DateTimeFormat('pt-PT', {
+  month: 'long',
+  year: 'numeric',
+});
+
 /**
  * @param {string | null | undefined} mesIso Primeiro dia do mês (YYYY-MM-DD)
  * @returns {string}
@@ -45,5 +52,5 @@ export function formatProximoMesPt(mesIso) {
   if (!mesIso) return '—';
   const d = new Date(`${mesIso}T12:00:00`);
   if (Number.isNaN(d.getTime())) return mesIso;
-  return d.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+  return monthYearFormatter.format(d);
 }
