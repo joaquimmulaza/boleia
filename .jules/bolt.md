@@ -8,3 +8,7 @@
 ## 2024-09-12 - Intl.DateTimeFormat optimization
 **Learning:** Similar to `Intl.NumberFormat`, instantiating `Intl.DateTimeFormat` on every invocation is a significant performance bottleneck. In local benchmarks, instantiating it 10,000 times took ~1183ms, whereas using a cached instance took only ~56ms (a ~20x improvement).
 **Action:** Always cache `Intl.DateTimeFormat` globally within the module when creating date/time formatting utilities, instead of creating a new instance on every function call.
+
+## 2024-09-25 - React Component Crashes on Missing Imports During Micro-optimizations
+**Learning:** When applying micro-optimizations like replacing inline `.toLocaleString()` with imported utility functions (`formatKwanza`), automated code reviewers will flag if the utility is not actually imported. Such changes, while conceptually correct, are fatal and will crash the component at runtime with a `ReferenceError`.
+**Action:** When swapping out inline function calls for imported utilities in React components, ALWAYS ensure the import statement is added to the top of the file before running tests or requesting a code review.
