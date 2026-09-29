@@ -45,7 +45,7 @@ describe('PACOTE ENG #2 — aceitação', () => {
       supabase.auth.getUser.mockResolvedValue({
         data: { user: { id: 'pax-owner' } },
       });
-      const mockSingle = vi.fn().mockResolvedValue({
+      supabase.rpc.mockResolvedValue({
         data: {
           id: 'prop-incompleto',
           grupo_id: 'g-1',
@@ -56,11 +56,6 @@ describe('PACOTE ENG #2 — aceitação', () => {
           created_by: 'pax-owner',
         },
         error: null,
-      });
-      supabase.from.mockReturnValue({
-        insert: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnValue({ single: mockSingle }),
-        }),
       });
 
       const result = await createProposta({
@@ -126,27 +121,25 @@ describe('PACOTE ENG #2 — aceitação', () => {
       expect(propostaAntiga.n_passageiros_propostos).toBe(2);
     });
 
-    it('nova proposta após crescimento usa N_actual=3 enquanto v1 mantém N=2', async () => {
+    it('segunda proposta aberta no mesmo par é idempotente — snapshot v1 preservado', async () => {
       supabase.auth.getUser.mockResolvedValue({
         data: { user: { id: 'pax-owner' } },
       });
 
-      const inserts = [];
-      supabase.from.mockReturnValue({
-        insert: vi.fn().mockImplementation((rows) => {
-          inserts.push(rows[0]);
-          return {
-            select: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({
-                data: { id: `prop-v${inserts.length}`, ...rows[0], estado: 'aberta' },
-                error: null,
-              }),
-            }),
-          };
-        }),
-      });
+      const v1 = {
+        id: 'prop-v1',
+        oferta_id: 'of-1',
+        procura_id: 'pr-1',
+        grupo_id: 'g-1',
+        modo_preco: 'TOTAL_ACORDO',
+        valor_mensal_ask_kz: 80000,
+        n_passageiros_propostos: 2,
+        estado: 'aberta',
+        created_by: 'pax-owner',
+      };
+      supabase.rpc.mockResolvedValue({ data: v1, error: null });
 
-      await createProposta({
+      const first = await createProposta({
         oferta_id: 'of-1',
         procura_id: 'pr-1',
         grupo_id: 'g-1',
@@ -155,7 +148,7 @@ describe('PACOTE ENG #2 — aceitação', () => {
         n_passageiros_propostos: 2,
       });
 
-      await createProposta({
+      const second = await createProposta({
         oferta_id: 'of-1',
         procura_id: 'pr-1',
         grupo_id: 'g-1',
@@ -164,11 +157,11 @@ describe('PACOTE ENG #2 — aceitação', () => {
         n_passageiros_propostos: 3,
       });
 
-      expect(inserts).toHaveLength(2);
-      expect(inserts[0].n_passageiros_propostos).toBe(2);
-      expect(inserts[1].n_passageiros_propostos).toBe(3);
-      expect(inserts[0].valor_mensal_ask_kz).toBe(80000);
-      expect(inserts[1].valor_mensal_ask_kz).toBe(120000);
+      expect(first.id).toBe('prop-v1');
+      expect(second.id).toBe('prop-v1');
+      expect(second.n_passageiros_propostos).toBe(2);
+      expect(second.valor_mensal_ask_kz).toBe(80000);
+      expect(supabase.rpc).toHaveBeenCalledTimes(2);
     });
 
     it('listPropostasByProcura devolve M propostas coexistentes', async () => {
@@ -310,20 +303,15 @@ describe('PACOTE ENG #2 — aceitação', () => {
       supabase.auth.getUser.mockResolvedValue({
         data: { user: { id: 'pax-1' } },
       });
-      const mockInsert = vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({
-            data: {
-              id: 'prop-a',
-              created_by: 'pax-1',
-              estado: 'aberta',
-              n_passageiros_propostos: 1,
-            },
-            error: null,
-          }),
-        }),
+      supabase.rpc.mockResolvedValue({
+        data: {
+          id: 'prop-a',
+          created_by: 'pax-1',
+          estado: 'aberta',
+          n_passageiros_propostos: 1,
+        },
+        error: null,
       });
-      supabase.from.mockReturnValue({ insert: mockInsert });
 
       await createProposta({
         oferta_id: 'of-1',
@@ -333,9 +321,10 @@ describe('PACOTE ENG #2 — aceitação', () => {
         n_passageiros_propostos: 1,
       });
 
-      expect(mockInsert).toHaveBeenCalledWith([
-        expect.objectContaining({ created_by: 'pax-1' }),
-      ]);
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        'create_proposal',
+        expect.objectContaining({ p_n_passageiros_propostos: 1 }),
+      );
       expect(resolvePropostaInbox({
         createdBy: 'pax-1',
         driverId: 'driver-1',
@@ -347,20 +336,15 @@ describe('PACOTE ENG #2 — aceitação', () => {
       supabase.auth.getUser.mockResolvedValue({
         data: { user: { id: 'driver-1' } },
       });
-      const mockInsert = vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({
-            data: {
-              id: 'prop-b',
-              created_by: 'driver-1',
-              estado: 'aberta',
-              n_passageiros_propostos: 1,
-            },
-            error: null,
-          }),
-        }),
+      supabase.rpc.mockResolvedValue({
+        data: {
+          id: 'prop-b',
+          created_by: 'driver-1',
+          estado: 'aberta',
+          n_passageiros_propostos: 1,
+        },
+        error: null,
       });
-      supabase.from.mockReturnValue({ insert: mockInsert });
 
       await createProposta({
         oferta_id: 'of-1',
@@ -370,9 +354,10 @@ describe('PACOTE ENG #2 — aceitação', () => {
         n_passageiros_propostos: 1,
       });
 
-      expect(mockInsert).toHaveBeenCalledWith([
-        expect.objectContaining({ created_by: 'driver-1' }),
-      ]);
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        'create_proposal',
+        expect.objectContaining({ p_n_passageiros_propostos: 1 }),
+      );
       expect(resolvePropostaInbox({
         createdBy: 'driver-1',
         driverId: 'driver-1',

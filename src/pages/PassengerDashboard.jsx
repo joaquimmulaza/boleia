@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ArrowRight, Clock, Users, Banknote } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AddressInput from '../components/AddressInput';
@@ -25,6 +25,7 @@ import { getGrupoByProcura, listMembrosGrupo } from '../services/GrupoService';
 import {
   createProposta,
   listPropostasByProcura,
+  listOpenPropostasByCreator,
   enrichPropostasForReview,
   rejectProposta,
   cancelProposta,
@@ -133,8 +134,18 @@ const PassengerDashboard = () => {
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
   const [savingProcura, setSavingProcura] = useState(false);
   const [browseBusy, setBrowseBusy] = useState(false);
+  /** @type {[Set<string>, Function]} */
+  const [browseOfertasComProposta, setBrowseOfertasComProposta] = useState(() => new Set());
   /** @type {[null | { oferta: object, gaps: Array<'time' | 'od'>, form: object }, Function]} */
   const [proporSheet, setProporSheet] = useState(null);
+
+  const ofertasComPropostaAberta = useMemo(() => {
+    const ids = new Set(browseOfertasComProposta);
+    for (const review of enviadasReviews) {
+      if (review?.proposta?.oferta_id) ids.add(review.proposta.oferta_id);
+    }
+    return ids;
+  }, [browseOfertasComProposta, enviadasReviews]);
 
   const carregar = useCallback(async () => {
     if (!user?.id) {
@@ -207,8 +218,14 @@ const PassengerDashboard = () => {
         setLoadingInbox(false);
         setLoadingBrowse(true);
         try {
-          const ofertas = await listOfertasDisponiveis();
+          const [ofertas, abertas] = await Promise.all([
+            listOfertasDisponiveis(),
+            listOpenPropostasByCreator(user.id),
+          ]);
           setBrowseOfertas(ofertas);
+          setBrowseOfertasComProposta(
+            new Set(abertas.map((p) => p.oferta_id).filter(Boolean)),
+          );
         } catch (err) {
           console.error(err);
           setBrowseOfertas([]);
@@ -442,6 +459,9 @@ const PassengerDashboard = () => {
    * @param {object} overrides
    */
   const submitProporBrowse = async (oferta, overrides) => {
+    if (ofertasComPropostaAberta.has(oferta.id)) {
+      return;
+    }
     setBrowseBusy(true);
     setBusyId(oferta.id);
     setFeedback({ type: '', text: '' });
@@ -449,6 +469,7 @@ const PassengerDashboard = () => {
     try {
       const payload = buildProcuraMinimaFromOferta(oferta, overrides);
       const criada = await createProcura(payload);
+      let propostaOk = false;
       try {
         await createProposta({
           oferta_id: oferta.id,
@@ -458,6 +479,7 @@ const PassengerDashboard = () => {
           valor_mensal_ask_kz: oferta.valor_mensal_ask_kz,
           n_passageiros_propostos: 1,
         });
+        propostaOk = true;
         setFeedback({ type: 'success', text: 'Proposta enviada ao motorista.' });
       } catch (propErr) {
         console.error(propErr);
@@ -468,6 +490,9 @@ const PassengerDashboard = () => {
       }
       setProporSheet(null);
       await carregar();
+      if (propostaOk) {
+        setBrowseOfertasComProposta((prev) => new Set(prev).add(oferta.id));
+      }
     } catch (err) {
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
     } finally {
@@ -502,6 +527,9 @@ const PassengerDashboard = () => {
   };
 
   const handlePropor = async (oferta) => {
+    if (ofertasComPropostaAberta.has(oferta.id)) {
+      return;
+    }
     if (!procura) {
       setFeedback({
         type: 'error',
@@ -701,7 +729,12 @@ const PassengerDashboard = () => {
                   oferta={oferta}
                   variant="browse"
                   busy={busyId === oferta.id}
-                  onPropor={() => openProporBrowseSheet(oferta)}
+                  propostaEnviada={ofertasComPropostaAberta.has(oferta.id)}
+                  onPropor={
+                    ofertasComPropostaAberta.has(oferta.id)
+                      ? undefined
+                      : () => openProporBrowseSheet(oferta)
+                  }
                 />
               ))
             )}
@@ -1041,7 +1074,12 @@ const PassengerDashboard = () => {
                     variant="waitlist"
                     waitlistEstado={waitlistEstadoOferta(oferta.id)}
                     busy={busyId === oferta.id}
-                    onPropor={() => handlePropor(oferta)}
+                    propostaEnviada={ofertasComPropostaAberta.has(oferta.id)}
+                    onPropor={
+                      ofertasComPropostaAberta.has(oferta.id)
+                        ? undefined
+                        : () => handlePropor(oferta)
+                    }
                     onWaitlist={() => handleWaitlist(oferta)}
                   />
                 ))}
@@ -1164,7 +1202,12 @@ const PassengerDashboard = () => {
                   oferta={oferta}
                   variant="direct"
                   busy={busyId === oferta.id}
-                  onPropor={() => handlePropor(oferta)}
+                  propostaEnviada={ofertasComPropostaAberta.has(oferta.id)}
+                  onPropor={
+                    ofertasComPropostaAberta.has(oferta.id)
+                      ? undefined
+                      : () => handlePropor(oferta)
+                  }
                 />
               ))}
 

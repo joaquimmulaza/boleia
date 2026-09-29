@@ -150,26 +150,20 @@ describe('PACOTE ENG #9 — waitlist vs capacidade / N_proposto', () => {
     });
 
     it('createProposta continua a criar proposta aberta (aceite separado)', async () => {
-      supabase.from.mockImplementation((table) => {
-        if (table === 'propostas') {
-          return {
-            insert: vi.fn().mockReturnValue({
-              select: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({
-                  data: {
-                    id: 'prop-1',
-                    estado: 'aberta',
-                    n_passageiros_propostos: 3,
-                    valor_mensal_ask_kz: 90000,
-                    modo_preco: 'TOTAL_ACORDO',
-                  },
-                  error: null,
-                }),
-              }),
-            }),
-          };
+      supabase.rpc.mockImplementation((fn) => {
+        if (fn === 'create_proposal') {
+          return Promise.resolve({
+            data: {
+              id: 'prop-1',
+              estado: 'aberta',
+              n_passageiros_propostos: 3,
+              valor_mensal_ask_kz: 90000,
+              modo_preco: 'TOTAL_ACORDO',
+            },
+            error: null,
+          });
         }
-        return {};
+        return Promise.resolve({ data: null, error: null });
       });
 
       const prop = await createProposta({

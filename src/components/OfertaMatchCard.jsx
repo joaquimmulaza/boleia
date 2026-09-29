@@ -57,6 +57,7 @@ function estadoChip(variant, waitlistEstado) {
  *   variant?: 'direct' | 'waitlist' | 'browse',
  *   waitlistEstado?: string | null,
  *   busy?: boolean,
+ *   propostaEnviada?: boolean,
  *   onPropor?: () => void,
  *   onWaitlist?: () => void,
  * }} props
@@ -66,6 +67,7 @@ function OfertaMatchCard({
   variant = 'direct',
   waitlistEstado = null,
   busy = false,
+  propostaEnviada = false,
   onPropor,
   onWaitlist,
 }) {
@@ -127,7 +129,17 @@ function OfertaMatchCard({
           <p className="text-xs text-slate-400">{labelModoPreco(oferta.modo_preco)}</p>
         </div>
 
-        {(variant === 'direct' || variant === 'browse') && onPropor ? (
+        {propostaEnviada ? (
+          <button
+            type="button"
+            disabled
+            className="bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400 text-sm font-bold px-4 py-2.5 rounded-xl shrink-0 cursor-not-allowed"
+          >
+            Proposta enviada
+          </button>
+        ) : null}
+
+        {!propostaEnviada && (variant === 'direct' || variant === 'browse') && onPropor ? (
           <button
             type="button"
             disabled={busy}
@@ -143,7 +155,7 @@ function OfertaMatchCard({
           </button>
         ) : null}
 
-        {isWaitlist && waitlistEstado === 'notificada' && onPropor ? (
+        {!propostaEnviada && isWaitlist && waitlistEstado === 'notificada' && onPropor ? (
           <button
             type="button"
             disabled={busy}

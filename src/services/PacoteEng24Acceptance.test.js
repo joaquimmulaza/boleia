@@ -26,6 +26,7 @@ function readSrc(relPath) {
 vi.mock('../lib/supabase', () => ({
   supabase: {
     from: vi.fn(),
+    rpc: vi.fn(),
     auth: {
       getUser: vi.fn(),
     },
@@ -122,7 +123,7 @@ describe('PACOTE #24 — aceitação motorista feed + enviar proposta', () => {
       supabase.auth.getUser.mockResolvedValue({
         data: { user: { id: 'driver-1' } },
       });
-      const mockSingle = vi.fn().mockResolvedValue({
+      supabase.rpc.mockResolvedValue({
         data: {
           id: 'prop-b',
           oferta_id: 'of-1',
@@ -134,11 +135,6 @@ describe('PACOTE #24 — aceitação motorista feed + enviar proposta', () => {
           valor_mensal_ask_kz: 45000,
         },
         error: null,
-      });
-      supabase.from.mockReturnValue({
-        insert: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnValue({ single: mockSingle }),
-        }),
       });
 
       const result = await createProposta({
@@ -194,7 +190,7 @@ describe('PACOTE #24 — aceitação motorista feed + enviar proposta', () => {
       supabase.auth.getUser.mockResolvedValue({
         data: { user: { id: 'driver-1' } },
       });
-      const mockSingle = vi.fn().mockResolvedValue({
+      supabase.rpc.mockResolvedValue({
         data: {
           id: 'prop-grupo',
           grupo_id: 'g-incompleto',
@@ -205,11 +201,6 @@ describe('PACOTE #24 — aceitação motorista feed + enviar proposta', () => {
           estado: 'aberta',
         },
         error: null,
-      });
-      supabase.from.mockReturnValue({
-        insert: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnValue({ single: mockSingle }),
-        }),
       });
 
       const result = await createProposta({
