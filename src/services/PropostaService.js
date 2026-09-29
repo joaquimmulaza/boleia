@@ -52,25 +52,38 @@ export async function createProposta(input) {
     throw new Error('Valor mensal em Kz inválido.');
   }
 
+  const { data, error } = await supabase.rpc('create_proposal', {
+    p_oferta_id: input.oferta_id,
+    p_procura_id: input.procura_id,
+    p_grupo_id: input.grupo_id ?? null,
+    p_modo_preco: input.modo_preco,
+    p_valor_mensal_ask_kz: ask,
+    p_n_passageiros_propostos: n,
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Falha ao criar proposta.');
+  }
+  return data;
+}
+
+/**
+ * Lista propostas abertas criadas pelo utilizador (anti-duplicado UI browse).
+ *
+ * @param {string} userId
+ * @returns {Promise<object[]>}
+ */
+export async function listOpenPropostasByCreator(userId) {
+  if (!userId) return [];
+
   const { data, error } = await supabase
     .from('propostas')
-    .insert([
-      {
-        oferta_id: input.oferta_id,
-        procura_id: input.procura_id,
-        grupo_id: input.grupo_id ?? null,
-        modo_preco: input.modo_preco,
-        valor_mensal_ask_kz: ask,
-        n_passageiros_propostos: n,
-        estado: 'aberta',
-        created_by: user.id,
-      },
-    ])
-    .select()
-    .single();
+    .select('id, oferta_id, procura_id, estado, created_by')
+    .eq('created_by', userId)
+    .eq('estado', 'aberta');
 
   if (error) throw error;
-  return data;
+  return data || [];
 }
 
 /**

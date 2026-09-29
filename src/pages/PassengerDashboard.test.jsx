@@ -39,6 +39,7 @@ vi.mock('../services/OfertaService', () => ({
 vi.mock('../services/PropostaService', () => ({
   createProposta: vi.fn(),
   listPropostasByProcura: vi.fn().mockResolvedValue([]),
+  listOpenPropostasByCreator: vi.fn().mockResolvedValue([]),
   enrichPropostasForReview: vi.fn().mockResolvedValue([]),
   rejectProposta: vi.fn(),
   cancelProposta: vi.fn(),

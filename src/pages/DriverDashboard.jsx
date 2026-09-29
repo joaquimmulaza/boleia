@@ -109,6 +109,8 @@ const DriverDashboard = () => {
   const [ofertaBusy, setOfertaBusy] = useState(false);
   const [editPropostas, setEditPropostas] = useState([]);
   const [editProcurasById, setEditProcurasById] = useState({});
+  /** @type {[Set<string>, Function]} */
+  const [procurasComPropostaEnviada, setProcurasComPropostaEnviada] = useState(() => new Set());
 
   const carregar = useCallback(async () => {
     if (!user?.id) {
@@ -168,9 +170,10 @@ const DriverDashboard = () => {
     }
     setLoadingProcuras(true);
     try {
-      const [todas, result] = await Promise.all([
+      const [todas, result, propostasOferta] = await Promise.all([
         listProcurasDisponiveis(),
         findCompatibleProcuras(oferta),
+        listPropostasByOferta(oferta.id),
       ]);
       setTodasProcuras(todas);
       setProcurasMatch({
@@ -178,12 +181,16 @@ const DriverDashboard = () => {
         waitlist: result.waitlist || [],
         incompatible: result.incompatible || [],
       });
+      const enviadas = filterPropostasEnviadas(propostasOferta, user?.id);
+      setProcurasComPropostaEnviada(
+        new Set(enviadas.map((p) => p.procura_id).filter(Boolean)),
+      );
     } catch (err) {
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
     } finally {
       setLoadingProcuras(false);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     if (hubTab !== 'procuras' || isLoading || hasVehicle !== true) return;
@@ -273,6 +280,7 @@ const DriverDashboard = () => {
 
   const handleProporB = async (procura) => {
     if (!ofertaSeleccionada) return;
+    if (procurasComPropostaEnviada.has(procura.id)) return;
     setBusyId(procura.id);
     setFeedback({ type: '', text: '' });
     try {
@@ -298,6 +306,7 @@ const DriverDashboard = () => {
         valor_mensal_ask_kz: ofertaSeleccionada.valor_mensal_ask_kz,
         n_passageiros_propostos: nProposto,
       });
+      setProcurasComPropostaEnviada((prev) => new Set(prev).add(procura.id));
       setFeedback({ type: 'success', text: 'Proposta enviada ao passageiro.' });
     } catch (err) {
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
@@ -750,7 +759,16 @@ const DriverDashboard = () => {
                                 {labelModo(ofertaSeleccionada?.modo_preco)}
                               </p>
                             </div>
-                            {isDirect ? (
+                            {isDirect && procurasComPropostaEnviada.has(procura.id) ? (
+                              <button
+                                type="button"
+                                disabled
+                                className="bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400 text-sm font-bold px-4 py-2.5 rounded-xl cursor-not-allowed"
+                              >
+                                Proposta enviada
+                              </button>
+                            ) : null}
+                            {isDirect && !procurasComPropostaEnviada.has(procura.id) ? (
                               <button
                                 type="button"
                                 disabled={busyId === procura.id}

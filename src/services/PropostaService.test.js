@@ -3,6 +3,7 @@ import {
   createProposta,
   listPropostasByProcura,
   listPropostasByOferta,
+  listOpenPropostasByCreator,
   rejectProposta,
   cancelProposta,
   acceptProposal,
@@ -39,11 +40,11 @@ describe('PropostaService', () => {
     Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
   });
 
-  it('createProposta cria proposta aberta 1:M com snapshot N', async () => {
+  it('createProposta cria proposta aberta 1:M com snapshot N via RPC', async () => {
     supabase.auth.getUser.mockResolvedValue({
       data: { user: { id: 'driver-1' } },
     });
-    const mockSingle = vi.fn().mockResolvedValue({
+    supabase.rpc.mockResolvedValue({
       data: {
         id: 'prop-1',
         oferta_id: 'of-1',
@@ -53,11 +54,6 @@ describe('PropostaService', () => {
         modo_preco: 'TOTAL_ACORDO',
       },
       error: null,
-    });
-    supabase.from.mockReturnValue({
-      insert: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({ single: mockSingle }),
-      }),
     });
 
     const result = await createProposta({
@@ -69,28 +65,33 @@ describe('PropostaService', () => {
       n_passageiros_propostos: 3,
     });
 
+    expect(supabase.rpc).toHaveBeenCalledWith('create_proposal', {
+      p_oferta_id: 'of-1',
+      p_procura_id: 'pr-1',
+      p_grupo_id: 'g-1',
+      p_modo_preco: 'TOTAL_ACORDO',
+      p_valor_mensal_ask_kz: 120000,
+      p_n_passageiros_propostos: 3,
+    });
     expect(result.estado).toBe('aberta');
     expect(result.n_passageiros_propostos).toBe(3);
   });
 
-  it('G6 — Sense B createProposta como motorista grava created_by do autenticado', async () => {
+  it('G6 — Sense B createProposta como motorista via RPC create_proposal', async () => {
     supabase.auth.getUser.mockResolvedValue({
       data: { user: { id: 'motorista-42' } },
     });
-    const mockInsert = vi.fn().mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        single: vi.fn().mockResolvedValue({
-          data: {
-            id: 'prop-b',
-            created_by: 'motorista-42',
-            estado: 'aberta',
-            n_passageiros_propostos: 1,
-          },
-          error: null,
-        }),
-      }),
+    supabase.rpc.mockResolvedValue({
+      data: {
+        id: 'prop-b',
+        created_by: 'motorista-42',
+        estado: 'aberta',
+        n_passageiros_propostos: 1,
+        oferta_id: 'of-1',
+        procura_id: 'pr-1',
+      },
+      error: null,
     });
-    supabase.from.mockReturnValue({ insert: mockInsert });
 
     const result = await createProposta({
       oferta_id: 'of-1',
@@ -100,15 +101,59 @@ describe('PropostaService', () => {
       n_passageiros_propostos: 1,
     });
 
-    expect(mockInsert).toHaveBeenCalledWith([
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      'create_proposal',
       expect.objectContaining({
-        created_by: 'motorista-42',
-        estado: 'aberta',
+        p_oferta_id: 'of-1',
+        p_procura_id: 'pr-1',
+        p_grupo_id: null,
+      }),
+    );
+    expect(result.created_by).toBe('motorista-42');
+  });
+
+  it('createProposta idempotente — RPC devolve proposta existente', async () => {
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'pax-1' } },
+    });
+    supabase.rpc.mockResolvedValue({
+      data: {
+        id: 'prop-existing',
         oferta_id: 'of-1',
         procura_id: 'pr-1',
-      }),
-    ]);
-    expect(result.created_by).toBe('motorista-42');
+        estado: 'aberta',
+        created_by: 'pax-1',
+      },
+      error: null,
+    });
+
+    const result = await createProposta({
+      oferta_id: 'of-1',
+      procura_id: 'pr-1',
+      modo_preco: 'POR_PASSAGEIRO',
+      valor_mensal_ask_kz: 35000,
+      n_passageiros_propostos: 1,
+    });
+
+    expect(result.id).toBe('prop-existing');
+    expect(supabase.rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it('listOpenPropostasByCreator filtra abertas do criador', async () => {
+    const mockEqEstado = vi.fn().mockResolvedValue({
+      data: [{ id: 'p1', oferta_id: 'of-1', estado: 'aberta' }],
+      error: null,
+    });
+    const mockEqCreator = vi.fn().mockReturnValue({ eq: mockEqEstado });
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({ eq: mockEqCreator }),
+    });
+
+    const result = await listOpenPropostasByCreator('pax-1');
+
+    expect(mockEqCreator).toHaveBeenCalledWith('created_by', 'pax-1');
+    expect(mockEqEstado).toHaveBeenCalledWith('estado', 'aberta');
+    expect(result).toHaveLength(1);
   });
 
   it('createProposta exige grupo_id quando N > 1', async () => {
