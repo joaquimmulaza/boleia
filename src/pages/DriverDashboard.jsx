@@ -34,6 +34,9 @@ import { labelOfertaPicker } from '../utils/ofertaLabels';
 import { canEditOferta, canDespublicarOferta } from '../utils/canEditOferta';
 import ConfirmationModal from '../components/ConfirmationModal';
 import OfertaEditPanel from '../components/OfertaEditPanel';
+import OverlayShell from '../components/OverlayShell';
+import PropostaValorInput from '../components/PropostaValorInput';
+import { parseValorPropostaKz, validarValorPropostaKz } from '../utils/propostaValor.js';
 
 function estadoChip(estado) {
   const map = {
@@ -111,6 +114,8 @@ const DriverDashboard = () => {
   const [editProcurasById, setEditProcurasById] = useState({});
   /** @type {[Set<string>, Function]} */
   const [procurasComPropostaEnviada, setProcurasComPropostaEnviada] = useState(() => new Set());
+  /** @type {[null | { procura: object, valor_mensal_ask_kz: string }, Function]} */
+  const [proporSheet, setProporSheet] = useState(null);
 
   const carregar = useCallback(async () => {
     if (!user?.id) {
@@ -278,9 +283,30 @@ const DriverDashboard = () => {
     setFeedback({ type: '', text: '' });
   };
 
-  const handleProporB = async (procura) => {
+  /** @param {object} procura */
+  const openProporSheet = (procura) => {
     if (!ofertaSeleccionada) return;
     if (procurasComPropostaEnviada.has(procura.id)) return;
+    setProporSheet({
+      procura,
+      valor_mensal_ask_kz: String(ofertaSeleccionada.valor_mensal_ask_kz ?? ''),
+    });
+  };
+
+  const handleProporSheetSubmit = async (e) => {
+    e.preventDefault();
+    if (!proporSheet || !ofertaSeleccionada) return;
+
+    const valorParsed = parseValorPropostaKz(proporSheet.valor_mensal_ask_kz);
+    const valorCheck = validarValorPropostaKz(valorParsed);
+    if (!valorCheck.ok) {
+      setFeedback({ type: 'error', text: valorCheck.erro });
+      return;
+    }
+
+    const procura = proporSheet.procura;
+    if (procurasComPropostaEnviada.has(procura.id)) return;
+
     setBusyId(procura.id);
     setFeedback({ type: '', text: '' });
     try {
@@ -303,10 +329,11 @@ const DriverDashboard = () => {
         procura_id: procura.id,
         grupo_id: grupoId,
         modo_preco: ofertaSeleccionada.modo_preco,
-        valor_mensal_ask_kz: ofertaSeleccionada.valor_mensal_ask_kz,
+        valor_mensal_ask_kz: valorCheck.valor,
         n_passageiros_propostos: nProposto,
       });
       setProcurasComPropostaEnviada((prev) => new Set(prev).add(procura.id));
+      setProporSheet(null);
       setFeedback({ type: 'success', text: 'Proposta enviada ao passageiro.' });
     } catch (err) {
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
@@ -772,7 +799,7 @@ const DriverDashboard = () => {
                               <button
                                 type="button"
                                 disabled={busyId === procura.id}
-                                onClick={() => handleProporB(procura)}
+                                onClick={() => openProporSheet(procura)}
                                 className="bg-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl disabled:opacity-60"
                               >
                                 Enviar proposta
@@ -906,6 +933,55 @@ const DriverDashboard = () => {
           ) : null}
         </div>
       )}
+
+      {proporSheet && ofertaSeleccionada ? (
+        <OverlayShell
+          variant="bottom"
+          overlayClassName="bg-slate-900/60 dark:bg-black/80"
+          panelClassName="bg-white dark:bg-slate-900 shadow-2xl px-5 pt-4 space-y-4"
+          testId="driver-propor-sheet"
+          onDismiss={() => setProporSheet(null)}
+        >
+          <div className="space-y-4">
+            <div className="flex h-1.5 w-12 rounded-full bg-slate-200 dark:bg-slate-700 mx-auto" aria-hidden="true" />
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white text-balance">
+              Confirmar proposta
+            </h2>
+            <p className="text-sm text-slate-500 text-pretty">
+              Revê o valor mensal — podes propor outro preço antes de enviar ao passageiro.
+            </p>
+            <form onSubmit={handleProporSheetSubmit} className="space-y-4">
+              <PropostaValorInput
+                modoPreco={ofertaSeleccionada.modo_preco}
+                value={proporSheet.valor_mensal_ask_kz}
+                askKz={ofertaSeleccionada.valor_mensal_ask_kz}
+                disabled={busyId === proporSheet.procura.id}
+                onChange={(e) =>
+                  setProporSheet((prev) =>
+                    prev ? { ...prev, valor_mensal_ask_kz: e.target.value } : prev,
+                  )
+                }
+              />
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  className="flex-1 min-h-12 border border-slate-200 dark:border-slate-700 font-bold rounded-xl"
+                  onClick={() => setProporSheet(null)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 min-h-12 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl shadow-lg shadow-primary/25 disabled:opacity-60"
+                  disabled={busyId === proporSheet.procura.id}
+                >
+                  Confirmar proposta
+                </button>
+              </div>
+            </form>
+          </div>
+        </OverlayShell>
+      ) : null}
 
       <ConfirmationModal
         isOpen={Boolean(confirmDespublicarId)}

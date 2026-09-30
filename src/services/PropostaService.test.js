@@ -186,6 +186,21 @@ describe('PropostaService', () => {
     ).rejects.toThrow('passageiros');
   });
 
+  it('createProposta rejeita valor mensal <= 0', async () => {
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'pax-1' } },
+    });
+    await expect(
+      createProposta({
+        oferta_id: 'of-1',
+        procura_id: 'pr-1',
+        modo_preco: 'POR_PASSAGEIRO',
+        valor_mensal_ask_kz: 0,
+        n_passageiros_propostos: 1,
+      }),
+    ).rejects.toThrow(/Valor mensal/i);
+  });
+
   it('listPropostasByProcura devolve M propostas', async () => {
     const mockOrder = vi.fn().mockResolvedValue({
       data: [{ id: 'p1' }, { id: 'p2' }],

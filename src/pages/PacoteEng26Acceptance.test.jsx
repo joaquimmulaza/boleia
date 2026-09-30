@@ -12,6 +12,7 @@ import { findCompatibleProcuras } from '../services/MatchingService';
 import { createProposta } from '../services/PropostaService';
 import { getAgreementsForDriver } from '../services/AgreementService';
 import { supabase } from '../lib/supabase';
+import { confirmPropostaSheet } from '../test/confirmPropostaSheet.js';
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' }),
@@ -146,6 +147,7 @@ describe('PACOTE ENG #26 — hub motorista procuras e grupos', () => {
     expect(screen.queryByRole('button', { name: /Propor acordo/i })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Enviar proposta/i }));
+    await confirmPropostaSheet();
 
     await waitFor(() => {
       expect(createProposta).toHaveBeenCalledWith(

@@ -48,6 +48,8 @@ import { resolveCapacityN } from '../utils/capacityGate.js';
 import { canEditProcura } from '../utils/canEditProcura';
 import { countPropostasAInvalidar } from '../utils/procuraEditImpact';
 import { isPropostaAcimaDoTeto } from '../utils/isPropostaAcimaDoTeto';
+import PropostaValorInput from '../components/PropostaValorInput';
+import { parseValorPropostaKz, validarValorPropostaKz } from '../utils/propostaValor.js';
 import { buildProcuraMinimaFromOferta, getPropostaBrowseGaps } from '../utils/procuraFromOferta';
 import { labelRotaProcura } from '../utils/ofertaLabels';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -136,7 +138,7 @@ const PassengerDashboard = () => {
   const [browseBusy, setBrowseBusy] = useState(false);
   /** @type {[Set<string>, Function]} */
   const [browseOfertasComProposta, setBrowseOfertasComProposta] = useState(() => new Set());
-  /** @type {[null | { oferta: object, gaps: Array<'time' | 'od'>, form: object }, Function]} */
+  /** @type {[null | { oferta: object, gaps: Array<'time' | 'od'>, source: 'browse' | 'hub', form: object }, Function]} */
   const [proporSheet, setProporSheet] = useState(null);
 
   const ofertasComPropostaAberta = useMemo(() => {
@@ -431,34 +433,46 @@ const PassengerDashboard = () => {
 
   /**
    * @param {object} oferta
+   * @returns {object}
    */
-  const openProporBrowseSheet = (oferta) => {
-    const gaps = getPropostaBrowseGaps(oferta);
-    if (gaps.length === 0) {
-      void submitProporBrowse(oferta, {});
-      return;
-    }
+  const buildProporSheetForm = (oferta) => ({
+    preferred_time: String(oferta.departure_time || '07:15').slice(0, 5),
+    origin_name: oferta.origin_name || '',
+    origin_lat: oferta.origin_lat ?? null,
+    origin_lng: oferta.origin_lng ?? null,
+    destination_name: oferta.destination_name || '',
+    destination_lat: oferta.destination_lat ?? null,
+    destination_lng: oferta.destination_lng ?? null,
+    valor_mensal_ask_kz: String(oferta.valor_mensal_ask_kz ?? ''),
+  });
+
+  /**
+   * @param {object} oferta
+   * @param {'browse' | 'hub'} source
+   */
+  const openProporSheet = (oferta, source) => {
     setProporSheet({
       oferta,
-      gaps,
-      form: {
-        preferred_time: String(oferta.departure_time || '07:15').slice(0, 5),
-        origin_name: oferta.origin_name || '',
-        origin_lat: oferta.origin_lat ?? null,
-        origin_lng: oferta.origin_lng ?? null,
-        destination_name: oferta.destination_name || '',
-        destination_lat: oferta.destination_lat ?? null,
-        destination_lng: oferta.destination_lng ?? null,
-      },
+      gaps: source === 'browse' ? getPropostaBrowseGaps(oferta) : [],
+      source,
+      form: buildProporSheetForm(oferta),
     });
   };
+
+  /** @param {object} oferta */
+  const openProporBrowseSheet = (oferta) => openProporSheet(oferta, 'browse');
 
   /**
    * Browse: cria procura mínima + proposta (valores da oferta).
    * @param {object} oferta
    * @param {object} overrides
    */
-  const submitProporBrowse = async (oferta, overrides) => {
+  /**
+   * @param {object} oferta
+   * @param {object} overrides
+   * @param {number} valorMensalKz
+   */
+  const submitProporBrowse = async (oferta, overrides, valorMensalKz) => {
     if (ofertasComPropostaAberta.has(oferta.id)) {
       return;
     }
@@ -476,7 +490,7 @@ const PassengerDashboard = () => {
           procura_id: criada.id,
           grupo_id: null,
           modo_preco: oferta.modo_preco,
-          valor_mensal_ask_kz: oferta.valor_mensal_ask_kz,
+          valor_mensal_ask_kz: valorMensalKz,
           n_passageiros_propostos: 1,
         });
         propostaOk = true;
@@ -501,32 +515,11 @@ const PassengerDashboard = () => {
     }
   };
 
-  const handleProporSheetSubmit = async (e) => {
-    e.preventDefault();
-    if (!proporSheet) return;
-
-    const { oferta, gaps, form } = proporSheet;
-    if (gaps.includes('time') && !form.preferred_time) {
-      setFeedback({ type: 'error', text: 'Indica o horário preferido.' });
-      return;
-    }
-    if (gaps.includes('od') && (form.origin_lat == null || form.destination_lat == null)) {
-      setFeedback({ type: 'error', text: 'Seleccione origem e destino na lista de sugestões.' });
-      return;
-    }
-
-    await submitProporBrowse(oferta, {
-      preferred_time: form.preferred_time,
-      origin_name: form.origin_name || null,
-      origin_lat: form.origin_lat,
-      origin_lng: form.origin_lng,
-      destination_name: form.destination_name || null,
-      destination_lat: form.destination_lat,
-      destination_lng: form.destination_lng,
-    });
-  };
-
-  const handlePropor = async (oferta) => {
+  /**
+   * @param {object} oferta
+   * @param {number} valorMensalKz
+   */
+  const submitProporHub = async (oferta, valorMensalKz) => {
     if (ofertasComPropostaAberta.has(oferta.id)) {
       return;
     }
@@ -538,32 +531,95 @@ const PassengerDashboard = () => {
       setView('form');
       return;
     }
-    setBusyId(oferta.id);
-    setFeedback({ type: '', text: '' });
 
     const { nProposto, grupoId, erro } = resolverPropostaN();
     if (erro) {
       setFeedback({ type: 'error', text: erro });
-      setBusyId(null);
       return;
     }
 
+    setBusyId(oferta.id);
+    setFeedback({ type: '', text: '' });
     try {
       await createProposta({
         oferta_id: oferta.id,
         procura_id: procura.id,
         grupo_id: grupoId,
         modo_preco: oferta.modo_preco,
-        valor_mensal_ask_kz: oferta.valor_mensal_ask_kz,
+        valor_mensal_ask_kz: valorMensalKz,
         n_passageiros_propostos: nProposto,
       });
       setFeedback({ type: 'success', text: 'Proposta enviada ao motorista.' });
+      setProporSheet(null);
       await carregar();
     } catch (err) {
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
     } finally {
       setBusyId(null);
     }
+  };
+
+  const handleProporSheetSubmit = async (e) => {
+    e.preventDefault();
+    if (!proporSheet) return;
+
+    const { oferta, gaps, form, source } = proporSheet;
+    const valorParsed = parseValorPropostaKz(form.valor_mensal_ask_kz);
+    const valorCheck = validarValorPropostaKz(valorParsed);
+    if (!valorCheck.ok) {
+      setFeedback({ type: 'error', text: valorCheck.erro });
+      return;
+    }
+
+    if (gaps.includes('time') && !form.preferred_time) {
+      setFeedback({ type: 'error', text: 'Indica o horário preferido.' });
+      return;
+    }
+    if (gaps.includes('od') && (form.origin_lat == null || form.destination_lat == null)) {
+      setFeedback({ type: 'error', text: 'Seleccione origem e destino na lista de sugestões.' });
+      return;
+    }
+
+    if (source === 'hub') {
+      await submitProporHub(oferta, valorCheck.valor);
+      return;
+    }
+
+    await submitProporBrowse(
+      oferta,
+      {
+        preferred_time: form.preferred_time,
+        origin_name: form.origin_name || null,
+        origin_lat: form.origin_lat,
+        origin_lng: form.origin_lng,
+        destination_name: form.destination_name || null,
+        destination_lat: form.destination_lat,
+        destination_lng: form.destination_lng,
+      },
+      valorCheck.valor,
+    );
+  };
+
+  const handlePropor = (oferta) => {
+    if (ofertasComPropostaAberta.has(oferta.id)) {
+      return;
+    }
+    if (!procura) {
+      setFeedback({
+        type: 'error',
+        text: 'Cria uma procura com origem, destino e horário antes de propor acordo.',
+      });
+      setView('form');
+      return;
+    }
+
+    const { erro } = resolverPropostaN();
+    if (erro) {
+      setFeedback({ type: 'error', text: erro });
+      return;
+    }
+
+    openProporSheet(oferta, 'hub');
   };
 
   const handleWaitlist = async (oferta) => {
@@ -1255,14 +1311,28 @@ const PassengerDashboard = () => {
           <div className="space-y-4">
             <div className="flex h-1.5 w-12 rounded-full bg-slate-200 dark:bg-slate-700 mx-auto" aria-hidden="true" />
             <h2 className="text-lg font-bold text-slate-900 dark:text-white text-balance">
-              Dados em falta para propor
+              {proporSheet.gaps.length > 0 ? 'Dados em falta para propor' : 'Confirmar proposta'}
             </h2>
             <p className="text-sm text-slate-500 text-pretty">
-              {proporSheet.oferta.flexibilidade_rota
-                ? 'Indica o horário para completar a proposta — sem origem/destino fixos.'
-                : 'Completa origem, destino ou horário antes de enviar a proposta.'}
+              {proporSheet.gaps.length > 0
+                ? proporSheet.oferta.flexibilidade_rota
+                  ? 'Indica o horário para completar a proposta — sem origem/destino fixos.'
+                  : 'Completa origem, destino ou horário antes de enviar a proposta.'
+                : 'Revê o valor mensal — podes propor outro preço antes de enviar.'}
             </p>
             <form onSubmit={handleProporSheetSubmit} className="space-y-4">
+              <PropostaValorInput
+                modoPreco={proporSheet.oferta.modo_preco}
+                value={proporSheet.form.valor_mensal_ask_kz}
+                askKz={proporSheet.oferta.valor_mensal_ask_kz}
+                disabled={browseBusy}
+                onChange={(e) =>
+                  setProporSheet((prev) => ({
+                    ...prev,
+                    form: { ...prev.form, valor_mensal_ask_kz: e.target.value },
+                  }))
+                }
+              />
               {proporSheet.gaps.includes('time') ? (
                 <TimeInput
                   name="preferred_time"
@@ -1335,7 +1405,7 @@ const PassengerDashboard = () => {
                   className="flex-1 min-h-12 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl shadow-lg shadow-primary/25 disabled:opacity-60"
                   disabled={browseBusy}
                 >
-                  Propor acordo
+                  Confirmar proposta
                 </button>
               </div>
             </form>

@@ -11,6 +11,7 @@ import { listOfertasByDriver } from '../services/OfertaService';
 import { listProcurasDisponiveis } from '../services/ProcuraService';
 import { findCompatibleProcuras } from '../services/MatchingService';
 import { supabase } from '../lib/supabase';
+import { confirmPropostaSheet } from '../test/confirmPropostaSheet.js';
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' }),
@@ -120,6 +121,7 @@ describe('PACOTE ENG #29 — motorista procuras hub', () => {
     fireEvent.click(await screen.findByRole('tab', { name: /Procuras e grupos/i }));
     const enviar = await screen.findByRole('button', { name: /Enviar proposta/i });
     fireEvent.click(enviar);
+    await confirmPropostaSheet();
     await waitFor(() => expect(createProposta).toHaveBeenCalledTimes(1));
 
     await waitFor(() => {
