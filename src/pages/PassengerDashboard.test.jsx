@@ -11,6 +11,7 @@ import { createAgreementFromProposal } from '../services/AgreementService';
 import { getGrupoByProcura, listMembrosGrupo } from '../services/GrupoService';
 import { listWaitlistByProcura } from '../services/WaitlistService';
 import { expectNoUserFacingJargon } from '../test/jargonBan';
+import { confirmPropostaSheet } from '../test/confirmPropostaSheet.js';
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'pax-1' }, tipoPerfil: 'Passageiro' }),
@@ -214,6 +215,7 @@ describe('PassengerDashboard — marketplace', () => {
 
     expect(await screen.findByTestId('browse-ofertas-feed')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Propor acordo/i }));
+    await confirmPropostaSheet();
 
     await waitFor(() => {
       expect(createProcura).toHaveBeenCalledWith(
@@ -353,6 +355,7 @@ describe('PassengerDashboard — marketplace', () => {
     );
 
     fireEvent.click(await screen.findByRole('button', { name: /Propor acordo/i }));
+    await confirmPropostaSheet();
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/Procura criada, mas não foi possível enviar a proposta/i);
     expect(createProcura).toHaveBeenCalled();
@@ -496,6 +499,7 @@ describe('PassengerDashboard — marketplace', () => {
     );
 
     fireEvent.click(await screen.findByRole('button', { name: /Propor acordo/i }));
+    await confirmPropostaSheet();
 
     await waitFor(() => {
       expect(createProposta).toHaveBeenCalledWith(
@@ -557,6 +561,7 @@ describe('PassengerDashboard — marketplace', () => {
     );
 
     fireEvent.click(await screen.findByRole('button', { name: /Propor acordo/i }));
+    await confirmPropostaSheet();
 
     await waitFor(() => {
       expect(createProposta).toHaveBeenCalledWith(

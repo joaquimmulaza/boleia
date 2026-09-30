@@ -16,6 +16,7 @@ import { toProcuraMatchInput } from './MatchingService.js';
 import { listProcurasByOwner, createProcura } from './ProcuraService.js';
 import { listOfertasDisponiveis } from './OfertaService.js';
 import { createProposta } from './PropostaService.js';
+import { confirmPropostaSheet } from '../test/confirmPropostaSheet.js';
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({
@@ -56,6 +57,7 @@ vi.mock('../services/GrupoService', () => ({
 vi.mock('../services/PropostaService', () => ({
   createProposta: vi.fn(),
   listPropostasByProcura: vi.fn().mockResolvedValue([]),
+  listOpenPropostasByCreator: vi.fn().mockResolvedValue([]),
   enrichPropostasForReview: vi.fn().mockResolvedValue([]),
   rejectProposta: vi.fn(),
   cancelProposta: vi.fn(),
@@ -169,6 +171,7 @@ describe('PACOTE #23 — propor acordo no browse', () => {
       );
 
       fireEvent.click(await screen.findByRole('button', { name: /Propor acordo/i }));
+      await confirmPropostaSheet();
 
       await waitFor(() => {
         expect(createProcura).toHaveBeenCalledWith(
@@ -209,6 +212,7 @@ describe('PACOTE #23 — propor acordo no browse', () => {
       );
 
       fireEvent.click(await screen.findByRole('button', { name: /Propor acordo/i }));
+      await confirmPropostaSheet();
 
       await waitFor(() => {
         expect(createProcura).toHaveBeenCalledWith(

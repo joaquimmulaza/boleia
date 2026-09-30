@@ -48,7 +48,7 @@ export async function createProposta(input) {
   }
 
   const ask = Number(input.valor_mensal_ask_kz);
-  if (!Number.isInteger(ask) || ask < 0) {
+  if (!Number.isInteger(ask) || ask <= 0) {
     throw new Error('Valor mensal em Kz inválido.');
   }
 

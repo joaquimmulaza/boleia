@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import PassengerDashboard from './PassengerDashboard';
 import { createProposta, listOpenPropostasByCreator } from '../services/PropostaService';
+import { confirmPropostaSheet } from '../test/confirmPropostaSheet.js';
 import { listOfertasDisponiveis } from '../services/OfertaService';
 import { listProcurasByOwner, createProcura } from '../services/ProcuraService';
 
@@ -107,6 +108,7 @@ describe('PACOTE ENG #29 — anti-duplicado propostas', () => {
 
     const btn = await screen.findByRole('button', { name: /Propor acordo/i });
     fireEvent.click(btn);
+    await confirmPropostaSheet();
     await waitFor(() => expect(createProposta).toHaveBeenCalledTimes(1));
 
     await waitFor(() => {

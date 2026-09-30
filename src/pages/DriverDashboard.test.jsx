@@ -17,6 +17,7 @@ import { listOfertasByDriver, cancelOferta, updateOferta } from '../services/Ofe
 import { getAgreementsForDriver } from '../services/AgreementService';
 import { supabase } from '../lib/supabase';
 import { expectNoUserFacingJargon } from '../test/jargonBan';
+import { confirmPropostaSheet } from '../test/confirmPropostaSheet.js';
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' }),
@@ -628,6 +629,7 @@ describe('DriverDashboard — marketplace', () => {
     expect(screen.getByText(/Grupo · 2 pessoas/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Enviar proposta/i }));
+    await confirmPropostaSheet();
 
     await waitFor(() => {
       expect(createProposta).toHaveBeenCalledWith(
@@ -798,6 +800,7 @@ describe('DriverDashboard — marketplace', () => {
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Enviar proposta/i }));
+    await confirmPropostaSheet();
 
     await waitFor(() => {
       expect(createProposta).toHaveBeenCalledWith(
