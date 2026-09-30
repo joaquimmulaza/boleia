@@ -1,6 +1,9 @@
 import React from 'react';
 import { Banknote } from 'lucide-react';
-import { labelValorProposta } from '../utils/propostaValor.js';
+import {
+  aplicarValidacaoNativaValorProposta,
+  labelValorProposta,
+} from '../utils/propostaValor.js';
 
 /**
  * Campo editável do valor mensal da proposta (counter-ask).
@@ -29,6 +32,10 @@ function PropostaValorInput({ modoPreco, value, onChange, disabled = false, askK
         step="1"
         value={value}
         onChange={onChange}
+        onInvalid={(e) => aplicarValidacaoNativaValorProposta(e.currentTarget)}
+        onInput={(e) => {
+          e.currentTarget.setCustomValidity('');
+        }}
         required
         disabled={disabled}
         aria-label={label}

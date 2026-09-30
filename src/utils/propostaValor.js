@@ -1,3 +1,21 @@
+/** Copy PT para validação HTML5 e feedback de proposta (counter-ask). */
+export const MENSAGEM_VALOR_PROPOSTA_MINIMO = 'O valor tem de ser pelo menos 1 Kz.';
+
+/** @param {HTMLInputElement} input */
+export function aplicarValidacaoNativaValorProposta(input) {
+  if (input.validity.valueMissing) {
+    input.setCustomValidity('Indica um valor mensal (Kz).');
+  } else if (
+    input.validity.rangeUnderflow
+    || input.validity.stepMismatch
+    || input.validity.badInput
+  ) {
+    input.setCustomValidity(MENSAGEM_VALOR_PROPOSTA_MINIMO);
+  } else {
+    input.setCustomValidity(MENSAGEM_VALOR_PROPOSTA_MINIMO);
+  }
+}
+
 /**
  * @param {string | number} raw
  * @returns {number}
@@ -17,7 +35,7 @@ export function parseValorPropostaKz(raw) {
  */
 export function validarValorPropostaKz(valor) {
   if (!Number.isInteger(valor) || valor <= 0) {
-    return { ok: false, erro: 'Indica um valor mensal maior que zero (Kz).' };
+    return { ok: false, erro: MENSAGEM_VALOR_PROPOSTA_MINIMO };
   }
   return { ok: true, valor };
 }

@@ -3,6 +3,8 @@ import {
   parseValorPropostaKz,
   validarValorPropostaKz,
   labelValorProposta,
+  MENSAGEM_VALOR_PROPOSTA_MINIMO,
+  aplicarValidacaoNativaValorProposta,
 } from './propostaValor.js';
 
 describe('propostaValor', () => {
@@ -26,13 +28,25 @@ describe('propostaValor', () => {
       expect(validarValorPropostaKz(45000)).toEqual({ ok: true, valor: 45000 });
     });
 
-    it('rejeita zero ou negativo', () => {
-      expect(validarValorPropostaKz(0).ok).toBe(false);
+    it('rejeita zero ou negativo com copy PT', () => {
+      expect(validarValorPropostaKz(0)).toEqual({ ok: false, erro: MENSAGEM_VALOR_PROPOSTA_MINIMO });
       expect(validarValorPropostaKz(-100).ok).toBe(false);
     });
 
     it('rejeita valor não inteiro', () => {
       expect(validarValorPropostaKz(45000.5).ok).toBe(false);
+    });
+  });
+
+  describe('aplicarValidacaoNativaValorProposta', () => {
+    it('define mensagem PT para min=1 (evita toast EN do browser)', () => {
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.min = '1';
+      input.value = '0';
+      input.checkValidity();
+      aplicarValidacaoNativaValorProposta(input);
+      expect(input.validationMessage).toBe(MENSAGEM_VALOR_PROPOSTA_MINIMO);
     });
   });
 
