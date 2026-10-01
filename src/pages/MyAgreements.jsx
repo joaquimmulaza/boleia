@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowRight, Clock, Users, ChevronRight, Loader2 } from 'lucide-react';
+import { ArrowRight, Users, ChevronRight, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getAgreementsForDriver,
@@ -18,6 +18,10 @@ import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 import ConfirmationModal from '../components/ConfirmationModal';
 import ModalPortal from '../components/ModalPortal';
+import OverlayShell from '../components/OverlayShell';
+import SheetDragHandle from '../components/SheetDragHandle';
+import AcordoDetalheKebabMenu from '../components/AcordoDetalheKebabMenu';
+import TerminateConfirmSheet from '../components/TerminateConfirmSheet';
 import { Button } from '../components/ui/button';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
@@ -145,6 +149,55 @@ function formatHora(raw) {
   const m = s.match(/(\d{1,2}):(\d{2})/);
   if (!m) return null;
   return `${m[1].padStart(2, '0')}:${m[2]}`;
+}
+
+/**
+ * @param {{
+ *   contactos: object | null,
+ *   tipoPerfil: string | null | undefined,
+ *   linhas: object[],
+ * }} ctx
+ * @returns {string}
+ */
+function buildTerminateCounterpartyLabel({ contactos, tipoPerfil, linhas }) {
+  if (tipoPerfil === 'Passageiro') {
+    return contactos?.motorista?.nome_completo || 'o motorista';
+  }
+  const activos = (linhas || []).filter((p) => {
+    const e = String(p.estado || '').toLowerCase();
+    return e === 'activo' || e === 'reservado';
+  });
+  if (activos.length === 1) {
+    return nomePassageiro(activos[0]);
+  }
+  return 'os passageiros';
+}
+
+/**
+ * @param {{
+ *   contactos: object | null,
+ *   rota: { origem?: string, destino?: string },
+ *   tipoPerfil: string | null | undefined,
+ *   linhas: object[],
+ *   modoMessage: string,
+ * }} ctx
+ * @returns {React.ReactNode}
+ */
+function buildTerminateConfirmBody({ contactos, rota, tipoPerfil, linhas, modoMessage }) {
+  const counterparty = buildTerminateCounterpartyLabel({ contactos, tipoPerfil, linhas });
+  const odSuffix =
+    rota.origem && rota.destino ? ` (${rota.origem} → ${rota.destino})` : '';
+
+  return (
+    <>
+      <p>
+        Vais encerrar o acordo com {counterparty}
+        {odSuffix}. Esta acção não se pode desfazer. O valor acordado deixa de aplicar-se a
+        partir do fecho.
+      </p>
+      {modoMessage ? <p>{modoMessage}</p> : null}
+    </>
+  );
 }
 
 /**
@@ -336,6 +389,21 @@ const MyAgreements = () => {
     scrollToAcordoFocus(focus);
     return undefined;
   }, [selected, scrollToAcordoFocus, pagamentoLoading, pagamento]);
+
+  useEffect(() => {
+    if (!selected) return undefined;
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setSelected(null);
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [selected]);
 
   const activos = acordos.filter((a) => isActivo(a.estado));
   const outros = acordos.filter((a) => !isActivo(a.estado));
@@ -666,14 +734,38 @@ const MyAgreements = () => {
         : [];
 
     return (
-      <ModalPortal>
-        <div className="fixed inset-0 z-modal flex items-end sm:items-center justify-center bg-black/40 p-4">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="acordo-detail-title"
-            className="w-full max-w-md max-h-[90dvh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl p-6 space-y-4 shadow-xl pb-safe"
-          >
+      <OverlayShell
+        variant="bottom"
+        onDismiss={() => setSelected(null)}
+        panelTestId="acordo-detalhe-sheet"
+        panelClassName="bg-white dark:bg-slate-900 shadow-2xl"
+      >
+        <SheetDragHandle />
+
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="acordo-detail-title"
+          className="px-5 pb-safe space-y-4"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-10 px-0 font-bold text-slate-600 dark:text-slate-300"
+              data-testid="acordo-detalhe-fechar"
+              onClick={() => setSelected(null)}
+            >
+              Fechar
+            </Button>
+            <AcordoDetalheKebabMenu
+              podeRegistarFaltas={podeRegistarFaltas}
+              podeEncerrar={podeEncerrar}
+              onRegistarFalta={() => navigate(`/faltas/${selected.id}`)}
+              onEncerrar={() => setTerminatePickerOpen(true)}
+            />
+          </div>
+
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
@@ -1008,58 +1100,28 @@ const MyAgreements = () => {
             </p>
           )}
 
-          <div className="flex flex-col gap-2 pt-1">
-            {activo && podeRegistarFaltas ? (
-              <Button
-                type="button"
-                variant="secondary"
-                className="w-full h-11 rounded-xl font-bold"
-                onClick={() => navigate(`/faltas/${selected.id}`)}
-              >
-                <Clock size={16} aria-hidden="true" /> Registar falta
-              </Button>
-            ) : null}
-            {activo && !podeRegistarFaltas && !pagamentoLoading ? (
-              <p
-                className="text-xs text-slate-500 text-pretty px-1"
-                data-testid="faltas-gate-pagamento"
-              >
-                Registo de faltas disponível após pagamento validado em custódia.
-              </p>
-            ) : null}
-            {podeSair && (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full h-11 rounded-xl font-bold text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                disabled={leavePending}
-                onClick={handleLeaveClick}
-              >
-                Sair só eu
-              </Button>
-            )}
-            {podeEncerrar && (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full h-11 rounded-xl font-bold text-red-700 border-red-300 hover:bg-red-50 hover:text-red-800"
-                onClick={() => setTerminatePickerOpen(true)}
-              >
-                Encerrar acordo
-              </Button>
-            )}
+          {activo && !podeRegistarFaltas && !pagamentoLoading ? (
+            <p
+              className="text-xs text-slate-500 text-pretty px-1"
+              data-testid="faltas-gate-pagamento"
+            >
+              Registo de faltas disponível após pagamento validado em custódia.
+            </p>
+          ) : null}
+
+          {podeSair ? (
             <Button
               type="button"
-              variant="ghost"
-              className="w-full h-11 rounded-xl font-bold text-slate-500"
-              onClick={() => setSelected(null)}
+              variant="outline"
+              className="w-full h-11 rounded-xl font-bold text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+              disabled={leavePending}
+              onClick={handleLeaveClick}
             >
-              Fechar
+              Sair só eu
             </Button>
-          </div>
+          ) : null}
         </div>
-        </div>
-      </ModalPortal>
+      </OverlayShell>
     );
   };
 
@@ -1339,7 +1401,7 @@ const MyAgreements = () => {
         </ModalPortal>
       )}
 
-      <ConfirmationModal
+      <TerminateConfirmSheet
         isOpen={terminateConfirmOpen}
         busy={terminateBusy}
         title={
@@ -1351,16 +1413,23 @@ const MyAgreements = () => {
               ? 'Confirmar aviso prévio?'
               : 'Confirmar justa causa?'
         }
-        message={
-          terminateModo === 'consensual'
-            ? terminateVigencia === 'fim_ciclo'
-              ? 'Enviaremos o pedido à outra parte. Se confirmar, o acordo mantém-se activo até ao fim deste mês.'
-              : 'Enviaremos o pedido à outra parte. Se confirmar, o acordo encerra já com ajuste proporcional das quotas.'
-            : terminateModo === 'aviso_previo'
-              ? 'O acordo mantém-se activo até ao último dia deste mês. A quota deste mês não é reembolsada.'
-              : 'O acordo termina de imediato se o motivo for válido. As quotas deste mês podem ser ajustadas proporcionalmente.'
-        }
-        confirmText="Confirmar"
+        body={buildTerminateConfirmBody({
+          contactos,
+          rota: labelRotaOferta(selected?.ofertas_capacidade || {}),
+          tipoPerfil,
+          linhas: selected?.acordos_passageiros || [],
+          modoMessage:
+            terminateModo === 'consensual'
+              ? terminateVigencia === 'fim_ciclo'
+                ? 'Enviaremos o pedido à outra parte. Se confirmar, o acordo mantém-se activo até ao fim deste mês.'
+                : 'Enviaremos o pedido à outra parte. Se confirmar, o acordo encerra já com ajuste proporcional das quotas.'
+              : terminateModo === 'aviso_previo'
+                ? 'O acordo mantém-se activo até ao último dia deste mês. A quota deste mês não é reembolsada.'
+                : terminateModo === 'justa_causa'
+                  ? 'O acordo termina de imediato se o motivo for válido. As quotas deste mês podem ser ajustadas proporcionalmente.'
+                  : '',
+        })}
+        confirmText={terminateModo === 'consensual' ? 'Confirmar' : 'Encerrar acordo'}
         onConfirm={() => handleTerminate()}
         onCancel={() => {
           if (!terminateBusy) {
