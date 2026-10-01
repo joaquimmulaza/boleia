@@ -452,16 +452,19 @@ describe('Marketplace audit — G5 leave → waitlist FIFO', () => {
 });
 
 describe('Marketplace audit — G7 copy adenda «próximo mês»', () => {
-  it('MyAgreements usa copy «próximo mês» na adenda e no modal de confirmação', () => {
-    const src = readSrc('MyAgreements.jsx');
-    expect(src).toMatch(/próximo mês/);
-    expect(src).toMatch(
-      /Alteração aceite\. O novo preço aplica-se a partir do próximo mês\./,
+  it('fluxo ENG#35 usa copy «próximo mês» nos ecrãs dedicados', () => {
+    const panelSrc = readFileSync(
+      join(AUDIT_DIR, '../components/precoProximoMes/AcordoPrecoProximoMesPanel.jsx'),
+      'utf8',
     );
-    expect(src).toMatch(
-      /aplica-se a partir do próximo mês; o mês corrente mantém as quotas/,
-    );
-    // Fallback de formatMesAdenda quando effective_from falta / inválido
+    const propostaSrc = readSrc('AcordoPrecoProposta.jsx');
+    expect(panelSrc).toMatch(/próximo mês/);
+    expect(propostaSrc).toMatch(/próximo mês/);
+    expect(propostaSrc).toMatch(/Recusar o preço ≠ Não renovar/);
+    expect(propostaSrc).toMatch(/Nada muda neste mês/);
+    const precoProximoSrc = readFileSync(join(AUDIT_DIR, '../utils/precoProximoMes.js'), 'utf8');
+    expect(precoProximoSrc).toMatch(/if \(!isoDate\) return 'próximo mês'/);
+    expect(precoProximoSrc).toMatch(/Number\.isNaN\(d\.getTime\(\)\)\) return 'próximo mês'/);
     const adendaStatusSrc = readFileSync(join(AUDIT_DIR, '../utils/adendaStatus.js'), 'utf8');
     expect(adendaStatusSrc).toMatch(/if \(!isoDate\) return 'próximo mês'/);
     expect(adendaStatusSrc).toMatch(/Number\.isNaN\(d\.getTime\(\)\)\) return 'próximo mês'/);

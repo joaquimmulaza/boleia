@@ -167,4 +167,6 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
 
 * **ENG#32c rating MVP (2026-10-01):** bilateral mot↔pax; M1 (1.º mês pago confirmado) + M2 (saída); estados `pendente`/`feito`/`expirado`; comentário platform-only (RLS + RPC `was_avaliado_por`); mot = lista única `/acordos/:id/avaliar-passageiros`; banner em `MyAgreements`; fluxo saída `/acordos/:id/sair/avaliar`; sem labels M1/M2 na UI. Migração `20261001105853_pacote_eng32c_rating_mvp.sql` (Preview reconcile; git alinhado ao remoto). Spec plano: `.specs/quick/pacote-eng-32-rating-plan/quick.md`.
 
+* **ENG#35 preço próximo mês (2026-10-01):** mudar preço ≠ renovar; reutiliza `acordos_adendas` + RPCs adenda existentes; janela dia 28 Luanda; respostas Aceitar/Contra-propor/Recusar/Retirar/Voltar a aceitar; panel «Próximo mês» em `MyAgreements` + ecrãs `/acordos/:id/preco/{novo,proposta,contra-propor,historico}`; renovação separada `/renovar` e `/nao-renovar`; histórico `listAdendaHistorico`. Figma `OUrBNaukPsXB14x2nwGSJy`. Migração `20261001143000_pacote_eng35_preco_proximo_mes.sql`. Spec: `.specs/quick/pacote-eng-35-preco-proximo-mes/quick.md`.
+
 **Próximo:** polish admin Critiquito; Redirect URLs recovery em produção. **Fora do MVP:** zonas/polígonos/raio residencial; adenda bilateral completa (hoje motorista inicia). Commits só se o utilizador pedir.

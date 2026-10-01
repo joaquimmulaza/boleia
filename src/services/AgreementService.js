@@ -22,6 +22,7 @@ function withPendingAdenda(acordo) {
     'pendente_contraparte',
     'aceite',
     'aceite_agendada',
+    'rejeitada',
   ]);
   const pending =
     rows.find(
@@ -609,6 +610,26 @@ export async function declineAgreementRenewal(acordoId, options = {}) {
       return { ...(typeof rpcData === 'object' && rpcData ? rpcData : {}), ...withPendingAdenda(data) };
     },
   });
+}
+
+/**
+ * Histórico auditável de propostas de preço de um acordo.
+ * @param {string} acordoId
+ * @returns {Promise<object[]>}
+ */
+export async function listAdendaHistorico(acordoId) {
+  if (!acordoId) {
+    throw new Error('ID do acordo é obrigatório.');
+  }
+
+  const { data, error } = await supabase
+    .from('acordos_adendas')
+    .select('*')
+    .eq('acordo_id', acordoId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
 }
 
 /**

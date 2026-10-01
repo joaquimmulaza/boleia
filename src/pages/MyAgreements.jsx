@@ -1,18 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowRight, Clock, Users, ChevronRight, Pencil, Loader2 } from 'lucide-react';
+import { ArrowRight, Clock, Users, ChevronRight, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getAgreementsForDriver,
   getAgreementsForPassenger,
   leavePassenger,
   terminateAgreement,
-  renewAgreementPeriod,
-  declineAgreementRenewal,
-  renegotiateAgreementPricing,
-  acceptAgreementAdenda,
-  rejectAgreementAdenda,
-  cancelAgreementAdenda,
+  listAdendaHistorico,
 } from '../services/AgreementService';
 import { listPending } from '../services/offlineQueue';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
@@ -26,20 +21,16 @@ import ModalPortal from '../components/ModalPortal';
 import { Button } from '../components/ui/button';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
-import { resolveAgreementPricing } from '../utils/resolveAgreementPricing';
 import { labelRotaOferta } from '../utils/ofertaLabels';
 import { buildAcordoContratoSnapshot } from '../utils/buildAcordoContratoSnapshot';
 import AcordoContratoSnapshot from '../components/AcordoContratoSnapshot';
 import { isOfertaFlexivel } from '../services/OfertaService';
 import AcordoPagamentoPanel from '../components/AcordoPagamentoPanel';
 import AcordoContactosPanel from '../components/AcordoContactosPanel';
-import {
-  labelChipAdenda,
-  chipClassAdenda,
-  formatMesAdendaPt,
-} from '../utils/adendaStatus';
 import { copyCancelamentoPendente } from '../utils/rescisaoDisplay';
-import { isAdendaBeforeEffectiveFrom } from '../utils/adendaEffectiveFrom';
+import AcordoPrecoProximoMesPanel from '../components/precoProximoMes/AcordoPrecoProximoMesPanel';
+import { resolveNegociacaoPrecoAtiva } from '../utils/adendaNegociacao.js';
+import { isJanelaPropostaPrecoAberta, labelMesActualPt } from '../utils/precoProximoMes.js';
 import {
   getPagamentoForPassageiro,
   getAcordoContactos,
@@ -154,56 +145,6 @@ function formatHora(raw) {
 }
 
 /**
- * Contagem de passageiros activos no acordo.
- * @param {{ acordos_passageiros?: Array<{ estado?: string }> } | null | undefined} acordo
- * @returns {number}
- */
-function countActivos(acordo) {
-  const linhas = acordo?.acordos_passageiros || [];
-  return linhas.filter((p) => isActivo(p.estado)).length;
-}
-
-/**
- * @param {string | null | undefined} isoDate
- * @returns {string}
- */
-function formatMesAdenda(isoDate) {
-  return formatMesAdendaPt(isoDate);
-}
-
-/**
- * @param {string | null | undefined} estado
- * @returns {boolean}
- */
-function isAdendaAguardandoContraparte(estado) {
-  const e = String(estado || '').toLowerCase();
-  return e === 'pendente_passageiro' || e === 'pendente_contraparte';
-}
-
-/**
- * @param {{ estado?: string } | null | undefined} adenda
- * @param {boolean} isMotorista
- * @param {boolean} isPassageiro
- * @returns {boolean}
- */
-function souContraparteAdenda(adenda, isMotorista, isPassageiro) {
-  const e = String(adenda?.estado || '').toLowerCase();
-  if (e === 'pendente_passageiro') return isPassageiro;
-  if (e === 'pendente_contraparte') return isMotorista;
-  return false;
-}
-
-/**
- * @param {{ created_by?: string } | null | undefined} adenda
- * @param {string | undefined} userId
- * @returns {boolean}
- */
-function souIniciadorAdenda(adenda, userId) {
-  if (!adenda?.created_by || !userId) return false;
-  return adenda.created_by === userId;
-}
-
-/**
  * Gestão de acordos 1 motorista : N passageiros.
  */
 const MyAgreements = () => {
@@ -226,28 +167,17 @@ const MyAgreements = () => {
   /** @type {['imediato' | 'fim_ciclo' | '', React.Dispatch<React.SetStateAction<'imediato' | 'fim_ciclo' | ''>>]} */
   const [terminateVigencia, setTerminateVigencia] = useState('');
   const [terminateBusy, setTerminateBusy] = useState(false);
-  const [cancelAdendaConfirmOpen, setCancelAdendaConfirmOpen] = useState(false);
   const [leaveModalOpen, setLeaveModalOpen] = useState(false);
   const [leaveBusy, setLeaveBusy] = useState(false);
   /** @type {[Record<string, true>, React.Dispatch<React.SetStateAction<Record<string, true>>>]} */
   const [pendingLeaveIds, setPendingLeaveIds] = useState({});
 
-  const [adendaModo, setAdendaModo] = useState(
-    /** @type {'POR_PASSAGEIRO' | 'TOTAL_ACORDO'} */ ('POR_PASSAGEIRO'),
-  );
-  const [adendaValor, setAdendaValor] = useState('');
-  const [adendaN, setAdendaN] = useState('');
-  const [adendaFormOpen, setAdendaFormOpen] = useState(false);
-  const [adendaModalOpen, setAdendaModalOpen] = useState(false);
-  const [adendaBusy, setAdendaBusy] = useState(false);
-  const [adendaError, setAdendaError] = useState('');
+  const [historicoPreco, setHistoricoPreco] = useState(/** @type {object[]} */ ([]));
   const [pagamento, setPagamento] = useState(/** @type {object | null} */ (null));
   const [pagamentosAcordo, setPagamentosAcordo] = useState(/** @type {object[]} */ ([]));
   const [contactos, setContactos] = useState(/** @type {object | null} */ (null));
   const [pagamentoLoading, setPagamentoLoading] = useState(false);
   const [contactosLoading, setContactosLoading] = useState(false);
-  const [renewBusy, setRenewBusy] = useState(false);
-  const [renewFeedback, setRenewFeedback] = useState(/** @type {{ type: 'success' | 'error', text: string } | null} */ (null));
   const [avaliacoesAcordo, setAvaliacoesAcordo] = useState(/** @type {object[]} */ ([]));
 
   const carregarPagamentoContactos = useCallback(async (acordo) => {
@@ -271,6 +201,8 @@ const MyAgreements = () => {
       setContactos(payload);
       const avs = await listMinhasAvaliacoesAcordo(acordo.id);
       setAvaliacoesAcordo(avs || []);
+      const historico = await listAdendaHistorico(acordo.id);
+      setHistoricoPreco(historico || []);
     } catch (err) {
       console.error('Erro ao carregar pagamento/contactos:', err);
     } finally {
@@ -287,6 +219,7 @@ const MyAgreements = () => {
       setPagamentosAcordo([]);
       setContactos(null);
       setAvaliacoesAcordo([]);
+      setHistoricoPreco([]);
     }
   }, [selected, carregarPagamentoContactos]);
 
@@ -403,32 +336,6 @@ const MyAgreements = () => {
 
   const activos = acordos.filter((a) => isActivo(a.estado));
   const outros = acordos.filter((a) => !isActivo(a.estado));
-
-  const closeAdendaForm = () => {
-    setAdendaFormOpen(false);
-    setAdendaModalOpen(false);
-    setAdendaBusy(false);
-    setAdendaError('');
-    setAdendaModo('POR_PASSAGEIRO');
-    setAdendaValor('');
-    setAdendaN('');
-  };
-
-  /**
-   * @param {typeof selected} acordo
-   */
-  const openAdendaForm = (acordo) => {
-    const nActivos = countActivos(acordo) || acordo?.n_passageiros_contrato || 1;
-    setAdendaModo('POR_PASSAGEIRO');
-    setAdendaValor(
-      acordo?.valor_mensal_por_passageiro_kz != null
-        ? String(acordo.valor_mensal_por_passageiro_kz)
-        : '',
-    );
-    setAdendaN(String(nActivos));
-    setAdendaError('');
-    setAdendaFormOpen(true);
-  };
 
   const podeSairSoloAcordo = useMemo(() => {
     if (!selected || tipoPerfil !== 'Passageiro') return false;
@@ -564,182 +471,6 @@ const MyAgreements = () => {
     }
   };
 
-  const handleRenewPeriod = async () => {
-    if (!selected || renewBusy) return;
-    setRenewBusy(true);
-    setRenewFeedback(null);
-    try {
-      const result = await renewAgreementPeriod(selected.id);
-      if (result?.offlineQueued) {
-        setRenewFeedback({
-          type: 'success',
-          text: 'Renovação guardada. Sincronizamos quando a rede voltar.',
-        });
-      } else {
-        const mes = result?.renovacao_proximo_mes || result?.mes_referencia;
-        setRenewFeedback({
-          type: 'success',
-          text: `Período renovado para ${formatProximoMesPt(mes)}. Pagamentos do novo ciclo criados.`,
-        });
-      }
-      const acordoId = selected.id;
-      const refreshed = await carregar();
-      const updated = refreshed.find((a) => a.id === acordoId);
-      if (updated) {
-        setSelected(updated);
-        await carregarPagamentoContactos(updated);
-      }
-    } catch (err) {
-      setRenewFeedback({
-        type: 'error',
-        text: err.message || getFriendlyErrorMessage(err),
-      });
-    } finally {
-      setRenewBusy(false);
-    }
-  };
-
-  const handleDeclineRenewal = async () => {
-    if (!selected || renewBusy) return;
-    setRenewBusy(true);
-    setRenewFeedback(null);
-    try {
-      await declineAgreementRenewal(selected.id);
-      setRenewFeedback({
-        type: 'success',
-        text: 'Acordo termina no fim deste ciclo mensal.',
-      });
-      const acordoId = selected.id;
-      const refreshed = await carregar();
-      const updated = refreshed.find((a) => a.id === acordoId);
-      if (updated) setSelected(updated);
-    } catch (err) {
-      setRenewFeedback({
-        type: 'error',
-        text: err.message || getFriendlyErrorMessage(err),
-      });
-    } finally {
-      setRenewBusy(false);
-    }
-  };
-
-  const handleConfirmAdenda = async () => {
-    if (!selected || adendaBusy) return;
-    const valor = Number.parseInt(String(adendaValor), 10);
-    const n = Number.parseInt(String(adendaN), 10);
-    if (!Number.isInteger(valor) || valor < 0) {
-      setAdendaError('Indica um valor mensal válido em Kz (inteiro).');
-      setAdendaModalOpen(false);
-      return;
-    }
-    if (!Number.isInteger(n) || n < 1) {
-      setAdendaError('Indica o número de passageiros no preço.');
-      setAdendaModalOpen(false);
-      return;
-    }
-
-    setAdendaBusy(true);
-    setAdendaError('');
-    try {
-      await renegotiateAgreementPricing(selected.id, {
-        modo_preco: adendaModo,
-        valor_ask_kz: valor,
-        n_passageiros: n,
-      });
-      const contraparteLabel =
-        tipoPerfil === 'Passageiro' ? 'do motorista' : 'do passageiro';
-      setMessage({
-        type: 'success',
-        text: `Proposta de novo preço enviada. Fica à espera da aceitação ${contraparteLabel}.`,
-      });
-      const acordoId = selected.id;
-      closeAdendaForm();
-      const refreshed = await carregar();
-      const updated = refreshed.find((a) => a.id === acordoId);
-      if (updated) setSelected(updated);
-    } catch (err) {
-      console.error('Erro ao renegociar preço:', err);
-      setAdendaError(err.message || getFriendlyErrorMessage(err));
-      setAdendaModalOpen(false);
-    } finally {
-      setAdendaBusy(false);
-    }
-  };
-
-  const handleAcceptAdenda = async () => {
-    const adendaId = selected?.adenda_pendente?.id;
-    if (!adendaId || adendaBusy) return;
-    setAdendaBusy(true);
-    try {
-      await acceptAgreementAdenda(adendaId);
-      setMessage({
-        type: 'success',
-        text: 'Alteração aceite. O novo preço aplica-se a partir do próximo mês.',
-      });
-      const acordoId = selected.id;
-      const refreshed = await carregar();
-      const updated = refreshed.find((a) => a.id === acordoId);
-      if (updated) setSelected(updated);
-    } catch (err) {
-      console.error('Erro ao aceitar adenda:', err);
-      setMessage({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
-    } finally {
-      setAdendaBusy(false);
-    }
-  };
-
-  const handleRejectAdenda = async () => {
-    const adendaId = selected?.adenda_pendente?.id;
-    if (!adendaId || adendaBusy) return;
-    setAdendaBusy(true);
-    try {
-      await rejectAgreementAdenda(adendaId);
-      setMessage({
-        type: 'success',
-        text: 'Alteração rejeitada. Mantém-se o preço combinado actual.',
-      });
-      const acordoId = selected.id;
-      const refreshed = await carregar();
-      const updated = refreshed.find((a) => a.id === acordoId);
-      if (updated) setSelected(updated);
-    } catch (err) {
-      console.error('Erro ao rejeitar adenda:', err);
-      setMessage({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
-    } finally {
-      setAdendaBusy(false);
-    }
-  };
-
-  const handleCancelAdenda = async () => {
-    const adendaId = selected?.adenda_pendente?.id;
-    if (!adendaId || adendaBusy) return;
-    setAdendaBusy(true);
-    try {
-      const result = await cancelAgreementAdenda(adendaId);
-      setCancelAdendaConfirmOpen(false);
-      if (result?.offlineQueued) {
-        setMessage({
-          type: 'success',
-          text: 'Anulação guardada. Sincronizamos quando a rede voltar.',
-        });
-      } else {
-        setMessage({
-          type: 'success',
-          text: 'Renegociação anulada. Mantém-se o preço combinado actual.',
-        });
-      }
-      const acordoId = selected.id;
-      const refreshed = await carregar();
-      const updated = refreshed.find((a) => a.id === acordoId);
-      if (updated) setSelected(updated);
-    } catch (err) {
-      console.error('Erro ao anular adenda:', err);
-      setMessage({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
-    } finally {
-      setAdendaBusy(false);
-    }
-  };
-
   /**
    * @param {typeof selected} acordo
    */
@@ -764,10 +495,7 @@ const MyAgreements = () => {
       <button
         type="button"
         key={acordo.id}
-        onClick={() => {
-          closeAdendaForm();
-          setSelected(acordo);
-        }}
+        onClick={() => setSelected(acordo)}
         className="w-full text-left bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-2"
       >
         <div className="flex justify-between items-center gap-2">
@@ -876,12 +604,14 @@ const MyAgreements = () => {
     const podeRegistarFaltas = activo
       && allowsAssiduidadeFaltasForAcordo(pagamentosGate, idsGate);
     const leavePending = Boolean(pendingLeaveIds[selected.id]);
-    const adenda = selected.adenda_pendente;
-    const adendaAguardando = adenda && isAdendaAguardandoContraparte(adenda.estado);
-    const mostrarCtAdenda =
-      adendaAguardando && souContraparteAdenda(adenda, isMotorista, isPassageiro);
-    const mostrarAnularAdenda =
-      adendaAguardando && souIniciadorAdenda(adenda, user?.id) && !mostrarCtAdenda;
+    const negociacaoPreco =
+      resolveNegociacaoPrecoAtiva(selected.acordos_adendas) || selected.adenda_pendente || null;
+    const janelaPrecoAberta = isJanelaPropostaPrecoAberta();
+    const mesActualLabel = labelMesActualPt();
+    const precoActualPassageiro =
+      selected.valor_mensal_por_passageiro_kz ?? quotaDestaque;
+    const podeProporPreco =
+      podeRenegociar && janelaPrecoAberta && !negociacaoPreco;
     const rescisaoConsensualPendente =
       activo &&
       String(selected.rescisao_modo || '').toLowerCase() === 'consensual' &&
@@ -893,10 +623,6 @@ const MyAgreements = () => {
     const cancelamentoCopy = cancelamentoPendente
       ? copyCancelamentoPendente(selected.rescisao_effective_on)
       : null;
-    const adendaAntesVigencia =
-      adenda?.effective_from && isAdendaBeforeEffectiveFrom(adenda.effective_from);
-    const precoActualPassageiro =
-      selected.valor_mensal_por_passageiro_kz ?? quotaDestaque;
     const podeRenovar = activo && podeRenovarPeriodo(selected);
     const podeRecusarRenov = activo && podeRecusarRenovacao(selected);
     const renovacaoRenovado =
@@ -931,30 +657,6 @@ const MyAgreements = () => {
           driverId: user.id,
         })
         : [];
-
-    const valorNum = Number.parseInt(String(adendaValor), 10);
-    const nNum = Number.parseInt(String(adendaN), 10);
-    let preview = null;
-    let previewHasResto = false;
-    if (
-      adendaFormOpen &&
-      Number.isInteger(valorNum) &&
-      valorNum >= 0 &&
-      Number.isInteger(nNum) &&
-      nNum >= 1
-    ) {
-      try {
-        preview = resolveAgreementPricing({
-          modo_preco: adendaModo,
-          valor_ask_kz: valorNum,
-          n_passageiros: nNum,
-        });
-        previewHasResto =
-          adendaModo === 'TOTAL_ACORDO' && valorNum % nNum !== 0;
-      } catch {
-        preview = null;
-      }
-    }
 
     return (
       <ModalPortal>
@@ -1086,118 +788,6 @@ const MyAgreements = () => {
               className="border-0 bg-transparent dark:bg-transparent p-0"
             />
 
-            {selected.adenda_pendente && (
-              <div
-                data-testid="adenda-pendente"
-                className="rounded-xl border border-amber-200/90 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 space-y-2"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">
-                    Alteração de preço
-                  </p>
-                  <span
-                    className={`text-xs font-bold px-2 py-1 rounded-full shrink-0 ${chipClassAdenda(adenda.estado)}`}
-                    data-testid="adenda-chip"
-                  >
-                    {labelChipAdenda(adenda.estado, {
-                      isMotorista,
-                      isPassageiro,
-                      effectiveFrom: adenda.effective_from,
-                    })}
-                  </span>
-                </div>
-
-                {adendaAntesVigencia ? (
-                  <div
-                    className="grid grid-cols-2 gap-2 text-xs"
-                    data-testid="adenda-precos-comparacao"
-                  >
-                    <div className="rounded-lg bg-white/80 dark:bg-slate-900/50 p-2">
-                      <p className="text-slate-500">Preço actual</p>
-                      <p className="font-bold tabular-nums text-slate-900 dark:text-white">
-                        {formatKwanza(precoActualPassageiro)} Kz
-                      </p>
-                    </div>
-                    <div className="rounded-lg bg-white/80 dark:bg-slate-900/50 p-2">
-                      <p className="text-slate-500">
-                        Preço futuro
-                        {adenda.effective_from
-                          ? ` (${formatMesAdenda(adenda.effective_from)})`
-                          : ''}
-                      </p>
-                      <p className="font-bold tabular-nums text-primary">
-                        {formatKwanza(adenda.valor_mensal_por_passageiro_kz)} Kz
-                      </p>
-                    </div>
-                  </div>
-                ) : null}
-
-                {adendaAguardando ? (
-                  <>
-                    <p className="text-sm text-slate-600 dark:text-slate-300 text-pretty">
-                      {mostrarCtAdenda
-                        ? 'Revisa a proposta abaixo antes de aceitar ou rejeitar.'
-                        : String(adenda.estado || '').toLowerCase() === 'pendente_contraparte'
-                          ? isMotorista
-                            ? 'O passageiro propôs um novo preço.'
-                            : 'À espera da aceitação do motorista.'
-                          : isPassageiro
-                            ? 'O motorista propôs um novo preço.'
-                            : 'À espera da aceitação do passageiro.'}
-                    </p>
-                    {mostrarCtAdenda && (
-                      <div className="mt-1 flex flex-col gap-3">
-                        <Button
-                          type="button"
-                          className="w-full min-h-12 text-base"
-                          disabled={adendaBusy}
-                          onClick={handleAcceptAdenda}
-                        >
-                          Aceitar Alteração
-                        </Button>
-                        <button
-                          type="button"
-                          disabled={adendaBusy}
-                          onClick={handleRejectAdenda}
-                          className="w-full min-h-12 rounded-lg border border-red-300/90 bg-transparent px-4 text-sm font-semibold text-red-800 dark:border-red-800 dark:text-red-200 disabled:opacity-60"
-                        >
-                          Rejeitar Alteração
-                        </button>
-                      </div>
-                    )}
-                    {mostrarAnularAdenda && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="w-full min-h-11"
-                        disabled={adendaBusy}
-                        data-testid="anular-renegociacao-cta"
-                        onClick={() => setCancelAdendaConfirmOpen(true)}
-                      >
-                        Anular renegociação
-                      </Button>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <p className="text-sm text-slate-600 dark:text-slate-300 text-pretty">
-                      {adendaAntesVigencia
-                        ? `O mês corrente mantém as quotas já combinadas até ${formatMesAdenda(adenda.effective_from)}.`
-                        : 'Novo preço em vigor neste acordo.'}
-                    </p>
-                    {selected.adenda_pendente.valor_mensal_total_kz != null && adendaAntesVigencia ? (
-                      <p className="text-xs text-slate-500">
-                        Total futuro{' '}
-                        <span className="tabular-nums font-medium">
-                          {formatKwanza(selected.adenda_pendente.valor_mensal_total_kz)} Kz
-                        </span>
-                      </p>
-                    ) : null}
-                  </>
-                )}
-              </div>
-            )}
-
             {cancelamentoCopy ? (
               <div
                 data-testid="cancelamento-pendente-banner"
@@ -1239,6 +829,18 @@ const MyAgreements = () => {
             )}
           </section>
 
+          {activo && podeRenegociar ? (
+            <AcordoPrecoProximoMesPanel
+              acordoId={selected.id}
+              precoActual={precoActualPassageiro}
+              negociacao={negociacaoPreco}
+              historico={historicoPreco}
+              janelaAberta={janelaPrecoAberta}
+              mesActualLabel={mesActualLabel}
+              podePropor={podeProporPreco}
+            />
+          ) : null}
+
           {(podeRenovar || renovacaoRenovado || renovacaoRecusada) && (
             <section
               className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 p-4 space-y-3"
@@ -1246,43 +848,34 @@ const MyAgreements = () => {
             >
               <div className="space-y-1">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Renovação do período
+                  Renovação do acordo
                 </h3>
                 <p className="text-xs text-slate-500 text-pretty">
                   {renovacaoRenovado
                     ? `${labelRenovacaoEstado('renovado')} (${formatProximoMesPt(selected.renovacao_proximo_mes)}).`
                     : renovacaoRecusada
                       ? labelRenovacaoEstado('nao_renovar')
-                      : 'Confirma se o acordo continua no mês seguinte com os termos vigentes.'}
+                      : 'Confirma se o acordo continua no mês seguinte. Isto é independente de mudar o preço.'}
                 </p>
               </div>
-
-              {renewFeedback ? (
-                <FeedbackAlert type={renewFeedback.type} text={renewFeedback.text} className="mb-0" />
-              ) : null}
 
               {podeRenovar ? (
                 <div className="flex flex-col gap-2">
                   <Button
                     type="button"
                     className="w-full min-h-11"
-                    disabled={renewBusy}
                     data-testid="renovar-periodo-cta"
-                    onClick={handleRenewPeriod}
+                    onClick={() => navigate(`/acordos/${selected.id}/renovar`)}
                   >
-                    {renewBusy ? (
-                      <Loader2 size={16} className="animate-spin" aria-hidden="true" />
-                    ) : null}
-                    Renovar próximo período
+                    Renovar
                   </Button>
                   {podeRecusarRenov ? (
                     <Button
                       type="button"
                       variant="outline"
                       className="w-full min-h-11 text-slate-600"
-                      disabled={renewBusy}
                       data-testid="nao-renovar-periodo-cta"
-                      onClick={handleDeclineRenewal}
+                      onClick={() => navigate(`/acordos/${selected.id}/nao-renovar`)}
                     >
                       Não renovar
                     </Button>
@@ -1408,140 +1001,7 @@ const MyAgreements = () => {
             </p>
           )}
 
-          {adendaFormOpen && podeRenegociar && (
-            <section
-              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/40 p-4 space-y-4"
-              aria-labelledby="adenda-title"
-            >
-              <div className="space-y-1">
-                <h3 id="adenda-title" className="text-base font-bold text-slate-900 dark:text-white">
-                  Novo preço
-                </h3>
-                <p className="text-sm text-slate-500 text-pretty">
-                  Actualiza o valor combinado do acordo.
-                </p>
-              </div>
-
-              <div className="space-y-1.5">
-                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Modo</p>
-                <div className="flex bg-slate-200/80 dark:bg-slate-800 rounded-xl p-1 gap-1">
-                  <button
-                    type="button"
-                    className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
-                      adendaModo === 'POR_PASSAGEIRO'
-                        ? 'bg-white dark:bg-slate-700 text-primary shadow-sm'
-                        : 'text-slate-500'
-                    }`}
-                    onClick={() => setAdendaModo('POR_PASSAGEIRO')}
-                  >
-                    Por passageiro
-                  </button>
-                  <button
-                    type="button"
-                    className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
-                      adendaModo === 'TOTAL_ACORDO'
-                        ? 'bg-white dark:bg-slate-700 text-primary shadow-sm'
-                        : 'text-slate-500'
-                    }`}
-                    onClick={() => setAdendaModo('TOTAL_ACORDO')}
-                  >
-                    Total do acordo
-                  </button>
-                </div>
-              </div>
-
-              <label className="flex flex-col gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                Valor mensal
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    step={1}
-                    value={adendaValor}
-                    onChange={(e) => setAdendaValor(e.target.value)}
-                    className="flex-1 h-11 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 outline-none focus:ring-2 focus:ring-primary/50 tabular-nums"
-                  />
-                  <span className="text-sm font-medium text-slate-500 shrink-0">Kz</span>
-                </div>
-              </label>
-
-              <label className="flex flex-col gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                Passageiros no preço
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  step={1}
-                  value={adendaN}
-                  onChange={(e) => setAdendaN(e.target.value)}
-                  className="h-11 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 outline-none focus:ring-2 focus:ring-primary/50 tabular-nums"
-                />
-                <span className="text-xs font-normal text-slate-400">
-                  Por omissão: passageiros activos
-                </span>
-              </label>
-
-              {preview && (
-                <div className="rounded-xl border border-emerald-200/80 bg-white dark:bg-slate-900 dark:border-emerald-900/40 p-3 space-y-1">
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">Como fica</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-300">
-                    Cada um paga{' '}
-                    <span className="tabular-nums font-semibold">
-                      {formatKwanza(preview.valor_mensal_por_passageiro_kz)} Kz
-                    </span>
-                  </p>
-                  <p className="text-sm text-slate-600 dark:text-slate-300">
-                    Total{' '}
-                    <span className="tabular-nums font-semibold">
-                      {formatKwanza(preview.valor_mensal_total_kz)} Kz
-                    </span>
-                  </p>
-                  {previewHasResto && (
-                    <p className="text-xs text-slate-500">O resto fica no último</p>
-                  )}
-                </div>
-              )}
-
-              {adendaError ? (
-                <FeedbackAlert type="error" text={adendaError} className="mb-0" />
-              ) : null}
-
-              <div className="flex flex-col gap-2 sm:flex-row-reverse">
-                <Button
-                  type="button"
-                  className="w-full h-11 rounded-xl font-bold"
-                  disabled={!preview}
-                  onClick={() => {
-                    setAdendaError('');
-                    setAdendaModalOpen(true);
-                  }}
-                >
-                  Rever e confirmar
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full h-11 rounded-xl font-bold text-slate-500"
-                  onClick={closeAdendaForm}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </section>
-          )}
-
           <div className="flex flex-col gap-2 pt-1">
-            {podeRenegociar && !adendaFormOpen && (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full h-11 rounded-xl font-bold border-primary/30 text-primary hover:bg-primary/5"
-                onClick={() => openAdendaForm(selected)}
-              >
-                <Pencil size={16} aria-hidden="true" /> Renegociar preço
-              </Button>
-            )}
             {activo && podeRegistarFaltas ? (
               <Button
                 type="button"
@@ -1585,10 +1045,7 @@ const MyAgreements = () => {
               type="button"
               variant="ghost"
               className="w-full h-11 rounded-xl font-bold text-slate-500"
-              onClick={() => {
-                closeAdendaForm();
-                setSelected(null);
-              }}
+              onClick={() => setSelected(null)}
             >
               Fechar
             </Button>
@@ -1913,18 +1370,6 @@ const MyAgreements = () => {
       />
 
       <ConfirmationModal
-        isOpen={cancelAdendaConfirmOpen}
-        busy={adendaBusy}
-        title="Anular renegociação?"
-        message="A proposta de novo preço deixa de ficar pendente. O preço combinado actual mantém-se."
-        confirmText="Anular"
-        onConfirm={handleCancelAdenda}
-        onCancel={() => {
-          if (!adendaBusy) setCancelAdendaConfirmOpen(false);
-        }}
-      />
-
-      <ConfirmationModal
         isOpen={leaveModalOpen}
         busy={leaveBusy}
         title="Sair só tu?"
@@ -1936,18 +1381,6 @@ const MyAgreements = () => {
         }}
       />
 
-      <ConfirmationModal
-        isOpen={adendaModalOpen}
-        busy={adendaBusy}
-        variant="primary"
-        title="Confirmar novo preço?"
-        message={`A proposta fica à espera da aceitação ${tipoPerfil === 'Passageiro' ? 'do motorista' : 'do passageiro'}. Depois, aplica-se a partir do próximo mês; o mês corrente mantém as quotas já combinadas.`}
-        confirmText="Confirmar"
-        onConfirm={handleConfirmAdenda}
-        onCancel={() => {
-          if (!adendaBusy) setAdendaModalOpen(false);
-        }}
-      />
     </PageShell>
   );
 };

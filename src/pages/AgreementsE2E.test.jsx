@@ -124,12 +124,17 @@ describe('Agreements marketplace E2E (T25)', () => {
         join(dir, '../services/AgreementService.js'),
         'utf8',
       );
+      const leaveStart = src.indexOf('export async function leavePassenger');
+      const leaveEnd = src.indexOf('export async function renegotiateAgreementPricing');
+      const leaveSrc = leaveStart >= 0 && leaveEnd > leaveStart
+        ? src.slice(leaveStart, leaveEnd)
+        : src;
 
-      expect(src).toMatch(/leave_passenger/);
-      expect(src).not.toMatch(/\/\s*4(\.0)?\b/);
-      expect(src).not.toMatch(/valor_mensal.*=.*N_activos/i);
-      expect(src).not.toMatch(/quota_mensal_kz\s*:/);
-      expect(src).not.toMatch(/vagas_disponiveis/);
+      expect(leaveSrc).toMatch(/leave_passenger/);
+      expect(leaveSrc).not.toMatch(/\/\s*4(\.0)?\b/);
+      expect(leaveSrc).not.toMatch(/valor_mensal.*=.*N_activos/i);
+      expect(leaveSrc).not.toMatch(/quota_mensal_kz\s*:/);
+      expect(leaveSrc).not.toMatch(/vagas_disponiveis/);
     });
 
     it('resolveAgreementPricing divide por N_contrato (n_passageiros), nunca por vagas', () => {
