@@ -702,7 +702,7 @@ describe('DriverDashboard — marketplace', () => {
         }),
       );
     });
-    expect(await screen.findByText(/Proposta enviada ao passageiro/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Avisámos o passageiro/i)).toBeInTheDocument();
   });
 
   it('separa direct e waitlist: só direct tem «Enviar proposta»', async () => {
@@ -873,7 +873,7 @@ describe('DriverDashboard — marketplace', () => {
         }),
       );
     });
-    expect(await screen.findByText(/Proposta enviada ao passageiro/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Avisámos o passageiro/i)).toBeInTheDocument();
   });
 
   it('mostra Editar e Despublicar quando oferta activa', async () => {

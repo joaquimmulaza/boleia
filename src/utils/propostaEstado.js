@@ -13,6 +13,16 @@ export function normalizeEstadoProposta(estado) {
 }
 
 /**
+ * Proposta ainda negociável (pendente no produto → `aberta` na BD).
+ *
+ * @param {string | null | undefined} estado
+ * @returns {boolean}
+ */
+export function isPropostaAberta(estado) {
+  return normalizeEstadoProposta(estado) === 'aberta';
+}
+
+/**
  * Label curta para chip de estado.
  *
  * @param {string | null | undefined} estado

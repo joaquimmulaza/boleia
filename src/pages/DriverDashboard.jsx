@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { MapPin, AlertCircle, ArrowRight, Clock, Users, ChevronRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
   listOfertasByDriver,
@@ -40,6 +40,7 @@ import OfertaEditPanel from '../components/OfertaEditPanel';
 import OverlayShell from '../components/OverlayShell';
 import PropostaValorInput from '../components/PropostaValorInput';
 import { parseValorPropostaKz, validarValorPropostaKz } from '../utils/propostaValor.js';
+import { FEEDBACK_PROPOSTA_ENVIADA_PASSAGEIRO } from '../utils/propostaFeedback';
 
 function estadoChip(estado) {
   const map = {
@@ -91,6 +92,9 @@ function OfertaRotaTitulo({ oferta }) {
  */
 const DriverDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const pendingPropostaDeepLinkRef = useRef(null);
+  const propostaDeepLinkHandledRef = useRef(false);
   const { user } = useAuth();
   const [hasVehicle, setHasVehicle] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -160,6 +164,22 @@ const DriverDashboard = () => {
   useEffect(() => {
     carregar();
   }, [carregar]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const openOfertaId = params.get('openOfertaId');
+    const propostaId = params.get('propostaId');
+    const focus = params.get('focus');
+    if (openOfertaId || focus === 'propostas' || propostaId) {
+      pendingPropostaDeepLinkRef.current = {
+        openOfertaId: openOfertaId || null,
+        propostaId: propostaId || null,
+      };
+      if (location.search) {
+        navigate(location.pathname, { replace: true });
+      }
+    }
+  }, [location.search, location.pathname, navigate]);
 
   const ofertasActivas = useMemo(
     () => ofertas.filter((o) => o.estado !== 'inactiva'),
@@ -278,6 +298,38 @@ const DriverDashboard = () => {
     }
   };
 
+  useEffect(() => {
+    const pending = pendingPropostaDeepLinkRef.current;
+    if (
+      propostaDeepLinkHandledRef.current
+      || !pending?.openOfertaId
+      || isLoading
+      || hasVehicle !== true
+    ) {
+      return undefined;
+    }
+
+    const ofertaExists = ofertas.some((o) => o.id === pending.openOfertaId);
+    if (!ofertaExists) return undefined;
+
+    const target = { ...pending };
+    pendingPropostaDeepLinkRef.current = null;
+    propostaDeepLinkHandledRef.current = true;
+
+    void handleVerPropostas(target.openOfertaId, { preserveFeedback: true }).then(() => {
+      if (!target.propostaId) return;
+      requestAnimationFrame(() => {
+        document.querySelector(`[data-proposta-id="${target.propostaId}"]`)?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+        });
+      });
+    });
+    return undefined;
+    // handleVerPropostas é estável o suficiente para deep link único no mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, hasVehicle, ofertas]);
+
   const handleVerProcuras = (oferta, { sóCompatíveis: filtrarCompatíveis = true } = {}) => {
     setDetailPanel(null);
     setHubTab('procuras');
@@ -365,7 +417,7 @@ const DriverDashboard = () => {
       });
       setProcurasComPropostaEnviada((prev) => new Set(prev).add(procura.id));
       setProporSheet(null);
-      setFeedback({ type: 'success', text: 'Proposta enviada ao passageiro.' });
+      setFeedback({ type: 'success', text: FEEDBACK_PROPOSTA_ENVIADA_PASSAGEIRO });
     } catch (err) {
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
     } finally {
@@ -402,6 +454,7 @@ const DriverDashboard = () => {
       if (selectedOfertaId) {
         await handleVerPropostas(selectedOfertaId, { preserveFeedback: true });
       }
+      await carregar();
     } catch (err) {
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
     } finally {

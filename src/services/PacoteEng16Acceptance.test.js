@@ -111,12 +111,12 @@ describe('PACOTE ENG #16 — eventos domínio + deep-links', () => {
       ).toBe('/acordos?openAcordoId=a-3&focus=pagamento');
     });
 
-    it('proposal_received mantém hub contraparte (regressão)', () => {
+    it('proposal_received mantém hub contraparte com foco propostas (ENG#33)', () => {
       expect(
         resolveNotificationRoute({
           metadata: { type: 'proposal_received', inbox: 'passageiro' },
         }),
-      ).toBe('/passageiro');
+      ).toBe('/passageiro?focus=propostas');
     });
   });
 

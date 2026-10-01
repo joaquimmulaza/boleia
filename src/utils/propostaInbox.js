@@ -1,4 +1,4 @@
-import { isPropostaHistorico } from './propostaEstado';
+import { isPropostaAberta, isPropostaHistorico } from './propostaEstado';
 
 /**
  * Helpers de inbox de propostas (sentidos A e B).
@@ -20,7 +20,9 @@ import { isPropostaHistorico } from './propostaEstado';
 export function filterPropostasParaInbox(propostas, userId) {
   if (!userId) return [];
   const list = Array.isArray(propostas) ? propostas : [];
-  return list.filter((p) => p?.estado === 'aberta' && p.created_by !== userId);
+  return list.filter(
+    (p) => p?.created_by && p.created_by !== userId && isPropostaAberta(p.estado),
+  );
 }
 
 /**
@@ -33,7 +35,9 @@ export function filterPropostasParaInbox(propostas, userId) {
 export function filterPropostasEnviadas(propostas, userId) {
   if (!userId) return [];
   const list = Array.isArray(propostas) ? propostas : [];
-  return list.filter((p) => p?.estado === 'aberta' && p.created_by === userId);
+  return list.filter(
+    (p) => p?.created_by === userId && isPropostaAberta(p.estado),
+  );
 }
 
 /**

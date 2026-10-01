@@ -24,13 +24,21 @@ describe('filterPropostasParaInbox', () => {
     expect(result.map((p) => p.id)).toEqual(['a', 'd']);
   });
 
-  it('exclui propostas sem created_by distinto do utilizador', () => {
+  it('exclui propostas sem created_by', () => {
     expect(
       filterPropostasParaInbox(
         [{ id: 'x', estado: 'aberta', created_by: undefined }],
         userId,
       ),
-    ).toHaveLength(1);
+    ).toHaveLength(0);
+  });
+
+  it('aceita estado aberta case-insensitive', () => {
+    const result = filterPropostasParaInbox(
+      [{ id: 'a', estado: 'ABERTA', created_by: 'driver-1' }],
+      userId,
+    );
+    expect(result.map((p) => p.id)).toEqual(['a']);
   });
 
   it('devolve [] sem userId ou lista inválida', () => {

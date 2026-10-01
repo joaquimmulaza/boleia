@@ -161,4 +161,6 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
 
  * **Esqueceu a palavra-passe (2026-10-01):** CTA em `/auth` → `mode=forgot` → `resetPasswordForEmail` (sucesso genérico anti-enumeração) → link `mode=update-password` → `updateUser`; `AuthContext.passwordRecoveryPending` + `sessionStorage` `bc_password_recovery`; guards em `RootRoute` / `ProtectedRoute` / `AdminRoute` bloqueiam hub/admin durante recovery. Spec: `.specs/features/esqueceu-palavra-passe/`. **Ops:** adicionar Redirect URLs no Dashboard Supabase (`…/auth?mode=update-password`).
 
+* **ENG#33 visibilidade proposta cruzada (2026-10-01):** deep links `proposal_received` com `?focus=propostas&propostaId&openOfertaId`; hubs passageiro/motorista consomem query no mount (scroll + painel propostas); filtros inbox case-insensitive (`isPropostaAberta`); feedback pós-envio «Avisámos o motorista/passageiro». Spec: `.specs/quick/eng33-visibilidade-proposta-cruzada/`.
+
 **Próximo:** polish admin Critiquito; Redirect URLs recovery em produção. **Fora do MVP:** zonas/polígonos/raio residencial; adenda bilateral completa (hoje motorista inicia). Commits só se o utilizador pedir.

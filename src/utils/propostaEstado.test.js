@@ -2,9 +2,19 @@ import { describe, it, expect } from 'vitest';
 import {
   labelEstadoProposta,
   chipEstadoProposta,
+  isPropostaAberta,
   isPropostaTerminada,
   isPropostaHistorico,
 } from './propostaEstado';
+
+describe('isPropostaAberta', () => {
+  it('normaliza case e trata vazio', () => {
+    expect(isPropostaAberta('aberta')).toBe(true);
+    expect(isPropostaAberta('ABERTA')).toBe(true);
+    expect(isPropostaAberta('rejeitada')).toBe(false);
+    expect(isPropostaAberta(null)).toBe(false);
+  });
+});
 
 describe('labelEstadoProposta', () => {
   it('aberta na secção enviadas → Aguarda resposta', () => {
