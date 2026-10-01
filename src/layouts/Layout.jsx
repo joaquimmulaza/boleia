@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import ThemeToggle from '../components/ThemeToggle';
 import NotificationBell from '../components/NotificationBell';
 import OnboardingPermissions from '../components/OnboardingPermissions';
+import InstallAppPrompt from '../components/InstallAppPrompt';
 import { useAuth } from '../contexts/AuthContext';
 
 /**
@@ -58,6 +59,7 @@ const Layout = () => {
 
       {/* Soft Permission Prompt — monta apenas se as permissões ainda não foram configuradas */}
       <OnboardingPermissions />
+      <InstallAppPrompt />
 
       {/* ── Bottom Navigation ─────────────────────────────────────────── */}
       <nav
