@@ -22,7 +22,7 @@ import { createAgreementFromProposal } from '../services/AgreementService';
 import { findCompatibleProcuras } from '../services/MatchingService';
 import { getGrupoByProcura } from '../services/GrupoService';
 import { getProcura, listProcurasDisponiveis } from '../services/ProcuraService';
-import { buildOfertaMinimaFromProcura } from '../utils/ofertaFromProcura';
+import { buildOfertaMinimaFromProcura, getPropostaDriverGaps } from '../utils/ofertaFromProcura';
 import { supabase } from '../lib/supabase';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
@@ -313,6 +313,14 @@ const DriverDashboard = () => {
     const valorCheck = validarValorPropostaKz(valorParsed);
     if (!valorCheck.ok) {
       setFeedback({ type: 'error', text: valorCheck.erro });
+      return;
+    }
+
+    if (
+      !ofertaSeleccionada &&
+      getPropostaDriverGaps({ valor_mensal_ask_kz: valorCheck.valor }).length > 0
+    ) {
+      setFeedback({ type: 'error', text: 'Indica um valor mensal válido em Kz.' });
       return;
     }
 

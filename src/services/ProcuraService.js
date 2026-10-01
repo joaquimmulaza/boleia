@@ -140,7 +140,9 @@ export async function listProcurasDisponiveis(options = {}) {
 
   const { data, error } = await supabase
     .from('procuras')
-    .select('*')
+    .select(
+      'id, origin_name, origin_lat, origin_lng, destination_name, destination_lat, destination_lng, preferred_time, return_time, dias_semana, n_candidato, estado, created_at',
+    )
     .in('estado', ['activa', 'em_negociacao'])
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);

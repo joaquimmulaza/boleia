@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, Clock, Users } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { listOfertasDisponiveis, isOfertaFlexivel, labelOfertaRota } from '../services/OfertaService';
 import { listProcurasDisponiveis } from '../services/ProcuraService';
 import { formatKwanza } from '../utils/formatKwanza';
@@ -12,11 +13,12 @@ import ThemeToggle from '../components/ThemeToggle';
 
 /**
  * Marketplace público — browse ofertas e procuras sem conta.
- * CTAs de acção redireccionam para /auth.
+ * CTAs de acção redireccionam para /auth. Sessão activa → hub do perfil.
  * @typedef {Readonly<{}>} MarketplaceExploreProps
  */
 export default function MarketplaceExplore() {
   const navigate = useNavigate();
+  const { session, loading: authLoading, tipoPerfil } = useAuth();
   const [tab, setTab] = useState('ofertas'); // 'ofertas' | 'procuras'
   const [ofertas, setOfertas] = useState([]);
   const [procuras, setProcuras] = useState([]);
@@ -41,8 +43,22 @@ export default function MarketplaceExplore() {
   }, []);
 
   useEffect(() => {
+    if (session) return;
     void carregar();
-  }, [carregar]);
+  }, [carregar, session]);
+
+  if (authLoading) {
+    return (
+      <div className="flex h-dvh items-center justify-center text-slate-500">
+        A carregar...
+      </div>
+    );
+  }
+
+  if (session) {
+    if (tipoPerfil === 'Motorista') return <Navigate to="/motorista" replace />;
+    return <Navigate to="/passageiro" replace />;
+  }
 
   const goAuth = (role) => {
     const q = role ? `?mode=register&role=${role}` : '';

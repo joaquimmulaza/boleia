@@ -163,7 +163,9 @@ export async function listOfertasDisponiveis(options = {}) {
 
   const { data, error } = await supabase
     .from('ofertas_capacidade')
-    .select('*')
+    .select(
+      'id, flexibilidade_rota, origin_name, origin_lat, origin_lng, destination_name, destination_lat, destination_lng, departure_time, return_time, dias_semana, vagas_disponiveis, vagas_totais, modo_preco, valor_mensal_ask_kz, estado, created_at',
+    )
     .in('estado', ['disponivel', 'parcial'])
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);

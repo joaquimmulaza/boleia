@@ -6,6 +6,10 @@ import MarketplaceExplore from './MarketplaceExplore';
 
 const navigate = vi.fn();
 
+vi.mock('../contexts/AuthContext', () => ({
+  useAuth: () => ({ session: null, loading: false, tipoPerfil: null }),
+}));
+
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return {
