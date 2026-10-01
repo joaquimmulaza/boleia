@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import PassengerDashboard from './PassengerDashboard';
 import { createProcura, createProcuraWithGrupo, listProcurasByOwner, updateProcura } from '../services/ProcuraService';
 import { findCompatibleOfertas, toProcuraMatchInput } from '../services/MatchingService';
@@ -89,6 +89,12 @@ vi.mock('../components/AddressInput', () => ({
     </label>
   ),
 }));
+
+/** Expõe location.search para assert de deep-link (Critiquito ENG#33). */
+function LocationSearchProbe() {
+  const { search } = useLocation();
+  return <div data-testid="location-search">{search}</div>;
+}
 
 const procuraBase = {
   id: 'pr-1',
@@ -1316,6 +1322,58 @@ describe('PassengerDashboard — marketplace', () => {
         'pr-1',
         expect.objectContaining({ preferred_time: '08:00' }),
       );
+    });
+  });
+
+  it('deep-link proposal_received preserva query params na URL', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    listPropostasByProcura.mockResolvedValue([
+      {
+        id: 'prop-dl',
+        estado: 'aberta',
+        created_by: 'driver-1',
+        modo_preco: 'TOTAL_ACORDO',
+        valor_mensal_ask_kz: 120000,
+        n_passageiros_propostos: 1,
+      },
+    ]);
+    enrichPropostasForReview.mockImplementation(async (lista) =>
+      (lista || []).map((p) => ({
+        proposta: p,
+        titulo: 'Individual',
+        membros: [{ passenger_id: 'pax-1', nome: 'Tu', quota_mensal_kz: 120000 }],
+        pricing: {
+          valor_mensal_total_kz: 120000,
+          valor_mensal_por_passageiro_kz: 120000,
+          quotas: [120000],
+          temResto: false,
+        },
+        avisoComposicao: null,
+      })),
+    );
+
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          '/passageiro?focus=propostas&propostaId=prop-dl&openOfertaId=of-1',
+        ]}
+      >
+        <PassengerDashboard />
+        <LocationSearchProbe />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Propostas recebidas')).toBeInTheDocument();
+    const search = screen.getByTestId('location-search').textContent || '';
+    expect(search).toContain('focus=propostas');
+    expect(search).toContain('propostaId=prop-dl');
+    expect(search).toContain('openOfertaId=of-1');
+
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalled();
     });
   });
 

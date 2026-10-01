@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import DriverDashboard from './DriverDashboard';
 import {
   listPropostasByOferta,
@@ -22,6 +22,12 @@ import { confirmPropostaSheet } from '../test/confirmPropostaSheet.js';
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' }),
 }));
+
+/** Expõe location.search para assert de deep-link (Critiquito ENG#33). */
+function LocationSearchProbe() {
+  const { search } = useLocation();
+  return <div data-testid="location-search">{search}</div>;
+}
 
 const ofertaFixa = {
   id: 'of-1',
@@ -973,6 +979,43 @@ describe('DriverDashboard — marketplace', () => {
       expect(cancelOferta).toHaveBeenCalledWith('of-1');
     });
     expect(await screen.findByText(/Oferta despublicada/i)).toBeInTheDocument();
+  });
+
+  it('deep-link proposal_received preserva query params na URL', async () => {
+    listPropostasByOferta.mockResolvedValue([propostaAberta]);
+    enrichPropostasForReview.mockImplementation(async (lista) => {
+      if (!lista?.length) return [];
+      if (lista[0].created_by === 'pax-1') return [reviewFixture];
+      return [];
+    });
+
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          '/motorista?focus=propostas&propostaId=prop-1&openOfertaId=of-1',
+        ]}
+      >
+        <DriverDashboard />
+        <LocationSearchProbe />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(listPropostasByOferta).toHaveBeenCalledWith('of-1');
+    });
+    expect(await screen.findByText('Grupo · 3 pessoas')).toBeInTheDocument();
+
+    const search = screen.getByTestId('location-search').textContent || '';
+    expect(search).toContain('focus=propostas');
+    expect(search).toContain('propostaId=prop-1');
+    expect(search).toContain('openOfertaId=of-1');
+
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalled();
+    });
   });
 
   it('não expõe jargon de produto na UI do hub motorista', async () => {
