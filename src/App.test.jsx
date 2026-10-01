@@ -88,4 +88,22 @@ describe('AppShell — scroll por tipo de rota', () => {
     expect(container.querySelector('.overflow-hidden.h-dvh')).not.toBeNull();
     expect(screen.getByTestId('offline-banner')).toBeInTheDocument();
   });
+
+  it('sessão com passwordRecoveryPending em / redireciona para Auth', () => {
+    useAuth.mockReturnValue({
+      session: { user: { id: 'u1' } },
+      loading: false,
+      tipoPerfil: 'Passageiro',
+      passwordRecoveryPending: true,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <AppShell />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('auth-page')).toBeInTheDocument();
+    expect(screen.queryByTestId('landing-page')).not.toBeInTheDocument();
+  });
 });

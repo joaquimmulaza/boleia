@@ -10,10 +10,14 @@ import { useAuthForm } from '../hooks/useAuthForm';
 const Auth = () => {
   const {
     isLogin,
+    isForgot,
+    isUpdatePassword,
+    isRegister,
     profileType,
     showPassword,
     email,
     password,
+    passwordConfirm,
     nome,
     telefone,
     feedback,
@@ -21,6 +25,7 @@ const Auth = () => {
     isLoading,
     setEmail,
     setPassword,
+    setPasswordConfirm,
     setNome,
     setTelefone,
     setProfileType,
@@ -28,7 +33,19 @@ const Auth = () => {
     setErrors,
     handleSubmit,
     handleToggleMode,
+    handleForgotClick,
+    handleBackToLogin,
   } = useAuthForm();
+
+  const submitLabel = isLoading
+    ? 'A processar...'
+    : isForgot
+      ? 'Enviar instruções'
+      : isUpdatePassword
+        ? 'Guardar nova palavra-passe'
+        : isLogin
+          ? 'Entrar'
+          : 'Registar';
 
   return (
     <div className="font-[Plus Jakarta Sans,sans-serif] min-h-dvh bg-background-light dark:bg-background-dark text-gray-800 dark:text-gray-100 antialiased flex flex-col items-center justify-center p-0 sm:p-4">
@@ -40,12 +57,16 @@ const Auth = () => {
             <img src="/boleia-logo.png" alt="Boleia Certa" className="h-20 w-auto object-contain" />
           </h1>
           <p className="text-gray-500 dark:text-slate-400 text-[15px] leading-relaxed max-w-[260px] text-pretty">
-            Mobilidade urbana limpa e partilhada.
+            {isForgot
+              ? 'Recuperar palavra-passe'
+              : isUpdatePassword
+                ? 'Nova palavra-passe'
+                : 'Mobilidade urbana limpa e partilhada.'}
           </p>
         </div>
 
         {/* Profile Toggle — apenas em modo Criar Conta */}
-        {!isLogin && (
+        {isRegister && (
           <div className="px-8 mb-6">
             <div className="flex relative h-14 w-full items-center justify-center rounded-full bg-gray-50 dark:bg-slate-800 p-1.5 border border-gray-200 dark:border-slate-700 shadow-inner">
               <label className={`flex h-full grow cursor-pointer items-center justify-center rounded-full px-4 transition-all duration-300 ${profileType === 'Passageiro' ? 'bg-primary text-white shadow-md' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'}`}>
@@ -80,7 +101,7 @@ const Auth = () => {
         <form aria-label="auth-form" onSubmit={handleSubmit} className="flex flex-col gap-6 px-8 flex-grow">
 
           {/* Campos Nome e Telefone — apenas em modo Criar Conta */}
-          {!isLogin && (
+          {isRegister && (
             <>
               <div className="flex flex-col gap-2">
                 <label htmlFor="nome" className="text-gray-500 text-sm font-medium ml-1">Nome Completo</label>
@@ -111,52 +132,89 @@ const Auth = () => {
             </>
           )}
 
-          <div className="flex flex-col gap-2">
-            <label htmlFor="email" className="text-gray-500 text-sm font-medium ml-1">Email</label>
-            <input 
-              id="email"
-              className={`flex w-full rounded-2xl border ${errors?.email ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 dark:border-slate-700 focus:border-primary focus:ring-primary/10'} bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-slate-100 focus:ring-4 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400`}
-              placeholder="nome@email.com" 
-              type="email"
-              value={email}
-              onChange={(e) => { setEmail(e.target.value); if (errors?.email) setErrors(prev => ({ ...prev, email: '' })); }}
-              required
-            />
-            {errors?.email && <span className="text-red-500 text-xs font-medium ml-1">{errors.email}</span>}
-          </div>
-          
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between items-center ml-1">
-              <label htmlFor="password" className="text-gray-500 text-sm font-medium">Password</label>
-            </div>
-            <div className="relative flex items-center">
+          {/* Email — login, registo e forgot */}
+          {!isUpdatePassword && (
+            <div className="flex flex-col gap-2">
+              <label htmlFor="email" className="text-gray-500 text-sm font-medium ml-1">Email</label>
               <input 
-                id="password"
-                className={`flex w-full rounded-2xl border ${errors?.password ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 dark:border-slate-700 focus:border-primary focus:ring-primary/10'} bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-slate-100 focus:ring-4 h-14 p-4 pr-12 text-base outline-none transition-all placeholder:text-gray-400`}
-                placeholder="••••••••" 
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => { setPassword(e.target.value); if (errors?.password) setErrors(prev => ({ ...prev, password: '' })); }}
+                id="email"
+                className={`flex w-full rounded-2xl border ${errors?.email ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 dark:border-slate-700 focus:border-primary focus:ring-primary/10'} bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-slate-100 focus:ring-4 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400`}
+                placeholder="nome@email.com" 
+                type="email"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); if (errors?.email) setErrors(prev => ({ ...prev, email: '' })); }}
                 required
               />
-              <button 
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 text-gray-400 hover:text-gray-600 transition-colors"
-                aria-label={showPassword ? "Esconder senha" : "Mostrar senha"}
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
+              {errors?.email && <span className="text-red-500 text-xs font-medium ml-1">{errors.email}</span>}
             </div>
-            {errors?.password && <span className="text-red-500 text-xs font-medium ml-1">{errors.password}</span>}
-            {isLogin && (
-              <div className="flex justify-end mt-1">
-                <button type="button" className="text-xs text-primary font-semibold hover:text-primary/80 transition-colors">
-                  Esqueceu a palavra-passe?
+          )}
+
+          {/* Password — login, registo e update */}
+          {!isForgot && (
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between items-center ml-1">
+                <label htmlFor="password" className="text-gray-500 text-sm font-medium">
+                  {isUpdatePassword ? 'Nova palavra-passe' : 'Palavra-passe'}
+                </label>
+              </div>
+              <div className="relative flex items-center">
+                <input 
+                  id="password"
+                  className={`flex w-full rounded-2xl border ${errors?.password ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 dark:border-slate-700 focus:border-primary focus:ring-primary/10'} bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-slate-100 focus:ring-4 h-14 p-4 pr-12 text-base outline-none transition-all placeholder:text-gray-400`}
+                  placeholder="••••••••" 
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); if (errors?.password) setErrors(prev => ({ ...prev, password: '' })); }}
+                  required
+                  minLength={isUpdatePassword ? 8 : undefined}
+                />
+                <button 
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label={showPassword ? "Esconder senha" : "Mostrar senha"}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
-            )}
-          </div>
+              {errors?.password && <span className="text-red-500 text-xs font-medium ml-1">{errors.password}</span>}
+              {isLogin && (
+                <div className="flex justify-end mt-1">
+                  <button
+                    type="button"
+                    onClick={handleForgotClick}
+                    className="text-xs text-primary font-semibold hover:text-primary/80 transition-colors"
+                  >
+                    Esqueceu a palavra-passe?
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {isUpdatePassword && (
+            <div className="flex flex-col gap-2">
+              <label htmlFor="passwordConfirm" className="text-gray-500 text-sm font-medium ml-1">
+                Confirmar palavra-passe
+              </label>
+              <input
+                id="passwordConfirm"
+                className={`flex w-full rounded-2xl border ${errors?.passwordConfirm ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 dark:border-slate-700 focus:border-primary focus:ring-primary/10'} bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-slate-100 focus:ring-4 h-14 p-4 text-base outline-none transition-all placeholder:text-gray-400`}
+                placeholder="••••••••"
+                type={showPassword ? 'text' : 'password'}
+                value={passwordConfirm}
+                onChange={(e) => {
+                  setPasswordConfirm(e.target.value);
+                  if (errors?.passwordConfirm) setErrors((prev) => ({ ...prev, passwordConfirm: '' }));
+                }}
+                required
+                minLength={8}
+              />
+              {errors?.passwordConfirm && (
+                <span className="text-red-500 text-xs font-medium ml-1">{errors.passwordConfirm}</span>
+              )}
+            </div>
+          )}
 
           {/* Feedback Message */}
           {feedback.message && (
@@ -178,7 +236,7 @@ const Auth = () => {
               disabled={isLoading}
               className="w-full bg-primary hover:bg-primary/90 active:scale-[0.98] text-white font-bold py-4 rounded-2xl shadow-lg shadow-primary/20 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'A processar...' : isLogin ? 'Entrar' : 'Registar'}
+              {submitLabel}
             </button>
           </div>
         </form>
@@ -186,12 +244,23 @@ const Auth = () => {
         {/* Footer Toggle Section */}
         <div className="mt-auto px-8 py-10 pb-12">
           <div className="flex flex-col items-center gap-4">
-            <button 
-              onClick={handleToggleMode}
-              className="text-gray-500 dark:text-slate-400 font-medium text-sm hover:text-primary transition-colors"
-            >
-              {isLogin ? 'Não tem conta? Criar Conta' : 'Já tem conta? Entrar na minha conta'}
-            </button>
+            {(isForgot || isUpdatePassword) ? (
+              <button
+                type="button"
+                onClick={handleBackToLogin}
+                className="text-gray-500 dark:text-slate-400 font-medium text-sm hover:text-primary transition-colors"
+              >
+                Voltar ao início de sessão
+              </button>
+            ) : (
+              <button 
+                type="button"
+                onClick={handleToggleMode}
+                className="text-gray-500 dark:text-slate-400 font-medium text-sm hover:text-primary transition-colors"
+              >
+                {isLogin ? 'Não tem conta? Criar Conta' : 'Já tem conta? Entrar na minha conta'}
+              </button>
+            )}
           </div>
         </div>
       </div>

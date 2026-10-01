@@ -29,4 +29,18 @@ describe('getFriendlyErrorMessage', () => {
     expect(getFriendlyErrorMessage(undefined)).toBe('Ocorreu um erro inesperado. Tente novamente.');
     expect(getFriendlyErrorMessage(null)).toBe('Ocorreu um erro inesperado. Tente novamente.');
   });
+
+  it('Cenário 6: palavra-passe igual à anterior (recovery)', () => {
+    const error = { message: 'New password should be different from the old password.' };
+    expect(getFriendlyErrorMessage(error)).toBe(
+      'A nova palavra-passe deve ser diferente da actual.'
+    );
+  });
+
+  it('Cenário 7: rate limit de emails de recuperação', () => {
+    const error = { message: 'For security purposes, you can only request this after 60 seconds.' };
+    expect(getFriendlyErrorMessage(error)).toBe(
+      'Aguarde um momento antes de pedir novamente a recuperação.'
+    );
+  });
 });

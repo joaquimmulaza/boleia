@@ -13,3 +13,14 @@ export const validateTelefone = (tel) => {
   const angolaRegex = /^(\+244)?9\d{8}$/;
   return angolaRegex.test(cleanTel);
 };
+
+/** Comprimento mínimo da palavra-passe (recuperação / nova). */
+export const MIN_PASSWORD_LENGTH = 8;
+
+/**
+ * Valida comprimento mínimo da palavra-passe.
+ * @param {string} password
+ * @returns {boolean}
+ */
+export const validatePassword = (password) =>
+  typeof password === 'string' && password.length >= MIN_PASSWORD_LENGTH;

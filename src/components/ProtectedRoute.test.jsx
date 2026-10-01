@@ -137,4 +137,29 @@ describe('ProtectedRoute', () => {
       expect(screen.getByText('Conteúdo Genérico')).toBeInTheDocument();
     });
   });
+
+  it('deve redirecionar para /auth?mode=update-password quando passwordRecoveryPending', async () => {
+    useAuth.mockReturnValue({
+      session: { user: { id: '123' } },
+      loading: false,
+      tipoPerfil: 'Passageiro',
+      passwordRecoveryPending: true,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/protegido']}>
+        <Routes>
+          <Route path="/auth" element={<div>Página de Auth Recovery</div>} />
+          <Route path="/protegido" element={<ProtectedRoute allowedRole="Passageiro" />}>
+            <Route index element={<div>Conteúdo Protegido</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Página de Auth Recovery')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Conteúdo Protegido')).not.toBeInTheDocument();
+  });
 });

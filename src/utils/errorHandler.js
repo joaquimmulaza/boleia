@@ -21,6 +21,12 @@ export function getFriendlyErrorMessage(error) {
   if (/sem IBAN configurado/i.test(msg)) {
     return 'O motorista precisa de IBAN no perfil antes de liquidar.';
   }
+  if (/New password should be different/i.test(msg)) {
+    return 'A nova palavra-passe deve ser diferente da actual.';
+  }
+  if (/only request this after|rate.?limit|security purposes/i.test(msg)) {
+    return 'Aguarde um momento antes de pedir novamente a recuperação.';
+  }
 
   return 'Ocorreu um erro inesperado. Tente novamente.';
 }

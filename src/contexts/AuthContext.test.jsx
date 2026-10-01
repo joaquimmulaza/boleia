@@ -22,7 +22,7 @@ vi.mock('../lib/supabase', () => ({
 }));
 
 const TestComponent = () => {
-  const { user, loading, tipoPerfil, profile } = useAuth();
+  const { user, loading, tipoPerfil, profile, passwordRecoveryPending, clearPasswordRecovery } = useAuth();
   
   if (loading) return <div data-testid="loading">A carregar...</div>;
   
@@ -31,6 +31,10 @@ const TestComponent = () => {
       <div data-testid="user">{user ? user.id : 'no-user'}</div>
       <div data-testid="tipoPerfil">{tipoPerfil || 'no-perfil'}</div>
       <div data-testid="onboarding">{profile?.onboarding_completed ? 'done' : 'pending'}</div>
+      <div data-testid="recovery">{passwordRecoveryPending ? 'pending' : 'idle'}</div>
+      <button type="button" data-testid="clear-recovery" onClick={clearPasswordRecovery}>
+        Limpar recovery
+      </button>
     </div>
   );
 };
@@ -38,6 +42,7 @@ const TestComponent = () => {
 describe('AuthContext', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionStorage.clear();
     mockSingle.mockImplementation(() => Promise.resolve({
       data: { id: 'user-123', tipo_perfil: 'Motorista', onboarding_completed: false },
       error: null,
@@ -177,5 +182,71 @@ describe('AuthContext', () => {
     }).toThrow('useAuth deve ser usado dentro de um AuthProvider');
     
     consoleSpy.mockRestore();
+  });
+
+  it('PASSWORD_RECOVERY marca passwordRecoveryPending e sessionStorage', async () => {
+    supabase.auth.getSession.mockResolvedValue({ data: { session: null }, error: null });
+
+    let authChangeListener;
+    supabase.auth.onAuthStateChange.mockImplementation((callback) => {
+      authChangeListener = callback;
+      return { data: { subscription: { unsubscribe: vi.fn() } } };
+    });
+
+    render(
+      <AuthProvider>
+        <TestComponent />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('recovery')).toHaveTextContent('idle');
+    });
+
+    const mockSession = {
+      user: {
+        id: 'user-recovery',
+        user_metadata: { tipo_perfil: 'Passageiro' },
+      },
+    };
+
+    mockSingle.mockResolvedValueOnce({
+      data: { id: 'user-recovery', tipo_perfil: 'Passageiro', onboarding_completed: true },
+      error: null,
+    });
+
+    await act(async () => {
+      await authChangeListener('PASSWORD_RECOVERY', mockSession);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('recovery')).toHaveTextContent('pending');
+    });
+    expect(sessionStorage.getItem('bc_password_recovery')).toBe('1');
+  });
+
+  it('clearPasswordRecovery limpa estado e sessionStorage', async () => {
+    sessionStorage.setItem('bc_password_recovery', '1');
+    supabase.auth.getSession.mockResolvedValue({ data: { session: null }, error: null });
+    supabase.auth.onAuthStateChange.mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    });
+
+    render(
+      <AuthProvider>
+        <TestComponent />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('recovery')).toHaveTextContent('pending');
+    });
+
+    await act(async () => {
+      screen.getByTestId('clear-recovery').click();
+    });
+
+    expect(screen.getByTestId('recovery')).toHaveTextContent('idle');
+    expect(sessionStorage.getItem('bc_password_recovery')).toBeNull();
   });
 });

@@ -72,9 +72,17 @@
 - `return_time` reservado (não anular); `n_candidato` / grupo / `n_maximo` intocados
 - Spec: `.specs/features/editar-procura/`
 
+## Esqueceu a palavra-passe (2026-10-01) — Done
+- Modos `/auth?mode=forgot` e `/auth?mode=update-password`
+- `resetPasswordForEmail` + `PASSWORD_RECOVERY` → `passwordRecoveryPending` (`bc_password_recovery`)
+- Guards hub; `updateUser` + clear pending → hub
+- Spec: `.specs/features/esqueceu-palavra-passe/`
+- **Ops pendente:** Redirect URLs no Supabase Dashboard
+
 ## Next Steps
-1. TTL reservas (opcional) + polish admin Critiquito
-2. **Não** zonas/polígonos; **não** merge automático em `main`
+1. Redirect URLs recovery (Supabase Auth URL Configuration)
+2. TTL reservas (opcional) + polish admin Critiquito
+3. **Não** zonas/polígonos; **não** merge automático em `main`
 
 ## Key links
 - Plan: `.cursor/plans/marketplace_oferta_procura_74cbb52a.plan.md`
