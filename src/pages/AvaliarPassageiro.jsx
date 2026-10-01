@@ -60,7 +60,8 @@ export default function AvaliarPassageiro() {
         estrelas,
         comentario: comentario.trim() || null,
       });
-      navigate(`/acordos/${ctx.acordo.id}/avaliar/sucesso`, { replace: true });
+      await ctx.reload();
+      navigate(`/acordos/${ctx.acordo.id}/avaliar-passageiros`, { replace: true });
     } catch (err) {
       const msg = err?.message || getFriendlyErrorMessage(err);
       if (/expirou/i.test(msg)) {

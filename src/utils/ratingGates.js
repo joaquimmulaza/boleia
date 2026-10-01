@@ -117,12 +117,18 @@ function hasSubmitted(avaliacoes, acordoPassageiroId, momento, avaliadorId) {
 }
 
 /**
- * @param {Array<{ acordo_passageiro_id?: string, estado?: string, validado_em?: string | null, liquidado_em?: string | null, mes_referencia?: string }>} pagamentos
+ * Pagamentos do lugar — por FK ou, em linhas legadas, por passenger_id.
+ * @param {Array<{ acordo_passageiro_id?: string, passenger_id?: string, estado?: string, validado_em?: string | null, liquidado_em?: string | null, mes_referencia?: string }>} pagamentos
  * @param {string} acordoPassageiroId
+ * @param {string | null | undefined} [passengerId]
  * @returns {Array<object>}
  */
-function pagamentosForSeat(pagamentos, acordoPassageiroId) {
-  return (pagamentos || []).filter((p) => p.acordo_passageiro_id === acordoPassageiroId);
+function pagamentosForSeat(pagamentos, acordoPassageiroId, passengerId = null) {
+  return (pagamentos || []).filter((p) => {
+    if (p.acordo_passageiro_id && p.acordo_passageiro_id === acordoPassageiroId) return true;
+    if (!p.acordo_passageiro_id && passengerId && p.passenger_id === passengerId) return true;
+    return false;
+  });
 }
 
 /**
@@ -161,7 +167,7 @@ export function buildPassageiroRatingPrompt(input) {
     avaliadorId,
   } = input;
 
-  const seatPagamentos = pagamentosForSeat(pagamentos, acordoPassageiroId);
+  const seatPagamentos = pagamentosForSeat(pagamentos, acordoPassageiroId, avaliadorId);
   const settledAt = getFirstSettledAt(seatPagamentos);
   const submitted = hasSubmitted(
     avaliacoes,
@@ -213,7 +219,7 @@ export function buildMotoristaRatingPrompts(input) {
       return e === 'activo' || e === 'saiu';
     })
     .map((p) => {
-      const seatPagamentos = pagamentosForSeat(pagamentos, p.id);
+      const seatPagamentos = pagamentosForSeat(pagamentos, p.id, p.passenger_id);
       const settledAt = getFirstSettledAt(seatPagamentos);
       const submitted = hasSubmitted(
         avaliacoes,
@@ -273,7 +279,7 @@ export function buildSaidaRatingPrompt(input) {
     saidaAt = null,
   } = input;
 
-  const seatPagamentos = pagamentosForSeat(pagamentos, acordoPassageiroId);
+  const seatPagamentos = pagamentosForSeat(pagamentos, acordoPassageiroId, avaliadorId);
   const settledAt = getFirstSettledAt(seatPagamentos);
   const submitted = hasSubmitted(
     avaliacoes,

@@ -69,6 +69,9 @@ describe('RatingService', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].comentario).toBe('segredo');
     expect(chain.eq).toHaveBeenCalledWith('acordo_id', 'a1');
+    expect(chain.select).toHaveBeenCalledWith(
+      expect.stringContaining('avaliador_id'),
+    );
   });
 
   it('wasAvaliadoPor devolve booleano da RPC', async () => {

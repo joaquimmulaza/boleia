@@ -104,6 +104,38 @@ describe('ratingGates — elegibilidade ENG#32c', () => {
     expect(prompt?.ctaLabel).toBe('Avaliar motorista');
   });
 
+  it('buildPassageiroRatingPrompt resolve pagamentos só com passenger_id (legado)', () => {
+    const prompt = buildPassageiroRatingPrompt({
+      acordoId: 'a1',
+      acordoPassageiroId: 'ap1',
+      passageiroEstado: 'activo',
+      pagamentos: [{ passenger_id: 'pax-1', estado: 'em_custodia', validado_em: settledAt, mes_referencia: '2026-09-01' }],
+      avaliacoes: [],
+      now: withinWindow,
+      driverNome: 'João M.',
+      avaliadorId: 'pax-1',
+    });
+    expect(prompt?.estado).toBe('pendente');
+  });
+
+  it('hasSubmitted exige avaliador_id nas linhas carregadas', () => {
+    const prompts = buildMotoristaRatingPrompts({
+      acordoId: 'a1',
+      passageiros: [
+        { id: 'ap1', passenger_id: 'p1', estado: 'activo', perfis: { nome_completo: 'Ana S.' } },
+      ],
+      pagamentos: [
+        { acordo_passageiro_id: 'ap1', estado: 'em_custodia', validado_em: settledAt, mes_referencia: '2026-09-01' },
+      ],
+      avaliacoes: [
+        { acordo_passageiro_id: 'ap1', momento: RATING_MOMENTO.PRIMEIRO_PERIODO, avaliador_id: 'mot-1' },
+      ],
+      now: withinWindow,
+      driverId: 'mot-1',
+    });
+    expect(prompts[0]?.estado).toBe('feito');
+  });
+
   it('buildMotoristaRatingPrompts lista N passageiros com estados', () => {
     const prompts = buildMotoristaRatingPrompts({
       acordoId: 'a1',

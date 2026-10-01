@@ -40,7 +40,7 @@ export async function submitAvaliacao(input) {
 export async function listMinhasAvaliacoesAcordo(acordoId) {
   const { data, error } = await supabase
     .from('avaliacoes_acordo')
-    .select('id, acordo_id, acordo_passageiro_id, momento, estrelas, comentario, created_at, direccao')
+    .select('id, acordo_id, acordo_passageiro_id, avaliador_id, momento, estrelas, comentario, created_at, direccao')
     .eq('acordo_id', acordoId)
     .order('created_at', { ascending: false });
 
