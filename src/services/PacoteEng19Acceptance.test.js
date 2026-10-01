@@ -82,8 +82,10 @@ describe('PACOTE #19 — gaps visão path crítico', () => {
 
     it('resolveOdFields anula OD quando flexível (API)', () => {
       const src = readSrc('services/OfertaService.js');
-      expect(src).toMatch(/if \(allowed\.flexibilidade_rota\)/);
-      expect(src).toMatch(/origin_name = null/);
+      expect(src).toMatch(/function resolveOdFields/);
+      expect(src).toMatch(/formData\.flexibilidade_rota/);
+      expect(src).toMatch(/origin_name: null/);
+      expect(src).toMatch(/destination_name: null/);
     });
   });
 
@@ -210,10 +212,16 @@ describe('PACOTE #19 — gaps visão path crítico', () => {
     });
   });
 
-  describe('AC6 — CTAs só com auth', () => {
-    it('listOfertasDisponiveis exige utilizador autenticado', async () => {
+  describe('AC6 — browse público; acções com auth', () => {
+    it('listOfertasDisponiveis permite listagem sem utilizador', async () => {
       supabase.auth.getUser.mockResolvedValue({ data: { user: null } });
-      await expect(listOfertasDisponiveis()).rejects.toThrow(/autenticado/i);
+      const mockRange = vi.fn().mockResolvedValue({ data: [], error: null });
+      const mockOrder = vi.fn().mockReturnValue({ range: mockRange });
+      const mockIn = vi.fn().mockReturnValue({ order: mockOrder });
+      supabase.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({ in: mockIn }),
+      });
+      await expect(listOfertasDisponiveis()).resolves.toEqual([]);
     });
 
     it('inbox propostas vazia sem userId', () => {
@@ -221,12 +229,12 @@ describe('PACOTE #19 — gaps visão path crítico', () => {
       expect(filterPropostasEnviadas([{ id: 'p1', estado: 'aberta', created_by: 'x' }], '')).toEqual([]);
     });
 
-    it('feed browse não passa onPropor ao OfertaMatchCard', () => {
+    it('feed browse passa onPropor ao OfertaMatchCard (ENG#23)', () => {
       const src = readSrc('pages/PassengerDashboard.jsx');
       const browseBlock = src.match(/browseOfertas\.map\([\s\S]*?\)\)\}/);
       expect(browseBlock).not.toBeNull();
       expect(browseBlock[0]).toMatch(/variant="browse"/);
-      expect(browseBlock[0]).not.toMatch(/onPropor/);
+      expect(browseBlock[0]).toMatch(/onPropor/);
     });
   });
 });

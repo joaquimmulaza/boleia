@@ -118,11 +118,8 @@ describe('ProcuraService', () => {
     expect(supabase.from).toHaveBeenCalledWith('procuras');
   });
 
-  it('listProcurasDisponiveis exige autenticação e filtra activa|em_negociacao', async () => {
+  it('listProcurasDisponiveis permite anónimo e filtra activa|em_negociacao', async () => {
     supabase.auth.getUser.mockResolvedValue({ data: { user: null } });
-    await expect(listProcurasDisponiveis()).rejects.toThrow(/Não autenticado/i);
-
-    supabase.auth.getUser.mockResolvedValue({ data: { user: { id: 'driver-1' } } });
     const mockRange = vi.fn().mockResolvedValue({ data: [{ id: 'pr-1', estado: 'activa' }], error: null });
     const mockOrder = vi.fn().mockReturnValue({ range: mockRange });
     const mockIn = vi.fn().mockReturnValue({ order: mockOrder });

@@ -239,9 +239,17 @@ describe('OfertaService', () => {
       expect(result).toHaveLength(2);
     });
 
-    it('rejeita sem autenticação', async () => {
+    it('permite listagem sem autenticação (browse público)', async () => {
       supabase.auth.getUser.mockResolvedValue({ data: { user: null } });
-      await expect(listOfertasDisponiveis()).rejects.toThrow('Não autenticado');
+      const mockRange = vi.fn().mockResolvedValue({ data: [{ id: 'of-public' }], error: null });
+      const mockOrder = vi.fn().mockReturnValue({ range: mockRange });
+      const mockIn = vi.fn().mockReturnValue({ order: mockOrder });
+      const mockSelect = vi.fn().mockReturnValue({ in: mockIn });
+      supabase.from.mockReturnValue({ select: mockSelect });
+
+      const result = await listOfertasDisponiveis();
+      expect(result).toEqual([{ id: 'of-public' }]);
+      expect(mockIn).toHaveBeenCalledWith('estado', ['disponivel', 'parcial']);
     });
   });
 
