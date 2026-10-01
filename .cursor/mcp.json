@@ -1,5 +1,8 @@
 {
   "mcpServers": {
+    "figma": {
+      "url": "https://mcp.figma.com/mcp"
+    },
     "graphlore": {
       "command": "graphlore",
       "env": {
