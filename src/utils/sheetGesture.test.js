@@ -6,11 +6,18 @@ import {
   clampDragY,
   dismissDurationMs,
   isHorizontalGesture,
+  readTranslateY,
   resolveSheetHeight,
   shouldDismissSheet,
 } from './sheetGesture';
 
 describe('sheetGesture', () => {
+  it('lê o translateY de matrix e de translate3d', () => {
+    expect(readTranslateY('none')).toBe(0);
+    expect(readTranslateY('translate3d(0px, 48px, 0px)')).toBe(48);
+    expect(readTranslateY('matrix(1, 0, 0, 1, 0, 32)')).toBe(32);
+  });
+
   it('limita o arrasto a valores não negativos', () => {
     expect(clampDragY(-40)).toBe(0);
     expect(clampDragY(0)).toBe(0);

@@ -75,7 +75,7 @@ function OverlayShell({
           <div
             ref={panelRef}
             data-testid={panelTestId}
-            className={`relative w-full max-w-md mx-auto max-h-[90dvh] overflow-y-auto overscroll-y-contain touch-pan-y rounded-t-xl sm:rounded-2xl pb-safe ${panelClassName}`}
+            className={`relative w-full max-w-md mx-auto max-h-[90dvh] overflow-y-auto overscroll-y-contain rounded-t-xl sm:rounded-2xl pb-safe ${panelClassName}`}
           >
             {children}
           </div>

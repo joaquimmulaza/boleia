@@ -8,6 +8,7 @@ import {
   dismissDurationMs,
   isHorizontalGesture,
   passedAxisLock,
+  readTranslateY,
   resolveSheetHeight,
   shouldDismissSheet,
 } from '../utils/sheetGesture';
@@ -94,6 +95,7 @@ export function useSheetDrag({ enabled, onDismiss }) {
       lastT: 0,
       velocity: 0,
       y: 0,
+      offsetY: 0,
       height: 0,
       origin: /** @type {EventTarget | null} */ (null),
       mode: /** @type {'pending' | 'drag' | 'scroll' | 'horizontal' | null} */ (null),
@@ -109,6 +111,12 @@ export function useSheetDrag({ enabled, onDismiss }) {
     let activeAnim = null;
     /** @type {Animation | null} */
     let backdropAnim = null;
+
+    const visibleTranslateY = () => {
+      const computed = readTranslateY(getComputedStyle(panel).transform);
+      if (computed !== 0) return clampDragY(computed);
+      return clampDragY(readTranslateY(panel.style.transform));
+    };
 
     const apply = (y) => {
       panel.style.transform = `translate3d(0, ${y}px, 0)`;
@@ -232,7 +240,8 @@ export function useSheetDrag({ enabled, onDismiss }) {
           drag.mode = 'horizontal';
           return;
         }
-        if (dy < 0 || canScrollUpFrom(drag.origin, panel)) {
+        const pullingContent = dy < 0 && drag.offsetY <= 0;
+        if (pullingContent || canScrollUpFrom(drag.origin, panel)) {
           drag.mode = 'scroll';
           return;
         }
@@ -248,7 +257,7 @@ export function useSheetDrag({ enabled, onDismiss }) {
       }
 
       if (drag.mode !== 'drag') return;
-      const y = clampDragY(dy);
+      const y = clampDragY(drag.offsetY + dy);
       drag.y = y;
       apply(y);
     };
@@ -258,14 +267,17 @@ export function useSheetDrag({ enabled, onDismiss }) {
       if (event.button !== 0) return;
       if (drag.pointerId != null) return;
       if (isInteractiveTarget(event.target)) return;
+      const visibleY = visibleTranslateY();
       cancelAnim();
+      drag.offsetY = visibleY;
+      drag.y = visibleY;
+      if (visibleY > 0) apply(visibleY);
       drag.pointerId = event.pointerId;
       drag.startX = event.clientX;
       drag.startY = event.clientY;
       drag.lastY = event.clientY;
       drag.lastT = eventTime(event);
       drag.velocity = 0;
-      drag.y = 0;
       drag.height = resolveSheetHeight(panel.getBoundingClientRect().height);
       drag.origin = event.target;
       drag.mode = 'pending';
@@ -342,11 +354,15 @@ export function useSheetDrag({ enabled, onDismiss }) {
       if (!touch) return;
       const dy = touch.clientY - drag.startY;
       const dx = touch.clientX - drag.startX;
-      if (drag.mode === 'pending') {
-        if (!passedAxisLock(dx, dy)) return;
-        if (isHorizontalGesture(dx, dy) || dy < 0 || canScrollUpFrom(drag.origin, panel)) return;
+      if (drag.mode === 'drag') {
+        if (event.cancelable) event.preventDefault();
+        return;
       }
-      if (dy > 0 && event.cancelable) event.preventDefault();
+      if (drag.mode !== 'pending') return;
+      if (!passedAxisLock(dx, dy)) return;
+      const pullingContent = dy < 0 && drag.offsetY <= 0;
+      if (isHorizontalGesture(dx, dy) || pullingContent || canScrollUpFrom(drag.origin, panel)) return;
+      if (event.cancelable) event.preventDefault();
     };
 
     /** @param {MouseEvent} event */

@@ -191,6 +191,39 @@ describe('OverlayShell drag-to-dismiss', () => {
     restoreMotion();
   });
 
+  it('não deixa o painel preso se o gesto for interrompido a meio da animação', async () => {
+    const restoreMotion = mockSheetMotion();
+    const { onDismiss, panel } = renderSheet(<p>Conteúdo</p>);
+
+    dispatchPointer(panel, 'pointerdown', { x: 20, y: 100, time: 1000 });
+    dispatchPointer(window, 'pointermove', { x: 20, y: 116, time: 1400 });
+    dispatchPointer(window, 'pointerup', { x: 20, y: 116, time: 1800 });
+    expect(panel.style.transform).toBe('translate3d(0, 16px, 0)');
+
+    dispatchPointer(panel, 'pointerdown', { x: 20, y: 200, time: 2000 });
+    dispatchPointer(window, 'pointerup', { x: 20, y: 201, time: 2100 });
+    await flushMotion();
+
+    expect(onDismiss).not.toHaveBeenCalled();
+    expect(panel.style.transform).toBe('');
+    restoreMotion();
+  });
+
+  it('continua o arrasto a partir da posição visível', async () => {
+    const restoreMotion = mockSheetMotion();
+    const { panel } = renderSheet(<p>Conteúdo</p>);
+
+    dispatchPointer(panel, 'pointerdown', { x: 20, y: 100, time: 1000 });
+    dispatchPointer(window, 'pointermove', { x: 20, y: 116, time: 1400 });
+    dispatchPointer(window, 'pointerup', { x: 20, y: 116, time: 1800 });
+
+    dispatchPointer(panel, 'pointerdown', { x: 20, y: 200, time: 2000 });
+    dispatchPointer(window, 'pointermove', { x: 20, y: 220, time: 2500 });
+
+    expect(panel.style.transform).toBe('translate3d(0, 36px, 0)');
+    restoreMotion();
+  });
+
   it('fecha quando o arrasto passa o limiar da altura', async () => {
     const restoreMotion = mockSheetMotion();
     const { onDismiss, panel } = renderSheet(<p>Conteúdo</p>);

@@ -10,7 +10,8 @@
 - Fora de âmbito: `InstallAppPrompt`, `UpdatePrompt`, `InstallAppInstructionsModal`, `ConfirmationModal`.
 
 ## Comportamento
-- `sheetY = max(0, dy)` via `translate3d` (sem re-render no drag).
+- `sheetY = max(0, offset + dy)` via `translate3d` (sem re-render no drag). Sem `touch-action: pan-y` no painel, para o `touchmove` não-passivo poder seguir o dedo no corpo do sheet.
+- Se um novo toque interrompe o snap/fecho, o gesto continua a partir do `translate` visível. Largar sem arrastar volta a 0.
 - Backdrop: opacidade `1 - clamp(sheetY / altura, 0, 1)`.
 - Fecha no `pointerup` se `sheetY >= 28%` da altura do painel, ou se a velocidade para baixo for `>= 0.75` px/ms com pelo menos `24px`.
 - Abaixo do limiar: volta em ~380ms (`cubic-bezier(0.22, 1, 0.36, 1)`).

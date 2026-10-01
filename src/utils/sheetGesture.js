@@ -42,6 +42,30 @@ export function clampDragY(dy) {
 }
 
 /**
+ * Lê o deslocamento vertical de um `transform` (matrix, translate3d ou translateY).
+ * @param {string | null | undefined} transform
+ * @returns {number}
+ */
+export function readTranslateY(transform) {
+  if (!transform || transform === 'none') return 0;
+  const translate3d = transform.match(/translate3d\(\s*[^,]+,\s*(-?[\d.]+)px/i);
+  if (translate3d) return Number(translate3d[1]);
+  const translateY = transform.match(/translateY\(\s*(-?[\d.]+)px\)/i);
+  if (translateY) return Number(translateY[1]);
+  const matrix3d = transform.match(/matrix3d\(([^)]+)\)/);
+  if (matrix3d) {
+    const parts = matrix3d[1].split(',');
+    return Number.parseFloat(parts[13]) || 0;
+  }
+  const matrix = transform.match(/matrix\(([^)]+)\)/);
+  if (matrix) {
+    const parts = matrix[1].split(',');
+    return Number.parseFloat(parts[5]) || 0;
+  }
+  return 0;
+}
+
+/**
  * @param {number} dragY
  * @param {number} sheetHeight
  * @returns {number}
