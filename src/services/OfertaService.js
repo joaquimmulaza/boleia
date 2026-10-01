@@ -150,26 +150,22 @@ export async function listOfertasByDriver(driverId) {
 export const BROWSE_OFERTAS_DEFAULT_LIMIT = 50;
 
 /**
- * Feed browse para passageiro autenticado — ofertas com vagas (exclui `cheia`).
+ * Feed browse público / autenticado — ofertas com vagas (exclui `cheia`).
  * Sem matching geo; flexível mantém OD null (UI usa `labelRotaOferta`).
+ * Anónimo permitido (RLS SELECT anon); ações (propor) exigem sessão na UI.
  *
  * @param {{ limit?: number, offset?: number }} [options]
  * @returns {Promise<object[]>}
  */
 export async function listOfertasDisponiveis(options = {}) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    throw new Error('Não autenticado.');
-  }
-
   const limit = Number.isFinite(options.limit) ? options.limit : BROWSE_OFERTAS_DEFAULT_LIMIT;
   const offset = Number.isFinite(options.offset) ? options.offset : 0;
 
   const { data, error } = await supabase
     .from('ofertas_capacidade')
-    .select('*')
+    .select(
+      'id, flexibilidade_rota, origin_name, origin_lat, origin_lng, destination_name, destination_lat, destination_lng, departure_time, return_time, dias_semana, vagas_disponiveis, vagas_totais, modo_preco, valor_mensal_ask_kz, estado, created_at',
+    )
     .in('estado', ['disponivel', 'parcial'])
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);

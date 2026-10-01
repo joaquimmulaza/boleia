@@ -36,6 +36,7 @@ vi.mock('../services/ProcuraService', async (importOriginal) => {
 
 vi.mock('../services/PropostaService', () => ({
   listPropostasByOferta: vi.fn().mockResolvedValue([]),
+  listOpenPropostasByCreator: vi.fn().mockResolvedValue([]),
   rejectProposta: vi.fn(),
   cancelProposta: vi.fn(),
   enrichPropostasForReview: vi.fn().mockResolvedValue([]),

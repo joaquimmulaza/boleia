@@ -176,12 +176,13 @@ describe('PACOTE #24 — aceitação motorista feed + enviar proposta', () => {
       expect(src).not.toMatch(/Propor acordo/);
     });
 
-    it('DriverDashboard expõe tab/secção «Procuras e grupos» visível', () => {
+    it('DriverDashboard expõe tab/secção «Procuras e grupos» sem gate de oferta', () => {
       const src = readSrc('src/pages/DriverDashboard.jsx');
       expect(src).toMatch(/Procuras e grupos/);
       expect(src).toMatch(/driver-hub-tabs/);
       expect(src).toMatch(/driver-procuras-grupos-section/);
-      expect(src).toMatch(/driver-procuras-empty-sem-oferta/);
+      expect(src).not.toMatch(/driver-procuras-empty-sem-oferta/);
+      expect(src).toMatch(/buildOfertaMinimaFromProcura/);
     });
   });
 

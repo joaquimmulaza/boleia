@@ -5,6 +5,7 @@ import { Menu, X } from 'lucide-react';
 import ThemeToggle from '../ThemeToggle';
 
 const NAV_LINKS = [
+  { href: '/explorar', label: 'Explorar' },
   { href: '#como-funciona', label: 'Como funciona' },
   { href: '#vantagens', label: 'Vantagens' },
   { href: '#seguranca', label: 'Segurança' },

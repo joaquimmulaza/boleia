@@ -12,6 +12,10 @@ vi.mock('./pages/Auth', () => ({
   default: () => <div data-testid="auth-page">Auth</div>,
 }));
 
+vi.mock('./pages/MarketplaceExplore', () => ({
+  default: () => <div data-testid="marketplace-explore">Explorar</div>,
+}));
+
 vi.mock('./layouts/Layout', () => ({
   default: () => <div data-testid="app-layout">Layout</div>,
 }));
@@ -48,7 +52,7 @@ describe('AppShell — scroll por tipo de rota', () => {
     });
   });
 
-  it('rotas públicas / e /auth não usam shell h-dvh overflow-hidden', () => {
+  it('rotas públicas /, /auth e /explorar não usam shell h-dvh overflow-hidden', () => {
     const { container, unmount } = render(
       <MemoryRouter initialEntries={['/']}>
         <AppShell />
@@ -68,6 +72,17 @@ describe('AppShell — scroll por tipo de rota', () => {
 
     expect(screen.getByTestId('auth-page')).toBeInTheDocument();
     expect(authRender.container.querySelector('.overflow-hidden.h-dvh')).toBeNull();
+    expect(screen.queryByTestId('offline-banner')).not.toBeInTheDocument();
+    authRender.unmount();
+
+    const exploreRender = render(
+      <MemoryRouter initialEntries={['/explorar']}>
+        <AppShell />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('marketplace-explore')).toBeInTheDocument();
+    expect(exploreRender.container.querySelector('.overflow-hidden.h-dvh')).toBeNull();
     expect(screen.queryByTestId('offline-banner')).not.toBeInTheDocument();
   });
 

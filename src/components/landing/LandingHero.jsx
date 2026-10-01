@@ -44,8 +44,15 @@ export default function LandingHero() {
           <div className="flex flex-wrap gap-4">
             <button
               type="button"
-              onClick={() => navigate('/auth?mode=register&role=passenger')}
+              onClick={() => navigate('/explorar')}
               className="flex min-w-[160px] cursor-pointer items-center justify-center rounded-xl bg-primary px-6 h-14 text-base font-bold text-slate-900 shadow-lg shadow-primary/20 transition-transform hover:scale-[1.02] active:scale-95"
+            >
+              Explorar boleias
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/auth?mode=register&role=passenger')}
+              className="flex min-w-[160px] cursor-pointer items-center justify-center rounded-xl border-2 border-primary/30 bg-white px-6 h-14 text-base font-bold text-slate-900 transition-colors hover:border-primary/60 active:scale-95 dark:bg-slate-800 dark:text-white"
             >
               Sou Passageiro
             </button>
