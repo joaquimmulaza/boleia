@@ -1377,6 +1377,76 @@ describe('PassengerDashboard — marketplace', () => {
     });
   });
 
+  it('contra-proposta visível mesmo com enviada aberta à mesma oferta; submit cancela+cria', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    listPropostasByProcura.mockResolvedValue([
+      {
+        id: 'prop-in',
+        estado: 'aberta',
+        created_by: 'driver-1',
+        oferta_id: 'of-1',
+        procura_id: 'pr-1',
+        modo_preco: 'POR_PASSAGEIRO',
+        valor_mensal_ask_kz: 38000,
+        n_passageiros_propostos: 1,
+      },
+      {
+        id: 'prop-out',
+        estado: 'aberta',
+        created_by: 'pax-1',
+        oferta_id: 'of-1',
+        procura_id: 'pr-1',
+        modo_preco: 'POR_PASSAGEIRO',
+        valor_mensal_ask_kz: 40000,
+        n_passageiros_propostos: 1,
+      },
+    ]);
+    enrichPropostasForReview.mockImplementation(async (lista) =>
+      (lista || []).map((p) => ({
+        proposta: p,
+        titulo: 'Individual',
+        membros: [{ passenger_id: 'pax-1', nome: 'Tu', quota_mensal_kz: p.valor_mensal_ask_kz }],
+        pricing: {
+          valor_mensal_total_kz: p.valor_mensal_ask_kz,
+          valor_mensal_por_passageiro_kz: p.valor_mensal_ask_kz,
+          quotas: [p.valor_mensal_ask_kz],
+          temResto: false,
+        },
+        avisoComposicao: null,
+      })),
+    );
+    findCompatibleOfertas.mockResolvedValue({
+      direct: [{ ...ofertaDirect, modo_preco: 'POR_PASSAGEIRO', valor_mensal_ask_kz: 45000 }],
+      waitlist: [],
+      incompatible: [],
+    });
+    cancelProposta.mockResolvedValue({ id: 'prop-out', estado: 'cancelada' });
+    createProposta.mockResolvedValue({ id: 'prop-counter', estado: 'aberta' });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('button', { name: /Fazer contra-proposta/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Fazer contra-proposta/i }));
+    fireEvent.change(await screen.findByTestId('proposta-valor-input'), { target: { value: '42000' } });
+    await confirmPropostaSheet();
+
+    await waitFor(() => {
+      expect(cancelProposta).toHaveBeenCalledWith('prop-out');
+      expect(createProposta).toHaveBeenCalledWith(
+        expect.objectContaining({
+          oferta_id: 'of-1',
+          procura_id: 'pr-1',
+          valor_mensal_ask_kz: 42000,
+        }),
+      );
+    });
+  });
+
   it('mostra chip Acima do teto quando a proposta excede o teto', async () => {
     listProcurasByOwner.mockResolvedValue([
       { ...procuraBase, n_candidato: 1, teto_mensal_kz: 18000 },
