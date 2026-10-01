@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 
 /**
- * CTA final da landing — escolha explícita de papel (Passageiro vs Motorista).
+ * CTA final — mesmo carro, preço do mês, dois papéis.
  * @typedef {Readonly<{}>} LandingCtaProps
  */
 export default function LandingCta() {
@@ -11,11 +11,10 @@ export default function LandingCta() {
     <section className="bg-primary/10 px-4 py-16">
       <div className="mx-auto flex max-w-3xl flex-col items-center gap-8 text-center">
         <h2 className="text-balance text-3xl font-bold text-slate-900 dark:text-white">
-          Junta-te ao Boleia Certa
+          Todos os dias, no mesmo carro.
         </h2>
         <p className="text-pretty text-slate-700 dark:text-slate-300">
-          Começa a combinar a tua boleia casa–trabalho — acordo mensal com preço em Kz, combinado e
-          registado.
+          Passageiro ou motorista: o preço do mês em Kz fica combinado antes de arrancar.
         </p>
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:justify-center">
           <button

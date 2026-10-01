@@ -13,40 +13,37 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+function renderCta() {
+  return render(
+    <BrowserRouter>
+      <LandingCta />
+    </BrowserRouter>
+  );
+}
+
 describe('LandingCta', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
   });
 
-  it('reforça acordo mensal sem números inventados', () => {
-    render(
-      <BrowserRouter>
-        <LandingCta />
-      </BrowserRouter>
-    );
+  it('fecha com o mesmo carro e o preço do mês em Kz, sem números inventados', () => {
+    renderCta();
 
-    expect(screen.getByText(/junta-te ao boleia certa/i)).toBeInTheDocument();
-    expect(screen.getByText(/acordo mensal/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /mesmo carro/i })).toBeInTheDocument();
+    expect(screen.getByText(/preço do mês em Kz/i)).toBeInTheDocument();
     expect(screen.queryByText(/centenas de pessoas/i)).not.toBeInTheDocument();
   });
 
-  it('não expõe jargon de produto (1:N, matchmaking, marketplace)', () => {
-    const { container } = render(
-      <BrowserRouter>
-        <LandingCta />
-      </BrowserRouter>
-    );
+  it('não expõe jargon nem claims proibidos', () => {
+    const { container } = renderCta();
     const text = container.textContent ?? '';
-    expect(text).not.toMatch(/1:N|1:n|matchmaking|marketplace/i);
+    expect(text).not.toMatch(/1:N|1:n|matchmaking|marketplace|matching|custódia/i);
+    expect(text).not.toMatch(/seguro|segurança|verificad|garantid|multicaixa|proxypay/i);
   });
 
   it('navega para registo com papel explícito', () => {
-    render(
-      <BrowserRouter>
-        <LandingCta />
-      </BrowserRouter>
-    );
+    renderCta();
 
     fireEvent.click(screen.getByRole('button', { name: /Sou Passageiro/i }));
     expect(mockNavigate).toHaveBeenCalledWith('/auth?mode=register&role=passenger');

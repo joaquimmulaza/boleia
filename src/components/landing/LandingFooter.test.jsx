@@ -33,11 +33,17 @@ describe('LandingFooter', () => {
     expect(entrar).toHaveAttribute('href', '/auth');
   });
 
-  it('Contacto usa mailto honesto', () => {
+  it('Contacto, Termos e Privacidade usam o email de contacto', () => {
     renderFooter();
 
     const contacto = screen.getByRole('link', { name: /^contacto$/i });
-    expect(contacto.getAttribute('href')).toMatch(/^mailto:/);
+    const termos = screen.getByRole('link', { name: /^termos$/i });
+    const privacidade = screen.getByRole('link', { name: /^privacidade$/i });
+    const email = 'joaquimmulazadev@gmail.com';
+
+    expect(contacto).toHaveAttribute('href', `mailto:${email}`);
+    expect(termos).toHaveAttribute('href', `mailto:${email}?subject=Termos%20de%20uso`);
+    expect(privacidade).toHaveAttribute('href', `mailto:${email}?subject=Privacidade`);
   });
 
   it('Termos e Privacidade não são links mortos href="#"', () => {

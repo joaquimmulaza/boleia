@@ -13,6 +13,14 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+/**
+ * @param {string} text
+ * @returns {number}
+ */
+function countWords(text) {
+  return text.trim().split(/\s+/).filter((word) => /[\p{L}\p{N}]/u.test(word)).length;
+}
+
 describe('LandingHero', () => {
   afterEach(() => {
     cleanup();
@@ -31,42 +39,58 @@ describe('LandingHero', () => {
     return container;
   }
 
-  it('renderiza headline de boleia casa-trabalho (não o copy legado)', () => {
+  it('headline parte da dor do táxi e promete o mesmo carro, em ≤10 palavras', () => {
     renderHero();
 
     const heading = screen.getByRole('heading', { level: 1 });
-    expect(heading).toBeInTheDocument();
-    expect(heading.textContent).toMatch(/casa|trabalho|boleia|quotidiano|diári/i);
-    expect(heading.textContent).not.toBe('A tua rota diária, mais simples e barata.');
+    expect(heading.textContent).toMatch(/táxi/i);
+    expect(heading.textContent).toMatch(/mesmo carro/i);
+    expect(countWords(heading.textContent)).toBeLessThanOrEqual(10);
   });
 
-  it('mostra marca hero-level e frase de suporte com percurso → acordo mensal', () => {
+  it('frase de apoio descreve a paragem cheia, fala a passageiro e motorista e cabe em ≤45 palavras', () => {
     renderHero();
 
-    const logo = screen.getByAltText('Boleia Certa');
-    expect(logo).toHaveAttribute('src', '/boleia-logo.png');
-
-    expect(document.body.textContent).toMatch(/percurso/i);
-    expect(document.body.textContent).toMatch(/motorista|passageiro/i);
-    expect(document.body.textContent).toMatch(/acordo/i);
-    expect(document.body.textContent).toMatch(/Kz|Kwanza|Luanda/i);
+    const support = screen.getByTestId('landing-hero-support');
+    expect(support.textContent).toMatch(/paragem|táxi|trânsito/i);
+    expect(support.textContent).toMatch(/Luanda/);
+    expect(support.textContent).toMatch(/Kz/);
+    expect(support.textContent).toMatch(/lugares vazios/i);
+    expect(countWords(support.textContent)).toBeLessThanOrEqual(45);
   });
 
-  it('mostra mock leve do produto com lugares, procura e acordo em Kz', () => {
+  it('mostra logo oficial e eyebrow de boleia casa–trabalho', () => {
+    renderHero();
+
+    expect(screen.getByAltText('Boleia Certa')).toHaveAttribute('src', '/boleia-logo.png');
+    expect(document.body.textContent).toMatch(/casa–trabalho/i);
+  });
+
+  it('mock do produto mostra rota fixa, oferta flexível sem rota marcada e acordo do mês em Kz', () => {
     renderHero();
 
     expect(screen.getByText(/lugares do motorista/i)).toBeInTheDocument();
-    expect(screen.getByText(/quem precisa de boleia/i)).toBeInTheDocument();
-    expect(screen.getByText(/1 motorista · vários passageiros/i)).toBeInTheDocument();
-    expect(document.body.textContent).toMatch(/Kz/);
+    expect(screen.getByText(/oferta flexível/i)).toBeInTheDocument();
+    expect(screen.getByText(/sem rota marcada/i)).toBeInTheDocument();
+    expect(screen.getByText(/acordo do mês/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 motorista · 3 passageiros · mesmo carro/i)).toBeInTheDocument();
+    expect(screen.getByText(/25\.000 Kz por passageiro/i)).toBeInTheDocument();
   });
 
-  it('não expõe jargon de produto (1:N, matchmaking, marketplace)', () => {
+  it('não expõe jargon nem claims proibidos', () => {
     renderHero();
     const text = document.body.textContent ?? '';
 
-    expect(text).not.toMatch(/1:N|1:n|matchmaking|marketplace/i);
+    expect(text).not.toMatch(/1:N|1:n|matchmaking|marketplace|matching|custódia/i);
     expect(text).not.toMatch(/N_candidato|N_proposto|N_actual|POR_PASSAGEIRO|TOTAL_ACORDO/);
+    expect(text).not.toMatch(/seguro|segurança|verificad|garantid|multicaixa|proxypay/i);
+  });
+
+  it('Explorar boleias leva ao browse público', () => {
+    renderHero();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Explorar boleias' }));
+    expect(mockNavigate).toHaveBeenCalledWith('/explorar');
   });
 
   it('navega para auth passageiro e motorista nos CTAs', () => {

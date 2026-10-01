@@ -1,13 +1,13 @@
 import LandingHeader from '../components/landing/LandingHeader';
 import LandingHero from '../components/landing/LandingHero';
-import LandingHowItWorks from '../components/landing/LandingHowItWorks';
 import LandingBenefits from '../components/landing/LandingBenefits';
-import LandingSecurity from '../components/landing/LandingSecurity';
+import LandingHowItWorks from '../components/landing/LandingHowItWorks';
+import LandingFaq from '../components/landing/LandingFaq';
 import LandingCta from '../components/landing/LandingCta';
 import LandingFooter from '../components/landing/LandingFooter';
 
 /**
- * Landing pública — composição das secções marketplace.
+ * Landing pública — dor, valor, fluxo, perguntas, CTA.
  * @typedef {Readonly<{}>} LandingPageProps
  */
 export default function LandingPage() {
@@ -16,9 +16,9 @@ export default function LandingPage() {
       <LandingHeader />
       <main className="flex-1">
         <LandingHero />
-        <LandingHowItWorks />
         <LandingBenefits />
-        <LandingSecurity />
+        <LandingHowItWorks />
+        <LandingFaq />
         <LandingCta />
       </main>
       <LandingFooter />

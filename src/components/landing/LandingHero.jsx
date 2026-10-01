@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 
 /**
- * Hero full-bleed da landing — gradiente CSS + mock produto (sem stock externo).
+ * Hero full-bleed da landing — dor do táxi, mesmo carro, mock produto.
  * @typedef {Readonly<{}>} LandingHeroProps
  */
 export default function LandingHero() {
@@ -29,17 +29,20 @@ export default function LandingHero() {
             className="h-14 w-auto object-contain self-start md:h-16"
           />
           <p className="text-xs font-extrabold uppercase text-primary">
-            A boleia que faz sentido · Luanda
+            A boleia que faz sentido · Luanda · casa–trabalho
           </p>
           <h1
             id="landing-hero-heading"
             className="text-balance text-4xl font-black leading-tight text-slate-900 dark:text-slate-100 md:text-5xl lg:text-6xl"
           >
-            Casa e trabalho. No mesmo caminho.
+            Deixa a luta pelo táxi. Vai no mesmo carro.
           </h1>
-          <p className="max-w-xl text-pretty text-lg text-slate-600 dark:text-slate-300 md:text-xl">
-            Partilha a viagem casa–trabalho todos os dias em Luanda. Diz o teu percurso, encontra
-            motorista ou passageiros, e fecha um acordo mensal com preço claro em Kwanza.
+          <p
+            data-testid="landing-hero-support"
+            className="max-w-xl text-pretty text-lg text-slate-600 dark:text-slate-300 md:text-xl"
+          >
+            Em Luanda a paragem enche, o trânsito come o dia, e o preço muda. Reserva um lugar no
+            mesmo carro, todos os dias, com o preço do mês em Kz — ou enche os teus lugares vazios.
           </p>
           <div className="flex flex-wrap gap-4">
             <button
@@ -75,21 +78,25 @@ export default function LandingHero() {
             <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
               Talatona → Centro · Seg–Sex
             </p>
-            <p className="text-sm text-slate-500 dark:text-slate-400">3 vagas · a partir de 25.000 Kz</p>
+            <p className="text-sm tabular-nums text-slate-500 dark:text-slate-400">
+              3 vagas · a partir de 25.000 Kz
+            </p>
           </div>
           <div className="rounded-2xl border border-primary/15 bg-white/90 p-4 shadow-sm dark:bg-slate-900/80">
-            <p className="text-xs font-bold uppercase text-primary">Quem precisa de boleia</p>
+            <p className="text-xs font-bold uppercase text-primary">Oferta flexível</p>
             <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
-              Viana → Mutamba · manhã
+              Sem rota marcada · Seg–Sex · 6h–9h
             </p>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Grupo · 2 colegas</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">3 lugares</p>
           </div>
           <div className="rounded-2xl border border-primary/25 bg-primary/10 p-4 shadow-sm">
-            <p className="text-xs font-bold uppercase text-primary">Acordo mensal</p>
+            <p className="text-xs font-bold uppercase text-primary">Acordo do mês</p>
             <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
-              1 motorista · vários passageiros · preço congelado
+              1 motorista · 3 passageiros · mesmo carro
             </p>
-            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Total 75.000 Kz</p>
+            <p className="text-sm font-bold tabular-nums text-slate-800 dark:text-slate-200">
+              25.000 Kz por passageiro
+            </p>
           </div>
         </div>
       </div>

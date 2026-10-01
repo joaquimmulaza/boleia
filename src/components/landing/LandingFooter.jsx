@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 
+const CONTACT_EMAIL = 'joaquimmulazadev@gmail.com';
+
 /**
  * Footer da landing — sem Blog; links honestos.
  * @typedef {Readonly<{}>} LandingFooterProps
@@ -15,15 +17,15 @@ export default function LandingFooter() {
           <Link className="hover:text-primary" to="/auth">
             Entrar
           </Link>
-          <a className="hover:text-primary" href="mailto:contacto@boleiacerta.ao">
+          <a className="hover:text-primary" href={`mailto:${CONTACT_EMAIL}`}>
             Contacto
           </a>
-          <a className="hover:text-primary" href="mailto:contacto@boleiacerta.ao?subject=Termos%20de%20uso">
+          <a className="hover:text-primary" href={`mailto:${CONTACT_EMAIL}?subject=Termos%20de%20uso`}>
             Termos
           </a>
           <a
             className="hover:text-primary"
-            href="mailto:contacto@boleiacerta.ao?subject=Privacidade"
+            href={`mailto:${CONTACT_EMAIL}?subject=Privacidade`}
           >
             Privacidade
           </a>

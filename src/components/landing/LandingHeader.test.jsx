@@ -59,13 +59,28 @@ describe('LandingHeader', () => {
   it('renderiza âncoras de navegação no desktop', () => {
     renderHeader();
 
+    const explorar = screen.getAllByRole('link', { name: 'Explorar' });
+    const oQueMuda = screen.getAllByRole('link', { name: 'O que muda' });
     const comoFunciona = screen.getAllByRole('link', { name: 'Como funciona' });
-    const vantagens = screen.getAllByRole('link', { name: 'Vantagens' });
-    const seguranca = screen.getAllByRole('link', { name: 'Segurança' });
+    const perguntas = screen.getAllByRole('link', { name: 'Perguntas' });
 
+    expect(explorar.some((el) => el.getAttribute('href') === '/explorar')).toBe(true);
+    expect(oQueMuda.some((el) => el.getAttribute('href') === '#o-que-muda')).toBe(true);
     expect(comoFunciona.some((el) => el.getAttribute('href') === '#como-funciona')).toBe(true);
-    expect(vantagens.some((el) => el.getAttribute('href') === '#vantagens')).toBe(true);
-    expect(seguranca.some((el) => el.getAttribute('href') === '#seguranca')).toBe(true);
+    expect(perguntas.some((el) => el.getAttribute('href') === '#perguntas')).toBe(true);
+
+    expect(screen.queryByRole('link', { name: 'Vantagens' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Segurança' })).not.toBeInTheDocument();
+
+    const nav = screen.getByRole('navigation', { name: 'Navegação principal' });
+    expect(within(nav).getAllByRole('link')).toHaveLength(4);
+  });
+
+  it('Criar conta abre o registo', () => {
+    renderHeader();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }));
+    expect(mockNavigate).toHaveBeenCalledWith('/auth?mode=register');
   });
 
   it('inclui o ThemeToggle no header', () => {

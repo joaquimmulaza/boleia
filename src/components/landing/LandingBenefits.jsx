@@ -1,57 +1,96 @@
-import { PiggyBank, Clock, Users } from 'lucide-react';
+import { User, Car } from 'lucide-react';
 
-const BENEFITS = [
+const PASSAGEIRO = [
   {
-    icon: PiggyBank,
-    title: 'Economia',
-    text: 'Partilha o custo da rota diária com acordo mensal em Kz — sem surpresas de última hora.',
+    title: 'Sem a luta da paragem',
+    text: 'Sem puxarem a mala ao subir no táxi.',
   },
   {
-    icon: Clock,
-    title: 'Pontualidade',
-    text: 'Horários combinados para a ida e o regresso casa–trabalho, com a rotina que precisas.',
+    title: 'Preço do mês em Kz',
+    text: 'Sabes o que pagas antes de entrar.',
   },
   {
-    icon: Users,
-    title: 'Grupo de colegas',
-    text: 'Junta colegas no mesmo percurso — o grupo pode viajar mesmo antes de estar completo.',
+    title: 'O mesmo carro todos os dias',
+    text: 'Ponto e hora combinados. Dois colegas já começam.',
+  },
+];
+
+const MOTORISTA = [
+  {
+    title: 'Renda extra todos os meses',
+    text: 'Lugares vazios no teu percurso passam a render em Kz.',
+  },
+  {
+    title: 'Sem rota marcada',
+    text: 'Fazes Yango, Heetch ou táxi? Diz os dias e as horas.',
+  },
+  {
+    title: 'Clientes certos',
+    text: 'Quem faz sempre o mesmo caminho. Valor do mês combinado.',
   },
 ];
 
 /**
- * Secção «Vantagens».
+ * @param {{ title: string, points: typeof PASSAGEIRO, testId: string, icon: typeof User }} props
+ */
+function RoleColumn({ title, points, testId, icon: Icon }) {
+  return (
+    <article
+      data-testid={testId}
+      className="flex flex-col gap-6 rounded-xl border border-primary/10 bg-white p-6 shadow-sm dark:bg-slate-800"
+    >
+      <div className="flex items-center gap-3">
+        <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Icon size={22} aria-hidden="true" />
+        </div>
+        <h3 className="text-xl font-bold text-slate-900 dark:text-white">{title}</h3>
+      </div>
+      <ul className="flex flex-col gap-5">
+        {points.map((point) => (
+          <li key={point.title} className="flex flex-col gap-1">
+            <h4 className="text-base font-bold text-slate-900 dark:text-white">{point.title}</h4>
+            <p
+              data-testid="o-que-muda-ponto"
+              className="text-pretty text-sm text-slate-600 dark:text-slate-400"
+            >
+              {point.text}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </article>
+  );
+}
+
+/**
+ * Secção «O que muda» — duas colunas, passageiro e motorista.
  * @typedef {Readonly<{}>} LandingBenefitsProps
  */
 export default function LandingBenefits() {
   return (
-    <section id="vantagens" className="py-20 px-4">
+    <section id="o-que-muda" className="px-4 py-20">
       <div className="mx-auto flex max-w-7xl flex-col gap-12">
         <div className="flex max-w-[720px] flex-col gap-4">
           <h2 className="text-balance text-4xl font-black leading-tight text-slate-900 dark:text-white md:text-5xl">
-            Vantagens
+            O que muda
           </h2>
           <p className="text-pretty text-lg leading-relaxed text-slate-600 dark:text-slate-400">
-            Boleia casa–trabalho em Luanda: poupar, chegar a horas e viajar com quem partilha o caminho.
+            Sai da paragem. Enche os lugares vazios. O preço do mês fica em Kz.
           </p>
         </div>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {BENEFITS.map((benefit) => {
-            const BenefitIcon = benefit.icon;
-            return (
-              <div
-                key={benefit.title}
-                className="group flex flex-1 gap-4 rounded-xl border border-primary/5 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:bg-slate-800"
-              >
-                <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-transform group-hover:scale-110">
-                  <BenefitIcon size={28} aria-hidden="true" />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{benefit.title}</h3>
-                  <p className="text-pretty text-sm text-slate-600 dark:text-slate-400">{benefit.text}</p>
-                </div>
-              </div>
-            );
-          })}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <RoleColumn
+            title="Passageiro"
+            points={PASSAGEIRO}
+            testId="o-que-muda-passageiro"
+            icon={User}
+          />
+          <RoleColumn
+            title="Motorista"
+            points={MOTORISTA}
+            testId="o-que-muda-motorista"
+            icon={Car}
+          />
         </div>
       </div>
     </section>

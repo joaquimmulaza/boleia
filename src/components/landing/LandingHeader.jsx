@@ -6,9 +6,9 @@ import ThemeToggle from '../ThemeToggle';
 
 const NAV_LINKS = [
   { href: '/explorar', label: 'Explorar' },
+  { href: '#o-que-muda', label: 'O que muda' },
   { href: '#como-funciona', label: 'Como funciona' },
-  { href: '#vantagens', label: 'Vantagens' },
-  { href: '#seguranca', label: 'Segurança' },
+  { href: '#perguntas', label: 'Perguntas' },
 ];
 
 /**
@@ -145,6 +145,13 @@ export default function LandingHeader() {
         >
           Entrar
         </a>
+        <button
+          type="button"
+          className="hidden cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-bold text-slate-900 md:inline-flex"
+          onClick={() => navigate('/auth?mode=register')}
+        >
+          Criar conta
+        </button>
         <button
           type="button"
           className="flex size-10 items-center justify-center rounded-lg text-slate-900 hover:bg-primary/10 md:hidden dark:text-slate-100"
