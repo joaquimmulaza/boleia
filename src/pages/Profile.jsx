@@ -214,6 +214,7 @@ const Profile = () => {
                     value={profileData.iban_titular}
                     onChange={handleChangeProfile}
                     className="w-full bg-transparent border-none text-slate-900 dark:text-slate-100 font-medium focus:outline-none focus:ring-0 p-0"
+                    placeholder="Nome completo do titular"
                   />
                 </div>
                 <div className="p-4 flex flex-col gap-1">
@@ -225,6 +226,7 @@ const Profile = () => {
                     value={profileData.iban}
                     onChange={handleChangeProfile}
                     className="w-full bg-transparent border-none text-slate-900 dark:text-slate-100 font-medium focus:outline-none focus:ring-0 p-0 font-mono uppercase"
+                    placeholder="AO06…"
                   />
                 </div>
               </div>
@@ -238,7 +240,7 @@ const Profile = () => {
                 </div>
                 <h4 className="text-base font-bold text-slate-900 dark:text-white">Ainda sem dados bancários</h4>
                 <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 max-w-xs leading-relaxed">
-                  Titular + IBAN para receberes pagamentos.
+                  Adiciona o titular e o IBAN para receberes os pagamentos das tuas boleias.
                 </p>
                 <button
                   type="button"
