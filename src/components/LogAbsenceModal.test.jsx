@@ -31,7 +31,47 @@ describe('LogAbsenceModal — meia quota', () => {
       expect.objectContaining({
         dataFalta: '2026-09-07',
         viagem: 'regresso',
+        tipo: 'Motorista',
       }),
     );
+  });
+
+  it('bloqueia tipo Passageiro na sessão de passageiro', () => {
+    const onSubmit = vi.fn();
+    render(
+      <LogAbsenceModal
+        isOpen
+        tipoPerfil="Passageiro"
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    expect(screen.getByTestId('falta-tipo-locked')).toHaveTextContent('Passageiro');
+    expect(screen.queryByRole('combobox', { name: /Tipo/i })).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/Data/i), {
+      target: { value: '2026-09-07' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Guardar/i }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tipo: 'Passageiro',
+      }),
+    );
+  });
+
+  it('limita data a hoje ou anterior (sem datas futuras)', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-01T12:00:00Z'));
+
+    render(
+      <LogAbsenceModal isOpen onClose={vi.fn()} onSubmit={vi.fn()} />,
+    );
+
+    expect(screen.getByLabelText(/Data/i)).toHaveAttribute('max', '2026-10-01');
+
+    vi.useRealTimers();
   });
 });

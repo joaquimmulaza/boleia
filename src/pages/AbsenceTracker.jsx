@@ -17,6 +17,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import { formatDate } from '../utils/formatters';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
+import { filterFaltasEsteMes, sumDescontoFaltas } from '../utils/faltasDisplay';
 
 const AbsenceTracker = () => {
   const { acordoId } = useParams();
@@ -108,10 +109,8 @@ const AbsenceTracker = () => {
     }
   }, [acordoId, carregarFaltas, carregarAcordosActivos, carregarGatePagamento]);
 
-  const totalDesconto = faltas.reduce(
-    (acc, falta) => acc + (Number(falta.desconto_kz) || 0),
-    0,
-  );
+  const faltasEsteMes = filterFaltasEsteMes(faltas);
+  const totalDesconto = sumDescontoFaltas(faltasEsteMes);
 
   const handleLogAbsence = async (formData) => {
     if (!acordoId) return;
@@ -208,10 +207,10 @@ const AbsenceTracker = () => {
       <div className="space-y-3">
         {loading ? (
           <LoadingSkeleton variant="list" count={4} />
-        ) : faltas.length === 0 ? (
+        ) : faltasEsteMes.length === 0 ? (
           <EmptyState message="Não há faltas registadas neste acordo." />
         ) : (
-          faltas.map((falta) => (
+          faltasEsteMes.map((falta) => (
             <div
               key={falta.id}
               data-testid="absence-card"
@@ -248,8 +247,11 @@ const AbsenceTracker = () => {
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-base font-bold text-red-500 tabular-nums">
-                  -{formatKwanza(falta.desconto_kz)} Kz
+                <p
+                  className="text-base font-bold text-red-600 dark:text-red-400 tabular-nums"
+                  aria-label={`Desconto de ${formatKwanza(falta.desconto_kz)} Kz`}
+                >
+                  {formatKwanza(falta.desconto_kz)} Kz
                 </p>
               </div>
             </div>
@@ -300,9 +302,11 @@ const AbsenceTracker = () => {
       )}
 
       <LogAbsenceModal
+        key={tipoPerfil}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleLogAbsence}
+        tipoPerfil={tipoPerfil}
       />
     </PageShell>
   );
