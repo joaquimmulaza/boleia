@@ -134,6 +134,15 @@ export const useAuthForm = () => {
       return;
     }
 
+    if (!isLogin && password.length < 8) {
+      setErrors((prev) => ({
+        ...prev,
+        password: 'A password deve ter pelo menos 8 caracteres.'
+      }));
+      setIsLoading(false);
+      return;
+    }
+
     let error;
     let sessionUser = null;
 
