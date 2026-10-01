@@ -207,7 +207,7 @@ describe('PropostaReviewCard', () => {
     );
 
     expect(screen.getByText('Total do acordo')).toBeInTheDocument();
-    expect(screen.getByText(/120[\s.]?000/)).toBeInTheDocument();
+    expect(screen.getAllByText(/120[\s.]?000/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/40[\s.]?000/)).toBeInTheDocument();
   });
 
@@ -222,6 +222,58 @@ describe('PropostaReviewCard', () => {
     );
 
     expect(screen.queryByText(/N_proposto|POR_PASSAGEIRO|N_actual/)).toBeNull();
+  });
+
+  it('modo contraparte mostra valor proposto e preço publicado quando fornecidos', () => {
+    render(
+      <PropostaReviewCard
+        review={buildReview()}
+        busy={false}
+        precoPublicadoKz={45000}
+        onAceitar={vi.fn()}
+        onRecusar={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('valor-proposto-label')).toHaveTextContent(/120[\s.]?000/);
+    expect(screen.getByTestId('preco-publicado-label')).toHaveTextContent(/45[\s.]?000/);
+  });
+
+  it('mostra CTA Fazer contra-proposta e chama onContraProposta', () => {
+    const onContraProposta = vi.fn();
+    render(
+      <PropostaReviewCard
+        review={buildReview()}
+        busy={false}
+        onAceitar={vi.fn()}
+        onRecusar={vi.fn()}
+        onContraProposta={onContraProposta}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Fazer contra-proposta/i }));
+    expect(onContraProposta).toHaveBeenCalledTimes(1);
+  });
+
+  it('não mostra contra-proposta em modo criador ou historico', () => {
+    const { rerender } = render(
+      <PropostaReviewCard
+        review={buildReview()}
+        modo="criador"
+        onCancelar={vi.fn()}
+        onContraProposta={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Fazer contra-proposta/i })).toBeNull();
+
+    rerender(
+      <PropostaReviewCard
+        review={buildReview({ proposta: { ...buildReview().proposta, estado: 'rejeitada' } })}
+        modo="historico"
+        onContraProposta={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Fazer contra-proposta/i })).toBeNull();
   });
 
   it('chama onAceitar e onRecusar', () => {
