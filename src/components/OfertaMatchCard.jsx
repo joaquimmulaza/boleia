@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowRight, Clock, Users } from 'lucide-react';
+import TextFade from './TextFade';
 import { formatKwanza } from '../utils/formatKwanza';
 import { labelModoPreco, labelCapacidade, labelRotaOferta } from '../utils/ofertaLabels';
 
@@ -83,9 +84,9 @@ function OfertaMatchCard({
     <section className={shellClass} data-testid={`oferta-match-${variant}`}>
       <div className="flex justify-between items-start gap-2">
         <div className="font-bold flex items-center gap-2 text-slate-900 dark:text-white min-w-0">
-          <span className="truncate">{rota.origem}</span>
+          <TextFade className="flex-1">{rota.origem}</TextFade>
           <ArrowRight size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
-          <span className="truncate">{rota.destino}</span>
+          <TextFade className="flex-1">{rota.destino}</TextFade>
         </div>
         <span className={`text-xs font-bold px-2 py-1 rounded-full shrink-0 ${chip.className}`}>
           {chip.label}

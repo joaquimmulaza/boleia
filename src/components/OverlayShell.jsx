@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import ModalPortal from './ModalPortal';
 
 /**
@@ -30,6 +30,20 @@ function OverlayShell({
     if (dismissDisabled || !onDismiss) return;
     onDismiss();
   };
+
+  useEffect(() => {
+    if (!onDismiss || dismissDisabled) return undefined;
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onDismiss();
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [onDismiss, dismissDisabled]);
 
   return (
     <ModalPortal>

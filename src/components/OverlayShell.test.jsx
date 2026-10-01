@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen, cleanup } from '@testing-library/react';
-import { describe, it, expect, afterEach } from 'vitest';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import OverlayShell from './OverlayShell';
 
 describe('OverlayShell', () => {
@@ -42,5 +42,17 @@ describe('OverlayShell', () => {
 
     const shell = screen.getByTestId('center-overlay');
     expect(shell.className).toMatch(/items-center/);
+  });
+
+  it('Escape chama onDismiss', () => {
+    const onDismiss = vi.fn();
+    render(
+      <OverlayShell testId="esc-overlay" onDismiss={onDismiss}>
+        <p>Conteúdo</p>
+      </OverlayShell>,
+    );
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 });
