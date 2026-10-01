@@ -11,10 +11,13 @@
 
 ## Ops (manual)
 
-Dashboard Supabase → Authentication → URL Configuration → Redirect URLs:
+Dashboard Supabase → Authentication → URL Configuration:
 
-- `http://localhost:5173/auth?mode=update-password`
-- `https://<domínio-prod>/auth?mode=update-password`
-- Previews Vercel conforme necessário
+- **Site URL:** `https://boleia-cyan.vercel.app` (domínio público; **não** usar `boleia-joaquim-mulazas-projects.vercel.app` — SSO Vercel 403)
+- **Redirect URLs:**
+  - `http://localhost:5173/auth?mode=update-password`
+  - `https://boleia-cyan.vercel.app/auth?mode=update-password`
+
+Vercel env: `VITE_APP_URL=https://boleia-cyan.vercel.app` (production + preview + development)
 
 Opcional: template email Recovery em PT-PT.
