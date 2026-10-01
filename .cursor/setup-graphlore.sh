@@ -70,7 +70,7 @@ build_graph() {
   if resolve_llm_key; then
     echo "[setup-graphlore] Gemini disponível — extração AST + docs (max-concurrency=${GRAPHIFY_MAX_CONCURRENCY})..."
     if [ -f graphify-out/graph.json ]; then
-      graphify update "${ROOT}" --max-concurrency "${GRAPHIFY_MAX_CONCURRENCY}" \
+      graphify update "${ROOT}" \
         || graphify "${ROOT}" --backend gemini --max-concurrency "${GRAPHIFY_MAX_CONCURRENCY}"
     else
       graphify "${ROOT}" --backend gemini --max-concurrency "${GRAPHIFY_MAX_CONCURRENCY}"
