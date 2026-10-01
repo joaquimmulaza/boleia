@@ -202,7 +202,7 @@ export function buildPassageiroRatingPrompt(input) {
 /**
  * @param {{
  *   acordoId: string,
- *   passageiros: Array<{ id: string, passenger_id: string, estado?: string, updated_at?: string, perfis?: { nome_completo?: string } }>,
+ *   passageiros: Array<{ id: string, passenger_id: string, estado?: string, perfis?: { nome_completo?: string } }>,
  *   pagamentos: object[],
  *   avaliacoes: object[],
  *   now: string | Date,
@@ -233,7 +233,7 @@ export function buildMotoristaRatingPrompts(input) {
         submitted,
         momento: RATING_MOMENTO.PRIMEIRO_PERIODO,
         passageiroEstado: p.estado || 'activo',
-        saidaAt: p.updated_at,
+        saidaAt: null,
       });
       if (!estado) return null;
 

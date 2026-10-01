@@ -644,7 +644,7 @@ export async function getAgreementsForPassenger(passengerId) {
   const { data, error } = await supabase
     .from('acordos_passageiros')
     .select(
-      'id, acordo_id, passenger_id, estado, quota_mensal_kz, updated_at, acordos(*, acordos_passageiros(*), ofertas_capacidade(origin_name, destination_name, departure_time), acordos_adendas(*))',
+      'id, acordo_id, passenger_id, estado, quota_mensal_kz, acordos(*, acordos_passageiros(*), ofertas_capacidade(origin_name, destination_name, departure_time), acordos_adendas(*))',
     )
     .eq('passenger_id', passengerId)
     .in('estado', ['activo', 'reservado', 'expirado']);
@@ -662,7 +662,6 @@ export async function getAgreementsForPassenger(passengerId) {
           passenger_id: row.passenger_id,
           estado: row.estado,
           quota_mensal_kz: row.quota_mensal_kz,
-          updated_at: row.updated_at,
         }];
       }
       return acordo;
