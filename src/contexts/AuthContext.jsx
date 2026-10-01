@@ -32,6 +32,11 @@ export function AuthProvider({ children }) {
     readPasswordRecoveryPending()
   );
 
+  const markPasswordRecovery = useCallback(() => {
+    markPasswordRecoveryPending();
+    setPasswordRecoveryPending(true);
+  }, []);
+
   const clearPasswordRecovery = useCallback(() => {
     clearPasswordRecoveryStorage();
     setPasswordRecoveryPending(false);
@@ -145,6 +150,7 @@ export function AuthProvider({ children }) {
     tipoPerfil,
     refreshProfile,
     passwordRecoveryPending,
+    markPasswordRecovery,
     clearPasswordRecovery,
   };
 

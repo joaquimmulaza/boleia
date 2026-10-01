@@ -17,4 +17,6 @@ Dashboard Supabase → Authentication → URL Configuration → Redirect URLs:
 - `https://<domínio-prod>/auth?mode=update-password`
 - Previews Vercel conforme necessário
 
-Opcional: template email Recovery em PT-PT.
+Template Recovery PT-PT: `supabase/templates/recovery.html`.
+Aplicar no projecto alojado (Authentication → Email Templates → Reset password)
+ou `SUPABASE_ACCESS_TOKEN=… node scripts/apply-auth-email-templates.mjs`.

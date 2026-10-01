@@ -1,3 +1,5 @@
+export const LINK_EXPIRED_MESSAGE = 'O link de recuperação expirou ou já foi usado. Peça um novo.';
+
 export function getFriendlyErrorMessage(error) {
   if (!error) return 'Ocorreu um erro inesperado. Tente novamente.';
   
@@ -23,6 +25,9 @@ export function getFriendlyErrorMessage(error) {
   }
   if (/New password should be different/i.test(msg)) {
     return 'A nova palavra-passe deve ser diferente da actual.';
+  }
+  if (/Token has expired or is invalid|Email link is invalid or has expired|otp_expired/i.test(msg)) {
+    return LINK_EXPIRED_MESSAGE;
   }
   if (/only request this after|rate.?limit|security purposes/i.test(msg)) {
     return 'Aguarde um momento antes de pedir novamente a recuperação.';

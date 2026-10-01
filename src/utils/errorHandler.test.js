@@ -37,6 +37,15 @@ describe('getFriendlyErrorMessage', () => {
     );
   });
 
+  it('Cenário 8: link de recuperação expirado ou inválido', () => {
+    expect(getFriendlyErrorMessage({ message: 'Token has expired or is invalid' })).toBe(
+      'O link de recuperação expirou ou já foi usado. Peça um novo.'
+    );
+    expect(getFriendlyErrorMessage({ message: 'Email link is invalid or has expired' })).toBe(
+      'O link de recuperação expirou ou já foi usado. Peça um novo.'
+    );
+  });
+
   it('Cenário 7: rate limit de emails de recuperação', () => {
     const error = { message: 'For security purposes, you can only request this after 60 seconds.' };
     expect(getFriendlyErrorMessage(error)).toBe(

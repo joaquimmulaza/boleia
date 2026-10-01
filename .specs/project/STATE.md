@@ -77,10 +77,11 @@
 - `resetPasswordForEmail` + `PASSWORD_RECOVERY` → `passwordRecoveryPending` (`bc_password_recovery`)
 - Guards hub; `updateUser` + clear pending → hub
 - Spec: `.specs/features/esqueceu-palavra-passe/`
-- **Ops pendente:** Redirect URLs no Supabase Dashboard
+- Template Recovery PT-PT em `supabase/templates/recovery.html` + `scripts/apply-auth-email-templates.mjs`
+- Cliente: `normalizeRecoveryRedirect` + `verifyOtp(token_hash)` se o link cair na raiz
 
 ## Next Steps
-1. Redirect URLs recovery (Supabase Auth URL Configuration)
+1. Confirmar template Recovery PT-PT no Dashboard (se o script Management API não correu)
 2. TTL reservas (opcional) + polish admin Critiquito
 3. **Não** zonas/polígonos; **não** merge automático em `main`
 

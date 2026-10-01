@@ -18,7 +18,7 @@ No ecrã `/auth` (modo Entrar) existe o CTA «Esqueceu a palavra-passe?» sem `o
 | Feature | Reason |
 | ------- | ------ |
 | Alterar palavra-passe no Perfil (logado) | Pedido é só «esqueceu» |
-| Custom SMTP / template email no dashboard | Ops manual; documentar Redirect URLs |
+| Custom SMTP | Ops manual; template Recovery PT-PT está no repo |
 | Magic Link / OTP | Flow password-based canónico |
 | Páginas `/auth/*` novas | Query modes no shell existente |
 
@@ -118,9 +118,9 @@ Auth → URL Configuration → Redirect URLs (adicionar):
 - `https://<domínio-prod>/auth?mode=update-password`
 - Previews Vercel: `https://*-<team>.vercel.app/auth?mode=update-password` (ou URLs exactas)
 
-Opcional: template email Recovery em PT-PT no dashboard (fora do repo).
-
----
+Template Recovery em PT-PT: `supabase/templates/recovery.html` (assunto «Redefinir a sua palavra-passe»).
+Alojado: Authentication → Email Templates → Reset password, ou
+`SUPABASE_ACCESS_TOKEN=… node scripts/apply-auth-email-templates.mjs`.
 
 ## Technical Notes
 

@@ -10,13 +10,17 @@ vi.mock('../lib/supabase', () => ({
       signInWithPassword: vi.fn(),
       resetPasswordForEmail: vi.fn(),
       updateUser: vi.fn(),
+      verifyOtp: vi.fn(),
     },
   },
 }));
 
+const mockMarkPasswordRecovery = vi.fn();
+
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({
     clearPasswordRecovery: vi.fn(),
+    markPasswordRecovery: mockMarkPasswordRecovery,
     tipoPerfil: null,
     passwordRecoveryPending: false,
   }),
@@ -40,6 +44,7 @@ describe('Auth Component', () => {
     supabase.auth.signInWithPassword.mockResolvedValue({ data: { user: { user_metadata: { tipo_perfil: 'Passageiro' } } }, error: null });
     supabase.auth.resetPasswordForEmail.mockResolvedValue({ data: {}, error: null });
     supabase.auth.updateUser.mockResolvedValue({ data: { user: {} }, error: null });
+    supabase.auth.verifyOtp.mockResolvedValue({ data: { session: null }, error: null });
     mockNavigate.mockClear();
   });
 
@@ -260,5 +265,39 @@ describe('Auth Component', () => {
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/passageiro');
     }, { timeout: 2000 });
+  });
+
+  it('link do email com token_hash valida o token, marca recuperação e limpa a URL', async () => {
+    supabase.auth.verifyOtp.mockResolvedValue({ data: { session: { user: { id: 'u1' } } }, error: null });
+    mockSearch = '?mode=update-password&token_hash=hash-123&type=recovery';
+    render(<Auth />);
+
+    await waitFor(() => {
+      expect(supabase.auth.verifyOtp).toHaveBeenCalledWith({ token_hash: 'hash-123', type: 'recovery' });
+    });
+    await waitFor(() => {
+      expect(mockMarkPasswordRecovery).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith('/auth?mode=update-password', { replace: true });
+    });
+    expect(supabase.auth.verifyOtp).toHaveBeenCalledTimes(1);
+  });
+
+  it('token_hash expirado envia para recuperar com motivo link_expired', async () => {
+    supabase.auth.verifyOtp.mockResolvedValue({ data: null, error: new Error('Token has expired or is invalid') });
+    mockSearch = '?mode=update-password&token_hash=velho&type=recovery';
+    render(<Auth />);
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/auth?mode=forgot&reason=link_expired', { replace: true });
+    });
+    expect(mockMarkPasswordRecovery).not.toHaveBeenCalled();
+  });
+
+  it('modo forgot com reason=link_expired explica que o link expirou', () => {
+    mockSearch = '?mode=forgot&reason=link_expired';
+    render(<Auth />);
+
+    expect(screen.getByText(/O link de recuperação expirou ou já foi usado/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Enviar instruções/i })).toBeInTheDocument();
   });
 });

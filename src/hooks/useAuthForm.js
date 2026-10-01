@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { validateTelefone, validatePassword, MIN_PASSWORD_LENGTH } from '../utils/validation';
-import { getFriendlyErrorMessage } from '../utils/errorHandler';
+import { getFriendlyErrorMessage, LINK_EXPIRED_MESSAGE } from '../utils/errorHandler';
+import { UPDATE_PASSWORD_PATH, LINK_EXPIRED_PATH } from '../utils/passwordRecovery';
+import { requestPasswordReset, verifyRecoveryToken, updatePassword } from '../services/AuthService';
 import { useAuth } from '../contexts/AuthContext';
 
 /**
@@ -17,6 +19,9 @@ export const resolveAuthMode = (modeParam) => {
   return 'login';
 };
 
+/** Evita verifyOtp duplicado no StrictMode (o 2.º consume o token e parece expirado). */
+const verifiedRecoveryTokens = new Set();
+
 export const useAuthForm = () => {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
@@ -26,6 +31,7 @@ export const useAuthForm = () => {
   const navigate = useNavigate();
   const auth = useAuth();
   const clearPasswordRecovery = auth?.clearPasswordRecovery;
+  const markPasswordRecovery = auth?.markPasswordRecovery;
   const tipoPerfil = auth?.tipoPerfil;
 
   /** Toggle login ↔ registo (estado local; URL `mode=register` só inicializa). */
@@ -52,6 +58,35 @@ export const useAuthForm = () => {
         ? 'login'
         : 'register';
 
+  const tokenHash = queryParams.get('type') === 'recovery' ? queryParams.get('token_hash') : null;
+
+  useEffect(() => {
+    if (!isUpdatePassword || !tokenHash || verifiedRecoveryTokens.has(tokenHash)) return;
+    verifiedRecoveryTokens.add(tokenHash);
+
+    const verify = async () => {
+      setIsLoading(true);
+      try {
+        await verifyRecoveryToken(tokenHash);
+        if (typeof markPasswordRecovery === 'function') {
+          markPasswordRecovery();
+        }
+        navigate(UPDATE_PASSWORD_PATH, { replace: true });
+      } catch (error) {
+        console.error('Erro ao validar link de recuperação:', error);
+        navigate(LINK_EXPIRED_PATH, { replace: true });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    verify();
+  }, [isUpdatePassword, tokenHash, markPasswordRecovery, navigate]);
+
+  const visibleFeedback =
+    !feedback.message && isForgot && queryParams.get('reason') === 'link_expired'
+      ? { type: 'error', message: LINK_EXPIRED_MESSAGE }
+      : feedback;
+
   const navigateToHub = (role) => {
     const destino = role === 'Motorista' ? '/motorista' : '/passageiro';
     setTimeout(() => navigate(destino), 1000);
@@ -63,14 +98,14 @@ export const useAuthForm = () => {
     setErrors({});
     setIsLoading(true);
 
-    const redirectTo = `${window.location.origin}/auth?mode=update-password`;
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
-
-    setIsLoading(false);
-
-    if (error) {
+    try {
+      await requestPasswordReset(email, `${window.location.origin}${UPDATE_PASSWORD_PATH}`);
+    } catch (error) {
+      console.error('Erro ao pedir recuperação de palavra-passe:', error);
       setFeedback({ type: 'error', message: getFriendlyErrorMessage(error) });
       return;
+    } finally {
+      setIsLoading(false);
     }
 
     setFeedback({
@@ -97,12 +132,14 @@ export const useAuthForm = () => {
     }
 
     setIsLoading(true);
-    const { error } = await supabase.auth.updateUser({ password });
-    setIsLoading(false);
-
-    if (error) {
+    try {
+      await updatePassword(password);
+    } catch (error) {
+      console.error('Erro ao actualizar palavra-passe:', error);
       setFeedback({ type: 'error', message: getFriendlyErrorMessage(error) });
       return;
+    } finally {
+      setIsLoading(false);
     }
 
     if (typeof clearPasswordRecovery === 'function') {
@@ -214,7 +251,7 @@ export const useAuthForm = () => {
     passwordConfirm,
     nome,
     telefone,
-    feedback,
+    feedback: visibleFeedback,
     errors,
     isLoading,
     setEmail,
