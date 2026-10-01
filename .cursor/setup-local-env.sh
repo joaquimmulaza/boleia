@@ -20,6 +20,7 @@ VITE_SUPABASE_URL=${VITE_SUPABASE_URL:-https://placeholder.supabase.co}
 VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY:-placeholder-anon-key}
 VITE_SENTRY_DSN=${VITE_SENTRY_DSN:-}
 VITE_VAPID_PUBLIC_KEY=${VITE_VAPID_PUBLIC_KEY:-}
+GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
 EOF
 
 echo "[setup-local-env] .env.local criado."
