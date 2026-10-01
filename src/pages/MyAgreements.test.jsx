@@ -672,7 +672,7 @@ describe('MyAgreements — marketplace 1:N', () => {
 
     const vigencia = await screen.findByTestId('terminate-vigencia-picker');
     fireEvent.click(within(vigencia).getByRole('button', { name: /Agora — ajuste proporcional/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Encerrar acordo$/i }));
 
     await waitFor(() => {
       expect(terminateAgreement).toHaveBeenCalledWith('acordo-pax', {
@@ -707,7 +707,7 @@ describe('MyAgreements — marketplace 1:N', () => {
     fireEvent.click(within(picker).getByRole('button', { name: /Acordo amigável/i }));
     const vigencia = await screen.findByTestId('terminate-vigencia-picker');
     fireEvent.click(within(vigencia).getByRole('button', { name: /Fim deste mês/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Encerrar acordo$/i }));
 
     await waitFor(() => {
       expect(terminateAgreement).toHaveBeenCalledWith('acordo-pax', {

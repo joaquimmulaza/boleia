@@ -1429,7 +1429,7 @@ const MyAgreements = () => {
                   ? 'O acordo termina de imediato se o motivo for válido. As quotas deste mês podem ser ajustadas proporcionalmente.'
                   : '',
         })}
-        confirmText={terminateModo === 'consensual' ? 'Confirmar' : 'Encerrar acordo'}
+        confirmText="Encerrar acordo"
         onConfirm={() => handleTerminate()}
         onCancel={() => {
           if (!terminateBusy) {
