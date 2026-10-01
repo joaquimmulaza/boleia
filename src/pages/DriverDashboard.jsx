@@ -125,6 +125,8 @@ const DriverDashboard = () => {
   const [proporSheet, setProporSheet] = useState(null);
   /** @type {[null | { propostaId: string, oferta_id: string, procura_id: string, grupo_id?: string | null, modo_preco: string, n_passageiros_propostos: number, valor_mensal_ask_kz: string, precoPublicadoKz?: number | null }, Function]} */
   const [contraPropostaSheet, setContraPropostaSheet] = useState(null);
+  /** @type {[Set<string>, Function]} ids de propostas recebidas com contra-proposta enviada nesta sessão */
+  const [contraPropostaFeitaIds, setContraPropostaFeitaIds] = useState(() => new Set());
 
   const carregar = useCallback(async () => {
     if (!user?.id) {
@@ -461,9 +463,21 @@ const DriverDashboard = () => {
     }
   };
 
+  /**
+   * Enviada aberta do motorista para o par (oferta, procura).
+   * @param {{ oferta_id: string, procura_id: string }} par
+   */
+  const findEnviadaAberta = ({ oferta_id, procura_id }) =>
+    enviadas.find(
+      (r) =>
+        r.proposta.oferta_id === oferta_id
+        && r.proposta.procura_id === procura_id,
+    );
+
+  /** Oculta CTA só após contra-proposta bem-sucedida nesta sessão (não por enviada prévia). */
   /** @param {import('../components/PropostaReviewCard').PropostaReview} review */
   const jaEnviouContraProposta = (review) =>
-    enviadas.some((r) => r.proposta.procura_id === review.proposta.procura_id);
+    contraPropostaFeitaIds.has(review.proposta.id);
 
   /** @param {import('../components/PropostaReviewCard').PropostaReview} review */
   const handleAbrirContraProposta = (review) => {
@@ -494,6 +508,13 @@ const DriverDashboard = () => {
     setBusyId(contraPropostaSheet.propostaId);
     setFeedback({ type: '', text: '' });
     try {
+      const enviadaExistente = findEnviadaAberta({
+        oferta_id: contraPropostaSheet.oferta_id,
+        procura_id: contraPropostaSheet.procura_id,
+      });
+      if (enviadaExistente) {
+        await cancelProposta(enviadaExistente.proposta.id);
+      }
       await createProposta({
         oferta_id: contraPropostaSheet.oferta_id,
         procura_id: contraPropostaSheet.procura_id,
@@ -502,6 +523,7 @@ const DriverDashboard = () => {
         valor_mensal_ask_kz: valorCheck.valor,
         n_passageiros_propostos: contraPropostaSheet.n_passageiros_propostos,
       });
+      setContraPropostaFeitaIds((prev) => new Set(prev).add(contraPropostaSheet.propostaId));
       setContraPropostaSheet(null);
       setProcurasComPropostaEnviada((prev) => new Set(prev).add(contraPropostaSheet.procura_id));
       setFeedback({ type: 'success', text: FEEDBACK_PROPOSTA_ENVIADA_PASSAGEIRO });

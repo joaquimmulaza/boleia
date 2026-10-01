@@ -197,6 +197,56 @@ describe('PACOTE ENG #34 — contra-proposta na proposta recebida', () => {
     });
   });
 
+  it('ENG34-4: passageiro com enviada aberta à mesma oferta ainda vê CTA e cancela+cria no submit', async () => {
+    const { listPropostasByProcura, enrichPropostasForReview, cancelProposta } = await import('../services/PropostaService');
+    const propostaEnviadaPax = {
+      id: 'prop-out',
+      estado: 'aberta',
+      created_by: 'pax-1',
+      oferta_id: 'of-1',
+      procura_id: 'pr-1',
+      modo_preco: 'POR_PASSAGEIRO',
+      valor_mensal_ask_kz: 40000,
+      n_passageiros_propostos: 1,
+      grupo_id: null,
+    };
+    listPropostasByProcura.mockResolvedValue([propostaRecebidaMotorista, propostaEnviadaPax]);
+    enrichPropostasForReview.mockImplementation(async (lista) => mockEnrichInbox(lista));
+    cancelProposta.mockResolvedValue({ id: 'prop-out', estado: 'cancelada' });
+    findCompatibleOfertas.mockResolvedValue({
+      direct: [{ id: 'of-1', valor_mensal_ask_kz: 45000, modo_preco: 'POR_PASSAGEIRO' }],
+      waitlist: [],
+      incompatible: [],
+    });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('button', { name: /Fazer contra-proposta/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Fazer contra-proposta/i }));
+    fireEvent.change(await screen.findByTestId('proposta-valor-input'), { target: { value: '42000' } });
+    await confirmPropostaSheet();
+
+    await waitFor(() => {
+      expect(cancelProposta).toHaveBeenCalledWith('prop-out');
+    });
+    await waitFor(() => {
+      expect(createProposta).toHaveBeenCalledWith(
+        expect.objectContaining({
+          oferta_id: 'of-1',
+          procura_id: 'pr-1',
+          valor_mensal_ask_kz: 42000,
+        }),
+      );
+    });
+    const { rejectProposta } = await import('../services/PropostaService');
+    expect(rejectProposta).not.toHaveBeenCalled();
+  });
+
   it('ENG34-3: motorista contra-proposta a proposta recebida', async () => {
     const { useAuth } = await import('../contexts/AuthContext');
     useAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
