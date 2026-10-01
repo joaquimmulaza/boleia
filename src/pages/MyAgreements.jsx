@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowRight, Clock, Users, ChevronRight, Pencil, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -430,7 +430,13 @@ const MyAgreements = () => {
     setAdendaFormOpen(true);
   };
 
-  const handleLeaveClick = () => {
+  const podeSairSoloAcordo = useMemo(() => {
+    if (!selected || tipoPerfil !== 'Passageiro') return false;
+    const minhaLinha = (selected.acordos_passageiros || []).find((p) => p.passenger_id === user?.id);
+    return isActivo(selected.estado) && (!minhaLinha || isNoAcordo(minhaLinha.estado));
+  }, [selected, tipoPerfil, user?.id]);
+
+  const handleSairSoEu = useCallback(() => {
     if (!selected || !user?.id) return;
     const minhaLinha = (selected.acordos_passageiros || []).find((p) => p.passenger_id === user.id);
     if (!minhaLinha) {
@@ -451,6 +457,10 @@ const MyAgreements = () => {
       return;
     }
     setLeaveModalOpen(true);
+  }, [selected, user?.id, pagamentosAcordo, avaliacoesAcordo, navigate]);
+
+  const handleLeaveClick = () => {
+    handleSairSoEu();
   };
 
   const handleLeaveSolo = async () => {
@@ -1643,12 +1653,30 @@ const MyAgreements = () => {
                 Como queres encerrar o acordo?
               </h3>
               <p className="text-sm text-slate-500 text-pretty">
-                Escolhe a modalidade de rescisão do acordo completo. Para sair só tu mantendo o
-                acordo para os restantes, usa «Sair só eu».
+                Escolhe a modalidade de rescisão do acordo completo ou sai só tu mantendo o acordo
+                activo para os restantes.
               </p>
             </div>
 
             <div className="space-y-2">
+              {podeSairSoloAcordo ? (
+                <button
+                  type="button"
+                  className="w-full text-left rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/80 dark:bg-emerald-950/20 p-4 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                  data-testid="terminate-picker-sair-so-eu"
+                  onClick={() => {
+                    setTerminatePickerOpen(false);
+                    handleSairSoEu();
+                  }}
+                >
+                  <p className="font-bold text-slate-900 dark:text-white text-balance">Sair só eu</p>
+                  <p className="text-sm text-slate-500 mt-1 text-pretty">
+                    Saída individual — o acordo mantém-se para os restantes. Com pagamento confirmado,
+                    podes avaliar antes de sair.
+                  </p>
+                </button>
+              ) : null}
+
               <button
                 type="button"
                 className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"

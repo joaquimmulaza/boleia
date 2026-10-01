@@ -644,14 +644,27 @@ export async function getAgreementsForPassenger(passengerId) {
   const { data, error } = await supabase
     .from('acordos_passageiros')
     .select(
-      'acordo_id, estado, acordos(*, ofertas_capacidade(origin_name, destination_name, departure_time), acordos_adendas(*))',
+      'id, acordo_id, passenger_id, estado, quota_mensal_kz, acordos(*, acordos_passageiros(*), ofertas_capacidade(origin_name, destination_name, departure_time), acordos_adendas(*))',
     )
     .eq('passenger_id', passengerId)
     .in('estado', ['activo', 'reservado', 'expirado']);
 
   if (error) throw error;
   return (data || [])
-    .map((row) => row.acordos)
-    .filter(Boolean)
-    .map(withPendingAdenda);
+    .map((row) => {
+      if (!row.acordos) return null;
+      const acordo = withPendingAdenda({ ...row.acordos });
+      const linhas = acordo.acordos_passageiros || [];
+      if (linhas.length === 0 && row.id) {
+        acordo.acordos_passageiros = [{
+          id: row.id,
+          acordo_id: row.acordo_id,
+          passenger_id: row.passenger_id,
+          estado: row.estado,
+          quota_mensal_kz: row.quota_mensal_kz,
+        }];
+      }
+      return acordo;
+    })
+    .filter(Boolean);
 }

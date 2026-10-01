@@ -118,6 +118,61 @@ describe('MyAgreements — rating banner ENG#32c', () => {
     expect(screen.getByTestId('acordo-rating-cta')).toHaveTextContent('Avaliar motorista');
   });
 
+  it('mostra banner com pagamento legado só passenger_id', async () => {
+    listPagamentosByAcordo.mockResolvedValue([
+      {
+        id: 'pag-1',
+        passenger_id: 'pax-1',
+        estado: 'em_custodia',
+        validado_em: new Date().toISOString(),
+        mes_referencia: getMesReferenciaAtual(),
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={['/acordos?openAcordoId=acordo-1']}>
+        <MyAgreements />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('acordo-rating-banner')).toBeInTheDocument();
+    });
+  });
+
+  it('paid exit navega para interstitial M2 antes de sair', async () => {
+    render(
+      <MemoryRouter initialEntries={['/acordos?openAcordoId=acordo-1']}>
+        <MyAgreements />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: /Detalhe do acordo/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Sair só eu/i }));
+    expect(mockNavigate).toHaveBeenCalledWith('/acordos/acordo-1/sair/avaliar');
+  });
+
+  it('picker «Encerrar acordo» oferece «Sair só eu» acionável → M2', async () => {
+    render(
+      <MemoryRouter initialEntries={['/acordos?openAcordoId=acordo-1']}>
+        <MyAgreements />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: /Detalhe do acordo/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Encerrar acordo/i }));
+    expect(screen.getByTestId('terminate-modality-picker')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('terminate-picker-sair-so-eu'));
+    expect(mockNavigate).toHaveBeenCalledWith('/acordos/acordo-1/sair/avaliar');
+  });
+
   it('navega para formulário ao clicar CTA', async () => {
     render(
       <MemoryRouter initialEntries={['/acordos?openAcordoId=acordo-1']}>
