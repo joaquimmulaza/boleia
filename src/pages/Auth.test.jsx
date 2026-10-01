@@ -232,6 +232,20 @@ describe('Auth Component', () => {
     expect(supabase.auth.updateUser).not.toHaveBeenCalled();
   });
 
+  it('modo update-password rejeita palavra-passe com menos de 8 caracteres', async () => {
+    mockSearch = '?mode=update-password';
+    render(<Auth />);
+
+    fireEvent.change(screen.getByLabelText(/Nova palavra-passe/i), { target: { value: 'curta' } });
+    fireEvent.change(screen.getByLabelText(/Confirmar palavra-passe/i), { target: { value: 'curta' } });
+    fireEvent.submit(screen.getByLabelText('auth-form'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/pelo menos 8 caracteres/i)).toBeInTheDocument();
+    });
+    expect(supabase.auth.updateUser).not.toHaveBeenCalled();
+  });
+
   it('modo update-password chama updateUser e navega para hub', async () => {
     mockSearch = '?mode=update-password';
     render(<Auth />);
