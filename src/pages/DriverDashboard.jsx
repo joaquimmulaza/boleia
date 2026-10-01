@@ -7,10 +7,12 @@ import {
   isOfertaFlexivel,
   labelOfertaRota,
   cancelOferta,
+  createOferta,
 } from '../services/OfertaService';
 import { getAgreementsForDriver } from '../services/AgreementService';
 import {
   listPropostasByOferta,
+  listOpenPropostasByCreator,
   rejectProposta,
   cancelProposta,
   enrichPropostasForReview,
@@ -20,6 +22,7 @@ import { createAgreementFromProposal } from '../services/AgreementService';
 import { findCompatibleProcuras } from '../services/MatchingService';
 import { getGrupoByProcura } from '../services/GrupoService';
 import { getProcura, listProcurasDisponiveis } from '../services/ProcuraService';
+import { buildOfertaMinimaFromProcura } from '../utils/ofertaFromProcura';
 import { supabase } from '../lib/supabase';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
@@ -114,7 +117,7 @@ const DriverDashboard = () => {
   const [editProcurasById, setEditProcurasById] = useState({});
   /** @type {[Set<string>, Function]} */
   const [procurasComPropostaEnviada, setProcurasComPropostaEnviada] = useState(() => new Set());
-  /** @type {[null | { procura: object, valor_mensal_ask_kz: string }, Function]} */
+  /** @type {[null | { procura: object, valor_mensal_ask_kz: string, modo_preco?: string }, Function]} */
   const [proporSheet, setProporSheet] = useState(null);
 
   const carregar = useCallback(async () => {
@@ -168,28 +171,32 @@ const DriverDashboard = () => {
     null;
 
   const carregarProcurasHub = useCallback(async (oferta) => {
-    if (!oferta) {
-      setTodasProcuras([]);
-      setProcurasMatch({ direct: [], waitlist: [], incompatible: [] });
-      return;
-    }
     setLoadingProcuras(true);
     try {
-      const [todas, result, propostasOferta] = await Promise.all([
-        listProcurasDisponiveis(),
-        findCompatibleProcuras(oferta),
-        listPropostasByOferta(oferta.id),
-      ]);
+      const todas = await listProcurasDisponiveis();
       setTodasProcuras(todas);
-      setProcurasMatch({
-        direct: result.direct || [],
-        waitlist: result.waitlist || [],
-        incompatible: result.incompatible || [],
-      });
-      const enviadas = filterPropostasEnviadas(propostasOferta, user?.id);
-      setProcurasComPropostaEnviada(
-        new Set(enviadas.map((p) => p.procura_id).filter(Boolean)),
-      );
+
+      if (oferta) {
+        const [result, propostasOferta] = await Promise.all([
+          findCompatibleProcuras(oferta),
+          listPropostasByOferta(oferta.id),
+        ]);
+        setProcurasMatch({
+          direct: result.direct || [],
+          waitlist: result.waitlist || [],
+          incompatible: result.incompatible || [],
+        });
+        const enviadas = filterPropostasEnviadas(propostasOferta, user?.id);
+        setProcurasComPropostaEnviada(
+          new Set(enviadas.map((p) => p.procura_id).filter(Boolean)),
+        );
+      } else {
+        setProcurasMatch({ direct: [], waitlist: [], incompatible: [] });
+        const abertas = user?.id ? await listOpenPropostasByCreator(user.id) : [];
+        setProcurasComPropostaEnviada(
+          new Set(abertas.map((p) => p.procura_id).filter(Boolean)),
+        );
+      }
     } catch (err) {
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
     } finally {
@@ -200,8 +207,7 @@ const DriverDashboard = () => {
   useEffect(() => {
     if (hubTab !== 'procuras' || isLoading || hasVehicle !== true) return;
     if (ofertasActivas.length === 0) {
-      setTodasProcuras([]);
-      setProcurasMatch({ direct: [], waitlist: [], incompatible: [] });
+      void carregarProcurasHub(null);
       return;
     }
     const alvo =
@@ -212,6 +218,12 @@ const DriverDashboard = () => {
     }
     void carregarProcurasHub(alvo);
   }, [hubTab, isLoading, hasVehicle, selectedOfertaId, ofertasActivas, carregarProcurasHub]);
+
+  useEffect(() => {
+    if (ofertasActivas.length === 0 && sóCompatíveis) {
+      setSóCompatíveis(false);
+    }
+  }, [ofertasActivas.length, sóCompatíveis]);
 
   const matchDirectIds = useMemo(
     () => new Set(procurasMatch.direct.map((p) => p.id)),
@@ -285,17 +297,17 @@ const DriverDashboard = () => {
 
   /** @param {object} procura */
   const openProporSheet = (procura) => {
-    if (!ofertaSeleccionada) return;
     if (procurasComPropostaEnviada.has(procura.id)) return;
     setProporSheet({
       procura,
-      valor_mensal_ask_kz: String(ofertaSeleccionada.valor_mensal_ask_kz ?? ''),
+      valor_mensal_ask_kz: String(ofertaSeleccionada?.valor_mensal_ask_kz ?? ''),
+      modo_preco: ofertaSeleccionada?.modo_preco ?? 'POR_PASSAGEIRO',
     });
   };
 
   const handleProporSheetSubmit = async (e) => {
     e.preventDefault();
-    if (!proporSheet || !ofertaSeleccionada) return;
+    if (!proporSheet) return;
 
     const valorParsed = parseValorPropostaKz(proporSheet.valor_mensal_ask_kz);
     const valorCheck = validarValorPropostaKz(valorParsed);
@@ -324,11 +336,22 @@ const DriverDashboard = () => {
         grupoId = grupo.id;
       }
 
+      let ofertaParaProposta = ofertaSeleccionada;
+      if (!ofertaParaProposta) {
+        const payload = buildOfertaMinimaFromProcura(procura, {
+          modo_preco: proporSheet.modo_preco || 'POR_PASSAGEIRO',
+          valor_mensal_ask_kz: valorCheck.valor,
+        });
+        ofertaParaProposta = await createOferta(payload);
+        setOfertas((prev) => [ofertaParaProposta, ...prev]);
+        setSelectedOfertaId(ofertaParaProposta.id);
+      }
+
       await createProposta({
-        oferta_id: ofertaSeleccionada.id,
+        oferta_id: ofertaParaProposta.id,
         procura_id: procura.id,
         grupo_id: grupoId,
-        modo_preco: ofertaSeleccionada.modo_preco,
+        modo_preco: ofertaParaProposta.modo_preco,
         valor_mensal_ask_kz: valorCheck.valor,
         n_passageiros_propostos: nProposto,
       });
@@ -651,205 +674,199 @@ const DriverDashboard = () => {
           <div className="space-y-1">
             <h2 className="text-lg font-bold text-balance">Procuras e grupos</h2>
             <p className="text-sm text-slate-500 text-pretty">
-              {sóCompatíveis
-                ? 'Procuras e grupos compatíveis com a tua oferta. Envia proposta in-app — o passageiro aceita ou recusa.'
-                : 'Todas as procuras e grupos visíveis no marketplace. Envia proposta in-app quando houver compatibilidade com a tua oferta.'}
+              {ofertasActivas.length === 0
+                ? 'Todas as procuras e grupos visíveis no marketplace. Podes enviar proposta sem oferta prévia — criamos uma oferta flexível mínima ao confirmar.'
+                : sóCompatíveis
+                  ? 'Procuras e grupos compatíveis com a tua oferta. Envia proposta in-app — o passageiro aceita ou recusa.'
+                  : 'Todas as procuras e grupos visíveis no marketplace. Envia proposta in-app quando houver compatibilidade com a tua oferta.'}
             </p>
           </div>
 
-          {ofertasActivas.length === 0 ? (
-            <div
-              className="rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-3"
-              data-testid="driver-procuras-empty-sem-oferta"
-            >
-              <p className="text-sm text-slate-600 dark:text-slate-300 text-pretty">
-                Precisas de uma oferta activa publicada para ver procuras e enviar propostas.
-                O marketplace não é só «Publicar» — aqui encontras quem procura boleia no teu horário.
-              </p>
-              <button
-                type="button"
-                onClick={() => navigate('/publicar-trajeto')}
-                className="bg-primary hover:bg-primary/90 text-white text-sm font-bold py-2.5 px-4 rounded-lg"
-              >
-                Publicar oferta
-              </button>
+          {ofertasActivas.length > 1 && (
+            <div className="flex flex-wrap gap-2" data-testid="driver-procuras-oferta-picker">
+              {ofertasActivas.map((oferta) => {
+                const selected = oferta.id === selectedOfertaId;
+                const rotulo = labelOfertaPicker(oferta, formatTime24h);
+                return (
+                  <button
+                    key={oferta.id}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => handleSeleccionarOfertaProcuras(oferta.id)}
+                    className={`text-xs font-bold px-3 py-2 rounded-lg border ${
+                      selected
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                    }`}
+                  >
+                    {rotulo}
+                  </button>
+                );
+              })}
             </div>
+          )}
+
+          {ofertaSeleccionada &&
+          isOfertaFlexivel(ofertaSeleccionada) &&
+          ofertasActivas.length === 1 ? (
+            <p className="text-sm text-slate-500 text-pretty">
+              Oferta flexível: matching por horário, dias e lugares — sem exigir origem/destino na tua oferta.
+            </p>
+          ) : null}
+
+          {ofertasActivas.length > 0 ? (
+            <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer w-fit">
+              <input
+                type="checkbox"
+                checked={sóCompatíveis}
+                onChange={(e) => {
+                  setSóCompatíveis(e.target.checked);
+                  setFeedback({ type: '', text: '' });
+                }}
+                data-testid="driver-procuras-só-compatíveis"
+                className="size-4 rounded border-slate-300 text-primary focus:ring-primary"
+              />
+              Só compatíveis com a minha oferta
+            </label>
+          ) : null}
+
+          {feedback.text && (
+            <div
+              role="alert"
+              className={`rounded-xl px-4 py-3 text-sm font-medium ${
+                feedback.type === 'success'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-red-50 text-red-700 border border-red-200'
+              }`}
+            >
+              {feedback.text}
+            </div>
+          )}
+
+          {loadingProcuras ? (
+            <LoadingSkeleton />
+          ) : !sóCompatíveis && todasProcuras.length === 0 ? (
+            <p className="text-sm text-slate-500" data-testid="driver-procuras-empty-todas">
+              Ainda não há procuras ou grupos no marketplace.
+            </p>
+          ) : sóCompatíveis && procurasVisiveis.length === 0 ? (
+            <p className="text-sm text-slate-500" data-testid="driver-procuras-empty-filtrado">
+              Ainda não há procuras ou grupos compatíveis com esta oferta.
+            </p>
           ) : (
             <>
-              {ofertasActivas.length > 1 && (
-                <div className="flex flex-wrap gap-2" data-testid="driver-procuras-oferta-picker">
-                  {ofertasActivas.map((oferta) => {
-                    const selected = oferta.id === selectedOfertaId;
-                    const rotulo = labelOfertaPicker(oferta, formatTime24h);
-                    return (
-                      <button
-                        key={oferta.id}
-                        type="button"
-                        aria-pressed={selected}
-                        onClick={() => handleSeleccionarOfertaProcuras(oferta.id)}
-                        className={`text-xs font-bold px-3 py-2 rounded-lg border ${
-                          selected
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
-                        }`}
-                      >
-                        {rotulo}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {ofertaSeleccionada &&
-              isOfertaFlexivel(ofertaSeleccionada) &&
-              ofertasActivas.length === 1 ? (
-                <p className="text-sm text-slate-500 text-pretty">
-                  Oferta flexível: matching por horário, dias e lugares — sem exigir origem/destino na tua oferta.
-                </p>
-              ) : null}
-
-              <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer w-fit">
-                <input
-                  type="checkbox"
-                  checked={sóCompatíveis}
-                  onChange={(e) => {
-                    setSóCompatíveis(e.target.checked);
-                    setFeedback({ type: '', text: '' });
-                  }}
-                  data-testid="driver-procuras-só-compatíveis"
-                  className="size-4 rounded border-slate-300 text-primary focus:ring-primary"
-                />
-                Só compatíveis com a minha oferta
-              </label>
-
-              {feedback.text && (
-                <div
-                  role="alert"
-                  className={`rounded-xl px-4 py-3 text-sm font-medium ${
-                    feedback.type === 'success'
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      : 'bg-red-50 text-red-700 border border-red-200'
-                  }`}
-                >
-                  {feedback.text}
-                </div>
-              )}
-
-              {loadingProcuras ? (
-                <LoadingSkeleton />
-              ) : !sóCompatíveis && todasProcuras.length === 0 ? (
-                <p className="text-sm text-slate-500" data-testid="driver-procuras-empty-todas">
-                  Ainda não há procuras ou grupos no marketplace.
-                </p>
-              ) : sóCompatíveis && procurasVisiveis.length === 0 ? (
-                <p className="text-sm text-slate-500" data-testid="driver-procuras-empty-filtrado">
-                  Ainda não há procuras ou grupos compatíveis com esta oferta.
-                </p>
-              ) : (
-                <>
-                  {procurasVisiveis
-                    .filter((procura) => !matchWaitlistIds.has(procura.id))
-                    .map((procura) => {
-                      const isDirect = matchDirectIds.has(procura.id);
-                      return (
-                        <section
-                          key={procura.id}
-                          className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
-                          data-testid="driver-procura-match-card"
-                        >
-                          <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
-                            <span>{procura.origin_name || 'Origem'}</span>
-                            <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
-                            <span>{procura.destination_name || 'Destino'}</span>
-                          </div>
-                          <div className="flex gap-3 text-sm text-slate-500 flex-wrap">
-                            <span className="flex items-center gap-1">
-                              <Clock size={14} aria-hidden="true" />
-                              {formatTime24h(procura.preferred_time)}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Users size={14} aria-hidden="true" />
-                              {labelProcuraN(procura.n_candidato ?? 1)}
-                            </span>
-                            {!isDirect && !sóCompatíveis ? (
-                              <span className="text-xs font-medium text-slate-400">
-                                Sem compatibilidade com esta oferta
-                              </span>
-                            ) : null}
-                          </div>
-                          <div className="flex items-center justify-between pt-1">
-                            <div>
+              {procurasVisiveis
+                .filter((procura) => !matchWaitlistIds.has(procura.id))
+                .map((procura) => {
+                  const isDirect =
+                    !ofertaSeleccionada || matchDirectIds.has(procura.id);
+                  const podePropor =
+                    isDirect && !procurasComPropostaEnviada.has(procura.id);
+                  return (
+                    <section
+                      key={procura.id}
+                      className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
+                      data-testid="driver-procura-match-card"
+                    >
+                      <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+                        <span>{procura.origin_name || 'Origem'}</span>
+                        <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
+                        <span>{procura.destination_name || 'Destino'}</span>
+                      </div>
+                      <div className="flex gap-3 text-sm text-slate-500 flex-wrap">
+                        <span className="flex items-center gap-1">
+                          <Clock size={14} aria-hidden="true" />
+                          {formatTime24h(procura.preferred_time)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Users size={14} aria-hidden="true" />
+                          {labelProcuraN(procura.n_candidato ?? 1)}
+                        </span>
+                        {ofertaSeleccionada && !isDirect && !sóCompatíveis ? (
+                          <span className="text-xs font-medium text-slate-400">
+                            Sem compatibilidade com esta oferta
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="flex items-center justify-between pt-1">
+                        <div>
+                          {ofertaSeleccionada ? (
+                            <>
                               <strong className="text-primary tabular-nums">
-                                {formatKwanza(ofertaSeleccionada?.valor_mensal_ask_kz)} Kz
+                                {formatKwanza(ofertaSeleccionada.valor_mensal_ask_kz)} Kz
                               </strong>
                               <p className="text-xs text-slate-400">
-                                {labelModo(ofertaSeleccionada?.modo_preco)}
+                                {labelModo(ofertaSeleccionada.modo_preco)}
                               </p>
-                            </div>
-                            {isDirect && procurasComPropostaEnviada.has(procura.id) ? (
-                              <button
-                                type="button"
-                                disabled
-                                className="bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400 text-sm font-bold px-4 py-2.5 rounded-xl cursor-not-allowed"
-                              >
-                                Proposta enviada
-                              </button>
-                            ) : null}
-                            {isDirect && !procurasComPropostaEnviada.has(procura.id) ? (
-                              <button
-                                type="button"
-                                disabled={busyId === procura.id}
-                                onClick={() => openProporSheet(procura)}
-                                className="bg-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl disabled:opacity-60"
-                              >
-                                Enviar proposta
-                              </button>
-                            ) : null}
-                          </div>
-                        </section>
-                      );
-                    })}
-
-                  {procurasVisiveis.some((p) => matchWaitlistIds.has(p.id)) ? (
-                    <div className="space-y-3 pt-2" data-testid="waitlist-bucket">
-                      <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide">
-                        Lista de espera
-                      </h3>
-                      <p className="text-sm text-slate-500 text-pretty">
-                        Sem lugares suficientes agora. Estes grupos excedem os lugares
-                        disponíveis — não podes enviar proposta directa.
-                      </p>
-                      {procurasVisiveis
-                        .filter((procura) => matchWaitlistIds.has(procura.id))
-                        .map((procura) => (
-                          <section
-                            key={procura.id}
-                            className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
-                          >
-                            <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
-                              <span>{procura.origin_name || 'Origem'}</span>
-                              <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
-                              <span>{procura.destination_name || 'Destino'}</span>
-                            </div>
-                            <div className="flex gap-3 text-sm text-slate-500">
-                              <span className="flex items-center gap-1">
-                                <Clock size={14} aria-hidden="true" />
-                                {formatTime24h(procura.preferred_time)}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Users size={14} aria-hidden="true" />
-                                {labelProcuraN(procura.n_candidato ?? 1)}
-                              </span>
-                            </div>
-                            <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">
-                              Grupo maior que os lugares disponíveis
+                            </>
+                          ) : (
+                            <p className="text-xs text-slate-500 text-pretty">
+                              Define o valor ao enviar a proposta
                             </p>
-                          </section>
-                        ))}
-                    </div>
-                  ) : null}
-                </>
-              )}
+                          )}
+                        </div>
+                        {isDirect && procurasComPropostaEnviada.has(procura.id) ? (
+                          <button
+                            type="button"
+                            disabled
+                            className="bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400 text-sm font-bold px-4 py-2.5 rounded-xl cursor-not-allowed"
+                          >
+                            Proposta enviada
+                          </button>
+                        ) : null}
+                        {podePropor ? (
+                          <button
+                            type="button"
+                            disabled={busyId === procura.id}
+                            onClick={() => openProporSheet(procura)}
+                            className="bg-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl disabled:opacity-60"
+                          >
+                            Enviar proposta
+                          </button>
+                        ) : null}
+                      </div>
+                    </section>
+                  );
+                })}
+
+              {procurasVisiveis.some((p) => matchWaitlistIds.has(p.id)) ? (
+                <div className="space-y-3 pt-2" data-testid="waitlist-bucket">
+                  <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide">
+                    Lista de espera
+                  </h3>
+                  <p className="text-sm text-slate-500 text-pretty">
+                    Sem lugares suficientes agora. Estes grupos excedem os lugares
+                    disponíveis — não podes enviar proposta directa.
+                  </p>
+                  {procurasVisiveis
+                    .filter((procura) => matchWaitlistIds.has(procura.id))
+                    .map((procura) => (
+                      <section
+                        key={procura.id}
+                        className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
+                      >
+                        <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+                          <span>{procura.origin_name || 'Origem'}</span>
+                          <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
+                          <span>{procura.destination_name || 'Destino'}</span>
+                        </div>
+                        <div className="flex gap-3 text-sm text-slate-500">
+                          <span className="flex items-center gap-1">
+                            <Clock size={14} aria-hidden="true" />
+                            {formatTime24h(procura.preferred_time)}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Users size={14} aria-hidden="true" />
+                            {labelProcuraN(procura.n_candidato ?? 1)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">
+                          Grupo maior que os lugares disponíveis
+                        </p>
+                      </section>
+                    ))}
+                </div>
+              ) : null}
             </>
           )}
         </section>
@@ -934,7 +951,7 @@ const DriverDashboard = () => {
         </div>
       )}
 
-      {proporSheet && ofertaSeleccionada ? (
+      {proporSheet ? (
         <OverlayShell
           variant="bottom"
           overlayClassName="bg-slate-900/60 dark:bg-black/80"
@@ -952,9 +969,9 @@ const DriverDashboard = () => {
             </p>
             <form onSubmit={handleProporSheetSubmit} className="space-y-4">
               <PropostaValorInput
-                modoPreco={ofertaSeleccionada.modo_preco}
+                modoPreco={proporSheet.modo_preco || ofertaSeleccionada?.modo_preco || 'POR_PASSAGEIRO'}
                 value={proporSheet.valor_mensal_ask_kz}
-                askKz={ofertaSeleccionada.valor_mensal_ask_kz}
+                askKz={ofertaSeleccionada?.valor_mensal_ask_kz ?? null}
                 disabled={busyId === proporSheet.procura.id}
                 onChange={(e) =>
                   setProporSheet((prev) =>

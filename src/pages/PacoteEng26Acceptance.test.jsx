@@ -28,6 +28,7 @@ vi.mock('../services/OfertaService', async (importOriginal) => {
 
 vi.mock('../services/PropostaService', () => ({
   listPropostasByOferta: vi.fn().mockResolvedValue([]),
+  listOpenPropostasByCreator: vi.fn().mockResolvedValue([]),
   rejectProposta: vi.fn(),
   cancelProposta: vi.fn(),
   enrichPropostasForReview: vi.fn().mockResolvedValue([]),
@@ -80,7 +81,18 @@ describe('PACOTE ENG #26 — hub motorista procuras e grupos', () => {
     createProposta.mockResolvedValue({ id: 'prop-b' });
   });
 
-  it('hub vazio (zero ofertas) mostra tab e secção com empty state', async () => {
+  it('hub sem ofertas: tab Procuras lista marketplace e permite Enviar proposta', async () => {
+    listOfertasByDriver.mockResolvedValue([]);
+    listProcurasDisponiveis.mockResolvedValue([
+      {
+        id: 'pr-browse',
+        origin_name: 'Kilamba',
+        destination_name: 'Baixa',
+        preferred_time: '07:20:00',
+        n_candidato: 1,
+      },
+    ]);
+
     render(
       <MemoryRouter>
         <DriverDashboard />
@@ -91,9 +103,10 @@ describe('PACOTE ENG #26 — hub motorista procuras e grupos', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Procuras e grupos/i }));
 
     expect(await screen.findByTestId('driver-procuras-grupos-section')).toBeInTheDocument();
-    expect(screen.getByTestId('driver-procuras-empty-sem-oferta')).toBeInTheDocument();
-    expect(screen.getByText(/Precisas de uma oferta activa/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Enviar proposta/i })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('driver-procuras-empty-sem-oferta')).not.toBeInTheDocument();
+    expect(await screen.findByTestId('driver-procura-match-card')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Enviar proposta/i })).toBeInTheDocument();
+    expect(listProcurasDisponiveis).toHaveBeenCalled();
     expect(findCompatibleProcuras).not.toHaveBeenCalled();
   });
 

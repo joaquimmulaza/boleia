@@ -156,4 +156,6 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
 
 * **PACOTE ENG #25 ciclo de vida oferta (2026-09-10):** RPC `update_oferta` / `cancel_oferta`; `OfertaEditPanel` + CTAs Editar/Despublicar em `DriverDashboard`; propostas abertas só `invalidada`|`cancelada` (snapshot intacto); browse/matching exclui `inactiva`; guard acordo activo na despublicação. Spec: `.specs/quick/pacote-eng-25-oferta-lifecycle/`.
 
+* **Marketplace browse público (2026-10-01):** rota pública `/explorar` (ofertas + procuras, só leitura; CTA → `/auth`); RLS anon SELECT em `ofertas_capacidade`/`procuras` (estados activos); `listOfertasDisponiveis` / `listProcurasDisponiveis` sem gate de sessão; motorista vê procuras **sem oferta activa**; «Enviar proposta» cria oferta flexível mínima (`buildOfertaMinimaFromProcura`). Spec: `.specs/quick/marketplace-browse-publico/`.
+
 **Próximo:** polish admin Critiquito. **Fora do MVP:** zonas/polígonos/raio residencial; adenda bilateral completa (hoje motorista inicia). Commits só se o utilizador pedir.

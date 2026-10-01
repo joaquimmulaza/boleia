@@ -76,6 +76,12 @@
 1. TTL reservas (opcional) + polish admin Critiquito
 2. **Não** zonas/polígonos; **não** merge automático em `main`
 
+## Decisão (2026-10-01) — Marketplace browse público
+- Anónimo vê ofertas e procuras em `/explorar` (só leitura; CTAs → `/auth`)
+- Motorista autenticado: browse procuras sem oferta activa; propor cria oferta flexível mínima
+- Passageiro browse sem procura: já coberto (ENG#4/#23)
+- RLS: GRANT SELECT anon + policies por estado activo
+
 ## Key links
 - Plan: `.cursor/plans/marketplace_oferta_procura_74cbb52a.plan.md`
 - Spec · Design · Tasks · Checkpoint sob `.specs/features/marketplace-oferta-procura/`

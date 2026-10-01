@@ -13,7 +13,7 @@ import { createAgreementFromProposal } from '../services/AgreementService';
 import { findCompatibleProcuras } from '../services/MatchingService';
 import { getGrupoByProcura } from '../services/GrupoService';
 import { getProcura, listProcurasDisponiveis } from '../services/ProcuraService';
-import { listOfertasByDriver, cancelOferta, updateOferta } from '../services/OfertaService';
+import { listOfertasByDriver, cancelOferta, updateOferta, createOferta } from '../services/OfertaService';
 import { getAgreementsForDriver } from '../services/AgreementService';
 import { supabase } from '../lib/supabase';
 import { expectNoUserFacingJargon } from '../test/jargonBan';
@@ -44,6 +44,7 @@ vi.mock('../services/OfertaService', async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
+    createOferta: vi.fn(),
     cancelOferta: vi.fn(),
     updateOferta: vi.fn(),
     listOfertasByDriver: vi.fn().mockResolvedValue([
@@ -64,6 +65,7 @@ vi.mock('../services/OfertaService', async (importOriginal) => {
 
 vi.mock('../services/PropostaService', () => ({
   listPropostasByOferta: vi.fn().mockResolvedValue([]),
+  listOpenPropostasByCreator: vi.fn().mockResolvedValue([]),
   rejectProposta: vi.fn(),
   cancelProposta: vi.fn(),
   enrichPropostasForReview: vi.fn().mockResolvedValue([]),
@@ -497,8 +499,17 @@ describe('DriverDashboard — marketplace', () => {
     expect(screen.getByRole('tab', { name: /Procuras e grupos/i })).toBeInTheDocument();
   });
 
-  it('sem ofertas: tab Procuras e grupos mostra copy de oferta activa necessária', async () => {
+  it('sem ofertas: tab Procuras e grupos lista procuras e CTA Enviar proposta', async () => {
     listOfertasByDriver.mockResolvedValue([]);
+    listProcurasDisponiveis.mockResolvedValue([
+      {
+        id: 'pr-sem-oferta',
+        origin_name: 'Talatona',
+        destination_name: 'Miramar',
+        preferred_time: '07:00:00',
+        n_candidato: 1,
+      },
+    ]);
 
     render(
       <MemoryRouter>
@@ -510,10 +521,9 @@ describe('DriverDashboard — marketplace', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Procuras e grupos/i }));
 
     expect(await screen.findByTestId('driver-procuras-grupos-section')).toBeInTheDocument();
-    expect(screen.getByTestId('driver-procuras-empty-sem-oferta')).toBeInTheDocument();
-    expect(screen.getByText(/Precisas de uma oferta activa/i)).toBeInTheDocument();
-    expect(screen.getByText(/não é só «Publicar»/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Enviar proposta/i })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('driver-procuras-empty-sem-oferta')).not.toBeInTheDocument();
+    expect(await screen.findByText(/oferta flexível mínima/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Enviar proposta/i })).toBeInTheDocument();
   });
 
   it('com oferta activa: tab Procuras e grupos mostra feed e CTA Enviar proposta', async () => {
@@ -597,6 +607,55 @@ describe('DriverDashboard — marketplace', () => {
 
     expect(await screen.findByTestId('driver-procuras-empty-filtrado')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Enviar proposta/i })).not.toBeInTheDocument();
+  });
+
+  it('sem oferta: Enviar proposta cria oferta mínima flexível e depois a proposta', async () => {
+    listOfertasByDriver.mockResolvedValue([]);
+    const procuraBrowse = {
+      id: 'pr-min',
+      origin_name: 'Benfica',
+      destination_name: 'Maianga',
+      preferred_time: '07:45:00',
+      return_time: '18:00:00',
+      dias_semana: [1, 2, 3, 4, 5],
+      n_candidato: 1,
+    };
+    listProcurasDisponiveis.mockResolvedValue([procuraBrowse]);
+    createOferta.mockResolvedValue({
+      id: 'of-min',
+      flexibilidade_rota: true,
+      modo_preco: 'POR_PASSAGEIRO',
+      valor_mensal_ask_kz: 35000,
+      estado: 'disponivel',
+      departure_time: '07:45',
+    });
+    createProposta.mockResolvedValue({ id: 'prop-min' });
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('tab', { name: /Procuras e grupos/i }));
+    expect(await screen.findByText('Benfica')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Enviar proposta/i }));
+
+    const sheet = await screen.findByTestId('driver-propor-sheet');
+    const input = within(sheet).getByTestId('proposta-valor-input');
+    fireEvent.change(input, { target: { value: '35000' } });
+    fireEvent.click(within(sheet).getByRole('button', { name: /Confirmar proposta/i }));
+
+    await waitFor(() => {
+      expect(createOferta).toHaveBeenCalled();
+      expect(createProposta).toHaveBeenCalledWith(
+        expect.objectContaining({
+          oferta_id: 'of-min',
+          procura_id: 'pr-min',
+          valor_mensal_ask_kz: 35000,
+        }),
+      );
+    });
   });
 
   it('lista procuras compatíveis e permite propor acordo (sentido B)', async () => {
