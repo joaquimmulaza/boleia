@@ -122,7 +122,7 @@ export default function NotificationBell() {
           panelClassName="bg-white dark:bg-slate-900 shadow-2xl flex flex-col"
           testId="notification-backdrop"
         >
-          <SheetDragHandle />
+          <SheetDragHandle onDismiss={() => setIsOpen(false)} />
 
           <div
             role="dialog"

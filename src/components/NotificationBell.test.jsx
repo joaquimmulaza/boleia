@@ -61,13 +61,28 @@ describe('NotificationBell', () => {
     vi.clearAllMocks();
   });
 
-  it('renderiza bottom sheet F7 com handle e Fechar', () => {
+  it('renderiza bottom sheet F7 com handle e Fechar (não side drawer)', () => {
     renderBell();
     fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
 
+    const panel = screen.getByTestId('notification-panel');
     expect(screen.getByTestId('sheet-drag-handle')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Fechar' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Notificações' })).toBeInTheDocument();
+    expect(panel.className).toMatch(/rounded-t-xl/);
+    expect(panel.className).not.toMatch(/translate-x/);
+    expect(screen.queryByLabelText(/Fechar notificações/i)).not.toBeInTheDocument();
+  });
+
+  it('fecha ao arrastar o handle para baixo', () => {
+    renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+
+    const handle = screen.getByTestId('sheet-drag-handle');
+    fireEvent.pointerDown(handle, { clientY: 100, pointerId: 1 });
+    fireEvent.pointerMove(handle, { clientY: 200, pointerId: 1 });
+
+    expect(screen.queryByTestId('notification-panel')).not.toBeInTheDocument();
   });
 
   it('mostra Marcar todas lidas quando há não lidas', () => {

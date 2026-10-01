@@ -139,8 +139,11 @@ describe('Profile Component', () => {
           expect(screen.getByText('Ainda sem dados bancários')).toBeInTheDocument();
         });
         expect(screen.getByRole('button', { name: /Adicionar dados bancários/i })).toBeInTheDocument();
+        expect(screen.getByText(/Adiciona o titular e o IBAN para receberes os pagamentos das tuas boleias/i)).toBeInTheDocument();
         expect(screen.queryByLabelText(/Titular da conta/i)).not.toBeInTheDocument();
         expect(screen.queryByLabelText(/^IBAN$/i)).not.toBeInTheDocument();
+        expect(screen.queryByPlaceholderText(/Nome completo do titular/i)).not.toBeInTheDocument();
+        expect(screen.queryByPlaceholderText(/AO06/i)).not.toBeInTheDocument();
       });
 
       it('CTA Adicionar dados bancários revela formulário bancário', async () => {
@@ -163,6 +166,8 @@ describe('Profile Component', () => {
 
         expect(screen.getByLabelText(/Titular da conta/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/^IBAN$/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/Nome completo do titular/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/AO06/i)).toBeInTheDocument();
       });
 
       it('com IBAN preenchido mostra campos bancários directamente', async () => {
