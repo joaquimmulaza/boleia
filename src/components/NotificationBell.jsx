@@ -1,22 +1,40 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Bell, CheckCircle, Info, AlertCircle, X, BellRing, BellOff, Trash2 } from 'lucide-react';
+import { Bell, CheckCircle, Info, AlertCircle, BellRing, BellOff } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { resolveNotificationRoute } from '../utils/notificationRouter';
 import { useAuth } from '../contexts/AuthContext';
+import OverlayShell from './OverlayShell';
+import SheetDragHandle from './SheetDragHandle';
+import NotificationRowKebab from './NotificationRowKebab';
+import { Button } from './ui/button';
 
+/**
+ * @param {{ type?: string }} props
+ */
 const NotificationIcon = ({ type }) => {
   switch (type) {
     case 'success':
-      return <CheckCircle className="w-5 h-5 text-green-500" />;
+      return (
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
+          <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" strokeWidth={2} aria-hidden="true" />
+        </span>
+      );
     case 'warning':
     case 'error':
-      return <AlertCircle className="w-5 h-5 text-red-500" />;
+      return (
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+          <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" strokeWidth={2} aria-hidden="true" />
+        </span>
+      );
     case 'info':
     default:
-      return <Info className="w-5 h-5 text-blue-500" />;
+      return (
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+          <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" strokeWidth={2} aria-hidden="true" />
+        </span>
+      );
   }
 };
 
@@ -41,37 +59,22 @@ export default function NotificationBell() {
   const { isSupported, permission, isSubscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const backdropRef = useRef(null);
-  const panelRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (!isOpen) return;
+    if (!isOpen) return undefined;
 
-      const target = event.target;
-      const insidePanel =
-        dropdownRef.current?.contains(target) ||
-        backdropRef.current?.contains(target) ||
-        panelRef.current?.contains(target);
-
-      if (!insidePanel) {
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
         setIsOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
+    document.addEventListener('keydown', onKeyDown);
 
-  // Scroll locking for mobile and portal
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
     return () => {
       document.body.style.overflow = 'unset';
+      document.removeEventListener('keydown', onKeyDown);
     };
   }, [isOpen]);
 
@@ -81,7 +84,6 @@ export default function NotificationBell() {
     }
     setIsOpen(false);
 
-    // Utiliza o Strategy Padrão de Roteamento (Escalabilidade de UX)
     const targetUrl = resolveNotificationRoute(notif);
     navigate(targetUrl);
   };
@@ -98,12 +100,12 @@ export default function NotificationBell() {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setIsOpen(true)}
         className="relative p-2 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
         aria-label="Notificações"
         title="Notificações"
       >
-        <Bell size={20} />
+        <Bell size={20} strokeWidth={2} />
         {unreadCount > 0 && (
           <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white dark:ring-gray-900">
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -111,25 +113,29 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {/* Backdrop & Panel inside React Portal to escape stacking context */}
-      {createPortal(
-        <>
-          <div
-            ref={backdropRef}
-            data-testid="notification-backdrop"
-            className={`fixed inset-0 z-overlay bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-            onClick={() => setIsOpen(false)}
-          />
+      {isOpen ? (
+        <OverlayShell
+          variant="bottom"
+          onDismiss={() => setIsOpen(false)}
+          overlayClassName="bg-black/50 backdrop-blur-sm"
+          panelTestId="notification-panel"
+          panelClassName="bg-white dark:bg-slate-900 shadow-2xl flex flex-col"
+          testId="notification-backdrop"
+        >
+          <SheetDragHandle />
 
           <div
-            ref={panelRef}
-            data-testid="notification-panel"
-            className={`fixed top-0 right-0 h-dvh w-full max-w-md bg-white dark:bg-slate-900 shadow-2xl z-drawer transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="notification-sheet-title"
+            className="flex max-h-[85dvh] flex-col"
           >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-slate-900 shrink-0">
-              <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100 font-[Plus_Jakarta_Sans]">Notificações</h2>
-              <div className="flex items-center gap-3">
-                {isSupported && permission !== 'denied' && (
+            <div className="flex items-center justify-between px-5 pb-2 pt-1 shrink-0">
+              <h2 id="notification-sheet-title" className="text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+                Notificações
+              </h2>
+              <div className="flex items-center gap-2">
+                {isSupported && permission !== 'denied' ? (
                   <button
                     onClick={handlePushToggle}
                     disabled={pushLoading}
@@ -141,80 +147,73 @@ export default function NotificationBell() {
                     aria-label={isSubscribed ? 'Desativar notificações push' : 'Ativar notificações push'}
                     title={isSubscribed ? 'Desativar notificações push' : 'Ativar notificações push'}
                   >
-                    {isSubscribed ? <BellRing size={16} /> : <BellOff size={16} />}
+                    {isSubscribed ? <BellRing size={16} strokeWidth={2} /> : <BellOff size={16} strokeWidth={2} />}
                   </button>
-                )}
-                <button 
+                ) : null}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 rounded-full px-4 text-sm font-bold text-slate-700 dark:text-slate-200"
                   onClick={() => setIsOpen(false)}
-                  className="p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
-                  aria-label="Fechar notificações"
-                  title="Fechar notificações"
                 >
-                  <X size={20} />
-                </button>
+                  Fechar
+                </Button>
               </div>
             </div>
 
-            {unreadCount > 0 && (
-              <div className="px-5 py-3 bg-gray-50 dark:bg-slate-800/50 flex justify-end shrink-0">
+            {unreadCount > 0 ? (
+              <div className="px-5 py-2 flex justify-start shrink-0">
                 <button
+                  type="button"
                   onClick={markAllAsRead}
-                  className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors pointer-events-auto"
+                  className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors"
                 >
                   Marcar todas lidas
                 </button>
               </div>
-            )}
+            ) : null}
 
-            <div className="flex-1 overflow-y-auto overscroll-none pb-24 sm:pb-28">
+            <div className="flex-1 overflow-y-auto overscroll-none pb-safe min-h-0">
               {notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-40 text-gray-500 dark:text-gray-400">
-                  <Bell size={48} className="mb-4 opacity-20" />
+                  <Bell size={48} className="mb-4 opacity-20" strokeWidth={1.5} aria-hidden="true" />
                   <p className="text-sm">Sem notificações no momento.</p>
                 </div>
               ) : (
                 <ul className="divide-y divide-gray-100 dark:divide-gray-800/50">
                   {notifications.map((notif) => (
                     <li
-                      key={notif.id} className={`flex items-start gap-4 px-5 py-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer ${
+                      key={notif.id}
+                      className={`flex items-start gap-3 px-5 py-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer ${
                         !notif.lida ? 'bg-primary/5 dark:bg-primary/10' : ''
                       }`}
                       onClick={() => handleNotificationClick(notif)}
                     >
-                      <div className="mt-1 shrink-0">
+                      <div className="mt-0.5 shrink-0">
                         <NotificationIcon type={notif.tipo} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm ${!notif.lida ? 'font-semibold text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300'} font-[Plus_Jakarta_Sans] leading-relaxed`}>
+                        <p className={`text-sm leading-relaxed ${!notif.lida ? 'font-semibold text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300'}`}>
                           {notif.mensagem}
                         </p>
-                        <p className="mt-2 text-xs font-medium text-gray-400 dark:text-gray-500">
+                        <p className="mt-1.5 text-xs font-medium text-gray-400 dark:text-gray-500">
                           {formatTimeAgo(notif.created_at)}
                         </p>
                       </div>
-                      {!notif.lida && (
-                        <div className="w-2.5 h-2.5 rounded-full bg-primary shrink-0 mt-1.5 shadow-sm" />
+                      {!notif.lida ? (
+                        <div className="w-2 h-2 rounded-full bg-primary shrink-0 mt-2 shadow-sm" aria-hidden="true" />
+                      ) : (
+                        <div className="w-2 shrink-0" aria-hidden="true" />
                       )}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteNotification(notif.id);
-                        }}
-                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors shrink-0 ml-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
-                        aria-label="Apagar notificação"
-                        title="Apagar notificação"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      <NotificationRowKebab onDelete={() => deleteNotification(notif.id)} />
                     </li>
                   ))}
                 </ul>
               )}
             </div>
           </div>
-        </>,
-        document.body
-      )}
+        </OverlayShell>
+      ) : null}
     </div>
   );
 }

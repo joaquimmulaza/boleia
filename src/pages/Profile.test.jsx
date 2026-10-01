@@ -121,5 +121,75 @@ describe('Profile Component', () => {
             expect(screen.getByText('Perfil actualizado com sucesso!')).toBeInTheDocument();
         });
       });
+
+      it('sem dados bancários mostra empty state real sem campos Titular/IBAN', async () => {
+        ProfileService.getProfile.mockResolvedValue({
+          id: 'user-123',
+          nome_completo: 'Carlos Motorista',
+          telefone: '+244923000000',
+          tipo_perfil: 'Motorista',
+          avatar_url: null,
+          iban: '',
+          iban_titular: '',
+        });
+
+        await renderComponent();
+
+        await waitFor(() => {
+          expect(screen.getByText('Ainda sem dados bancários')).toBeInTheDocument();
+        });
+        expect(screen.getByRole('button', { name: /Adicionar dados bancários/i })).toBeInTheDocument();
+        expect(screen.queryByLabelText(/Titular da conta/i)).not.toBeInTheDocument();
+        expect(screen.queryByLabelText(/^IBAN$/i)).not.toBeInTheDocument();
+      });
+
+      it('CTA Adicionar dados bancários revela formulário bancário', async () => {
+        ProfileService.getProfile.mockResolvedValue({
+          id: 'user-123',
+          nome_completo: 'Carlos Motorista',
+          telefone: '+244923000000',
+          tipo_perfil: 'Motorista',
+          avatar_url: null,
+          iban: '',
+          iban_titular: '',
+        });
+
+        await renderComponent();
+        await waitFor(() => {
+          expect(screen.getByText('Ainda sem dados bancários')).toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: /Adicionar dados bancários/i }));
+
+        expect(screen.getByLabelText(/Titular da conta/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/^IBAN$/i)).toBeInTheDocument();
+      });
+
+      it('com IBAN preenchido mostra campos bancários directamente', async () => {
+        ProfileService.getProfile.mockResolvedValue({
+          id: 'user-123',
+          nome_completo: 'Carlos Motorista',
+          telefone: '+244923000000',
+          tipo_perfil: 'Motorista',
+          avatar_url: null,
+          iban: 'AO06004000000000000000000',
+          iban_titular: 'Carlos Motorista',
+        });
+
+        await renderComponent();
+
+        await waitFor(() => {
+          expect(screen.getByDisplayValue('AO06004000000000000000000')).toBeInTheDocument();
+        });
+        expect(screen.queryByText('Ainda sem dados bancários')).not.toBeInTheDocument();
+      });
+
+      it('sticky Guardar tem espaço acima do CTA', async () => {
+        await renderComponent();
+        await waitFor(() => {
+          expect(screen.getByTestId('profile-sticky-save')).toBeInTheDocument();
+        });
+        expect(screen.getByTestId('profile-sticky-spacer')).toBeInTheDocument();
+      });
   });
 });
