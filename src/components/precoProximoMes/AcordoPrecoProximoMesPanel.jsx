@@ -113,7 +113,7 @@ export default function AcordoPrecoProximoMesPanel({
           </Button>
         ) : null}
 
-        {janelaAberta && podePropor && !temNegociacao ? (
+        {janelaAberta && podePropor ? (
           <Button
             type="button"
             className="w-full min-h-11 rounded-xl bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-100"

@@ -57,6 +57,36 @@ export function souProponenteAdenda(adenda, userId) {
 }
 
 /**
+ * Proponente pode enviar nova proposta enquanto a recusada ainda está activa (RPC supersede).
+ *
+ * @param {{ estado?: string, created_by?: string } | null | undefined} adenda
+ * @param {{ userId?: string, janelaAberta?: boolean }} ctx
+ * @returns {boolean}
+ */
+export function podeNovaPropostaAposRecusa(adenda, ctx) {
+  if (!ctx.janelaAberta || !adenda || !ctx.userId) return false;
+  if (String(adenda.estado || '').toLowerCase() !== 'rejeitada') return false;
+  return souProponenteAdenda(adenda, ctx.userId);
+}
+
+/**
+ * Gate «Mudar preço no próximo mês» — sem negociação activa ou nova proposta após recusa (proponente).
+ *
+ * @param {{ estado?: string, created_by?: string } | null | undefined} negociacao
+ * @param {{ userId?: string, janelaAberta?: boolean }} ctx
+ * @returns {boolean}
+ */
+export function podeProporNovaPreco(negociacao, ctx) {
+  if (!ctx.janelaAberta) return false;
+  if (!negociacao) return true;
+  const e = String(negociacao.estado || '').toLowerCase();
+  if (e === 'rejeitada') {
+    return souProponenteAdenda(negociacao, ctx.userId);
+  }
+  return false;
+}
+
+/**
  * @param {{ created_by?: string, estado?: string } | null | undefined} adenda
  * @param {string | undefined} userId
  * @returns {boolean}
@@ -70,7 +100,7 @@ export function podeRetirarProposta(adenda, userId) {
 
 /**
  * @param {{ estado?: string, created_by?: string } | null | undefined} adenda
- * @param {{ isMotorista?: boolean, isPassageiro?: boolean, janelaAberta?: boolean }} ctx
+ * @param {{ isMotorista?: boolean, isPassageiro?: boolean, janelaAberta?: boolean, driverId?: string }} ctx
  * @returns {boolean}
  */
 export function isContraparteAdenda(adenda, ctx) {
@@ -78,14 +108,18 @@ export function isContraparteAdenda(adenda, ctx) {
   if (e === 'pendente_passageiro') return Boolean(ctx.isPassageiro);
   if (e === 'pendente_contraparte') return Boolean(ctx.isMotorista);
   if (e === 'rejeitada') {
-    return Boolean(ctx.isMotorista || ctx.isPassageiro);
+    if (!adenda?.created_by || !ctx.driverId) return false;
+    if (adenda.created_by === ctx.driverId) {
+      return Boolean(ctx.isPassageiro);
+    }
+    return Boolean(ctx.isMotorista);
   }
   return false;
 }
 
 /**
  * @param {{ estado?: string, created_by?: string } | null | undefined} adenda
- * @param {{ isMotorista?: boolean, isPassageiro?: boolean, janelaAberta?: boolean, userId?: string }} ctx
+ * @param {{ isMotorista?: boolean, isPassageiro?: boolean, janelaAberta?: boolean, userId?: string, driverId?: string }} ctx
  * @returns {boolean}
  */
 export function podeContraPropor(adenda, ctx) {
@@ -97,7 +131,7 @@ export function podeContraPropor(adenda, ctx) {
 
 /**
  * @param {{ estado?: string, created_by?: string } | null | undefined} adenda
- * @param {{ isMotorista?: boolean, isPassageiro?: boolean, janelaAberta?: boolean, userId?: string }} ctx
+ * @param {{ isMotorista?: boolean, isPassageiro?: boolean, janelaAberta?: boolean, userId?: string, driverId?: string }} ctx
  * @returns {boolean}
  */
 export function podeVoltarAAceitar(adenda, ctx) {

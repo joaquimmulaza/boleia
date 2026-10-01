@@ -14,7 +14,7 @@
 
 ## Implementação
 
-- **BD:** migração `20261001143000_pacote_eng35_preco_proximo_mes.sql` (janela, re-aceitar `rejeitada`, supersede alargado).
+- **BD:** migração `20261001140321_pacote_eng35_preco_proximo_mes.sql` (janela, re-aceitar `rejeitada`, supersede alargado); hotfix auth `20261001150000_pacote_eng35_adenda_auth_hotfix.sql`.
 - **Serviços:** `listAdendaHistorico`; `withPendingAdenda` inclui `rejeitada`.
 - **Utils:** `precoProximoMes.js`, `adendaNegociacao.js`.
 - **UI:** `AcordoPrecoProximoMesPanel` em `MyAgreements`; ecrãs `/acordos/:id/preco/*`, `/renovar`, `/nao-renovar`.
