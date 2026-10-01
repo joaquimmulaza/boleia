@@ -95,7 +95,16 @@ self.addEventListener('push', function (event) {
         vibrate: [100, 50, 100],
       };
 
-      event.waitUntil(self.registration.showNotification(title, options));
+      const unreadCount = data.data?.unreadCount;
+      const showPromise = self.registration.showNotification(title, options);
+      const badgePromise =
+        typeof unreadCount === 'number' && 'setAppBadge' in self
+          ? unreadCount > 0
+            ? self.setAppBadge(unreadCount)
+            : self.clearAppBadge?.() ?? self.setAppBadge(0)
+          : Promise.resolve();
+
+      event.waitUntil(Promise.all([showPromise, badgePromise]));
     } catch {
       // Falha ao processar JSON, tratar como texto simples se possível
       const text = event.data.text();

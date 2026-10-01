@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { setAppBadgeCount } from '../utils/appBadge';
 
 export function useNotifications(userId) {
   const [notifications, setNotifications] = useState([]);
@@ -14,15 +15,17 @@ export function useNotifications(userId) {
 
       if (error) throw error;
 
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
-      setUnreadCount(prev => {
-        const wasUnread = notifications.find(n => n.id === notificationId)?.lida === false;
-        return wasUnread ? Math.max(0, prev - 1) : prev;
+      setNotifications((prev) => {
+        const wasUnread = prev.find((n) => n.id === notificationId)?.lida === false;
+        if (wasUnread) {
+          setUnreadCount((count) => Math.max(0, count - 1));
+        }
+        return prev.filter((n) => n.id !== notificationId);
       });
     } catch (err) {
       console.error("Erro ao apagar notificação:", err);
     }
-  }, [notifications]);
+  }, []);
 
   const fetchNotifications = useCallback(async () => {
     if (!userId) return;
@@ -125,6 +128,24 @@ export function useNotifications(userId) {
     return () => {
       supabase.removeChannel(channel);
     };
+  }, [userId, fetchNotifications]);
+
+  useEffect(() => {
+    if (!userId) return;
+    void setAppBadgeCount(unreadCount);
+  }, [userId, unreadCount]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchNotifications();
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
   }, [userId, fetchNotifications]);
 
   return { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification };

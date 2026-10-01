@@ -7,6 +7,7 @@ import NotificationBell from '../components/NotificationBell';
 import OnboardingPermissions from '../components/OnboardingPermissions';
 import InstallAppPrompt from '../components/InstallAppPrompt';
 import { useAuth } from '../contexts/AuthContext';
+import { clearAppBadge } from '../utils/appBadge';
 
 /**
  * Layout global que envolve todas as páginas autenticadas.
@@ -18,6 +19,7 @@ const Layout = () => {
   const { tipoPerfil } = useAuth();
 
   const handleLogout = async () => {
+    await clearAppBadge();
     await supabase.auth.signOut();
     navigate('/auth');
   };
