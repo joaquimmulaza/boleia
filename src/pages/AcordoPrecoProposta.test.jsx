@@ -171,6 +171,33 @@ describe('AcordoPrecoProposta — ENG#35', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/acordos/acordo-1/preco/novo');
   });
 
+  it('proponente pode Retirar proposta pendente', async () => {
+    useAcordoPrecoContext.mockReturnValue({
+      ...baseCtx,
+      user: { id: 'driver-1' },
+      isMotorista: true,
+      isPassageiro: false,
+      negociacao: {
+        id: 'adenda-1',
+        estado: 'pendente_passageiro',
+        created_by: 'driver-1',
+        effective_from: '2026-11-01',
+        valor_mensal_por_passageiro_kz: 28000,
+      },
+    });
+    cancelAgreementAdenda.mockResolvedValue({ id: 'adenda-1', estado: 'cancelada_iniciador' });
+
+    renderPage();
+    expect(screen.getByTestId('preco-proposta-view-enviada')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('preco-retirar-cta'));
+    const modal = await screen.findByRole('dialog');
+    fireEvent.click(within(modal).getByRole('button', { name: /^Retirar$/i }));
+
+    await waitFor(() => {
+      expect(cancelAgreementAdenda).toHaveBeenCalledWith('adenda-1');
+    });
+  });
+
   it('proponente pode Retirar após recusa', async () => {
     useAcordoPrecoContext.mockReturnValue({
       ...baseCtx,

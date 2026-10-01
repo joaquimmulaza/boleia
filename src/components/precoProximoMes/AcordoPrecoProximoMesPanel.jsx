@@ -120,7 +120,7 @@ export default function AcordoPrecoProximoMesPanel({
             onClick={irNovo}
             data-testid="mudar-preco-proximo-mes-cta"
           >
-            Mudar o preço no próximo mês
+            {recusadaValida ? 'Nova proposta' : 'Mudar o preço no próximo mês'}
           </Button>
         ) : null}
 

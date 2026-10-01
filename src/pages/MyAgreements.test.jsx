@@ -840,6 +840,58 @@ describe('MyAgreements — ENG#35 preço próximo mês', () => {
     expect(within(dialog).queryByTestId('mudar-preco-proximo-mes-cta')).not.toBeInTheDocument();
   });
 
+  it('proponente com proposta rejeitada vê Ver proposta recusada e Nova proposta', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        adenda_pendente: {
+          id: 'adenda-1',
+          estado: 'rejeitada',
+          created_by: 'driver-1',
+          effective_from: '2026-11-01',
+          valor_mensal_por_passageiro_kz: 26500,
+          applied_at: null,
+        },
+      },
+    ]);
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const panel = within(dialog).getByTestId('preco-proximo-mes-panel');
+    expect(within(panel).getByTestId('preco-proposta-recusada-cta')).toBeInTheDocument();
+    expect(within(panel).getByTestId('mudar-preco-proximo-mes-cta')).toHaveTextContent(/Nova proposta/i);
+  });
+
+  it('contraparte com proposta rejeitada vê Ver proposta recusada sem Nova proposta', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([
+      {
+        ...acordoPassageiro,
+        adenda_pendente: {
+          id: 'adenda-1',
+          estado: 'rejeitada',
+          created_by: 'driver-1',
+          effective_from: '2026-11-01',
+          valor_mensal_por_passageiro_kz: 26500,
+          applied_at: null,
+        },
+      },
+    ]);
+    mockPagamentosGate(acordoPassageiro, 'pax-viewer');
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const panel = within(dialog).getByTestId('preco-proximo-mes-panel');
+    expect(within(panel).getByTestId('preco-proposta-recusada-cta')).toBeInTheDocument();
+    expect(within(panel).queryByTestId('mudar-preco-proximo-mes-cta')).not.toBeInTheDocument();
+  });
+
   it('com preço aceite agendado mostra Ver preço confirmado', async () => {
     getAgreementsForDriver.mockResolvedValue([
       {
