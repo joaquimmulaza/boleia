@@ -123,6 +123,8 @@ const DriverDashboard = () => {
   const [procurasComPropostaEnviada, setProcurasComPropostaEnviada] = useState(() => new Set());
   /** @type {[null | { procura: object, valor_mensal_ask_kz: string, modo_preco?: string }, Function]} */
   const [proporSheet, setProporSheet] = useState(null);
+  /** @type {[null | { propostaId: string, oferta_id: string, procura_id: string, grupo_id?: string | null, modo_preco: string, n_passageiros_propostos: number, valor_mensal_ask_kz: string, precoPublicadoKz?: number | null }, Function]} */
+  const [contraPropostaSheet, setContraPropostaSheet] = useState(null);
 
   const carregar = useCallback(async () => {
     if (!user?.id) {
@@ -451,6 +453,61 @@ const DriverDashboard = () => {
     try {
       await rejectProposta(propostaId);
       setFeedback({ type: 'success', text: 'Proposta recusada.' });
+      if (selectedOfertaId) {
+        await handleVerPropostas(selectedOfertaId, { preserveFeedback: true });
+      }
+      await carregar();
+    } catch (err) {
+      setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  /** @param {import('../components/PropostaReviewCard').PropostaReview} review */
+  const jaEnviouContraProposta = (review) =>
+    enviadas.some((r) => r.proposta.procura_id === review.proposta.procura_id);
+
+  /** @param {import('../components/PropostaReviewCard').PropostaReview} review */
+  const handleAbrirContraProposta = (review) => {
+    const { proposta } = review;
+    setContraPropostaSheet({
+      propostaId: proposta.id,
+      oferta_id: proposta.oferta_id || selectedOfertaId,
+      procura_id: proposta.procura_id,
+      grupo_id: proposta.grupo_id ?? null,
+      modo_preco: proposta.modo_preco,
+      n_passageiros_propostos: proposta.n_passageiros_propostos ?? 1,
+      valor_mensal_ask_kz: String(proposta.valor_mensal_ask_kz ?? ''),
+      precoPublicadoKz: ofertaSeleccionada?.valor_mensal_ask_kz ?? null,
+    });
+  };
+
+  const handleContraPropostaSubmit = async (e) => {
+    e.preventDefault();
+    if (!contraPropostaSheet) return;
+
+    const valorParsed = parseValorPropostaKz(contraPropostaSheet.valor_mensal_ask_kz);
+    const valorCheck = validarValorPropostaKz(valorParsed);
+    if (!valorCheck.ok) {
+      setFeedback({ type: 'error', text: valorCheck.erro });
+      return;
+    }
+
+    setBusyId(contraPropostaSheet.propostaId);
+    setFeedback({ type: '', text: '' });
+    try {
+      await createProposta({
+        oferta_id: contraPropostaSheet.oferta_id,
+        procura_id: contraPropostaSheet.procura_id,
+        grupo_id: contraPropostaSheet.grupo_id,
+        modo_preco: contraPropostaSheet.modo_preco,
+        valor_mensal_ask_kz: valorCheck.valor,
+        n_passageiros_propostos: contraPropostaSheet.n_passageiros_propostos,
+      });
+      setContraPropostaSheet(null);
+      setProcurasComPropostaEnviada((prev) => new Set(prev).add(contraPropostaSheet.procura_id));
+      setFeedback({ type: 'success', text: FEEDBACK_PROPOSTA_ENVIADA_PASSAGEIRO });
       if (selectedOfertaId) {
         await handleVerPropostas(selectedOfertaId, { preserveFeedback: true });
       }
@@ -959,8 +1016,14 @@ const DriverDashboard = () => {
                   key={review.proposta.id}
                   review={review}
                   busy={busyId === review.proposta.id || loadingPropostas}
+                  precoPublicadoKz={ofertaSeleccionada?.valor_mensal_ask_kz ?? null}
                   onAceitar={(memberIds) => handleAceitar(review.proposta.id, memberIds)}
                   onRecusar={() => handleRecusar(review.proposta.id)}
+                  onContraProposta={
+                    jaEnviouContraProposta(review)
+                      ? undefined
+                      : () => handleAbrirContraProposta(review)
+                  }
                 />
               ))
             )}
@@ -1052,6 +1115,55 @@ const DriverDashboard = () => {
                   type="submit"
                   className="flex-1 min-h-12 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl shadow-lg shadow-primary/25 disabled:opacity-60"
                   disabled={busyId === proporSheet.procura.id}
+                >
+                  Confirmar proposta
+                </button>
+              </div>
+            </form>
+          </div>
+        </OverlayShell>
+      ) : null}
+
+      {contraPropostaSheet ? (
+        <OverlayShell
+          variant="bottom"
+          overlayClassName="bg-slate-900/60 dark:bg-black/80"
+          panelClassName="bg-white dark:bg-slate-900 shadow-2xl px-5 pt-4 space-y-4"
+          testId="contra-proposta-sheet"
+          onDismiss={() => setContraPropostaSheet(null)}
+        >
+          <div className="space-y-4">
+            <div className="flex h-1.5 w-12 rounded-full bg-slate-200 dark:bg-slate-700 mx-auto" aria-hidden="true" />
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white text-balance">
+              Contra-proposta
+            </h2>
+            <p className="text-sm text-slate-500 text-pretty">
+              Propõe outro valor mensal em resposta — a proposta recebida mantém-se aberta.
+            </p>
+            <form onSubmit={handleContraPropostaSubmit} className="space-y-4">
+              <PropostaValorInput
+                modoPreco={contraPropostaSheet.modo_preco}
+                value={contraPropostaSheet.valor_mensal_ask_kz}
+                askKz={contraPropostaSheet.precoPublicadoKz}
+                disabled={busyId === contraPropostaSheet.propostaId}
+                onChange={(e) =>
+                  setContraPropostaSheet((prev) =>
+                    prev ? { ...prev, valor_mensal_ask_kz: e.target.value } : prev,
+                  )
+                }
+              />
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  className="flex-1 min-h-12 border border-slate-200 dark:border-slate-700 font-bold rounded-xl"
+                  onClick={() => setContraPropostaSheet(null)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 min-h-12 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl shadow-lg shadow-primary/25 disabled:opacity-60"
+                  disabled={busyId === contraPropostaSheet.propostaId}
                 >
                   Confirmar proposta
                 </button>

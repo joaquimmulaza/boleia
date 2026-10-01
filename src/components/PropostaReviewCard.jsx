@@ -81,6 +81,8 @@ function countMembrosComPickup(membros) {
  *   onAceitar?: (selectedMemberIds?: string[]) => void,
  *   onRecusar?: () => void,
  *   onCancelar?: () => void,
+ *   onContraProposta?: () => void,
+ *   precoPublicadoKz?: number | null,
  *   acimaDoTeto?: boolean,
  * }} props
  */
@@ -92,12 +94,16 @@ function PropostaReviewCard({
   onAceitar,
   onRecusar,
   onCancelar,
+  onContraProposta,
+  precoPublicadoKz = null,
   acimaDoTeto = false,
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState(/** @type {string[]} */ ([]));
   const isCriador = modo === 'criador';
   const isHistorico = modo === 'historico';
+  const isContraparte = !isCriador && !isHistorico;
+  const valorPropostoKz = Number(review.proposta.valor_mensal_ask_kz);
   const estadoChip = chipEstadoProposta(review.proposta.estado, {
     secao: isCriador ? 'enviadas' : secao,
   });
@@ -289,6 +295,16 @@ function PropostaReviewCard({
             exacto.
           </p>
         ) : null}
+        {isContraparte && Number.isFinite(valorPropostoKz) ? (
+          <p className="text-xs text-slate-500 text-pretty pt-1" data-testid="valor-proposto-label">
+            Valor proposto: {formatKwanza(valorPropostoKz)} Kz
+          </p>
+        ) : null}
+        {isContraparte && precoPublicadoKz != null && Number.isFinite(Number(precoPublicadoKz)) ? (
+          <p className="text-xs text-slate-500 text-pretty" data-testid="preco-publicado-label">
+            Preço publicado: {formatKwanza(Number(precoPublicadoKz))} Kz
+          </p>
+        ) : null}
       </div>
 
       {avisoComposicao ? (
@@ -316,6 +332,16 @@ function PropostaReviewCard({
           >
             Aceitar proposta
           </button>
+          {onContraProposta ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onContraProposta}
+              className="w-full min-h-12 border border-primary/30 bg-primary/5 text-primary font-semibold py-3 rounded-lg disabled:opacity-60"
+            >
+              Fazer contra-proposta
+            </button>
+          ) : null}
           <button
             type="button"
             disabled={busy || !onRecusar}
