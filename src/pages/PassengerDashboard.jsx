@@ -12,6 +12,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import GrupoProcuraPanel from '../components/GrupoProcuraPanel';
 import GrupoDescobertaPanel from '../components/GrupoDescobertaPanel';
 import OfertaMatchCard from '../components/OfertaMatchCard';
+import TextFade from '../components/TextFade';
 import PropostaReviewCard from '../components/PropostaReviewCard';
 import {
   createProcura,
@@ -1299,9 +1300,9 @@ const PassengerDashboard = () => {
               )}
             </div>
             <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white min-w-0">
-              <span className="truncate">{labelRotaProcura(procura).origem}</span>
+              <TextFade className="flex-1">{labelRotaProcura(procura).origem}</TextFade>
               <ArrowRight size={16} className="text-slate-400 shrink-0" aria-hidden="true" />
-              <span className="truncate">{labelRotaProcura(procura).destino}</span>
+              <TextFade className="flex-1">{labelRotaProcura(procura).destino}</TextFade>
             </div>
             <div className="flex gap-3 text-sm text-slate-500 flex-wrap">
               <span className="flex items-center gap-1 tabular-nums">

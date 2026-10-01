@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { MapPin, AlertCircle, ArrowRight, Clock, Users, ChevronRight } from 'lucide-react';
+import { MapPin, AlertCircle, ArrowRight, Clock, Users } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -28,7 +28,7 @@ import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 import EmptyState from '../components/EmptyState';
 import LoadingSkeleton from '../components/LoadingSkeleton';
-import PropostaReviewCard from '../components/PropostaReviewCard';
+import TextFade from '../components/TextFade';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { filterPropostasParaInbox, filterPropostasEnviadas, filterPropostasTerminadasRecebidas, filterPropostasTerminadasEnviadas } from '../utils/propostaInbox';
@@ -36,8 +36,12 @@ import { formatIdaRegresso, formatTime24h } from '../utils/formatTime';
 import { labelOfertaPicker } from '../utils/ofertaLabels';
 import { canEditOferta, canDespublicarOferta } from '../utils/canEditOferta';
 import ConfirmationModal from '../components/ConfirmationModal';
-import OfertaEditPanel from '../components/OfertaEditPanel';
 import OverlayShell from '../components/OverlayShell';
+import DriverOfertaCard from '../components/DriverOfertaCard';
+import ProposalSheet from '../components/ProposalSheet';
+import PropostaDetailSheet from '../components/PropostaDetailSheet';
+import OfertaDetailSheet from '../components/OfertaDetailSheet';
+import { OfertaRotaTitulo } from '../components/DriverOfertaCard';
 import PropostaValorInput from '../components/PropostaValorInput';
 import { parseValorPropostaKz, validarValorPropostaKz } from '../utils/propostaValor.js';
 import { FEEDBACK_PROPOSTA_ENVIADA_PASSAGEIRO } from '../utils/propostaFeedback';
@@ -66,25 +70,13 @@ function labelProcuraN(n) {
 }
 
 /**
- * Título da oferta na lista — flexível sem OD fictício.
+ * Título legível da oferta para resumos (sheet, detalhe).
  * @param {object} oferta
  */
-function OfertaRotaTitulo({ oferta }) {
-  const flexLabel = labelOfertaRota(oferta);
-  if (flexLabel) {
-    return (
-      <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold">
-        <span>{flexLabel}</span>
-      </div>
-    );
-  }
-  return (
-    <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold">
-      <span>{oferta.origin_name}</span>
-      <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
-      <span>{oferta.destination_name}</span>
-    </div>
-  );
+function tituloOfertaLabel(oferta) {
+  const flex = labelOfertaRota(oferta);
+  if (flex) return flex;
+  return `${oferta.origin_name || 'Origem'} → ${oferta.destination_name || 'Destino'}`;
 }
 
 /**
@@ -127,6 +119,10 @@ const DriverDashboard = () => {
   const [contraPropostaSheet, setContraPropostaSheet] = useState(null);
   /** @type {[Set<string>, Function]} ids de propostas recebidas com contra-proposta enviada nesta sessão */
   const [contraPropostaFeitaIds, setContraPropostaFeitaIds] = useState(() => new Set());
+  /** @type {[string | null, Function]} */
+  const [ofertaDetailId, setOfertaDetailId] = useState(null);
+  /** @type {[null | import('../components/PropostaReviewCard').PropostaReview, Function]} */
+  const [selectedReview, setSelectedReview] = useState(null);
 
   const carregar = useCallback(async () => {
     if (!user?.id) {
@@ -435,6 +431,7 @@ const DriverDashboard = () => {
       } else {
         await createAgreementFromProposal(propostaId);
       }
+      setSelectedReview(null);
       setFeedback({ type: 'success', text: 'Proposta aceite. Acordo criado.' });
       if (selectedOfertaId) {
         await handleVerPropostas(selectedOfertaId, { preserveFeedback: true });
@@ -451,6 +448,7 @@ const DriverDashboard = () => {
     setBusyId(propostaId);
     try {
       await rejectProposta(propostaId);
+      setSelectedReview(null);
       setFeedback({ type: 'success', text: 'Proposta recusada.' });
       if (selectedOfertaId) {
         await handleVerPropostas(selectedOfertaId, { preserveFeedback: true });
@@ -482,6 +480,7 @@ const DriverDashboard = () => {
   /** @param {import('../components/PropostaReviewCard').PropostaReview} review */
   const handleAbrirContraProposta = (review) => {
     const { proposta } = review;
+    setSelectedReview(null);
     setContraPropostaSheet({
       propostaId: proposta.id,
       oferta_id: proposta.oferta_id || selectedOfertaId,
@@ -540,9 +539,40 @@ const DriverDashboard = () => {
 
   const temAcordoActivo = (ofertaId) => ofertasComAcordoActivo.has(ofertaId);
 
+  const sheetReviews = useMemo(
+    () => [...reviews, ...enviadas, ...terminadasRecebidas, ...terminadasEnviadas],
+    [reviews, enviadas, terminadasRecebidas, terminadasEnviadas],
+  );
+
+  const ofertaDetalhe = ofertaDetailId
+    ? ofertas.find((o) => o.id === ofertaDetailId) || null
+    : null;
+
+  /** @param {import('../components/PropostaReviewCard').PropostaReview} review */
+  const resolveReviewDetailMeta = (review) => {
+    const id = review.proposta.id;
+    if (terminadasRecebidas.some((r) => r.proposta.id === id)) {
+      return { modo: /** @type {const} */ ('historico'), secao: /** @type {const} */ ('recebidas') };
+    }
+    if (terminadasEnviadas.some((r) => r.proposta.id === id)) {
+      return { modo: /** @type {const} */ ('historico'), secao: /** @type {const} */ ('enviadas') };
+    }
+    if (enviadas.some((r) => r.proposta.id === id)) {
+      return { modo: /** @type {const} */ ('criador'), secao: /** @type {const} */ ('enviadas') };
+    }
+    return { modo: /** @type {const} */ ('contraparte'), secao: /** @type {const} */ ('recebidas') };
+  };
+
+  const closePropostasFlow = () => {
+    setDetailPanel(null);
+    setSelectedReview(null);
+    setFeedback({ type: '', text: '' });
+  };
+
   const handleStartEditOferta = async (ofertaId) => {
     setEditingOfertaId(ofertaId);
-    setSelectedOfertaId(null);
+    setOfertaDetailId(null);
+    setSelectedReview(null);
     setDetailPanel(null);
     setEditPropostas([]);
     setEditProcurasById({});
@@ -590,6 +620,7 @@ const DriverDashboard = () => {
     setFeedback({ type: '', text: '' });
     try {
       await cancelProposta(propostaId);
+      setSelectedReview(null);
       setFeedback({ type: 'success', text: 'Proposta cancelada.' });
       if (selectedOfertaId) {
         await handleVerPropostas(selectedOfertaId, { preserveFeedback: true });
@@ -709,98 +740,36 @@ const DriverDashboard = () => {
           const chip = estadoChip(oferta.estado);
           const horario = formatIdaRegresso(oferta.departure_time, oferta.return_time);
           const tipoRota = labelTipoRota(oferta);
+          const podeDespublicar = canDespublicarOferta(oferta, {
+            temAcordoActivo: temAcordoActivo(oferta.id),
+          });
           return (
-            <section
+            <DriverOfertaCard
               key={oferta.id}
-              className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
-            >
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${chip.className}`}>
-                    {chip.label}
-                  </span>
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                    {tipoRota}
-                  </span>
-                </div>
-                <span className="text-xs text-slate-400">{labelModo(oferta.modo_preco)}</span>
-              </div>
-              <OfertaRotaTitulo oferta={oferta} />
-              <div className="flex items-center gap-3 text-sm text-slate-500">
-                <span className="flex items-center gap-1 tabular-nums">
-                  <Clock size={15} aria-hidden="true" /> {horario}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Users size={15} aria-hidden="true" />{' '}
-                  {oferta.vagas_disponiveis}{' '}
-                  {oferta.vagas_disponiveis === 1 ? 'lugar disponível' : 'lugares disponíveis'}
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-50 dark:border-slate-800">
-                <strong className="text-primary tabular-nums">
-                  {formatKwanza(oferta.valor_mensal_ask_kz)} Kz
-                </strong>
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => handleVerProcuras(oferta, { sóCompatíveis: true })}
-                    className="text-sm font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1"
-                  >
-                    Procuras compatíveis <ChevronRight size={16} aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleVerPropostas(oferta.id)}
-                    className="text-sm font-bold text-primary flex items-center gap-1"
-                  >
-                    Ver propostas <ChevronRight size={16} aria-hidden="true" />
-                  </button>
-                </div>
-              </div>
-              {canEditOferta(oferta) ? (
-                <div className="flex flex-col gap-2 pt-2 border-t border-slate-50 dark:border-slate-800">
-                  {editingOfertaId !== oferta.id ? (
-                    <div className="flex flex-col gap-2">
-                      <button
-                        type="button"
-                        disabled={ofertaBusy}
-                        onClick={() => handleStartEditOferta(oferta.id)}
-                        className="w-full min-h-11 border border-slate-200 dark:border-slate-700 font-bold py-2.5 rounded-xl text-sm"
-                      >
-                        Editar oferta
-                      </button>
-                      {canDespublicarOferta(oferta, { temAcordoActivo: temAcordoActivo(oferta.id) }) ? (
-                        <button
-                          type="button"
-                          disabled={ofertaBusy}
-                          onClick={() => setConfirmDespublicarId(oferta.id)}
-                          className="w-full min-h-11 text-red-600 dark:text-red-400 font-semibold py-2 text-sm"
-                        >
-                          Despublicar oferta
-                        </button>
-                      ) : temAcordoActivo(oferta.id) ? (
-                        <p className="text-xs text-slate-500 text-pretty">
-                          Com acordo activo, encerra o acordo em Acordos antes de despublicar.
-                        </p>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <OfertaEditPanel
-                      oferta={oferta}
-                      busy={ofertaBusy}
-                      propostas={editPropostas}
-                      procurasById={editProcurasById}
-                      onCancel={() => {
-                        setEditingOfertaId(null);
-                        setEditPropostas([]);
-                        setEditProcurasById({});
-                      }}
-                      onSaved={handleOfertaSaved}
-                    />
-                  )}
-                </div>
-              ) : null}
-            </section>
+              oferta={oferta}
+              chip={chip}
+              horario={horario}
+              tipoRota={tipoRota}
+              modoLabel={labelModo(oferta.modo_preco)}
+              canEdit={canEditOferta(oferta)}
+              canDespublicar={podeDespublicar}
+              editing={editingOfertaId === oferta.id}
+              ofertaBusy={ofertaBusy}
+              editPropostas={editPropostas}
+              editProcurasById={editProcurasById}
+              temAcordoActivoMsg={canEditOferta(oferta) && !podeDespublicar && temAcordoActivo(oferta.id)}
+              onOpenDetail={() => setOfertaDetailId(oferta.id)}
+              onVerProcuras={() => handleVerProcuras(oferta, { sóCompatíveis: true })}
+              onVerPropostas={() => handleVerPropostas(oferta.id)}
+              onEditar={() => handleStartEditOferta(oferta.id)}
+              onDespublicar={() => setConfirmDespublicarId(oferta.id)}
+              onCancelEdit={() => {
+                setEditingOfertaId(null);
+                setEditPropostas([]);
+                setEditProcurasById({});
+              }}
+              onSaved={handleOfertaSaved}
+            />
           );
         })}
       </div>
@@ -905,10 +874,10 @@ const DriverDashboard = () => {
                       className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
                       data-testid="driver-procura-match-card"
                     >
-                      <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
-                        <span>{procura.origin_name || 'Origem'}</span>
-                        <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
-                        <span>{procura.destination_name || 'Destino'}</span>
+                      <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white min-w-0">
+                        <TextFade className="flex-1">{procura.origin_name || 'Origem'}</TextFade>
+                        <ArrowRight size={16} className="text-slate-400 shrink-0" aria-hidden="true" />
+                        <TextFade className="flex-1">{procura.destination_name || 'Destino'}</TextFade>
                       </div>
                       <div className="flex gap-3 text-sm text-slate-500 flex-wrap">
                         <span className="flex items-center gap-1">
@@ -1009,90 +978,91 @@ const DriverDashboard = () => {
         </section>
       )}
 
-      {selectedOfertaId && detailPanel === 'propostas' && (
-        <div className="mt-8 space-y-6">
-          <div className="space-y-3">
-            <h2 className="text-lg font-bold text-balance">Rever propostas</h2>
-            {feedback.text && (
-              <div
-                role="alert"
-                className={`rounded-xl px-4 py-3 text-sm font-medium ${
-                  feedback.type === 'success'
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                    : 'bg-red-50 text-red-700 border border-red-200'
-                }`}
-              >
-                {feedback.text}
-              </div>
-            )}
-            {loadingPropostas ? (
-              <LoadingSkeleton />
-            ) : reviews.length === 0 ? (
-              <p className="text-sm text-slate-500">Não há propostas para rever nesta oferta.</p>
-            ) : (
-              reviews.map((review) => (
-                <PropostaReviewCard
-                  key={review.proposta.id}
-                  review={review}
-                  busy={busyId === review.proposta.id || loadingPropostas}
-                  precoPublicadoKz={ofertaSeleccionada?.valor_mensal_ask_kz ?? null}
-                  onAceitar={(memberIds) => handleAceitar(review.proposta.id, memberIds)}
-                  onRecusar={() => handleRecusar(review.proposta.id)}
-                  onContraProposta={
-                    jaEnviouContraProposta(review)
-                      ? undefined
-                      : () => handleAbrirContraProposta(review)
-                  }
-                />
-              ))
-            )}
-          </div>
-
-          {!loadingPropostas && enviadas.length > 0 ? (
-            <div className="space-y-3">
-              <h2 className="text-lg font-bold text-balance">Propostas enviadas</h2>
-              <p className="text-sm text-slate-500 text-pretty">
-                Propostas que enviaste aos passageiros. Podes cancelar enquanto estiverem abertas.
-              </p>
-              {enviadas.map((review) => (
-                <PropostaReviewCard
-                  key={review.proposta.id}
-                  review={review}
-                  modo="criador"
-                  secao="enviadas"
-                  busy={busyId === review.proposta.id || loadingPropostas}
-                  onCancelar={() => handleCancelarEnviada(review.proposta.id)}
-                />
-              ))}
-            </div>
-          ) : null}
-
-          {!loadingPropostas && (terminadasRecebidas.length > 0 || terminadasEnviadas.length > 0) ? (
-            <div className="space-y-3" data-testid="propostas-terminadas">
-              <h2 className="text-lg font-bold text-balance">Propostas concluídas</h2>
-              <p className="text-sm text-slate-500 text-pretty">
-                Aceites, recusadas ou canceladas — já não podes actuar sobre estas propostas.
-              </p>
-              {terminadasRecebidas.map((review) => (
-                <PropostaReviewCard
-                  key={`tr-${review.proposta.id}`}
-                  review={review}
-                  modo="historico"
-                  secao="recebidas"
-                />
-              ))}
-              {terminadasEnviadas.map((review) => (
-                <PropostaReviewCard
-                  key={`te-${review.proposta.id}`}
-                  review={review}
-                  modo="historico"
-                  secao="enviadas"
-                />
-              ))}
-            </div>
-          ) : null}
+      {feedback.text && detailPanel === 'propostas' && !selectedReview ? (
+        <div
+          role="alert"
+          className={`fixed bottom-24 left-4 right-4 z-modal mx-auto max-w-md rounded-xl px-4 py-3 text-sm font-medium shadow-lg ${
+            feedback.type === 'success'
+              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+              : 'bg-red-50 text-red-700 border border-red-200'
+          }`}
+        >
+          {feedback.text}
         </div>
-      )}
+      ) : null}
+
+      {selectedOfertaId && detailPanel === 'propostas' && ofertaSeleccionada && !selectedReview ? (
+        <ProposalSheet
+          tituloOferta={tituloOfertaLabel(ofertaSeleccionada)}
+          horario={formatIdaRegresso(ofertaSeleccionada.departure_time, ofertaSeleccionada.return_time)}
+          reviews={sheetReviews}
+          summaryCounts={{
+            recebidas: reviews.length,
+            enviadas: enviadas.length,
+            concluidas: terminadasRecebidas.length + terminadasEnviadas.length,
+          }}
+          loading={loadingPropostas}
+          onClose={closePropostasFlow}
+          onVerReview={setSelectedReview}
+        />
+      ) : null}
+
+      {selectedReview && ofertaSeleccionada ? (
+        (() => {
+          const meta = resolveReviewDetailMeta(selectedReview);
+          return (
+            <PropostaDetailSheet
+              review={selectedReview}
+              busy={busyId === selectedReview.proposta.id || loadingPropostas}
+              precoPublicadoKz={ofertaSeleccionada.valor_mensal_ask_kz ?? null}
+              modo={meta.modo}
+              secao={meta.secao}
+              onClose={() => setSelectedReview(null)}
+              onAceitar={
+                meta.modo === 'contraparte'
+                  ? (memberIds) => handleAceitar(selectedReview.proposta.id, memberIds)
+                  : undefined
+              }
+              onRecusar={
+                meta.modo === 'contraparte'
+                  ? () => handleRecusar(selectedReview.proposta.id)
+                  : undefined
+              }
+              onCancelar={
+                meta.modo === 'criador'
+                  ? () => handleCancelarEnviada(selectedReview.proposta.id)
+                  : undefined
+              }
+              onContraProposta={
+                meta.modo === 'contraparte' && !jaEnviouContraProposta(selectedReview)
+                  ? () => handleAbrirContraProposta(selectedReview)
+                  : undefined
+              }
+            />
+          );
+        })()
+      ) : null}
+
+      {ofertaDetalhe ? (
+        <OfertaDetailSheet
+          oferta={ofertaDetalhe}
+          tituloRota={<OfertaRotaTitulo oferta={ofertaDetalhe} />}
+          horario={formatIdaRegresso(ofertaDetalhe.departure_time, ofertaDetalhe.return_time)}
+          chipLabel={estadoChip(ofertaDetalhe.estado).label}
+          chipClassName={estadoChip(ofertaDetalhe.estado).className}
+          tipoRota={labelTipoRota(ofertaDetalhe)}
+          modoLabel={labelModo(ofertaDetalhe.modo_preco)}
+          onClose={() => setOfertaDetailId(null)}
+          onVerProcuras={() => {
+            setOfertaDetailId(null);
+            handleVerProcuras(ofertaDetalhe, { sóCompatíveis: true });
+          }}
+          onVerPropostas={() => {
+            setOfertaDetailId(null);
+            handleVerPropostas(ofertaDetalhe.id);
+          }}
+        />
+      ) : null}
 
       {proporSheet ? (
         <OverlayShell

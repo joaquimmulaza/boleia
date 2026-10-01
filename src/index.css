@@ -147,3 +147,11 @@ body {
 .time-input-24h::-webkit-datetime-edit-ampm-field {
   display: none;
 }
+
+/* TextFade — truncagem single-line com fade, sem ellipsis */
+.text-fade {
+  overflow: hidden;
+  white-space: nowrap;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 1.25rem), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 1.25rem), transparent);
+}

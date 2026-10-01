@@ -29,6 +29,21 @@ function LocationSearchProbe() {
   return <div data-testid="location-search">{search}</div>;
 }
 
+async function abrirPropostasSheet() {
+  fireEvent.click(screen.getByRole('button', { name: /Ver propostas/i }));
+  return screen.findByTestId('proposal-sheet');
+}
+
+async function abrirDetalheProposta(nomeRow) {
+  await abrirPropostasSheet();
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(`Ver proposta ${nomeRow}`, 'i') }));
+  return screen.findByTestId('proposta-detail-sheet');
+}
+
+function abrirKebabOferta() {
+  fireEvent.click(screen.getByRole('button', { name: /Mais acções/i }));
+}
+
 const ofertaFixa = {
   id: 'of-1',
   origin_name: 'Talatona',
@@ -261,7 +276,7 @@ describe('DriverDashboard — marketplace', () => {
     expect(screen.getByRole('button', { name: 'Publicar oferta', exact: true })).toBeInTheDocument();
   });
 
-  it('ao Ver propostas mostra título enriquecido e Aceitar', async () => {
+  it('ao Ver propostas abre sheet in-context; Ver › abre detalhe com Aceitar', async () => {
     listPropostasByOferta.mockResolvedValue([propostaAberta]);
     enrichPropostasForReview.mockImplementation(async (lista) => {
       if (!lista?.length) return [];
@@ -276,9 +291,12 @@ describe('DriverDashboard — marketplace', () => {
     );
 
     await screen.findByText('Talatona');
-    fireEvent.click(screen.getByRole('button', { name: /Ver propostas/i }));
+    await abrirPropostasSheet();
+    expect(screen.getByText('Propostas')).toBeInTheDocument();
+    expect(screen.queryByText(/Rever proposta/i)).not.toBeInTheDocument();
 
-    expect(await screen.findByText('Grupo · 3 pessoas')).toBeInTheDocument();
+    await abrirDetalheProposta('Ana S.');
+    expect(screen.getByText('Grupo · 3 pessoas')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Aceitar proposta/i })).toBeInTheDocument();
     expect(enrichPropostasForReview).toHaveBeenCalledWith([propostaAberta]);
   });
@@ -301,17 +319,15 @@ describe('DriverDashboard — marketplace', () => {
     );
 
     await screen.findByText('Talatona');
-    fireEvent.click(screen.getByRole('button', { name: /Ver propostas/i }));
+    await abrirPropostasSheet();
 
     await waitFor(() => {
       expect(enrichPropostasForReview).toHaveBeenCalled();
     });
-    expect(screen.queryByText(/Não há propostas para rever/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Não há propostas abertas nesta oferta/i)).not.toBeInTheDocument();
-    expect(screen.queryByText('Grupo · 3 pessoas')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Ainda não há propostas nesta oferta/i)).not.toBeInTheDocument();
 
     resolveEnrich([reviewFixture]);
-    expect(await screen.findByText('Grupo · 3 pessoas')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Ver proposta Ana S\./i })).toBeInTheDocument();
   });
 
   it('Aceitar confirma e chama createAgreementFromProposal', async () => {
@@ -330,7 +346,7 @@ describe('DriverDashboard — marketplace', () => {
     );
 
     await screen.findByText('Talatona');
-    fireEvent.click(screen.getByRole('button', { name: /Ver propostas/i }));
+    await abrirDetalheProposta('Ana S.');
     await screen.findByText('Grupo · 3 pessoas');
 
     fireEvent.click(screen.getByRole('button', { name: /Aceitar proposta/i }));
@@ -372,13 +388,11 @@ describe('DriverDashboard — marketplace', () => {
     );
 
     await screen.findByText('Talatona');
-    fireEvent.click(screen.getByRole('button', { name: /Ver propostas/i }));
+    await abrirDetalheProposta('Ana S.');
 
-    expect(await screen.findByText('Propostas enviadas')).toBeInTheDocument();
     expect(screen.getByText('Individual')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Cancelar proposta/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Aceitar proposta/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/Não há propostas para rever/i)).toBeInTheDocument();
   });
 
   it('Cancelar proposta enviada chama cancelProposta e actualiza a lista', async () => {
@@ -418,7 +432,7 @@ describe('DriverDashboard — marketplace', () => {
     );
 
     await screen.findByText('Talatona');
-    fireEvent.click(screen.getByRole('button', { name: /Ver propostas/i }));
+    await abrirDetalheProposta('Ana S.');
     await screen.findByRole('button', { name: /Cancelar proposta/i });
 
     fireEvent.click(screen.getByRole('button', { name: /Cancelar proposta/i }));
@@ -431,7 +445,7 @@ describe('DriverDashboard — marketplace', () => {
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: /Cancelar proposta/i })).not.toBeInTheDocument();
     });
-    expect(await screen.findByText('Propostas concluídas')).toBeInTheDocument();
+    await abrirDetalheProposta('Ana S.');
     expect(screen.getByText('Cancelada')).toBeInTheDocument();
     expect(listOfertasByDriver).toHaveBeenCalledTimes(2);
   });
@@ -459,9 +473,8 @@ describe('DriverDashboard — marketplace', () => {
     );
 
     await screen.findByText('Talatona');
-    fireEvent.click(screen.getByRole('button', { name: /Ver propostas/i }));
+    await abrirDetalheProposta('Ana S.');
 
-    expect(await screen.findByText('Propostas concluídas')).toBeInTheDocument();
     expect(screen.getByText('Rejeitada')).toBeInTheDocument();
   });
 
@@ -485,12 +498,40 @@ describe('DriverDashboard — marketplace', () => {
     );
 
     await screen.findByText('Talatona');
-    fireEvent.click(screen.getByRole('button', { name: /Ver propostas/i }));
+    await abrirDetalheProposta('Ana S.');
 
-    expect(await screen.findByText('Propostas enviadas')).toBeInTheDocument();
     expect(screen.getByText('Enviada')).toBeInTheDocument();
     expect(screen.queryByText('Inbox')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Cancelar proposta/i })).toBeInTheDocument();
+  });
+
+  it('sheet empty state Figma C2b', async () => {
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Talatona');
+    await abrirPropostasSheet();
+
+    expect(screen.getByText(/Ainda não há propostas nesta oferta/i)).toBeInTheDocument();
+    expect(screen.getByText(/0 propostas/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Rever proposta/i)).not.toBeInTheDocument();
+  });
+
+  it('card vivo: tap no card abre detalhe da oferta', async () => {
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Talatona');
+    fireEvent.click(screen.getByRole('button', { name: /Ver detalhe da oferta/i }));
+
+    expect(await screen.findByTestId('oferta-detail-sheet')).toBeInTheDocument();
+    expect(screen.getByText('Detalhe da oferta')).toBeInTheDocument();
   });
 
   it('mostra separadores «As minhas ofertas» e «Procuras e grupos»', async () => {
@@ -890,8 +931,9 @@ describe('DriverDashboard — marketplace', () => {
     );
 
     await screen.findByText('Talatona');
-    expect(screen.getByRole('button', { name: /Editar oferta/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Despublicar oferta/i })).toBeInTheDocument();
+    abrirKebabOferta();
+    expect(screen.getByRole('menuitem', { name: /Editar oferta/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /Despublicar oferta/i })).toBeInTheDocument();
   });
 
   it('não mostra Editar quando oferta inactiva', async () => {
@@ -906,7 +948,7 @@ describe('DriverDashboard — marketplace', () => {
     );
 
     await screen.findByText('Inactiva');
-    expect(screen.queryByRole('button', { name: /Editar oferta/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Mais acções/i })).not.toBeInTheDocument();
   });
 
   it('bloqueia despublicar com acordo activo na oferta', async () => {
@@ -921,8 +963,9 @@ describe('DriverDashboard — marketplace', () => {
     );
 
     await screen.findByText('Talatona');
-    expect(screen.getByRole('button', { name: /Editar oferta/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Despublicar oferta/i })).not.toBeInTheDocument();
+    abrirKebabOferta();
+    expect(screen.getByRole('menuitem', { name: /Editar oferta/i })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /Despublicar oferta/i })).not.toBeInTheDocument();
     expect(screen.getByText(/Com acordo activo/i)).toBeInTheDocument();
   });
 
@@ -938,7 +981,8 @@ describe('DriverDashboard — marketplace', () => {
     );
 
     await screen.findByText('Talatona');
-    fireEvent.click(screen.getByRole('button', { name: /Editar oferta/i }));
+    abrirKebabOferta();
+    fireEvent.click(screen.getByRole('menuitem', { name: /Editar oferta/i }));
     expect(await screen.findByTestId('oferta-edit-panel')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/Hora de ida/i), {
@@ -972,7 +1016,8 @@ describe('DriverDashboard — marketplace', () => {
     );
 
     await screen.findByText('Talatona');
-    fireEvent.click(screen.getByRole('button', { name: /Despublicar oferta/i }));
+    abrirKebabOferta();
+    fireEvent.click(screen.getByRole('menuitem', { name: /Despublicar oferta/i }));
     fireEvent.click(screen.getByRole('button', { name: /^Despublicar$/i }));
 
     await waitFor(() => {
@@ -1006,7 +1051,8 @@ describe('DriverDashboard — marketplace', () => {
     await waitFor(() => {
       expect(listPropostasByOferta).toHaveBeenCalledWith('of-1');
     });
-    expect(await screen.findByText('Grupo · 3 pessoas')).toBeInTheDocument();
+    expect(await screen.findByTestId('proposal-sheet')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Ver proposta Ana S\./i })).toBeInTheDocument();
 
     const search = screen.getByTestId('location-search').textContent || '';
     expect(search).toContain('focus=propostas');
