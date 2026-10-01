@@ -80,6 +80,16 @@ serve(async (req) => {
       vapidPrivateKey
     );
 
+    const { count: unreadCount, error: unreadCountError } = await supabaseAdmin
+      .from("notificacoes")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user_id)
+      .eq("lida", false);
+
+    if (unreadCountError) {
+      console.error("Error fetching unread notification count:", unreadCountError);
+    }
+
     const notificationPayload = JSON.stringify({
       title: "Nova Notificação",
       body: mensagem,
@@ -88,7 +98,8 @@ serve(async (req) => {
       data: {
         url: "/", // Fallback URL
         notificationId: record.id,
-        metadata: metadata || {}
+        metadata: metadata || {},
+        unreadCount: unreadCount ?? 1,
       }
     });
 

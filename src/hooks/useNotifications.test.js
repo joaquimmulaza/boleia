@@ -2,6 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { useNotifications } from './useNotifications';
 import { supabase } from '../lib/supabase';
+import { setAppBadgeCount } from '../utils/appBadge';
 
 vi.mock('../lib/supabase', () => ({
   supabase: {
@@ -9,6 +10,10 @@ vi.mock('../lib/supabase', () => ({
     channel: vi.fn(),
     removeChannel: vi.fn(),
   },
+}));
+
+vi.mock('../utils/appBadge', () => ({
+  setAppBadgeCount: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe('useNotifications', () => {
@@ -46,6 +51,7 @@ describe('useNotifications', () => {
     expect(supabase.from).toHaveBeenCalledWith('notificacoes');
     expect(result.current.notifications).toEqual(mockNotifications);
     expect(result.current.unreadCount).toBe(1);
+    expect(setAppBadgeCount).toHaveBeenCalledWith(1);
   });
 
   it('marks a notification as read', async () => {
@@ -72,5 +78,6 @@ describe('useNotifications', () => {
 
     expect(result.current.notifications[0].lida).toBe(true);
     expect(result.current.unreadCount).toBe(0);
+    expect(setAppBadgeCount).toHaveBeenCalledWith(0);
   });
 });
