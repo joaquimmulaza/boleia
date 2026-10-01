@@ -1,5 +1,6 @@
 import React, { useEffect, useId } from 'react';
 import ModalPortal from './ModalPortal';
+import { useSheetDrag } from '../hooks/useSheetDrag';
 import { getTopOverlay, popOverlay, pushOverlay } from '../utils/overlayStack';
 
 /**
@@ -27,6 +28,8 @@ function OverlayShell({
 }) {
   const isBottom = variant === 'bottom';
   const overlayId = useId();
+  const dragEnabled = isBottom && Boolean(onDismiss) && !dismissDisabled;
+  const { panelRef, backdropRef } = useSheetDrag({ enabled: dragEnabled, onDismiss });
 
   const handleOverlayClick = () => {
     if (dismissDisabled || !onDismiss) return;
@@ -62,6 +65,7 @@ function OverlayShell({
         } p-4 ${isBottom ? 'p-0 sm:p-4' : ''}`}
       >
         <div
+          ref={backdropRef}
           className={`fixed inset-0 ${overlayClassName}`}
           aria-hidden="true"
           onClick={handleOverlayClick}
@@ -69,8 +73,9 @@ function OverlayShell({
 
         {isBottom ? (
           <div
+            ref={panelRef}
             data-testid={panelTestId}
-            className={`relative w-full max-w-md mx-auto max-h-[90dvh] overflow-y-auto rounded-t-xl sm:rounded-2xl pb-safe ${panelClassName}`}
+            className={`relative w-full max-w-md mx-auto max-h-[90dvh] overflow-y-auto overscroll-y-contain touch-pan-y rounded-t-xl sm:rounded-2xl pb-safe ${panelClassName}`}
           >
             {children}
           </div>

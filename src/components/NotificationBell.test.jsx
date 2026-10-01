@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import NotificationBell from './NotificationBell';
@@ -74,15 +74,46 @@ describe('NotificationBell', () => {
     expect(screen.queryByLabelText(/Fechar notificações/i)).not.toBeInTheDocument();
   });
 
-  it('fecha ao arrastar o handle para baixo', () => {
+  it('fecha ao arrastar o handle para baixo', async () => {
+    const hadAnimate = Object.prototype.hasOwnProperty.call(HTMLElement.prototype, 'animate');
+    const previousAnimate = HTMLElement.prototype.animate;
+    HTMLElement.prototype.animate = function animate() {
+      const anim = {
+        onfinish: /** @type {null | (() => void)} */ (null),
+        oncancel: /** @type {null | (() => void)} */ (null),
+        playState: 'running',
+        cancel() {
+          this.playState = 'idle';
+          this.oncancel?.();
+        },
+      };
+      queueMicrotask(() => {
+        if (anim.playState === 'idle') return;
+        anim.playState = 'finished';
+        anim.onfinish?.();
+      });
+      return /** @type {Animation} */ (/** @type {unknown} */ (anim));
+    };
+
     renderBell();
     fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
 
     const handle = screen.getByTestId('sheet-drag-handle');
-    fireEvent.pointerDown(handle, { clientY: 100, pointerId: 1 });
-    fireEvent.pointerMove(handle, { clientY: 200, pointerId: 1 });
+    const panel = screen.getByTestId('notification-panel');
+    fireEvent.pointerDown(handle, { clientX: 40, clientY: 100, pointerId: 1, button: 0 });
+    fireEvent.pointerMove(handle, { clientX: 40, clientY: 280, pointerId: 1 });
+
+    expect(panel).toBeInTheDocument();
+    expect(panel.style.transform).toContain('180px');
+
+    fireEvent.pointerUp(handle, { clientX: 40, clientY: 280, pointerId: 1 });
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     expect(screen.queryByTestId('notification-panel')).not.toBeInTheDocument();
+    if (hadAnimate) HTMLElement.prototype.animate = previousAnimate;
+    else delete HTMLElement.prototype.animate;
   });
 
   it('mostra Marcar todas lidas quando há não lidas', () => {
