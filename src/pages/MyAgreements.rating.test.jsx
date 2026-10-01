@@ -29,6 +29,7 @@ vi.mock('../services/AgreementService', () => ({
   acceptAgreementAdenda: vi.fn(),
   rejectAgreementAdenda: vi.fn(),
   cancelAgreementAdenda: vi.fn(),
+  listAdendaHistorico: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('../services/offlineQueue', () => ({
@@ -150,9 +151,14 @@ describe('MyAgreements — rating banner ENG#32c', () => {
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: /Detalhe do acordo/i })).toBeInTheDocument();
     });
+    await waitFor(() => {
+      expect(screen.getByTestId('acordo-rating-banner')).toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByRole('button', { name: /Sair só eu/i }));
-    expect(mockNavigate).toHaveBeenCalledWith('/acordos/acordo-1/sair/avaliar');
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/acordos/acordo-1/sair/avaliar');
+    });
   });
 
   it('picker «Encerrar acordo» oferece «Sair só eu» acionável → M2', async () => {

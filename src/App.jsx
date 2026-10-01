@@ -16,6 +16,12 @@ import AvaliarPassageiro from './pages/AvaliarPassageiro';
 import AvaliarSucesso from './pages/AvaliarSucesso';
 import AvaliarExpirado from './pages/AvaliarExpirado';
 import AvaliarSaidaPrompt from './pages/AvaliarSaidaPrompt';
+import AcordoPrecoNovo from './pages/AcordoPrecoNovo';
+import AcordoPrecoProposta from './pages/AcordoPrecoProposta';
+import AcordoPrecoContraPropor from './pages/AcordoPrecoContraPropor';
+import AcordoPrecoHistorico from './pages/AcordoPrecoHistorico';
+import AcordoRenovar from './pages/AcordoRenovar';
+import AcordoNaoRenovar from './pages/AcordoNaoRenovar';
 import VehicleSetup from './pages/VehicleSetup';
 import Profile from './pages/Profile';
 import AdminPagamentos from './pages/AdminPagamentos';
@@ -76,6 +82,12 @@ function AppShell() {
           <Route path="/acordos/:acordoId/avaliar/sucesso" element={<AvaliarSucesso />} />
           <Route path="/acordos/:acordoId/avaliar/expirado" element={<AvaliarExpirado />} />
           <Route path="/acordos/:acordoId/sair/avaliar" element={<AvaliarSaidaPrompt />} />
+          <Route path="/acordos/:acordoId/preco/novo" element={<AcordoPrecoNovo />} />
+          <Route path="/acordos/:acordoId/preco/proposta" element={<AcordoPrecoProposta />} />
+          <Route path="/acordos/:acordoId/preco/contra-propor" element={<AcordoPrecoContraPropor />} />
+          <Route path="/acordos/:acordoId/preco/historico" element={<AcordoPrecoHistorico />} />
+          <Route path="/acordos/:acordoId/renovar" element={<AcordoRenovar />} />
+          <Route path="/acordos/:acordoId/nao-renovar" element={<AcordoNaoRenovar />} />
           <Route path="/faltas" element={<AbsenceTracker />} />
           <Route path="/faltas/:acordoId" element={<AbsenceTracker />} />
           <Route path="/perfil" element={<Profile />} />

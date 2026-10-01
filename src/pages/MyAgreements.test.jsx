@@ -26,12 +26,7 @@ vi.mock('../services/AgreementService', () => ({
   getAgreementsForPassenger: vi.fn(),
   leavePassenger: vi.fn(),
   terminateAgreement: vi.fn(),
-  renewAgreementPeriod: vi.fn(),
-  declineAgreementRenewal: vi.fn(),
-  renegotiateAgreementPricing: vi.fn(),
-  acceptAgreementAdenda: vi.fn(),
-  rejectAgreementAdenda: vi.fn(),
-  cancelAgreementAdenda: vi.fn(),
+  listAdendaHistorico: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('../services/offlineQueue', () => ({
@@ -62,12 +57,7 @@ import {
   getAgreementsForPassenger,
   leavePassenger,
   terminateAgreement,
-  renewAgreementPeriod,
-  declineAgreementRenewal,
-  renegotiateAgreementPricing,
-  acceptAgreementAdenda,
-  rejectAgreementAdenda,
-  cancelAgreementAdenda,
+  listAdendaHistorico,
 } from '../services/AgreementService';
 import { listPending } from '../services/offlineQueue';
 import {
@@ -482,7 +472,7 @@ describe('MyAgreements — marketplace 1:N', () => {
     expect(within(dialog).getByTestId('estados-lugar-glossario')).toHaveTextContent(/Em custódia/i);
     expect(within(dialog).getByTestId('acordo-pagamento-panel')).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: /Sair só eu/i })).toBeInTheDocument();
-    expect(within(dialog).queryByRole('button', { name: /Renegociar preço/i })).not.toBeInTheDocument();
+    expect(within(dialog).queryByTestId('mudar-preco-proximo-mes-cta')).not.toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: /Registar falta/i })).not.toBeInTheDocument();
     expectNoUserFacingJargon(dialog.textContent);
   });
@@ -765,28 +755,30 @@ describe('MyAgreements — marketplace 1:N', () => {
   });
 });
 
-describe('MyAgreements — T29 adenda / renegociar preço', () => {
+describe('MyAgreements — ENG#35 preço próximo mês', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
     getAgreementsForDriver.mockResolvedValue([acordoMotorista]);
     getAgreementsForPassenger.mockResolvedValue([]);
-    renegotiateAgreementPricing.mockResolvedValue({ id: 'acordo-1' });
+    listAdendaHistorico.mockResolvedValue([]);
     setupPagamentosDefault();
   });
 
-  it('motorista com acordo activo vê CTA Renegociar preço acima de Registar falta', async () => {
+  it('motorista com acordo activo vê panel Próximo mês e CTA Mudar o preço', async () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
-    const renegociar = within(dialog).getByRole('button', { name: /Renegociar preço/i });
+    const panel = within(dialog).getByTestId('preco-proximo-mes-panel');
+    expect(within(panel).getByText(/^Próximo mês$/i)).toBeInTheDocument();
+    expect(within(panel).getByTestId('mudar-preco-proximo-mes-cta')).toBeInTheDocument();
     const falta = within(dialog).getByRole('button', { name: /Registar falta/i });
-    expect(renegociar.compareDocumentPosition(falta) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(panel.compareDocumentPosition(falta) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('passageiro activo vê CTA Renegociar preço', async () => {
+  it('passageiro activo vê panel Próximo mês', async () => {
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
     mockPagamentosGate(acordoPassageiro, 'pax-viewer');
@@ -796,10 +788,11 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
-    expect(within(dialog).getByRole('button', { name: /Renegociar preço/i })).toBeInTheDocument();
+    expect(within(dialog).getByTestId('preco-proximo-mes-panel')).toBeInTheDocument();
+    expect(within(dialog).getByTestId('mudar-preco-proximo-mes-cta')).toBeInTheDocument();
   });
 
-  it('acordo não activo: motorista não vê Renegociar preço', async () => {
+  it('acordo não activo: não vê panel de preço', async () => {
     getAgreementsForDriver.mockResolvedValue([
       { ...acordoMotorista, id: 'acordo-cancelado', estado: 'cancelado' },
     ]);
@@ -809,144 +802,52 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
-    expect(within(dialog).queryByRole('button', { name: /Renegociar preço/i })).not.toBeInTheDocument();
+    expect(within(dialog).queryByTestId('preco-proximo-mes-panel')).not.toBeInTheDocument();
   });
 
-  it('abre formulário Novo preço e preview Por passageiro', async () => {
+  it('CTA Mudar o preço navega para ecrã novo', async () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Renegociar preço/i }));
 
-    const dialog = screen.getByRole('dialog', { name: /Detalhe do acordo/i });
-    expect(within(dialog).getByText(/^Novo preço$/i)).toBeInTheDocument();
-    expect(
-      within(dialog).getByText(/Actualiza o valor combinado do acordo/i),
-    ).toBeInTheDocument();
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    fireEvent.click(within(dialog).getByTestId('mudar-preco-proximo-mes-cta'));
 
-    const valorInput = within(dialog).getByLabelText(/Valor mensal/i);
-    fireEvent.change(valorInput, { target: { value: '45000' } });
-
-    expect(within(dialog).getByText(/Como fica/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/Cada um paga/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/45\.?\s?000 Kz/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/Como fica/i).closest('div')).toHaveTextContent(
-      /Total\s+90[\s.]?000\s*Kz/i,
-    );
-    expect(within(dialog).queryByText(/POR_PASSAGEIRO/i)).not.toBeInTheDocument();
-    expect(within(dialog).queryByText(/TOTAL_ACORDO/i)).not.toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith('/acordos/acordo-1/preco/novo');
   });
 
-  it('preview Total do acordo com resto', async () => {
-    renderPage();
-
-    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Renegociar preço/i }));
-
-    const dialog = screen.getByRole('dialog', { name: /Detalhe do acordo/i });
-    fireEvent.click(within(dialog).getByRole('button', { name: /^Total do acordo$/i }));
-
-    const valorInput = within(dialog).getByLabelText(/Valor mensal/i);
-    fireEvent.change(valorInput, { target: { value: '100001' } });
-
-    const nInput = within(dialog).getByLabelText(/Passageiros no preço/i);
-    fireEvent.change(nInput, { target: { value: '3' } });
-
-    expect(within(dialog).getByText(/Como fica/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/Como fica/i).closest('div')).toHaveTextContent(
-      /Total\s+100[\s.]?001\s*Kz/i,
-    );
-    expect(within(dialog).getByText(/O resto fica no último/i)).toBeInTheDocument();
-  });
-
-  it('Rever e confirmar chama renegotiateAgreementPricing com modo/valor correctos', async () => {
-    renderPage();
-
-    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Renegociar preço/i }));
-
-    const dialog = screen.getByRole('dialog', { name: /Detalhe do acordo/i });
-    fireEvent.click(within(dialog).getByRole('button', { name: /Total do acordo/i }));
-    fireEvent.change(within(dialog).getByLabelText(/Valor mensal/i), {
-      target: { value: '120000' },
-    });
-    fireEvent.change(within(dialog).getByLabelText(/Passageiros no preço/i), {
-      target: { value: '3' },
-    });
-
-    fireEvent.click(within(dialog).getByRole('button', { name: /Rever e confirmar/i }));
-
-    expect(screen.getByText(/Confirmar novo preço\?/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/à espera da aceitação do passageiro/i),
-    ).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
-
-    await waitFor(() => {
-      expect(renegotiateAgreementPricing).toHaveBeenCalledWith('acordo-1', {
-        modo_preco: 'TOTAL_ACORDO',
-        valor_ask_kz: 120000,
-        n_passageiros: 3,
-      });
-    });
-  });
-
-  it('sucesso mostra mensagem e fecha o formulário de adenda', async () => {
-    const apósAdenda = {
-      ...acordoMotorista,
-      adenda_pendente: {
-        id: 'adenda-new',
-        estado: 'pendente_passageiro',
-        effective_from: '2026-10-01',
-        modo_preco: 'POR_PASSAGEIRO',
-        valor_mensal_por_passageiro_kz: 45000,
-        valor_mensal_total_kz: 90000,
-        n_passageiros_contrato: 2,
-        applied_at: null,
+  it('com proposta pendente mostra Ver proposta e oculta Mudar o preço', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        adenda_pendente: {
+          id: 'adenda-1',
+          estado: 'pendente_passageiro',
+          effective_from: '2026-11-01',
+          valor_mensal_por_passageiro_kz: 45000,
+          valor_mensal_total_kz: 90000,
+          applied_at: null,
+        },
       },
-    };
-    renegotiateAgreementPricing.mockResolvedValue(apósAdenda);
-    getAgreementsForDriver
-      .mockResolvedValueOnce([acordoMotorista])
-      .mockResolvedValueOnce([apósAdenda]);
+    ]);
 
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Renegociar preço/i }));
 
-    const dialog = screen.getByRole('dialog', { name: /Detalhe do acordo/i });
-    fireEvent.change(within(dialog).getByLabelText(/Valor mensal/i), {
-      target: { value: '45000' },
-    });
-    fireEvent.click(within(dialog).getByRole('button', { name: /Rever e confirmar/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
-
-    expect(
-      await screen.findByText(/Proposta de novo preço enviada\. Fica à espera da aceitação do passageiro\./i),
-    ).toBeInTheDocument();
-
-    await waitFor(() => {
-      expect(screen.queryByText(/^Novo preço$/i)).not.toBeInTheDocument();
-    });
-
-    // Leave CTA / fluxo do passageiro permanece coberto pelos testes T28 existentes
-    expect(within(dialog).getByRole('button', { name: /Registar falta/i })).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: /Renegociar preço/i })).toBeInTheDocument();
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByTestId('preco-ver-proposta-cta')).toBeInTheDocument();
+    expect(within(dialog).queryByTestId('mudar-preco-proximo-mes-cta')).not.toBeInTheDocument();
   });
 
-  it('com adenda_pendente aceite mostra chip, comparação de preços e mantém preço corrente', async () => {
+  it('com preço aceite agendado mostra Ver preço confirmado', async () => {
     getAgreementsForDriver.mockResolvedValue([
       {
         ...acordoMotorista,
         adenda_pendente: {
           estado: 'aceite',
           effective_from: '2026-11-01',
-          modo_preco: 'POR_PASSAGEIRO',
           valor_mensal_por_passageiro_kz: 45000,
-          valor_mensal_total_kz: 90000,
-          n_passageiros_contrato: 2,
           applied_at: null,
         },
       },
@@ -957,264 +858,18 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
-    expect(within(dialog).getByTestId('acordo-contrato-snapshot')).toBeInTheDocument();
-    expect(within(dialog).getByText(/Contrato acordado/i)).toBeInTheDocument();
-    const pendente = within(dialog).getByTestId('adenda-pendente');
-    expect(within(pendente).getByTestId('adenda-chip')).toHaveTextContent(/Aceite vigora em/i);
-    expect(within(pendente).getByTestId('adenda-precos-comparacao')).toBeInTheDocument();
-    expect(within(pendente).getByText(/Preço actual/i)).toBeInTheDocument();
-    expect(within(pendente).getByText(/Preço futuro/i)).toBeInTheDocument();
+    expect(within(dialog).getByTestId('preco-ver-confirmado-cta')).toBeInTheDocument();
   });
 
-  it('erro de renegociação mostra role=alert junto ao form', async () => {
-    renegotiateAgreementPricing.mockRejectedValue(new Error('Sem permissão para renegociar.'));
-
-    renderPage();
-
-    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Renegociar preço/i }));
-
-    const dialog = screen.getByRole('dialog', { name: /Detalhe do acordo/i });
-    fireEvent.change(within(dialog).getByLabelText(/Valor mensal/i), {
-      target: { value: '45000' },
-    });
-    fireEvent.click(within(dialog).getByRole('button', { name: /Rever e confirmar/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
-
-    const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent(/Sem permissão para renegociar/i);
-    expect(within(dialog).getByText(/^Novo preço$/i)).toBeInTheDocument();
-  });
-
-  it('Cancelar fecha o formulário de adenda', async () => {
-    renderPage();
-
-    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Renegociar preço/i }));
-
-    const dialog = screen.getByRole('dialog', { name: /Detalhe do acordo/i });
-    expect(within(dialog).getByText(/^Novo preço$/i)).toBeInTheDocument();
-
-    fireEvent.click(within(dialog).getByRole('button', { name: /^Cancelar$/i }));
-    expect(within(dialog).queryByText(/^Novo preço$/i)).not.toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: /Renegociar preço/i })).toBeInTheDocument();
-  });
-
-  it('passageiro vê CTA Aceitar Alteração e Rejeitar Alteração quando pendente', async () => {
-    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
-    getAgreementsForPassenger.mockResolvedValue([
-      {
-        ...acordoPassageiro,
-        adenda_pendente: {
-          id: 'adenda-1',
-          estado: 'pendente_passageiro',
-          effective_from: '2026-10-01',
-          modo_preco: 'POR_PASSAGEIRO',
-          valor_mensal_por_passageiro_kz: 45000,
-          valor_mensal_total_kz: 90000,
-          applied_at: null,
-        },
-      },
-    ]);
-
-    renderPage();
-
-    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-
-    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
-    const pendente = within(dialog).getByTestId('adenda-pendente');
-    expect(within(pendente).getByTestId('adenda-chip')).toHaveTextContent(/À espera tua/i);
-    expect(within(dialog).getByRole('button', { name: /Aceitar Alteração/i })).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: /Rejeitar Alteração/i })).toBeInTheDocument();
-  });
-
-  it('iniciador vê Anular renegociação e chama cancelAgreementAdenda', async () => {
-    mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+  it('Ver proposta navega para ecrã de proposta', async () => {
     getAgreementsForDriver.mockResolvedValue([
       {
         ...acordoMotorista,
         adenda_pendente: {
           id: 'adenda-1',
           estado: 'pendente_passageiro',
-          created_by: 'driver-1',
-          effective_from: '2026-10-01',
-          modo_preco: 'POR_PASSAGEIRO',
+          effective_from: '2026-11-01',
           valor_mensal_por_passageiro_kz: 45000,
-          valor_mensal_total_kz: 135000,
-          applied_at: null,
-        },
-      },
-    ]);
-    cancelAgreementAdenda.mockResolvedValue({
-      id: 'adenda-1',
-      estado: 'cancelada_iniciador',
-    });
-    getAgreementsForDriver
-      .mockResolvedValueOnce([
-        {
-          ...acordoMotorista,
-          adenda_pendente: {
-            id: 'adenda-1',
-            estado: 'pendente_passageiro',
-            created_by: 'driver-1',
-            effective_from: '2026-10-01',
-            valor_mensal_por_passageiro_kz: 45000,
-            applied_at: null,
-          },
-        },
-      ])
-      .mockResolvedValueOnce([{ ...acordoMotorista, adenda_pendente: null }]);
-
-    renderPage();
-
-    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
-    expect(within(dialog).getByTestId('anular-renegociacao-cta')).toBeInTheDocument();
-    expect(within(dialog).queryByRole('button', { name: /Aceitar Alteração/i })).not.toBeInTheDocument();
-
-    fireEvent.click(within(dialog).getByTestId('anular-renegociacao-cta'));
-    fireEvent.click(screen.getByRole('button', { name: /^Anular$/i }));
-
-    await waitFor(() => {
-      expect(cancelAgreementAdenda).toHaveBeenCalledWith('adenda-1');
-    });
-    expect(await screen.findByText(/Renegociação anulada/i)).toBeInTheDocument();
-  });
-
-  it('passageiro aceita adenda e actualiza o detalhe', async () => {
-    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
-    getAgreementsForPassenger
-      .mockResolvedValueOnce([
-        {
-          ...acordoPassageiro,
-          adenda_pendente: {
-            id: 'adenda-1',
-            estado: 'pendente_passageiro',
-            effective_from: '2026-10-01',
-            valor_mensal_por_passageiro_kz: 45000,
-            valor_mensal_total_kz: 90000,
-            applied_at: null,
-          },
-        },
-      ])
-      .mockResolvedValueOnce([
-        {
-          ...acordoPassageiro,
-          adenda_pendente: {
-            id: 'adenda-1',
-            estado: 'aceite',
-            effective_from: '2026-10-01',
-            valor_mensal_por_passageiro_kz: 45000,
-            valor_mensal_total_kz: 90000,
-            applied_at: null,
-            aceite_em: '2026-09-05T16:00:00Z',
-          },
-        },
-      ]);
-    acceptAgreementAdenda.mockResolvedValue({
-      id: 'adenda-1',
-      estado: 'aceite',
-      applied_at: null,
-    });
-
-    renderPage();
-
-    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Aceitar Alteração/i }));
-
-    await waitFor(() => {
-      expect(acceptAgreementAdenda).toHaveBeenCalledWith('adenda-1');
-    });
-
-    expect(await screen.findByText(/Adenda aceite|Alteração aceite/i)).toBeInTheDocument();
-    const dialog = screen.getByRole('dialog', { name: /Detalhe do acordo/i });
-    expect(within(dialog).getByTestId('adenda-pendente')).toHaveTextContent(
-      /Aceite vigora em/i,
-    );
-    expect(within(dialog).queryByRole('button', { name: /Aceitar Alteração/i })).not.toBeInTheDocument();
-  });
-
-  it('passageiro rejeita adenda com feedback modeless e remove CTAs', async () => {
-    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
-    getAgreementsForPassenger
-      .mockResolvedValueOnce([
-        {
-          ...acordoPassageiro,
-          adenda_pendente: {
-            id: 'adenda-1',
-            estado: 'pendente_passageiro',
-            effective_from: '2026-10-01',
-            valor_mensal_por_passageiro_kz: 45000,
-            valor_mensal_total_kz: 90000,
-            applied_at: null,
-          },
-        },
-      ])
-      .mockResolvedValueOnce([
-        {
-          ...acordoPassageiro,
-          adenda_pendente: null,
-        },
-      ]);
-    rejectAgreementAdenda.mockResolvedValue({
-      id: 'adenda-1',
-      estado: 'rejeitada',
-    });
-
-    renderPage();
-
-    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Rejeitar Alteração/i }));
-
-    await waitFor(() => {
-      expect(rejectAgreementAdenda).toHaveBeenCalledWith('adenda-1');
-    });
-
-    expect(await screen.findByText(/Alteração rejeitada|adenda rejeitada/i)).toBeInTheDocument();
-    const dialog = screen.getByRole('dialog', { name: /Detalhe do acordo/i });
-    expect(within(dialog).queryByRole('button', { name: /Aceitar Alteração/i })).not.toBeInTheDocument();
-    expect(within(dialog).queryByRole('button', { name: /Rejeitar Alteração/i })).not.toBeInTheDocument();
-  });
-
-  it('passageiro propõe renegociação e mensagem menciona motorista', async () => {
-    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
-    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
-    renegotiateAgreementPricing.mockResolvedValue({ id: 'acordo-pax' });
-
-    renderPage();
-
-    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Renegociar preço/i }));
-
-    const dialog = screen.getByRole('dialog', { name: /Detalhe do acordo/i });
-    fireEvent.change(within(dialog).getByLabelText(/Valor mensal/i), {
-      target: { value: '42000' },
-    });
-    fireEvent.click(within(dialog).getByRole('button', { name: /Rever e confirmar/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
-
-    await waitFor(() => {
-      expect(renegotiateAgreementPricing).toHaveBeenCalledWith('acordo-pax', {
-        modo_preco: 'POR_PASSAGEIRO',
-        valor_ask_kz: 42000,
-        n_passageiros: 2,
-      });
-    });
-    expect(
-      await screen.findByText(/aceitação do motorista|contraparte/i),
-    ).toBeInTheDocument();
-  });
-
-  it('motorista vê CTAs aceitar/rejeitar quando adenda pendente_contraparte', async () => {
-    getAgreementsForDriver.mockResolvedValue([
-      {
-        ...acordoMotorista,
-        adenda_pendente: {
-          id: 'adenda-pax-prop',
-          estado: 'pendente_contraparte',
-          effective_from: '2026-10-01',
-          valor_mensal_por_passageiro_kz: 42000,
-          valor_mensal_total_kz: 84000,
           applied_at: null,
         },
       },
@@ -1225,76 +880,37 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
-    const pendente = within(dialog).getByTestId('adenda-pendente');
-    expect(within(pendente).getByTestId('adenda-chip')).toHaveTextContent(/À espera tua/i);
-    expect(pendente).toHaveTextContent(/Revisa a proposta/i);
-    expect(within(dialog).getByRole('button', { name: /Aceitar Alteração/i })).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: /Rejeitar Alteração/i })).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByTestId('preco-ver-proposta-cta'));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/acordos/acordo-1/preco/proposta');
   });
 
-  it('motorista aceita adenda pendente_contraparte', async () => {
-    getAgreementsForDriver
-      .mockResolvedValueOnce([
-        {
-          ...acordoMotorista,
-          adenda_pendente: {
-            id: 'adenda-pax-prop',
-            estado: 'pendente_contraparte',
-            effective_from: '2026-10-01',
-            valor_mensal_por_passageiro_kz: 42000,
-            valor_mensal_total_kz: 84000,
-            applied_at: null,
-          },
-        },
-      ])
-      .mockResolvedValueOnce([
-        {
-          ...acordoMotorista,
-          adenda_pendente: {
-            id: 'adenda-pax-prop',
-            estado: 'aceite',
-            effective_from: '2026-10-01',
-            valor_mensal_por_passageiro_kz: 42000,
-            applied_at: null,
-          },
-        },
-      ]);
-    acceptAgreementAdenda.mockResolvedValue({ id: 'adenda-pax-prop', estado: 'aceite' });
-
-    renderPage();
-
-    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Aceitar Alteração/i }));
-
-    await waitFor(() => {
-      expect(acceptAgreementAdenda).toHaveBeenCalledWith('adenda-pax-prop');
-    });
-  });
-
-  it('motorista com adenda pendente_passageiro vê chip À espera deles sem CTA Aceitar', async () => {
-    getAgreementsForDriver.mockResolvedValue([
-      {
-        ...acordoMotorista,
-        adenda_pendente: {
-          id: 'adenda-1',
-          estado: 'pendente_passageiro',
-          effective_from: '2026-10-01',
-          valor_mensal_por_passageiro_kz: 45000,
-          valor_mensal_total_kz: 90000,
-          applied_at: null,
-        },
-      },
+  it('histórico chama listAdendaHistorico ao abrir detalhe', async () => {
+    listAdendaHistorico.mockResolvedValue([
+      { id: 'h1', estado: 'rejeitada', valor_mensal_por_passageiro_kz: 42000 },
     ]);
 
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
+    await waitFor(() => {
+      expect(listAdendaHistorico).toHaveBeenCalledWith('acordo-1');
+    });
+
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
-    const pendente = within(dialog).getByTestId('adenda-pendente');
-    expect(within(pendente).getByTestId('adenda-chip')).toHaveTextContent(/À espera deles/i);
-    expect(within(dialog).queryByRole('button', { name: /Aceitar Alteração/i })).not.toBeInTheDocument();
-    expect(within(dialog).queryByRole('button', { name: /Rejeitar Alteração/i })).not.toBeInTheDocument();
+    expect(within(dialog).getByTestId('preco-historico-resumo')).toBeInTheDocument();
+  });
+
+  it('Ver tudo no histórico navega para página histórico', async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    fireEvent.click(within(dialog).getByTestId('preco-historico-ver-tudo'));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/acordos/acordo-1/preco/historico');
   });
 
   it('cancelamento_pendente mostra banner com data Luanda e vaga ocupada', async () => {
@@ -1332,12 +948,6 @@ describe('MyAgreements — PACOTE ENG #14 renovação período', () => {
     getAgreementsForPassenger.mockResolvedValue([]);
     listPending.mockResolvedValue([]);
     setupPagamentosDefault();
-    renewAgreementPeriod.mockResolvedValue({
-      pagamentos_criados: 2,
-      mes_referencia: '2026-10-01',
-      renovacao_proximo_mes: '2026-10-01',
-    });
-    declineAgreementRenewal.mockResolvedValue({ renovacao_estado: 'nao_renovar' });
   });
 
   it('mostra CTAs de renovação explícita para acordo activo', async () => {
@@ -1350,28 +960,24 @@ describe('MyAgreements — PACOTE ENG #14 renovação período', () => {
     expect(within(dialog).getByTestId('nao-renovar-periodo-cta')).toBeInTheDocument();
   });
 
-  it('renovar período chama renewAgreementPeriod', async () => {
+  it('renovar período navega para ecrã dedicado', async () => {
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
     fireEvent.click(within(dialog).getByTestId('renovar-periodo-cta'));
 
-    await waitFor(() => {
-      expect(renewAgreementPeriod).toHaveBeenCalledWith('acordo-1');
-    });
+    expect(mockNavigate).toHaveBeenCalledWith('/acordos/acordo-1/renovar');
   });
 
-  it('não renovar chama declineAgreementRenewal', async () => {
+  it('não renovar navega para ecrã dedicado', async () => {
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
     fireEvent.click(within(dialog).getByTestId('nao-renovar-periodo-cta'));
 
-    await waitFor(() => {
-      expect(declineAgreementRenewal).toHaveBeenCalledWith('acordo-1');
-    });
+    expect(mockNavigate).toHaveBeenCalledWith('/acordos/acordo-1/nao-renovar');
   });
 
   it('oculta CTAs quando período já renovado', async () => {
