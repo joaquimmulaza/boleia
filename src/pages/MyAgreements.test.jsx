@@ -200,6 +200,16 @@ function renderPage(initialEntries = ['/acordos']) {
   );
 }
 
+/** @param {HTMLElement} dialog */
+function openAcordoKebab(dialog) {
+  fireEvent.click(within(dialog).getByRole('button', { name: /Mais acções do acordo/i }));
+}
+
+/** @param {RegExp | string} name */
+async function clickAcordoKebabItem(name) {
+  fireEvent.click(await screen.findByRole('menuitem', { name }));
+}
+
 describe('MyAgreements — marketplace 1:N', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -318,25 +328,38 @@ describe('MyAgreements — marketplace 1:N', () => {
     expect(within(ownRow).getByText(/40\.?\s?000 Kz/i)).toBeInTheDocument();
 
     expect(within(dialog).getByRole('button', { name: /Sair só eu/i })).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: /Encerrar acordo/i })).toBeInTheDocument();
+    openAcordoKebab(dialog);
+    expect(screen.getByRole('menuitem', { name: /Encerrar acordo/i })).toBeInTheDocument();
+  });
+
+  it('detalhe mostra Fechar no topo', async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByTestId('acordo-detalhe-fechar')).toBeInTheDocument();
   });
 
   it('CTA Registar falta navega para /faltas/:id', async () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Registar falta/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    openAcordoKebab(dialog);
+    await clickAcordoKebabItem(/Registar falta/i);
 
     expect(mockNavigate).toHaveBeenCalledWith('/faltas/acordo-1');
   });
 
-  it('acordo activo: mostra CTA Registar falta', async () => {
+  it('acordo activo: mostra Registar falta no kebab', async () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
-    expect(within(dialog).getByRole('button', { name: /Registar falta/i })).toBeInTheDocument();
+    openAcordoKebab(dialog);
+    expect(screen.getByRole('menuitem', { name: /Registar falta/i })).toBeInTheDocument();
   });
 
   it('sem pagamento em custódia: mostra aviso em vez de CTA Registar falta', async () => {
@@ -347,7 +370,8 @@ describe('MyAgreements — marketplace 1:N', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
-    expect(within(dialog).queryByRole('button', { name: /Registar falta/i })).not.toBeInTheDocument();
+    openAcordoKebab(dialog);
+    expect(screen.queryByRole('menuitem', { name: /Registar falta/i })).not.toBeInTheDocument();
     expect(within(dialog).getByTestId('faltas-gate-pagamento')).toBeInTheDocument();
   });
 
@@ -361,7 +385,7 @@ describe('MyAgreements — marketplace 1:N', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
-    expect(within(dialog).queryByRole('button', { name: /Registar falta/i })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: /Mais acções do acordo/i })).not.toBeInTheDocument();
   });
 
   it('passageiro que saiu: não mostra CTA Registar falta no detalhe do acordo inactivo', async () => {
@@ -388,9 +412,8 @@ describe('MyAgreements — marketplace 1:N', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
-    expect(within(dialog).queryByRole('button', { name: /Registar falta/i })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: /Mais acções do acordo/i })).not.toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: /Sair só eu/i })).not.toBeInTheDocument();
-    expect(within(dialog).queryByRole('button', { name: /Encerrar acordo/i })).not.toBeInTheDocument();
   });
 
   it('passageiro activo: Encerrar acordo abre modalidades A/B/C', async () => {
@@ -400,7 +423,9 @@ describe('MyAgreements — marketplace 1:N', () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Encerrar acordo/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    openAcordoKebab(dialog);
+    await clickAcordoKebabItem(/Encerrar acordo/i);
 
     const picker = await screen.findByTestId('terminate-modality-picker');
     expect(within(picker).getByText(/^Acordo amigável$/i)).toBeInTheDocument();
@@ -473,7 +498,8 @@ describe('MyAgreements — marketplace 1:N', () => {
     expect(within(dialog).getByTestId('acordo-pagamento-panel')).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: /Sair só eu/i })).toBeInTheDocument();
     expect(within(dialog).queryByTestId('mudar-preco-proximo-mes-cta')).not.toBeInTheDocument();
-    expect(within(dialog).queryByRole('button', { name: /Registar falta/i })).not.toBeInTheDocument();
+    openAcordoKebab(dialog);
+    expect(screen.queryByRole('menuitem', { name: /Registar falta/i })).not.toBeInTheDocument();
     expectNoUserFacingJargon(dialog.textContent);
   });
 
@@ -609,11 +635,13 @@ describe('MyAgreements — marketplace 1:N', () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Encerrar acordo/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    openAcordoKebab(dialog);
+    await clickAcordoKebabItem(/Encerrar acordo/i);
 
     const picker = await screen.findByTestId('terminate-modality-picker');
     fireEvent.click(within(picker).getByRole('button', { name: /Aviso prévio/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Encerrar acordo$/i }));
 
     await waitFor(() => {
       expect(terminateAgreement).toHaveBeenCalledWith('acordo-pax', { modo: 'aviso_previo' });
@@ -635,7 +663,9 @@ describe('MyAgreements — marketplace 1:N', () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Encerrar acordo/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    openAcordoKebab(dialog);
+    await clickAcordoKebabItem(/Encerrar acordo/i);
 
     const picker = await screen.findByTestId('terminate-modality-picker');
     fireEvent.click(within(picker).getByRole('button', { name: /Acordo amigável/i }));
@@ -669,7 +699,9 @@ describe('MyAgreements — marketplace 1:N', () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Encerrar acordo/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    openAcordoKebab(dialog);
+    await clickAcordoKebabItem(/Encerrar acordo/i);
 
     const picker = await screen.findByTestId('terminate-modality-picker');
     fireEvent.click(within(picker).getByRole('button', { name: /Acordo amigável/i }));
@@ -714,18 +746,20 @@ describe('MyAgreements — marketplace 1:N', () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Encerrar acordo/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    openAcordoKebab(dialog);
+    await clickAcordoKebabItem(/Encerrar acordo/i);
 
     const picker = await screen.findByTestId('terminate-modality-picker');
     fireEvent.click(within(picker).getByRole('button', { name: /Aviso prévio/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Encerrar acordo$/i }));
 
     await waitFor(() => {
       expect(terminateAgreement).toHaveBeenCalled();
     });
 
-    const confirmBtn = screen.getByRole('button', { name: /^Confirmar$/i });
-    const cancelBtn = screen.getByRole('button', { name: /Voltar/i });
+    const confirmBtn = screen.getByRole('button', { name: /^Encerrar acordo$/i });
+    const cancelBtn = screen.getByRole('button', { name: /^Cancelar$/i });
     expect(confirmBtn).toBeDisabled();
     expect(cancelBtn).toBeDisabled();
 
@@ -741,7 +775,8 @@ describe('MyAgreements — marketplace 1:N', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
-    expect(within(dialog).getByRole('button', { name: /Encerrar acordo/i })).toBeInTheDocument();
+    openAcordoKebab(dialog);
+    expect(screen.getByRole('menuitem', { name: /Encerrar acordo/i })).toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: /Sair só eu/i })).not.toBeInTheDocument();
   });
 
@@ -774,8 +809,9 @@ describe('MyAgreements — ENG#35 preço próximo mês', () => {
     const panel = within(dialog).getByTestId('preco-proximo-mes-panel');
     expect(within(panel).getByText(/^Próximo mês$/i)).toBeInTheDocument();
     expect(within(panel).getByTestId('mudar-preco-proximo-mes-cta')).toBeInTheDocument();
-    const falta = within(dialog).getByRole('button', { name: /Registar falta/i });
-    expect(panel.compareDocumentPosition(falta) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    openAcordoKebab(dialog);
+    expect(screen.getByRole('menuitem', { name: /Registar falta/i })).toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: /^Encerrar acordo$/i })).not.toBeInTheDocument();
   });
 
   it('passageiro activo vê panel Próximo mês', async () => {
