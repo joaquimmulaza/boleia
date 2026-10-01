@@ -56,6 +56,14 @@ import {
   allowsAssiduidadeFaltasForAcordo,
   RESERVA_TTL_HORAS,
 } from '../utils/paymentStatus';
+import AcordoRatingBanner from '../components/rating/AcordoRatingBanner';
+import AcordoRatingMotBanner from '../components/rating/AcordoRatingMotBanner';
+import { listMinhasAvaliacoesAcordo } from '../services/RatingService';
+import {
+  buildPassageiroRatingPrompt,
+  buildMotoristaRatingPrompts,
+  buildSaidaRatingPrompt,
+} from '../utils/ratingGates';
 import {
   isActivoPassageiro,
   isReservadoPassageiro,
@@ -240,6 +248,7 @@ const MyAgreements = () => {
   const [contactosLoading, setContactosLoading] = useState(false);
   const [renewBusy, setRenewBusy] = useState(false);
   const [renewFeedback, setRenewFeedback] = useState(/** @type {{ type: 'success' | 'error', text: string } | null} */ (null));
+  const [avaliacoesAcordo, setAvaliacoesAcordo] = useState(/** @type {object[]} */ ([]));
 
   const carregarPagamentoContactos = useCallback(async (acordo) => {
     if (!acordo?.id || !user?.id) return;
@@ -260,6 +269,8 @@ const MyAgreements = () => {
       }
       const payload = await getAcordoContactos(acordo.id);
       setContactos(payload);
+      const avs = await listMinhasAvaliacoesAcordo(acordo.id);
+      setAvaliacoesAcordo(avs || []);
     } catch (err) {
       console.error('Erro ao carregar pagamento/contactos:', err);
     } finally {
@@ -275,6 +286,7 @@ const MyAgreements = () => {
       setPagamento(null);
       setPagamentosAcordo([]);
       setContactos(null);
+      setAvaliacoesAcordo([]);
     }
   }, [selected, carregarPagamentoContactos]);
 
@@ -349,6 +361,7 @@ const MyAgreements = () => {
       pagamento: 'acordo-pagamento-section',
       adenda: 'adenda-pendente',
       renovacao: 'renovacao-periodo-panel',
+      avaliar: 'acordo-rating-banner',
     };
     const testId = focusTestIds[focus];
     if (!testId) return;
@@ -415,6 +428,29 @@ const MyAgreements = () => {
     setAdendaN(String(nActivos));
     setAdendaError('');
     setAdendaFormOpen(true);
+  };
+
+  const handleLeaveClick = () => {
+    if (!selected || !user?.id) return;
+    const minhaLinha = (selected.acordos_passageiros || []).find((p) => p.passenger_id === user.id);
+    if (!minhaLinha) {
+      setLeaveModalOpen(true);
+      return;
+    }
+    const saidaPrompt = buildSaidaRatingPrompt({
+      acordoId: selected.id,
+      acordoPassageiroId: minhaLinha.id,
+      passageiroEstado: minhaLinha.estado || 'activo',
+      pagamentos: pagamentosAcordo,
+      avaliacoes: avaliacoesAcordo,
+      now: new Date(),
+      avaliadorId: user.id,
+    });
+    if (saidaPrompt?.estado === 'pendente') {
+      navigate(`/acordos/${selected.id}/sair/avaliar`);
+      return;
+    }
+    setLeaveModalOpen(true);
   };
 
   const handleLeaveSolo = async () => {
@@ -859,6 +895,33 @@ const MyAgreements = () => {
       String(selected.renovacao_estado || '').toLowerCase() === 'nao_renovar'
       || String(selected.rescisao_modo || '').toLowerCase() === 'nao_renovacao';
 
+    const motoristaNome =
+      contactos?.motorista?.nome_completo || 'Motorista';
+    const ratingPromptPax =
+      isPassageiro && minhaLinha && user?.id
+        ? buildPassageiroRatingPrompt({
+          acordoId: selected.id,
+          acordoPassageiroId: minhaLinha.id,
+          passageiroEstado: minhaLinha.estado || 'activo',
+          pagamentos: pagamentosAcordo,
+          avaliacoes: avaliacoesAcordo,
+          now: new Date(),
+          driverNome: motoristaNome,
+          avaliadorId: user.id,
+        })
+        : null;
+    const ratingPromptsMot =
+      isMotorista && user?.id
+        ? buildMotoristaRatingPrompts({
+          acordoId: selected.id,
+          passageiros: linhas,
+          pagamentos: pagamentosAcordo,
+          avaliacoes: avaliacoesAcordo,
+          now: new Date(),
+          driverId: user.id,
+        })
+        : [];
+
     const valorNum = Number.parseInt(String(adendaValor), 10);
     const nNum = Number.parseInt(String(adendaN), 10);
     let preview = null;
@@ -964,6 +1027,19 @@ const MyAgreements = () => {
               </div>
             ) : null}
           </div>
+
+          {ratingPromptPax ? (
+            <AcordoRatingBanner
+              prompt={ratingPromptPax}
+              onAvaliar={() => navigate(`/acordos/${selected.id}/avaliar`)}
+            />
+          ) : null}
+          {ratingPromptsMot.length > 0 ? (
+            <AcordoRatingMotBanner
+              prompts={ratingPromptsMot}
+              onAvaliar={() => navigate(`/acordos/${selected.id}/avaliar-passageiros`)}
+            />
+          ) : null}
 
           <section className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 p-4 space-y-4">
             {isOfertaFlexivel(oferta) ? (
@@ -1480,7 +1556,7 @@ const MyAgreements = () => {
                 variant="outline"
                 className="w-full h-11 rounded-xl font-bold text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
                 disabled={leavePending}
-                onClick={() => setLeaveModalOpen(true)}
+                onClick={handleLeaveClick}
               >
                 Sair só eu
               </Button>

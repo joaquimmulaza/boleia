@@ -10,6 +10,12 @@ import AbsenceTracker from './pages/AbsenceTracker';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublishRoute from './pages/PublishRoute';
 import MyAgreements from './pages/MyAgreements';
+import AvaliarMotorista from './pages/AvaliarMotorista';
+import AvaliarPassageirosLista from './pages/AvaliarPassageirosLista';
+import AvaliarPassageiro from './pages/AvaliarPassageiro';
+import AvaliarSucesso from './pages/AvaliarSucesso';
+import AvaliarExpirado from './pages/AvaliarExpirado';
+import AvaliarSaidaPrompt from './pages/AvaliarSaidaPrompt';
 import VehicleSetup from './pages/VehicleSetup';
 import Profile from './pages/Profile';
 import AdminPagamentos from './pages/AdminPagamentos';
@@ -64,6 +70,12 @@ function AppShell() {
         {/* Rotas partilhadas (qualquer utilizador autenticado) */}
         <Route element={<ProtectedRoute />}>
           <Route path="/acordos" element={<MyAgreements />} />
+          <Route path="/acordos/:acordoId/avaliar" element={<AvaliarMotorista />} />
+          <Route path="/acordos/:acordoId/avaliar-passageiros" element={<AvaliarPassageirosLista />} />
+          <Route path="/acordos/:acordoId/avaliar-passageiro/:passageiroId" element={<AvaliarPassageiro />} />
+          <Route path="/acordos/:acordoId/avaliar/sucesso" element={<AvaliarSucesso />} />
+          <Route path="/acordos/:acordoId/avaliar/expirado" element={<AvaliarExpirado />} />
+          <Route path="/acordos/:acordoId/sair/avaliar" element={<AvaliarSaidaPrompt />} />
           <Route path="/faltas" element={<AbsenceTracker />} />
           <Route path="/faltas/:acordoId" element={<AbsenceTracker />} />
           <Route path="/perfil" element={<Profile />} />
