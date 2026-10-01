@@ -5,6 +5,7 @@ import { getProfile, updateProfile, getVehicle, updateVehicle } from '../service
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import InstallAppCard from '../components/InstallAppCard';
 
 const Profile = () => {
   const [loading, setLoading] = useState(true);
@@ -151,6 +152,8 @@ const Profile = () => {
             {feedback.text}
           </div>
         )}
+
+        <InstallAppCard />
 
         <div className="space-y-4">
           <h3 className="text-sm font-bold text-slate-400 uppercase px-1">Dados Pessoais</h3>

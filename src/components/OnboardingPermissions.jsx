@@ -7,6 +7,8 @@ import { usePushNotifications } from '../hooks/usePushNotifications'
 import {
   isPermissionsEligible,
   PERMISSIONS_ELIGIBLE_EVENT,
+  notifyOnboardingPermissionsClosed,
+  shouldSkipOnboardingPermissions,
 } from '../utils/permissionsPrompt'
 
 // --- Stitch Design System: Boleia Certa ---
@@ -14,33 +16,6 @@ import {
 // Screen: "Permission Overlay" (34536da98a764be0a8909bfac3fcc776)
 // Primary: #16a34a | Surface: #ffffff | Font: Inter
 // M3 Bottom Sheet — handle bar, FilledButton (primary), TextButton (low-emphasis)
-
-/**
- * Checks whether the user still needs to see the onboarding permission prompt.
- * Returns true if the component should NOT be rendered.
- * - Notifications already granted OR denied (user decided)
- * - Geolocation already granted
- * - profile.onboarding_completed === true
- */
-const checkShouldSkip = async (profile) => {
-  if (profile?.onboarding_completed === true) return true
-
-  const notifPermission = typeof Notification !== 'undefined'
-    ? Notification.permission
-    : 'granted'
-
-  // 'default' means the browser hasn't asked yet → we should prompt
-  if (notifPermission === 'granted') return true
-
-  try {
-    const geoStatus = await navigator.permissions.query({ name: 'geolocation' })
-    if (geoStatus.state === 'granted') return true
-  } catch {
-    // navigator.permissions not available; fall through and show the prompt
-  }
-
-  return false
-}
 
 const persistOnboardingCompleted = async (userId) => {
   if (!userId) return
@@ -69,7 +44,7 @@ const OnboardingPermissions = () => {
         return
       }
 
-      const skip = await checkShouldSkip(profile)
+      const skip = await shouldSkipOnboardingPermissions(profile)
       if (!cancelled && !skip) {
         setVisible(true)
         requestAnimationFrame(() => {
@@ -98,7 +73,10 @@ const OnboardingPermissions = () => {
 
   const handleClose = () => {
     setAnimating(false)
-    setTimeout(() => setVisible(false), 300)
+    setTimeout(() => {
+      setVisible(false)
+      notifyOnboardingPermissionsClosed()
+    }, 300)
   }
 
   // ─── Cenário C: Ativar Recursos ──────────────────────────────────────────────
