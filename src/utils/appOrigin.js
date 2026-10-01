@@ -17,3 +17,10 @@ export const getAppOrigin = () => {
  */
 export const getPasswordRecoveryRedirectUrl = () =>
   `${getAppOrigin()}/auth?mode=update-password`;
+
+/**
+ * URL para onde o Supabase devolve o browser depois do OAuth.
+ * O callback do provider é o do GoTrue, não este endereço.
+ * @returns {string}
+ */
+export const getOAuthRedirectUrl = () => `${getAppOrigin()}/auth`;

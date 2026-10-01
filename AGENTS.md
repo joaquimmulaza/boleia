@@ -95,7 +95,7 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
 
 🏛️ Relatório de Estado da Arquitetura: Boleia Certa
 **Última Atualização:** 1 de Outubro de 2026 
-**Fase Atual:** Marketplace Oferta/Procura (Phase 6–7) + **Landing refresh** + **Agent loop Cursor** + **Graphify/Graphlore** + **Stitch + UI Skills** + **PWA Offline Wave 3–4** + **PACOTE ENG#8 cancelamento** + **Esqueceu a palavra-passe**. Spec ENG#8: `.specs/quick/pacote-eng-8-cancelamento/`. Spec recovery: `.specs/features/esqueceu-palavra-passe/`.
+**Fase Atual:** Marketplace Oferta/Procura (Phase 6–7) + **Landing refresh** + **Agent loop Cursor** + **Graphify/Graphlore** + **Stitch + UI Skills** + **PWA Offline Wave 3–4** + **PACOTE ENG#8 cancelamento** + **Esqueceu a palavra-passe** + **Login social OAuth**. Spec ENG#8: `.specs/quick/pacote-eng-8-cancelamento/`. Spec recovery: `.specs/features/esqueceu-palavra-passe/`.
 
 **O que já está implementado e validado:**
 1. **Infraestrutura e Backend (Supabase):**
@@ -160,6 +160,7 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
 * **Marketplace browse público (2026-10-01):** rota pública `/explorar` (ofertas + procuras, só leitura; CTA → `/auth`); RLS anon SELECT em `ofertas_capacidade`/`procuras` (estados activos); `listOfertasDisponiveis` / `listProcurasDisponiveis` sem gate de sessão; motorista vê procuras **sem oferta activa**; «Enviar proposta» cria oferta flexível mínima (`buildOfertaMinimaFromProcura`). Spec: `.specs/quick/marketplace-browse-publico/`.
 
  * **Esqueceu a palavra-passe (2026-10-01):** CTA em `/auth` → `mode=forgot` → `resetPasswordForEmail` (sucesso genérico anti-enumeração) → link `mode=update-password` → `updateUser`; `AuthContext.passwordRecoveryPending` + `sessionStorage` `bc_password_recovery`; guards em `RootRoute` / `ProtectedRoute` / `AdminRoute` bloqueiam hub/admin durante recovery. Spec: `.specs/features/esqueceu-palavra-passe/`. **Ops:** adicionar Redirect URLs no Dashboard Supabase (`…/auth?mode=update-password`).
+* **Login social (2026-10-01):** Google, Apple, Facebook e LinkedIn (`linkedin_oidc`) via `signInWithOAuth` PKCE no mesmo Supabase Auth. Segredos só no Dashboard / `SUPABASE_AUTH_EXTERNAL_*` (sem `VITE_`). Conta nova sem telefone ou papel: `perfis.perfil_completo = false` → `/auth?mode=completar-perfil`. Linking automático só com email verificado; «Associar» no perfil usa `linkIdentity` (Manual linking no Dashboard). Spec: `.specs/features/social-login-oauth/`. Guia: `docs/oauth-social-login.md`. **Ops:** credenciais nas consolas + redirect `…/auth/v1/callback` + allow list `/auth`. Sem E2E IdP enquanto não houver secrets.
 
 * **ENG#33 visibilidade proposta cruzada (2026-10-01):** deep links `proposal_received` com `?focus=propostas&propostaId&openOfertaId`; hubs passageiro/motorista consomem query no mount (scroll + painel propostas); filtros inbox case-insensitive (`isPropostaAberta`); feedback pós-envio «Avisámos o motorista/passageiro». Spec: `.specs/quick/eng33-visibilidade-proposta-cruzada/`.
 

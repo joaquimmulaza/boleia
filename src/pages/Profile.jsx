@@ -6,6 +6,7 @@ import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import InstallAppCard from '../components/InstallAppCard';
+import LoginMethodsSection from '../components/LoginMethodsSection';
 
 const Profile = () => {
   const [loading, setLoading] = useState(true);
@@ -37,6 +38,7 @@ const Profile = () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
+        const meta = user.user_metadata || {};
 
         setUserId(user.id);
         setEmail(user.email);
@@ -47,7 +49,7 @@ const Profile = () => {
             nome_completo: perfil.nome_completo || '',
             telefone: perfil.telefone || '',
             tipo_perfil: perfil.tipo_perfil || 'Passageiro',
-            avatar_url: perfil.avatar_url || '',
+            avatar_url: perfil.avatar_url || meta.avatar_url || meta.picture || '',
             iban: perfil.iban || '',
             iban_titular: perfil.iban_titular || '',
           });
@@ -154,6 +156,8 @@ const Profile = () => {
         )}
 
         <InstallAppCard />
+
+        <LoginMethodsSection />
 
         <div className="space-y-4">
           <h3 className="text-sm font-bold text-slate-400 uppercase px-1">Dados Pessoais</h3>

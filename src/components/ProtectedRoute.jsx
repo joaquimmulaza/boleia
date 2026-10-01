@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { needsProfileSetup } from '../utils/oauth';
 
 /**
  * ProtectedRoute – Auth Guard com suporte a RBAC.
@@ -10,12 +11,12 @@ import { useAuth } from '../contexts/AuthContext';
  *     Se omitido, qualquer utilizador autenticado pode aceder.
  */
 const ProtectedRoute = ({ allowedRole }) => {
-  const { session, loading, tipoPerfil, passwordRecoveryPending } = useAuth();
+  const { session, loading, profileLoading, profile, tipoPerfil, passwordRecoveryPending } = useAuth();
 
-  if (loading) {
+  if (loading || (session && profileLoading)) {
     return (
       <div className="flex h-dvh items-center justify-center text-gray-500">
-        A verificar sessão...
+        {loading ? 'A verificar sessão...' : 'A carregar perfil...'}
       </div>
     );
   }
@@ -28,6 +29,10 @@ const ProtectedRoute = ({ allowedRole }) => {
   // 1b. Sessão de recovery → obrigar a definir nova palavra-passe
   if (passwordRecoveryPending) {
     return <Navigate to="/auth?mode=update-password" replace />;
+  }
+
+  if (needsProfileSetup(profile)) {
+    return <Navigate to="/auth?mode=completar-perfil" replace />;
   }
 
   // 2. Com sessão mas role inválido → redireciona para o dashboard correto

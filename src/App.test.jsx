@@ -104,6 +104,26 @@ describe('AppShell — scroll por tipo de rota', () => {
     expect(screen.getByTestId('offline-banner')).toBeInTheDocument();
   });
 
+  it('sessão com perfil incompleto em / vai para Auth', () => {
+    useAuth.mockReturnValue({
+      session: { user: { id: 'u1' } },
+      loading: false,
+      profileLoading: false,
+      profile: { perfil_completo: false },
+      tipoPerfil: null,
+      passwordRecoveryPending: false,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <AppShell />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('auth-page')).toBeInTheDocument();
+    expect(screen.queryByTestId('landing-page')).not.toBeInTheDocument();
+  });
+
   it('sessão com passwordRecoveryPending em / redireciona para Auth', () => {
     useAuth.mockReturnValue({
       session: { user: { id: 'u1' } },

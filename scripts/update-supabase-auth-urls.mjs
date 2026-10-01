@@ -8,6 +8,9 @@ const SITE_URL = 'https://boleia-cyan.vercel.app';
 const REQUIRED_REDIRECTS = [
   'https://boleia-cyan.vercel.app/auth?mode=update-password',
   'http://localhost:5173/auth?mode=update-password',
+  'https://boleia-cyan.vercel.app/auth',
+  'http://localhost:5173/auth',
+  'http://127.0.0.1:5173/auth',
 ];
 
 const token = process.env.SUPABASE_ACCESS_TOKEN;

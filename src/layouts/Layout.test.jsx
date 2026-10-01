@@ -1,8 +1,9 @@
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import Layout from './Layout';
 import { ThemeProvider } from '../contexts/ThemeContext';
+import { supabase } from '../lib/supabase';
 
 // Mock do supabase
 vi.mock('../lib/supabase', () => ({
@@ -119,6 +120,21 @@ describe('Layout Component', () => {
     const logo = screen.getByAltText(/Boleia Certa/i);
     expect(logo).toBeInTheDocument();
     expect(logo).toHaveAttribute('src', '/boleia-logo.png');
+  });
+
+  it('terminar sessão chama signOut', async () => {
+    useAuth.mockReturnValue({ tipoPerfil: 'Passageiro' });
+    supabase.auth.signOut.mockResolvedValue({ error: null });
+
+    await act(async () => {
+      renderWithRouterAndTheme(<Layout />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /terminar sessão/i }));
+    });
+
+    expect(supabase.auth.signOut).toHaveBeenCalledTimes(1);
   });
 
   it('main faz scroll interno e header não usa sticky sobre o conteúdo', async () => {

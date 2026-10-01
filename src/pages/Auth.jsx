@@ -1,6 +1,8 @@
 import React from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuthForm } from '../hooks/useAuthForm';
+import { useSocialAuth } from '../hooks/useSocialAuth';
+import SocialAuthButtons from '../components/SocialAuthButtons';
 
 /**
  * @typedef {Readonly<{}>} AuthProps
@@ -12,7 +14,9 @@ const Auth = () => {
     isLogin,
     isForgot,
     isUpdatePassword,
+    isCompleteProfile,
     isRegister,
+    userEmail,
     profileType,
     showPassword,
     email,
@@ -35,7 +39,11 @@ const Auth = () => {
     handleToggleMode,
     handleForgotClick,
     handleBackToLogin,
+    handleLeaveComplete,
   } = useAuthForm();
+
+  const showSocial = !isForgot && !isUpdatePassword && !isCompleteProfile;
+  const { pendingProvider, callbackMessage, start } = useSocialAuth({ enabled: showSocial || isCompleteProfile });
 
   const submitLabel = isLoading
     ? 'A processar...'
@@ -43,9 +51,11 @@ const Auth = () => {
       ? 'Enviar instruções'
       : isUpdatePassword
         ? 'Guardar nova palavra-passe'
-        : isLogin
-          ? 'Entrar'
-          : 'Registar';
+        : isCompleteProfile
+          ? 'Continuar'
+          : isLogin
+            ? 'Entrar'
+            : 'Registar';
 
   return (
     <div className="font-[Plus Jakarta Sans,sans-serif] min-h-dvh bg-background-light dark:bg-background-dark text-gray-800 dark:text-gray-100 antialiased flex flex-col items-center justify-center p-0 sm:p-4">
@@ -61,12 +71,35 @@ const Auth = () => {
               ? 'Recuperar palavra-passe'
               : isUpdatePassword
                 ? 'Nova palavra-passe'
-                : 'Mobilidade urbana limpa e partilhada.'}
+                : isCompleteProfile
+                  ? 'Falta pouco para usar a Boleia Certa.'
+                  : 'Mobilidade urbana limpa e partilhada.'}
           </p>
         </div>
 
-        {/* Profile Toggle — apenas em modo Criar Conta */}
-        {isRegister && (
+        {showSocial && (
+          <div className="px-8 mb-2 flex flex-col gap-4">
+            {callbackMessage && (
+              <div role="alert" className="rounded-xl px-4 py-3 text-sm font-medium text-center bg-red-50 text-red-600 border border-red-200">
+                {callbackMessage}
+              </div>
+            )}
+            <SocialAuthButtons
+              pendingProvider={pendingProvider}
+              onProvider={(providerId) => start(providerId, {
+                tipoPerfil: isRegister ? profileType : undefined,
+              })}
+            />
+            <div className="flex items-center gap-3">
+              <span className="h-px flex-1 bg-gray-200 dark:bg-slate-700" />
+              <span className="text-xs font-medium text-gray-400">ou</span>
+              <span className="h-px flex-1 bg-gray-200 dark:bg-slate-700" />
+            </div>
+          </div>
+        )}
+
+        {/* Profile Toggle — Criar Conta e completar perfil OAuth */}
+        {(isRegister || isCompleteProfile) && (
           <div className="px-8 mb-6">
             <div className="flex relative h-14 w-full items-center justify-center rounded-full bg-gray-50 dark:bg-slate-800 p-1.5 border border-gray-200 dark:border-slate-700 shadow-inner">
               <label className={`flex h-full grow cursor-pointer items-center justify-center rounded-full px-4 transition-all duration-300 ${profileType === 'Passageiro' ? 'bg-primary text-white shadow-md' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'}`}>
@@ -100,8 +133,14 @@ const Auth = () => {
         {/* Form elements */}
         <form aria-label="auth-form" onSubmit={handleSubmit} className="flex flex-col gap-6 px-8 flex-grow">
 
-          {/* Campos Nome e Telefone — apenas em modo Criar Conta */}
-          {isRegister && (
+          {isCompleteProfile && !userEmail && (
+            <p className="text-sm text-gray-500 dark:text-slate-400">
+              O fornecedor não partilhou um email. Podes continuar e adicionar um email mais tarde no perfil.
+            </p>
+          )}
+
+          {/* Campos Nome e Telefone — Criar Conta e completar perfil */}
+          {(isRegister || isCompleteProfile) && (
             <>
               <div className="flex flex-col gap-2">
                 <label htmlFor="nome" className="text-gray-500 text-sm font-medium ml-1">Nome Completo</label>
@@ -133,7 +172,7 @@ const Auth = () => {
           )}
 
           {/* Email — login, registo e forgot */}
-          {!isUpdatePassword && (
+          {!isUpdatePassword && !isCompleteProfile && (
             <div className="flex flex-col gap-2">
               <label htmlFor="email" className="text-gray-500 text-sm font-medium ml-1">Email</label>
               <input 
@@ -150,7 +189,7 @@ const Auth = () => {
           )}
 
           {/* Password — login, registo e update */}
-          {!isForgot && (
+          {!isForgot && !isCompleteProfile && (
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-center ml-1">
                 <label htmlFor="password" className="text-gray-500 text-sm font-medium">
@@ -244,13 +283,13 @@ const Auth = () => {
         {/* Footer Toggle Section */}
         <div className="mt-auto px-8 py-10 pb-12">
           <div className="flex flex-col items-center gap-4">
-            {(isForgot || isUpdatePassword) ? (
+            {(isForgot || isUpdatePassword || isCompleteProfile) ? (
               <button
                 type="button"
-                onClick={handleBackToLogin}
+                onClick={isCompleteProfile ? handleLeaveComplete : handleBackToLogin}
                 className="text-gray-500 dark:text-slate-400 font-medium text-sm hover:text-primary transition-colors"
               >
-                Voltar ao início de sessão
+                {isCompleteProfile ? 'Sair e usar outro método' : 'Voltar ao início de sessão'}
               </button>
             ) : (
               <button 
