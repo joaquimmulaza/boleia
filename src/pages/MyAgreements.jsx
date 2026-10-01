@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowRight, Clock, Users, ChevronRight, ShieldCheck, Pencil, Loader2 } from 'lucide-react';
+import { ArrowRight, Clock, Users, ChevronRight, Pencil, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getAgreementsForDriver,
@@ -28,6 +28,8 @@ import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { resolveAgreementPricing } from '../utils/resolveAgreementPricing';
 import { labelRotaOferta } from '../utils/ofertaLabels';
+import { buildAcordoContratoSnapshot } from '../utils/buildAcordoContratoSnapshot';
+import AcordoContratoSnapshot from '../components/AcordoContratoSnapshot';
 import { isOfertaFlexivel } from '../services/OfertaService';
 import AcordoPagamentoPanel from '../components/AcordoPagamentoPanel';
 import AcordoContactosPanel from '../components/AcordoContactosPanel';
@@ -992,39 +994,11 @@ const MyAgreements = () => {
               </div>
             ) : null}
 
-            <div className="flex items-start gap-3 rounded-xl border border-emerald-200/80 bg-white dark:bg-slate-900 dark:border-emerald-900/40 p-3">
-              <ShieldCheck
-                size={20}
-                className="text-primary shrink-0 mt-0.5"
-                aria-hidden="true"
-              />
-              <div className="min-w-0 flex-1 space-y-0.5">
-                <p className="text-sm font-bold text-slate-900 dark:text-white">
-                  Preço combinado
-                </p>
-                <p className="text-xs text-slate-500 text-pretty">
-                  O valor fica congelado durante este acordo.
-                </p>
-                {selected.valor_mensal_total_kz != null && (
-                  <p className="text-xs text-slate-400 pt-1">
-                    Total do acordo{' '}
-                    <span className="tabular-nums font-medium text-slate-600 dark:text-slate-300">
-                      {formatKwanza(selected.valor_mensal_total_kz)} Kz
-                    </span>
-                  </p>
-                )}
-              </div>
-              <strong
-                className={`tabular-nums shrink-0 ${
-                  isPassageiro
-                    ? 'text-lg font-bold text-primary'
-                    : 'text-base text-slate-900 dark:text-white'
-                }`}
-                data-testid="quota-destaque"
-              >
-                {formatKwanza(quotaDestaque)} Kz
-              </strong>
-            </div>
+            <AcordoContratoSnapshot
+              snapshot={buildAcordoContratoSnapshot(selected)}
+              highlightKz={isPassageiro ? quotaDestaque : null}
+              className="border-0 bg-transparent dark:bg-transparent p-0"
+            />
 
             {selected.adenda_pendente && (
               <div

@@ -163,4 +163,6 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
 
 * **ENG#33 visibilidade proposta cruzada (2026-10-01):** deep links `proposal_received` com `?focus=propostas&propostaId&openOfertaId`; hubs passageiro/motorista consomem query no mount (scroll + painel propostas); filtros inbox case-insensitive (`isPropostaAberta`); feedback pós-envio «Avisámos o motorista/passageiro». Spec: `.specs/quick/eng33-visibilidade-proposta-cruzada/`.
 
+* **ENG#31 contrato digital MVP (2026-10-01):** snapshot legível (`buildAcordoContratoSnapshot` + `AcordoContratoSnapshot`) no detalhe `/acordos` e no modal de aceite (`PropostaReviewCard`); modalidade, N_contrato, valor combinado, total mensal, quota/pessoa — sem defaults de plataforma; IBAN/comprovativo intactos. Spec: `.specs/quick/pacote-eng-31-contrato-digital/`.
+
 **Próximo:** polish admin Critiquito; Redirect URLs recovery em produção. **Fora do MVP:** zonas/polígonos/raio residencial; adenda bilateral completa (hoje motorista inicia). Commits só se o utilizador pedir.

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PropostaReviewCard from './PropostaReviewCard';
 
@@ -290,7 +290,9 @@ describe('PropostaReviewCard', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: /Aceitar proposta/i }));
-    // ConfirmationModal antes do aceite
+    const snapshot = screen.getByTestId('acordo-contrato-snapshot');
+    expect(within(snapshot).getAllByText(/Total do acordo/i).length).toBeGreaterThanOrEqual(1);
+    expect(within(snapshot).getByText(/Pessoas no acordo/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
     expect(onAceitar).toHaveBeenCalledTimes(1);
 
