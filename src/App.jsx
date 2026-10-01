@@ -31,6 +31,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import UpdatePrompt from './components/UpdatePrompt';
 import OfflineBanner from './components/OfflineBanner';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
+import { usePasswordRecoveryRouteRedirect } from './hooks/usePasswordRecoveryRouteRedirect';
 
 const RootRoute = () => {
   const { session, loading, tipoPerfil, passwordRecoveryPending } = useAuth();
@@ -48,6 +49,7 @@ const RootRoute = () => {
 };
 
 function AppShell() {
+  usePasswordRecoveryRouteRedirect();
   const { isOffline } = useNetworkStatus();
   const { pathname } = useLocation();
   const isPublicRoute = pathname === '/' || pathname === '/auth' || pathname === '/explorar';

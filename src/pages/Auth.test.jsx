@@ -212,7 +212,7 @@ describe('Auth Component', () => {
 
     await waitFor(() => {
       expect(supabase.auth.resetPasswordForEmail).toHaveBeenCalledWith('user@boleia.co.ao', {
-        redirectTo: `${window.location.origin}/auth?mode=update-password`,
+        redirectTo: expect.stringMatching(/\/auth\?mode=update-password$/),
       });
     });
     expect(screen.getByText(/Se existir conta com este email, enviámos instruções/i)).toBeInTheDocument();

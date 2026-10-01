@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { validateTelefone, validatePassword, MIN_PASSWORD_LENGTH } from '../utils/validation';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
+import { getPasswordRecoveryRedirectUrl } from '../utils/appOrigin';
 import { useAuth } from '../contexts/AuthContext';
 
 /**
@@ -63,7 +64,7 @@ export const useAuthForm = () => {
     setErrors({});
     setIsLoading(true);
 
-    const redirectTo = `${window.location.origin}/auth?mode=update-password`;
+    const redirectTo = getPasswordRecoveryRedirectUrl();
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
 
     setIsLoading(false);
