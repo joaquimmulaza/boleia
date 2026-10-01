@@ -146,7 +146,10 @@ function PropostaReviewCard({
   };
 
   return (
-    <section className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
+    <section
+      className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4"
+      data-proposta-id={review.proposta.id}
+    >
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-base font-bold text-slate-900 dark:text-white text-balance min-w-0">
           {titulo}

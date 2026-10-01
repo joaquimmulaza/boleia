@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, Clock, Users, Banknote } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AddressInput from '../components/AddressInput';
@@ -53,6 +54,7 @@ import { parseValorPropostaKz, validarValorPropostaKz } from '../utils/propostaV
 import { buildProcuraMinimaFromOferta, getPropostaBrowseGaps } from '../utils/procuraFromOferta';
 import { labelRotaProcura } from '../utils/ofertaLabels';
 import ConfirmationModal from '../components/ConfirmationModal';
+import { FEEDBACK_PROPOSTA_ENVIADA_MOTORISTA } from '../utils/propostaFeedback';
 
 const CAPACIDADES_GRUPO = [2, 3, 4, 5, 6, 7, 8];
 
@@ -99,6 +101,9 @@ function chipEstadoProcura(estado) {
  */
 const PassengerDashboard = () => {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const pendingPropostaFocusRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [procura, setProcura] = useState(null);
   const [grupo, setGrupo] = useState(null);
@@ -247,6 +252,44 @@ const PassengerDashboard = () => {
   useEffect(() => {
     carregar();
   }, [carregar]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const propostaId = params.get('propostaId');
+    const focus = params.get('focus');
+    if (focus === 'propostas' || propostaId) {
+      setView('hub');
+      if (propostaId) pendingPropostaFocusRef.current = propostaId;
+      if (location.search) {
+        navigate(location.pathname, { replace: true });
+      }
+    }
+  }, [location.search, location.pathname, navigate]);
+
+  useEffect(() => {
+    const propostaId = pendingPropostaFocusRef.current;
+    if (!propostaId || loadingInbox) return undefined;
+
+    const visible = [...inboxReviews, ...enviadasReviews, ...terminadasRecebidas, ...terminadasEnviadas]
+      .some((r) => r.proposta.id === propostaId);
+    if (!visible && loading) return undefined;
+
+    pendingPropostaFocusRef.current = null;
+    requestAnimationFrame(() => {
+      document.querySelector(`[data-proposta-id="${propostaId}"]`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+    });
+    return undefined;
+  }, [
+    loadingInbox,
+    loading,
+    inboxReviews,
+    enviadasReviews,
+    terminadasRecebidas,
+    terminadasEnviadas,
+  ]);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -494,7 +537,7 @@ const PassengerDashboard = () => {
           n_passageiros_propostos: 1,
         });
         propostaOk = true;
-        setFeedback({ type: 'success', text: 'Proposta enviada ao motorista.' });
+        setFeedback({ type: 'success', text: FEEDBACK_PROPOSTA_ENVIADA_MOTORISTA });
       } catch (propErr) {
         console.error(propErr);
         setFeedback({
@@ -549,7 +592,7 @@ const PassengerDashboard = () => {
         valor_mensal_ask_kz: valorMensalKz,
         n_passageiros_propostos: nProposto,
       });
-      setFeedback({ type: 'success', text: 'Proposta enviada ao motorista.' });
+      setFeedback({ type: 'success', text: FEEDBACK_PROPOSTA_ENVIADA_MOTORISTA });
       setProporSheet(null);
       await carregar();
     } catch (err) {

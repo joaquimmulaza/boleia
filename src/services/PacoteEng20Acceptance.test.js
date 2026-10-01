@@ -340,7 +340,7 @@ describe('PACOTE ENG #20 — E2E fluxos Partial 4 / 8 / 10', () => {
         resolveNotificationRoute({
           metadata: { type: 'proposal_received', inbox: 'motorista' },
         }),
-      ).toBe('/motorista');
+      ).toBe('/motorista?focus=propostas');
     });
 
     it('PWA sw.js: notificationclick usa resolveNotificationRoute', () => {

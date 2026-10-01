@@ -26,6 +26,27 @@ const ADENDA_PENDENTE_ESTADOS = new Set([
  * @param {string | null | undefined} focus pagamento | adenda | renovacao
  * @returns {string}
  */
+/**
+ * Deep link para hub de propostas (contraparte) com foco na lista.
+ *
+ * @param {Record<string, unknown> | null | undefined} metadata
+ * @returns {string}
+ */
+export function propostaHubDeepLink(metadata) {
+  const inbox = typeof metadata?.inbox === 'string' ? metadata.inbox.trim().toLowerCase() : '';
+  const params = new URLSearchParams();
+  params.set('focus', 'propostas');
+  if (metadata?.proposta_id) {
+    params.set('propostaId', String(metadata.proposta_id));
+  }
+  if (metadata?.oferta_id) {
+    params.set('openOfertaId', String(metadata.oferta_id));
+  }
+  const qs = params.toString();
+  const base = inbox === 'passageiro' ? '/passageiro' : '/motorista';
+  return qs ? `${base}?${qs}` : base;
+}
+
 export function acordosDeepLink(metadata, focus) {
   const params = new URLSearchParams();
   if (metadata?.acordo_id) {
@@ -55,12 +76,7 @@ export const notificationRouteMap = {
    * metadata.inbox: 'passageiro' (sentido B) | 'motorista' (sentido A).
    * Legado sem inbox → /motorista (era o único hub de propostas).
    */
-  proposal_received: (metadata) => {
-    const inbox = typeof metadata?.inbox === 'string' ? metadata.inbox.trim().toLowerCase() : '';
-    if (inbox === 'passageiro') return '/passageiro';
-    if (inbox === 'motorista') return '/motorista';
-    return '/motorista';
-  },
+  proposal_received: (metadata) => propostaHubDeepLink(metadata),
   proposal_invalidated: (metadata) => notificationRouteMap.proposal_received(metadata),
   proposal_cancelled: (metadata) => notificationRouteMap.proposal_received(metadata),
   waitlist_promoted: () => '/passageiro',

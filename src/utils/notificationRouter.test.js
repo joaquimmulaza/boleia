@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { resolveNotificationRoute, notificationRouteMap, acordosDeepLink } from './notificationRouter';
+import {
+  resolveNotificationRoute,
+  notificationRouteMap,
+  acordosDeepLink,
+  propostaHubDeepLink,
+} from './notificationRouter';
 
 describe('notificationRouter', () => {
   describe('acordosDeepLink (ENG #16)', () => {
@@ -44,54 +49,76 @@ describe('notificationRouter', () => {
     });
   });
 
+  describe('propostaHubDeepLink (ENG#33)', () => {
+    it('sentido B inclui focus e ids na query', () => {
+      expect(
+        propostaHubDeepLink({
+          inbox: 'passageiro',
+          oferta_id: 'of-1',
+          proposta_id: 'prop-1',
+        }),
+      ).toBe('/passageiro?focus=propostas&propostaId=prop-1&openOfertaId=of-1');
+    });
+
+    it('sentido A abre /motorista com openOfertaId', () => {
+      expect(
+        propostaHubDeepLink({
+          inbox: 'motorista',
+          oferta_id: 'of-2',
+          proposta_id: 'prop-2',
+        }),
+      ).toBe('/motorista?focus=propostas&propostaId=prop-2&openOfertaId=of-2');
+    });
+
+    it('sem inbox (legado) usa /motorista', () => {
+      expect(propostaHubDeepLink({ oferta_id: 'of-1' })).toBe(
+        '/motorista?focus=propostas&openOfertaId=of-1',
+      );
+    });
+  });
+
   describe('proposal_received (contraparte)', () => {
-    it('sentido B (inbox passageiro) abre /passageiro', () => {
+    it('sentido B (inbox passageiro) abre hub com query', () => {
       expect(
         notificationRouteMap.proposal_received({
           inbox: 'passageiro',
           oferta_id: 'of-1',
-          procura_id: 'pr-1',
+          proposta_id: 'prop-1',
         }),
-      ).toBe('/passageiro');
+      ).toBe('/passageiro?focus=propostas&propostaId=prop-1&openOfertaId=of-1');
     });
 
-    it('sentido A (inbox motorista) abre /motorista', () => {
+    it('sentido A (inbox motorista) abre hub com query', () => {
       expect(
         notificationRouteMap.proposal_received({
           inbox: 'motorista',
           oferta_id: 'of-1',
-          procura_id: 'pr-1',
+          proposta_id: 'prop-1',
         }),
-      ).toBe('/motorista');
-    });
-
-    it('sem inbox (legado) mantém /motorista', () => {
-      expect(
-        notificationRouteMap.proposal_received({ oferta_id: 'of-1' }),
-      ).toBe('/motorista');
+      ).toBe('/motorista?focus=propostas&propostaId=prop-1&openOfertaId=of-1');
     });
 
     it('proposal_invalidated e proposal_cancelled usam o mesmo inbox', () => {
       expect(
-        notificationRouteMap.proposal_invalidated({ inbox: 'motorista' }),
-      ).toBe('/motorista');
+        notificationRouteMap.proposal_invalidated({ inbox: 'motorista', oferta_id: 'o1' }),
+      ).toBe('/motorista?focus=propostas&openOfertaId=o1');
       expect(
-        notificationRouteMap.proposal_cancelled({ inbox: 'passageiro' }),
-      ).toBe('/passageiro');
+        notificationRouteMap.proposal_cancelled({ inbox: 'passageiro', proposta_id: 'p1' }),
+      ).toBe('/passageiro?focus=propostas&propostaId=p1');
     });
 
     it('normaliza inbox com maiúsculas / espaços', () => {
       expect(
-        notificationRouteMap.proposal_received({ inbox: ' Passageiro ' }),
-      ).toBe('/passageiro');
+        notificationRouteMap.proposal_received({ inbox: ' Passageiro ', proposta_id: 'p1' }),
+      ).toBe('/passageiro?focus=propostas&propostaId=p1');
       expect(
-        notificationRouteMap.proposal_received({ inbox: 'MOTORISTA' }),
-      ).toBe('/motorista');
+        notificationRouteMap.proposal_received({ inbox: 'MOTORISTA', proposta_id: 'p2' }),
+      ).toBe('/motorista?focus=propostas&propostaId=p2');
     });
   });
 
   describe('resolveNotificationRoute', () => {
-    it('proposal_received com inbox passageiro resolve /passageiro', () => {
+    it('proposal_received com inbox passageiro resolve hub com propostaId', () => {
       const route = resolveNotificationRoute({
         metadata: {
           type: 'proposal_received',
@@ -99,7 +126,7 @@ describe('notificationRouter', () => {
           proposta_id: 'prop-1',
         },
       });
-      expect(route).toBe('/passageiro');
+      expect(route).toBe('/passageiro?focus=propostas&propostaId=prop-1');
     });
 
     it('deve usar o strategy de metadata se type estiver presente e validado', () => {
