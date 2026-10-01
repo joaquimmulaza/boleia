@@ -26,6 +26,7 @@ import { getGrupoByProcura, listMembrosGrupo } from '../services/GrupoService';
 import {
   createProposta,
   listPropostasByProcura,
+  listPropostasByOferta,
   listOpenPropostasByCreator,
   enrichPropostasForReview,
   rejectProposta,
@@ -102,7 +103,10 @@ function chipEstadoProcura(estado) {
 const PassengerDashboard = () => {
   const { user } = useAuth();
   const location = useLocation();
-  const pendingPropostaFocusRef = useRef(null);
+  /** @type {React.MutableRefObject<null | { openOfertaId: string | null, propostaId: string | null }>} */
+  const pendingPropostaDeepLinkRef = useRef(null);
+  const propostaDeepLinkHandledRef = useRef(false);
+  const propostaDeepLinkLoadStartedRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [procura, setProcura] = useState(null);
   const [grupo, setGrupo] = useState(null);
@@ -117,6 +121,8 @@ const PassengerDashboard = () => {
   const [terminadasEnviadas, setTerminadasEnviadas] = useState([]);
   const [loadingInbox, setLoadingInbox] = useState(false);
   const [view, setView] = useState('hub'); // hub | form | matches
+  /** null | 'propostas' — deep-link proposal_received força painel de propostas */
+  const [hubFocus, setHubFocus] = useState(null);
   const [feedback, setFeedback] = useState({ type: '', text: '' });
   const [busyId, setBusyId] = useState(null);
   const [form, setForm] = useState({
@@ -252,37 +258,102 @@ const PassengerDashboard = () => {
     }
   }, [user?.id]);
 
+  const carregarPropostasOferta = useCallback(async (ofertaId) => {
+    if (!user?.id || !ofertaId) return;
+    setLoadingInbox(true);
+    try {
+      const propostas = await listPropostasByOferta(ofertaId);
+      const inbox = filterPropostasParaInbox(propostas, user.id);
+      const enviadas = filterPropostasEnviadas(propostas, user.id);
+      const termRecebidas = filterPropostasTerminadasRecebidas(propostas, user.id);
+      const termEnviadas = filterPropostasTerminadasEnviadas(propostas, user.id);
+      const [enrichedInbox, enrichedEnviadas, enrichedTermR, enrichedTermE] = await Promise.all([
+        enrichPropostasForReview(inbox),
+        enrichPropostasForReview(enviadas),
+        enrichPropostasForReview(termRecebidas),
+        enrichPropostasForReview(termEnviadas),
+      ]);
+      setInboxReviews(enrichedInbox);
+      setEnviadasReviews(enrichedEnviadas);
+      setTerminadasRecebidas(enrichedTermR);
+      setTerminadasEnviadas(enrichedTermE);
+    } catch (err) {
+      console.error(err);
+      setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
+    } finally {
+      setLoadingInbox(false);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     carregar();
   }, [carregar]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
+    const openOfertaId = params.get('openOfertaId');
     const propostaId = params.get('propostaId');
     const focus = params.get('focus');
-    if (focus === 'propostas' || propostaId) {
+    if (openOfertaId || focus === 'propostas' || propostaId) {
       setView('hub');
-      if (propostaId) pendingPropostaFocusRef.current = propostaId;
+      setHubFocus('propostas');
+      propostaDeepLinkHandledRef.current = false;
+      propostaDeepLinkLoadStartedRef.current = false;
+      pendingPropostaDeepLinkRef.current = {
+        openOfertaId: openOfertaId || null,
+        propostaId: propostaId || null,
+      };
     }
   }, [location.search]);
 
   useEffect(() => {
-    const propostaId = pendingPropostaFocusRef.current;
-    if (!propostaId || loadingInbox) return undefined;
+    const pending = pendingPropostaDeepLinkRef.current;
+    if (
+      propostaDeepLinkLoadStartedRef.current
+      || hubFocus !== 'propostas'
+      || loading
+      || procura
+      || !pending?.openOfertaId
+    ) {
+      return undefined;
+    }
 
-    const visible = [...inboxReviews, ...enviadasReviews, ...terminadasRecebidas, ...terminadasEnviadas]
-      .some((r) => r.proposta.id === propostaId);
-    if (!visible && loading) return undefined;
+    propostaDeepLinkLoadStartedRef.current = true;
+    void carregarPropostasOferta(pending.openOfertaId);
+    return undefined;
+  }, [hubFocus, loading, procura, carregarPropostasOferta]);
 
-    pendingPropostaFocusRef.current = null;
+  useEffect(() => {
+    const pending = pendingPropostaDeepLinkRef.current;
+    if (propostaDeepLinkHandledRef.current || hubFocus !== 'propostas') return undefined;
+    if (loadingInbox || loading) return undefined;
+
+    const propostaId = pending?.propostaId;
+    if (propostaId) {
+      const visible = [...inboxReviews, ...enviadasReviews, ...terminadasRecebidas, ...terminadasEnviadas]
+        .some((r) => r.proposta.id === propostaId);
+      if (!visible) return undefined;
+
+      propostaDeepLinkHandledRef.current = true;
+      requestAnimationFrame(() => {
+        document.querySelector(`[data-proposta-id="${propostaId}"]`)?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+        });
+      });
+      return undefined;
+    }
+
+    propostaDeepLinkHandledRef.current = true;
     requestAnimationFrame(() => {
-      document.querySelector(`[data-proposta-id="${propostaId}"]`)?.scrollIntoView({
+      document.querySelector('[data-testid="propostas-recebidas-section"]')?.scrollIntoView({
         behavior: 'smooth',
         block: 'nearest',
       });
     });
     return undefined;
   }, [
+    hubFocus,
     loadingInbox,
     loading,
     inboxReviews,
@@ -834,7 +905,9 @@ const PassengerDashboard = () => {
             ? (editing ? 'Editar procura' : 'Nova procura')
             : procura
               ? 'A minha procura'
-              : 'Explorar'
+              : hubFocus === 'propostas'
+                ? 'Propostas'
+                : 'Explorar'
         }
         subtitle={
           view === 'form'
@@ -843,7 +916,9 @@ const PassengerDashboard = () => {
               : 'Define a tua rota diária casa–trabalho.')
             : procura
               ? 'Encontra ofertas compatíveis com o teu horário.'
-              : 'Explora ofertas e propõe acordo directamente — ou cria procura para filtrar matches.'
+              : hubFocus === 'propostas'
+                ? 'Propostas recebidas e enviadas nesta oferta.'
+                : 'Explora ofertas e propõe acordo directamente — ou cria procura para filtrar matches.'
         }
         {...(view !== 'hub'
           ? { onBack: () => setView(procura ? 'matches' : 'hub') }
@@ -860,7 +935,7 @@ const PassengerDashboard = () => {
 
       {loading && <LoadingSkeleton />}
 
-      {!loading && view === 'hub' && !procura && (
+      {!loading && view === 'hub' && !procura && hubFocus !== 'propostas' && (
         <div className="space-y-4 relative">
           {browseBusy ? (
             <div
@@ -912,6 +987,85 @@ const PassengerDashboard = () => {
           </section>
 
           <GrupoDescobertaPanel userId={user.id} />
+        </div>
+      )}
+
+      {!loading && view === 'hub' && !procura && hubFocus === 'propostas' && (
+        <div className="space-y-4" data-testid="propostas-deep-link-panel">
+          <section className="space-y-3" data-testid="propostas-recebidas-section">
+            <h2 className="text-lg font-bold text-balance">Propostas recebidas</h2>
+            {loadingInbox ? (
+              <LoadingSkeleton />
+            ) : inboxReviews.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                Ainda sem propostas do motorista.
+              </p>
+            ) : (
+              inboxReviews.map((review) => (
+                <PropostaReviewCard
+                  key={review.proposta.id}
+                  review={review}
+                  secao="recebidas"
+                  busy={busyId === review.proposta.id}
+                  precoPublicadoKz={ofertasById[review.proposta.oferta_id]?.valor_mensal_ask_kz ?? null}
+                  onAceitar={(memberIds) => handleAceitarInbox(review.proposta.id, memberIds)}
+                  onRecusar={() => handleRecusarInbox(review.proposta.id)}
+                  onContraProposta={
+                    jaEnviouContraProposta(review)
+                      ? undefined
+                      : () => handleAbrirContraProposta(review)
+                  }
+                />
+              ))
+            )}
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-lg font-bold text-balance">Propostas enviadas</h2>
+            {loadingInbox ? (
+              <LoadingSkeleton />
+            ) : enviadasReviews.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                Ainda sem propostas enviadas a motoristas.
+              </p>
+            ) : (
+              enviadasReviews.map((review) => (
+                <PropostaReviewCard
+                  key={review.proposta.id}
+                  review={review}
+                  modo="criador"
+                  secao="enviadas"
+                  busy={busyId === review.proposta.id}
+                  onCancelar={() => handleCancelarEnviada(review.proposta.id)}
+                />
+              ))
+            )}
+          </section>
+
+          {(terminadasRecebidas.length > 0 || terminadasEnviadas.length > 0) && (
+            <section className="space-y-3" data-testid="propostas-terminadas">
+              <h2 className="text-lg font-bold text-balance">Propostas concluídas</h2>
+              <p className="text-sm text-slate-500 text-pretty">
+                Aceites, recusadas, canceladas ou que já não correspondem — já não podes actuar sobre estas propostas.
+              </p>
+              {terminadasRecebidas.map((review) => (
+                <PropostaReviewCard
+                  key={`tr-${review.proposta.id}`}
+                  review={review}
+                  modo="historico"
+                  secao="recebidas"
+                />
+              ))}
+              {terminadasEnviadas.map((review) => (
+                <PropostaReviewCard
+                  key={`te-${review.proposta.id}`}
+                  review={review}
+                  modo="historico"
+                  secao="enviadas"
+                />
+              ))}
+            </section>
+          )}
         </div>
       )}
 
@@ -1279,7 +1433,7 @@ const PassengerDashboard = () => {
             )}
           </section>
 
-          <section className="space-y-3">
+          <section className="space-y-3" data-testid="propostas-recebidas-section">
             <h2 className="text-lg font-bold text-balance">Propostas recebidas</h2>
             {loadingInbox ? (
               <LoadingSkeleton />

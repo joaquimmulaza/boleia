@@ -6,7 +6,13 @@ import PassengerDashboard from './PassengerDashboard';
 import { createProcura, createProcuraWithGrupo, listProcurasByOwner, updateProcura } from '../services/ProcuraService';
 import { findCompatibleOfertas, toProcuraMatchInput } from '../services/MatchingService';
 import { listOfertasDisponiveis } from '../services/OfertaService';
-import { createProposta, listPropostasByProcura, enrichPropostasForReview, cancelProposta } from '../services/PropostaService';
+import {
+  createProposta,
+  listPropostasByProcura,
+  listPropostasByOferta,
+  enrichPropostasForReview,
+  cancelProposta,
+} from '../services/PropostaService';
 import { createAgreementFromProposal } from '../services/AgreementService';
 import { getGrupoByProcura, listMembrosGrupo } from '../services/GrupoService';
 import { listWaitlistByProcura } from '../services/WaitlistService';
@@ -40,6 +46,7 @@ vi.mock('../services/OfertaService', () => ({
 vi.mock('../services/PropostaService', () => ({
   createProposta: vi.fn(),
   listPropostasByProcura: vi.fn().mockResolvedValue([]),
+  listPropostasByOferta: vi.fn().mockResolvedValue([]),
   listOpenPropostasByCreator: vi.fn().mockResolvedValue([]),
   enrichPropostasForReview: vi.fn().mockResolvedValue([]),
   rejectProposta: vi.fn(),
@@ -1322,6 +1329,78 @@ describe('PassengerDashboard — marketplace', () => {
         'pr-1',
         expect.objectContaining({ preferred_time: '08:00' }),
       );
+    });
+  });
+
+  it('deep-link focus=propostas sem procura activa abre propostas (não Explorar)', async () => {
+    listProcurasByOwner.mockResolvedValue([]);
+    listOfertasDisponiveis.mockResolvedValue([
+      {
+        id: 'of-browse',
+        origin_name: 'Talatona',
+        destination_name: 'Miramar',
+        departure_time: '07:15:00',
+        vagas_disponiveis: 2,
+        valor_mensal_ask_kz: 80000,
+        modo_preco: 'TOTAL_ACORDO',
+      },
+    ]);
+    listPropostasByOferta.mockResolvedValue([
+      {
+        id: 'prop-dl',
+        estado: 'aberta',
+        created_by: 'driver-1',
+        oferta_id: 'of-1',
+        procura_id: 'pr-archived',
+        modo_preco: 'TOTAL_ACORDO',
+        valor_mensal_ask_kz: 120000,
+        n_passageiros_propostos: 1,
+      },
+    ]);
+    enrichPropostasForReview.mockImplementation(async (lista) =>
+      (lista || []).map((p) => ({
+        proposta: p,
+        titulo: 'Individual',
+        membros: [{ passenger_id: 'pax-1', nome: 'Tu', quota_mensal_kz: 120000 }],
+        pricing: {
+          valor_mensal_total_kz: 120000,
+          valor_mensal_por_passageiro_kz: 120000,
+          quotas: [120000],
+          temResto: false,
+        },
+        avisoComposicao: null,
+      })),
+    );
+
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          '/passageiro?focus=propostas&propostaId=prop-dl&openOfertaId=of-1',
+        ]}
+      >
+        <PassengerDashboard />
+        <LocationSearchProbe />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(listPropostasByOferta).toHaveBeenCalledWith('of-1');
+    });
+
+    expect(await screen.findByText('Propostas recebidas')).toBeInTheDocument();
+    expect(screen.queryByTestId('browse-ofertas-feed')).not.toBeInTheDocument();
+    expect(screen.queryByText('Explorar')).not.toBeInTheDocument();
+
+    const search = screen.getByTestId('location-search').textContent || '';
+    expect(search).toContain('focus=propostas');
+    expect(search).toContain('propostaId=prop-dl');
+    expect(search).toContain('openOfertaId=of-1');
+
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalled();
     });
   });
 
