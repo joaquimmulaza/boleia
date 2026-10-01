@@ -1,6 +1,6 @@
 {
   "name": "Boleia Certa",
-  "install": "pnpm install --frozen-lockfile && bash .cursor/setup-local-env.sh",
+  "install": "pnpm install --frozen-lockfile && bash .cursor/setup-local-env.sh && bash .cursor/setup-graphlore.sh",
   "terminals": [
     {
       "name": "dev",

@@ -3,7 +3,6 @@
     "graphlore": {
       "command": "graphlore",
       "env": {
-        "GRAPHLORE_PROJECT_DIR": "C:\\boleia-certa",
         "GRAPHLORE_OUT_DIR": "graphify-out",
         "GRAPHLORE_TOOLSET": "lean"
       }
