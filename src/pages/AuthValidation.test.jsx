@@ -3,14 +3,23 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/re
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Auth from './Auth';
 
-// Mock do módulo Supabase
 vi.mock('../lib/supabase', () => ({
   supabase: {
     auth: {
       signUp: vi.fn(),
       signInWithPassword: vi.fn(),
+      resetPasswordForEmail: vi.fn(),
+      updateUser: vi.fn(),
     },
   },
+}));
+
+vi.mock('../contexts/AuthContext', () => ({
+  useAuth: () => ({
+    clearPasswordRecovery: vi.fn(),
+    tipoPerfil: null,
+    passwordRecoveryPending: false,
+  }),
 }));
 
 const mockNavigate = vi.fn();
@@ -33,29 +42,17 @@ describe('Auth Validation Fix Verification', () => {
 
   it('impede o registo com número de telefone inválido e mostra erro inline', async () => {
     render(<Auth />);
-
-    // Mudar para modo "Criar Conta"
-    const toggleBtn = screen.getByRole('button', { name: /Criar Conta/i });
-    fireEvent.click(toggleBtn);
-
-    // Preencher o formulário com telefone inválido
+    fireEvent.click(screen.getByRole('button', { name: /Criar Conta/i }));
     fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'teste@exemplo.com' } });
-    fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: 'password123' } });
+    fireEvent.change(screen.getByLabelText(/^Palavra-passe$/i), { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/Nome Completo/i), { target: { value: 'Usuário Teste' } });
     fireEvent.change(screen.getByLabelText(/Telefone/i), { target: { value: '123' } });
+    fireEvent.submit(screen.getByLabelText('auth-form'));
 
-    // Submeter
-    const form = screen.getByLabelText('auth-form');
-    fireEvent.submit(form);
-
-    // Deve mostrar mensagem de erro inline
     await waitFor(() => {
       expect(screen.getByText(/Número de telefone inválido/i)).toBeInTheDocument();
-      // O erro não deve ser o alerta geral (que tem role="alert")
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
-
-    // signUp NÃO deve ter sido chamado
     expect(supabase.auth.signUp).not.toHaveBeenCalled();
   });
 
@@ -63,11 +60,10 @@ describe('Auth Validation Fix Verification', () => {
     render(<Auth />);
     fireEvent.click(screen.getByRole('button', { name: /Criar Conta/i }));
     fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'teste1@exemplo.com' } });
-    fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: 'password123' } });
+    fireEvent.change(screen.getByLabelText(/^Palavra-passe$/i), { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/Nome Completo/i), { target: { value: 'Usuário Teste' } });
     fireEvent.change(screen.getByLabelText(/Telefone/i), { target: { value: '923456789' } });
-    const form = screen.getByLabelText('auth-form');
-    fireEvent.submit(form);
+    fireEvent.submit(screen.getByLabelText('auth-form'));
     await waitFor(() => {
       expect(supabase.auth.signUp).toHaveBeenCalled();
     });
@@ -77,11 +73,10 @@ describe('Auth Validation Fix Verification', () => {
     render(<Auth />);
     fireEvent.click(screen.getByRole('button', { name: /Criar Conta/i }));
     fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'teste2@exemplo.com' } });
-    fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: 'password123' } });
+    fireEvent.change(screen.getByLabelText(/^Palavra-passe$/i), { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/Nome Completo/i), { target: { value: 'Usuário Teste' } });
     fireEvent.change(screen.getByLabelText(/Telefone/i), { target: { value: '+244 923 456 789' } });
-    const form = screen.getByLabelText('auth-form');
-    fireEvent.submit(form);
+    fireEvent.submit(screen.getByLabelText('auth-form'));
     await waitFor(() => {
       expect(supabase.auth.signUp).toHaveBeenCalled();
     });

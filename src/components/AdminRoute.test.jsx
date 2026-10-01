@@ -69,4 +69,17 @@ describe('AdminRoute', () => {
     renderAdminRoute();
     expect(screen.getByText('Acordos')).toBeInTheDocument();
   });
+
+  it('redirecciona para update-password quando passwordRecoveryPending', () => {
+    useAuth.mockReturnValue({
+      session: { user: { id: 'admin-1' } },
+      loading: false,
+      profileLoading: false,
+      profile: { id: 'admin-1', is_admin: true },
+      passwordRecoveryPending: true,
+    });
+    renderAdminRoute();
+    expect(screen.getByText('Auth')).toBeInTheDocument();
+    expect(screen.queryByText('Admin OK')).not.toBeInTheDocument();
+  });
 });

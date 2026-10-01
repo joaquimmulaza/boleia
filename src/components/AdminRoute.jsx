@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
  * Espera o perfil carregar — senão `profile=null` redireccionava admins para `/acordos`.
  */
 const AdminRoute = () => {
-  const { session, loading, profileLoading, profile } = useAuth();
+  const { session, loading, profileLoading, profile, passwordRecoveryPending } = useAuth();
 
   if (loading || (session && profileLoading)) {
     return (
@@ -19,6 +19,10 @@ const AdminRoute = () => {
 
   if (!session) {
     return <Navigate to="/auth" replace />;
+  }
+
+  if (passwordRecoveryPending) {
+    return <Navigate to="/auth?mode=update-password" replace />;
   }
 
   // Perfil falhou ou ainda null após fetch — sem admin

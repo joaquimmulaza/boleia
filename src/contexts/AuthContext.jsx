@@ -1,5 +1,10 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import {
+  readPasswordRecoveryPending,
+  markPasswordRecoveryPending,
+  clearPasswordRecoveryStorage,
+} from '../utils/passwordRecovery';
 
 const AuthContext = createContext(undefined);
 
@@ -23,6 +28,14 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   /** true enquanto há sessão e o perfil ainda não foi resolvido (sucesso ou falha). */
   const [profileLoading, setProfileLoading] = useState(false);
+  const [passwordRecoveryPending, setPasswordRecoveryPending] = useState(() =>
+    readPasswordRecoveryPending()
+  );
+
+  const clearPasswordRecovery = useCallback(() => {
+    clearPasswordRecoveryStorage();
+    setPasswordRecoveryPending(false);
+  }, []);
 
   const fetchProfile = useCallback(async (userId) => {
     if (!userId) {
@@ -86,9 +99,19 @@ export function AuthProvider({ children }) {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, nextSession) => {
+      (event, nextSession) => {
         setSession(nextSession);
         setUser(nextSession?.user || null);
+
+        if (event === 'PASSWORD_RECOVERY') {
+          markPasswordRecoveryPending();
+          setPasswordRecoveryPending(true);
+        }
+
+        if (event === 'SIGNED_OUT' || !nextSession) {
+          clearPasswordRecoveryStorage();
+          setPasswordRecoveryPending(false);
+        }
 
         // Evita deadlock com getSession: não usar async/await nem chamadas Supabase directas aqui.
         setTimeout(() => {
@@ -121,6 +144,8 @@ export function AuthProvider({ children }) {
     profileLoading,
     tipoPerfil,
     refreshProfile,
+    passwordRecoveryPending,
+    clearPasswordRecovery,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

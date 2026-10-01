@@ -10,7 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
  *     Se omitido, qualquer utilizador autenticado pode aceder.
  */
 const ProtectedRoute = ({ allowedRole }) => {
-  const { session, loading, tipoPerfil } = useAuth();
+  const { session, loading, tipoPerfil, passwordRecoveryPending } = useAuth();
 
   if (loading) {
     return (
@@ -23,6 +23,11 @@ const ProtectedRoute = ({ allowedRole }) => {
   // 1. Sem sessão → redireciona para login
   if (!session) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // 1b. Sessão de recovery → obrigar a definir nova palavra-passe
+  if (passwordRecoveryPending) {
+    return <Navigate to="/auth?mode=update-password" replace />;
   }
 
   // 2. Com sessão mas role inválido → redireciona para o dashboard correto

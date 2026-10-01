@@ -21,9 +21,12 @@ import OfflineBanner from './components/OfflineBanner';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
 
 const RootRoute = () => {
-  const { session, loading, tipoPerfil } = useAuth();
+  const { session, loading, tipoPerfil, passwordRecoveryPending } = useAuth();
 
   if (loading) return <div className="flex h-dvh items-center justify-center text-gray-500">A carregar...</div>;
+  if (session && passwordRecoveryPending) {
+    return <Navigate to="/auth?mode=update-password" replace />;
+  }
   if (session) {
     if (tipoPerfil === 'Motorista') return <Navigate to="/motorista" replace />;
     return <Navigate to="/passageiro" replace />;

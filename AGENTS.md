@@ -94,8 +94,8 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
 **REGRA ABSOLUTA:** Esta secção do documento (`CONTEXT.md` e `AGENTS.md`) tem de ser **obrigatoriamente atualizada** sempre que uma nova funcionalidade for implementada, refatorada ou corrigida. O objetivo central é garantir que qualquer Agente de IA que leia este ficheiro saiba com exatidão o ponto de situação do projeto, evitando redundâncias, reinvenção da roda ou duplicação de lógicas já existentes (DRY - Don't Repeat Yourself). Antes de iniciar qualquer tarefa, o agente deve assumir este relatório como a única fonte de verdade arquitetónica.
 
 🏛️ Relatório de Estado da Arquitetura: Boleia Certa
-**Última Atualização:** 10 de Setembro de 2026 
-**Fase Atual:** Marketplace Oferta/Procura (Phase 6–7) + **Landing refresh** + **Agent loop Cursor** + **Graphify/Graphlore** + **Stitch + UI Skills** + **PWA Offline Wave 3–4** + **PACOTE ENG#8 cancelamento**. Spec ENG#8: `.specs/quick/pacote-eng-8-cancelamento/`.
+**Última Atualização:** 1 de Outubro de 2026 
+**Fase Atual:** Marketplace Oferta/Procura (Phase 6–7) + **Landing refresh** + **Agent loop Cursor** + **Graphify/Graphlore** + **Stitch + UI Skills** + **PWA Offline Wave 3–4** + **PACOTE ENG#8 cancelamento** + **Esqueceu a palavra-passe**. Spec ENG#8: `.specs/quick/pacote-eng-8-cancelamento/`. Spec recovery: `.specs/features/esqueceu-palavra-passe/`.
 
 **O que já está implementado e validado:**
 1. **Infraestrutura e Backend (Supabase):**
@@ -121,7 +121,7 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
  * **Cancelamento acordo (ENG#8 / s22 + ENG#8b):** RPC `terminate_agreement` — `aviso_previo` → `cancelamento_pendente`; `justa_causa` imediato; **consensual** com `p_vigencia` `imediato` (pro-rata) \| `fim_ciclo` (até fim do mês). RPC `cancel_agreement_adenda` → `cancelada_iniciador`. Lazy `apply_due_agreement_terminations` no load. Spec: `.specs/quick/pacote-eng-8b-s22-fecho/`.
  * **seat-before-custody (tick 22):** `acordos_passageiros.estado` `reservado` após `accept_proposal` (ocupa vaga); promove a `activo` em `admin_validate_payment` ao entrar `em_custodia`. UI: «Lugar reservado — aguarda pagamento». Spec: `.specs/quick/pacote-seat-before-custody/`.
  * **Deep linking:** `notificationRouter.js` — `proposal_received` → hub da **contraparte** (`metadata.inbox`: `passageiro`|`motorista`); `waitlist_promoted`, `match_available`, etc.
- * **AuthContext:** `{ session, user, loading, tipoPerfil, profile, refreshProfile }`.
+ * **AuthContext:** `{ session, user, loading, tipoPerfil, profile, refreshProfile, passwordRecoveryPending, clearPasswordRecovery }`.
  * **Design SoT:** Stitch MCP (one-project canónico «Boleia Certa» + Project Resolution) + UI Skills sync + shadcn (`src/components/ui/`) + Mobbin free-safe; v0/One só fallback (nunca por lista vazia). Ponte `.cursor/skills/boleia-stitch` + `skills/`. Penpot não é SoT.
  * **Agent loop:** `.cursor/skills/boleia-agent-loop/` (incl. bridge Plan mode no orchestrator), `.cursor/rules/ui-stack.mdc`, `.cursor/rules/multi-agent-loop.mdc` (secção Plan mode), `.cursor/rules/graphify.mdc` (grafo antes de Grep), hooks `subagentStop` + `stop` (exige VERDICT em falta).
  * **Produto (2026-09-05):** oferta fixa vs flexível (sem OD/zona no flex); propostas A/B; aceite só contraparte; Procura→M propostas→1 acordo 1:N. **T32–T35 Done** (Phase 7 completa).
@@ -158,4 +158,6 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
 
 * **Marketplace browse público (2026-10-01):** rota pública `/explorar` (ofertas + procuras, só leitura; CTA → `/auth`); RLS anon SELECT em `ofertas_capacidade`/`procuras` (estados activos); `listOfertasDisponiveis` / `listProcurasDisponiveis` sem gate de sessão; motorista vê procuras **sem oferta activa**; «Enviar proposta» cria oferta flexível mínima (`buildOfertaMinimaFromProcura`). Spec: `.specs/quick/marketplace-browse-publico/`.
 
-**Próximo:** polish admin Critiquito. **Fora do MVP:** zonas/polígonos/raio residencial; adenda bilateral completa (hoje motorista inicia). Commits só se o utilizador pedir.
+ * **Esqueceu a palavra-passe (2026-10-01):** CTA em `/auth` → `mode=forgot` → `resetPasswordForEmail` (sucesso genérico anti-enumeração) → link `mode=update-password` → `updateUser`; `AuthContext.passwordRecoveryPending` + `sessionStorage` `bc_password_recovery`; guards em `RootRoute` / `ProtectedRoute` / `AdminRoute` bloqueiam hub/admin durante recovery. Spec: `.specs/features/esqueceu-palavra-passe/`. **Ops:** adicionar Redirect URLs no Dashboard Supabase (`…/auth?mode=update-password`).
+
+**Próximo:** polish admin Critiquito; Redirect URLs recovery em produção. **Fora do MVP:** zonas/polígonos/raio residencial; adenda bilateral completa (hoje motorista inicia). Commits só se o utilizador pedir.
