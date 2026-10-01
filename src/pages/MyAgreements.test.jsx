@@ -53,6 +53,10 @@ vi.mock('../services/PaymentService', async (importOriginal) => {
   };
 });
 
+vi.mock('../services/RatingService', () => ({
+  listMinhasAvaliacoesAcordo: vi.fn().mockResolvedValue([]),
+}));
+
 import {
   getAgreementsForDriver,
   getAgreementsForPassenger,
