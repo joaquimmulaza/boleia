@@ -3,6 +3,9 @@ import {
   resolveNegociacaoPrecoAtiva,
   isAdendaAguardandoResposta,
   isAdendaRecusadaValida,
+  isContraparteAdenda,
+  podeNovaPropostaAposRecusa,
+  podeProporNovaPreco,
   podeRetirarProposta,
   podeContraPropor,
   podeVoltarAAceitar,
@@ -38,9 +41,12 @@ describe('adendaNegociacao — uma negociação activa', () => {
     expect(isAdendaRecusadaValida({ estado: 'rejeitada' }, false)).toBe(false);
   });
 
-  it('podeRetirarProposta — só iniciador em pendente', () => {
+  it('podeRetirarProposta — só iniciador em pendente ou rejeitada', () => {
     expect(
       podeRetirarProposta({ ...baseAdenda, estado: 'pendente_passageiro' }, 'mot-1'),
+    ).toBe(true);
+    expect(
+      podeRetirarProposta({ ...baseAdenda, estado: 'rejeitada' }, 'mot-1'),
     ).toBe(true);
     expect(
       podeRetirarProposta({ ...baseAdenda, estado: 'pendente_passageiro' }, 'pax-1'),
@@ -57,13 +63,14 @@ describe('adendaNegociacao — uma negociação activa', () => {
     ).toBe(false);
   });
 
-  it('podeVoltarAAceitar — contraparte pode mudar de ideias após recusa', () => {
-    const adenda = { ...baseAdenda, estado: 'rejeitada' };
+  it('podeVoltarAAceitar — motorista propôs, passageiro pode voltar a aceitar', () => {
+    const adenda = { ...baseAdenda, estado: 'rejeitada', created_by: 'mot-1' };
     expect(
       podeVoltarAAceitar(adenda, {
         userId: 'pax-1',
         isPassageiro: true,
         janelaAberta: true,
+        driverId: 'mot-1',
       }),
     ).toBe(true);
     expect(
@@ -71,8 +78,73 @@ describe('adendaNegociacao — uma negociação activa', () => {
         userId: 'mot-1',
         isMotorista: true,
         janelaAberta: true,
+        driverId: 'mot-1',
       }),
     ).toBe(false);
+  });
+
+  it('podeVoltarAAceitar — passageiro propôs, motorista pode voltar a aceitar', () => {
+    const adenda = { ...baseAdenda, estado: 'rejeitada', created_by: 'pax-1' };
+    expect(
+      podeVoltarAAceitar(adenda, {
+        userId: 'mot-1',
+        isMotorista: true,
+        janelaAberta: true,
+        driverId: 'mot-1',
+      }),
+    ).toBe(true);
+    expect(
+      podeVoltarAAceitar(adenda, {
+        userId: 'pax-1',
+        isPassageiro: true,
+        janelaAberta: true,
+        driverId: 'mot-1',
+      }),
+    ).toBe(false);
+  });
+
+  it('isContraparteAdenda rejeitada — autoriza pela contraparte de created_by', () => {
+    const rejeitadaMot = { ...baseAdenda, estado: 'rejeitada', created_by: 'mot-1' };
+    expect(
+      isContraparteAdenda(rejeitadaMot, { isPassageiro: true, driverId: 'mot-1' }),
+    ).toBe(true);
+    expect(
+      isContraparteAdenda(rejeitadaMot, { isMotorista: true, driverId: 'mot-1' }),
+    ).toBe(false);
+
+    const rejeitadaPax = { ...baseAdenda, estado: 'rejeitada', created_by: 'pax-1' };
+    expect(
+      isContraparteAdenda(rejeitadaPax, { isMotorista: true, driverId: 'mot-1' }),
+    ).toBe(true);
+    expect(
+      isContraparteAdenda(rejeitadaPax, { isPassageiro: true, driverId: 'mot-1' }),
+    ).toBe(false);
+  });
+
+  it('podeProporNovaPreco — proponente pode propor de novo após recusa', () => {
+    const rejeitada = { ...baseAdenda, estado: 'rejeitada', created_by: 'mot-1' };
+    expect(
+      podeProporNovaPreco(rejeitada, { userId: 'mot-1', janelaAberta: true }),
+    ).toBe(true);
+    expect(
+      podeProporNovaPreco(rejeitada, { userId: 'pax-1', janelaAberta: true }),
+    ).toBe(false);
+    expect(
+      podeProporNovaPreco(null, { userId: 'mot-1', janelaAberta: true }),
+    ).toBe(true);
+    expect(
+      podeProporNovaPreco(
+        { ...baseAdenda, estado: 'pendente_passageiro' },
+        { userId: 'mot-1', janelaAberta: true },
+      ),
+    ).toBe(false);
+  });
+
+  it('podeNovaPropostaAposRecusa — alias proponente + rejeitada', () => {
+    const adenda = { ...baseAdenda, estado: 'rejeitada', created_by: 'pax-1' };
+    expect(
+      podeNovaPropostaAposRecusa(adenda, { userId: 'pax-1', janelaAberta: true }),
+    ).toBe(true);
   });
 
   it('labelChipHistoricoAdenda — copy humana', () => {

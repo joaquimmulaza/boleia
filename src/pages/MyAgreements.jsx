@@ -29,7 +29,10 @@ import AcordoPagamentoPanel from '../components/AcordoPagamentoPanel';
 import AcordoContactosPanel from '../components/AcordoContactosPanel';
 import { copyCancelamentoPendente } from '../utils/rescisaoDisplay';
 import AcordoPrecoProximoMesPanel from '../components/precoProximoMes/AcordoPrecoProximoMesPanel';
-import { resolveNegociacaoPrecoAtiva } from '../utils/adendaNegociacao.js';
+import {
+  podeProporNovaPreco,
+  resolveNegociacaoPrecoAtiva,
+} from '../utils/adendaNegociacao.js';
 import { isJanelaPropostaPrecoAberta, labelMesActualPt } from '../utils/precoProximoMes.js';
 import {
   getPagamentoForPassageiro,
@@ -611,7 +614,11 @@ const MyAgreements = () => {
     const precoActualPassageiro =
       selected.valor_mensal_por_passageiro_kz ?? quotaDestaque;
     const podeProporPreco =
-      podeRenegociar && janelaPrecoAberta && !negociacaoPreco;
+      podeRenegociar
+      && podeProporNovaPreco(negociacaoPreco, {
+        userId: user?.id,
+        janelaAberta: janelaPrecoAberta,
+      });
     const rescisaoConsensualPendente =
       activo &&
       String(selected.rescisao_modo || '').toLowerCase() === 'consensual' &&

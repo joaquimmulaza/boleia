@@ -27,6 +27,7 @@ vi.mock('../services/AgreementService', () => ({
 import { useAcordoPrecoContext } from '../hooks/useAcordoPrecoContext';
 import {
   acceptAgreementAdenda,
+  cancelAgreementAdenda,
   rejectAgreementAdenda,
 } from '../services/AgreementService';
 
@@ -121,6 +122,79 @@ describe('AcordoPrecoProposta — ENG#35', () => {
 
     await waitFor(() => {
       expect(acceptAgreementAdenda).toHaveBeenCalledWith('adenda-1');
+    });
+  });
+
+  it('passageiro propôs, motorista recusou — motorista pode Voltar a aceitar', async () => {
+    useAcordoPrecoContext.mockReturnValue({
+      ...baseCtx,
+      user: { id: 'driver-1' },
+      isMotorista: true,
+      isPassageiro: false,
+      negociacao: {
+        id: 'adenda-1',
+        estado: 'rejeitada',
+        created_by: 'pax-1',
+        effective_from: '2026-11-01',
+        valor_mensal_por_passageiro_kz: 28000,
+      },
+    });
+    acceptAgreementAdenda.mockResolvedValue({ id: 'adenda-1', estado: 'aceite_agendada' });
+
+    renderPage();
+    expect(screen.getByTestId('preco-proposta-view-recusada_contraparte')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('preco-voltar-aceitar-cta'));
+
+    await waitFor(() => {
+      expect(acceptAgreementAdenda).toHaveBeenCalledWith('adenda-1');
+    });
+  });
+
+  it('proponente pode Nova proposta após recusa', async () => {
+    useAcordoPrecoContext.mockReturnValue({
+      ...baseCtx,
+      user: { id: 'driver-1' },
+      isMotorista: true,
+      isPassageiro: false,
+      negociacao: {
+        id: 'adenda-1',
+        estado: 'rejeitada',
+        created_by: 'driver-1',
+        effective_from: '2026-11-01',
+        valor_mensal_por_passageiro_kz: 28000,
+      },
+    });
+
+    renderPage();
+    expect(screen.getByTestId('preco-proposta-view-recusada_proponente')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('preco-nova-proposta-cta'));
+    expect(mockNavigate).toHaveBeenCalledWith('/acordos/acordo-1/preco/novo');
+  });
+
+  it('proponente pode Retirar após recusa', async () => {
+    useAcordoPrecoContext.mockReturnValue({
+      ...baseCtx,
+      user: { id: 'driver-1' },
+      isMotorista: true,
+      isPassageiro: false,
+      negociacao: {
+        id: 'adenda-1',
+        estado: 'rejeitada',
+        created_by: 'driver-1',
+        effective_from: '2026-11-01',
+        valor_mensal_por_passageiro_kz: 28000,
+      },
+    });
+    cancelAgreementAdenda.mockResolvedValue({ id: 'adenda-1', estado: 'cancelada_iniciador' });
+
+    renderPage();
+    expect(screen.getByTestId('preco-proposta-view-recusada_proponente')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('preco-retirar-cta'));
+    const modal = await screen.findByRole('dialog');
+    fireEvent.click(within(modal).getByRole('button', { name: /^Retirar$/i }));
+
+    await waitFor(() => {
+      expect(cancelAgreementAdenda).toHaveBeenCalledWith('adenda-1');
     });
   });
 

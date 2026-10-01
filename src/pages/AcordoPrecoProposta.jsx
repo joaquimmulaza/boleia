@@ -25,6 +25,7 @@ import {
   isAdendaRecusadaValida,
   isContraparteAdenda,
   podeContraPropor,
+  podeNovaPropostaAposRecusa,
   podeRetirarProposta,
   podeVoltarAAceitar,
   souProponenteAdenda,
@@ -56,6 +57,7 @@ export default function AcordoPrecoProposta() {
       isPassageiro: ctx.isPassageiro,
       janelaAberta: ctx.janelaAberta,
       userId,
+      driverId: ctx.acordo?.driver_id,
     };
 
     if (estado === 'aceite' || estado === 'aceite_agendada') return 'confirmado';
@@ -69,7 +71,7 @@ export default function AcordoPrecoProposta() {
       if (isContraparteAdenda(negociacao, ctxAdenda)) return 'receber';
     }
     return 'empty';
-  }, [negociacao, userId, ctx.isMotorista, ctx.isPassageiro, ctx.janelaAberta]);
+  }, [negociacao, userId, ctx.isMotorista, ctx.isPassageiro, ctx.janelaAberta, ctx.acordo?.driver_id]);
 
   const proponenteNome = useMemo(() => {
     if (!negociacao) return ctx.contraparteLabel;
@@ -267,6 +269,7 @@ export default function AcordoPrecoProposta() {
                 isMotorista: ctx.isMotorista,
                 isPassageiro: ctx.isPassageiro,
                 janelaAberta: ctx.janelaAberta,
+                driverId: ctx.acordo?.driver_id,
               }) ? (
                 <Button
                   type="button"
@@ -307,7 +310,24 @@ export default function AcordoPrecoProposta() {
             </Button>
           ) : null}
 
-          {view === 'enviada' && podeRetirarProposta(negociacao, userId) ? (
+          {view === 'recusada_proponente'
+          && podeNovaPropostaAposRecusa(negociacao, {
+            userId,
+            janelaAberta: ctx.janelaAberta,
+          }) ? (
+            <Button
+              type="button"
+              className="w-full min-h-11 rounded-xl"
+              disabled={busy}
+              onClick={() => navigate(`/acordos/${acordoId}/preco/novo`)}
+              data-testid="preco-nova-proposta-cta"
+            >
+              Nova proposta
+            </Button>
+          ) : null}
+
+          {(view === 'enviada' || view === 'recusada_proponente')
+          && podeRetirarProposta(negociacao, userId) ? (
             <Button
               type="button"
               variant="outline"
