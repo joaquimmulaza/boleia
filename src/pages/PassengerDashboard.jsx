@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { ArrowRight, Clock, Users, Banknote } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AddressInput from '../components/AddressInput';
@@ -102,7 +102,6 @@ function chipEstadoProcura(estado) {
 const PassengerDashboard = () => {
   const { user } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
   const pendingPropostaFocusRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [procura, setProcura] = useState(null);
@@ -262,11 +261,8 @@ const PassengerDashboard = () => {
     if (focus === 'propostas' || propostaId) {
       setView('hub');
       if (propostaId) pendingPropostaFocusRef.current = propostaId;
-      if (location.search) {
-        navigate(location.pathname, { replace: true });
-      }
     }
-  }, [location.search, location.pathname, navigate]);
+  }, [location.search]);
 
   useEffect(() => {
     const propostaId = pendingPropostaFocusRef.current;

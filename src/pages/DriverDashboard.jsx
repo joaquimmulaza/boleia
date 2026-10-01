@@ -177,11 +177,8 @@ const DriverDashboard = () => {
         openOfertaId: openOfertaId || null,
         propostaId: propostaId || null,
       };
-      if (location.search) {
-        navigate(location.pathname, { replace: true });
-      }
     }
-  }, [location.search, location.pathname, navigate]);
+  }, [location.search]);
 
   const ofertasActivas = useMemo(
     () => ofertas.filter((o) => o.estado !== 'inactiva'),
