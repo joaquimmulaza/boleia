@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, Info } from 'lucide-react';
 import OverlayShell from './OverlayShell';
+import { todayLuandaISO } from '../utils/faltasDisplay';
 
 /**
  * @typedef {'ida' | 'regresso' | 'ambas'} ViagemFalta
@@ -16,25 +17,28 @@ import OverlayShell from './OverlayShell';
  *     observacao: string,
  *     viagem: ViagemFalta,
  *   }) => void | Promise<void>,
+ *   tipoPerfil?: 'Passageiro' | 'Motorista',
  * }} props
  */
-const LogAbsenceModal = ({ isOpen, onClose, onSubmit }) => {
-  const [formData, setFormData] = useState({
+const LogAbsenceModal = ({ isOpen, onClose, onSubmit, tipoPerfil = 'Motorista' }) => {
+  const tipoDefault = tipoPerfil === 'Passageiro' ? 'Passageiro' : 'Motorista';
+  const tipoLocked = tipoPerfil === 'Passageiro';
+
+  const buildInitialForm = () => ({
     dataFalta: '',
-    tipo: 'Motorista',
+    tipo: tipoDefault,
     observacao: '',
     viagem: /** @type {ViagemFalta} */ ('ambas'),
   });
 
+  const [formData, setFormData] = useState(buildInitialForm);
+
   if (!isOpen) return null;
 
+  const maxDataFalta = todayLuandaISO();
+
   const resetForm = () => {
-    setFormData({
-      dataFalta: '',
-      tipo: 'Motorista',
-      observacao: '',
-      viagem: 'ambas',
-    });
+    setFormData(buildInitialForm());
   };
 
   const handleClose = () => {
@@ -71,6 +75,7 @@ const LogAbsenceModal = ({ isOpen, onClose, onSubmit }) => {
               <input
                 id="dataFalta"
                 type="date"
+                max={maxDataFalta}
                 className="w-full h-14 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:ring-primary focus:border-primary text-base px-4 pr-12 dark:text-white outline-none"
                 value={formData.dataFalta}
                 onChange={(e) => setFormData({ ...formData, dataFalta: e.target.value })}
@@ -81,18 +86,28 @@ const LogAbsenceModal = ({ isOpen, onClose, onSubmit }) => {
 
           <div className="flex flex-col gap-2">
             <label htmlFor="tipoFalta" className="text-sm font-semibold text-slate-700 dark:text-slate-300">Tipo</label>
-            <div className="relative">
-              <select
+            {tipoLocked ? (
+              <div
                 id="tipoFalta"
-                className="w-full h-14 appearance-none bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:ring-primary focus:border-primary text-base px-4 dark:text-white outline-none"
-                value={formData.tipo}
-                onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+                data-testid="falta-tipo-locked"
+                className="w-full h-14 flex items-center px-4 bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-base text-slate-700 dark:text-slate-200"
               >
-                <option value="Motorista">Motorista</option>
-                <option value="Passageiro">Passageiro</option>
-              </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 size-5" aria-hidden="true" />
-            </div>
+                Passageiro
+              </div>
+            ) : (
+              <div className="relative">
+                <select
+                  id="tipoFalta"
+                  className="w-full h-14 appearance-none bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:ring-primary focus:border-primary text-base px-4 dark:text-white outline-none"
+                  value={formData.tipo}
+                  onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+                >
+                  <option value="Motorista">Motorista</option>
+                  <option value="Passageiro">Passageiro</option>
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 size-5" aria-hidden="true" />
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-2">

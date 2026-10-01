@@ -1,8 +1,9 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import AbsenceTracker from './AbsenceTracker';
 import { expectNoUserFacingJargon } from '../test/jargonBan';
+import * as faltasDisplay from '../utils/faltasDisplay';
 
 const mockNavigate = vi.fn();
 let mockAcordoId = 'acordo-uuid-001';
@@ -74,6 +75,7 @@ vi.mock('../components/LogAbsenceModal', () => ({
 describe('AbsenceTracker — marketplace', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(faltasDisplay, 'filterFaltasEsteMes').mockImplementation((faltas) => faltas || []);
     mockAcordoId = 'acordo-uuid-001';
     mockListPagamentosByAcordo.mockResolvedValue([
       { passenger_id: 'user-1', estado: 'em_custodia' },
@@ -98,10 +100,52 @@ describe('AbsenceTracker — marketplace', () => {
     ]);
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('mostra histórico de faltas no detalhe', async () => {
     render(<AbsenceTracker />);
     expect(await screen.findByText(/Histórico de Ausências/i)).toBeInTheDocument();
     expect(await screen.findByTestId('absence-card')).toBeInTheDocument();
+  });
+
+  it('apresenta desconto com sinal coerente entre total e histórico', async () => {
+    render(<AbsenceTracker />);
+    expect(await screen.findByText('1363,64')).toBeInTheDocument();
+    expect(screen.queryByText('-1363,64')).not.toBeInTheDocument();
+  });
+
+  it('usa filtro «Este mês» no total e no histórico', async () => {
+    vi.spyOn(faltasDisplay, 'filterFaltasEsteMes').mockImplementation((faltas) =>
+      (faltas || []).filter((f) => f.data_falta !== '2026-10-15'),
+    );
+
+    mockGetAbsences.mockResolvedValue([
+      {
+        id: 'f-future',
+        id_acordo: 'acordo-uuid-001',
+        data_falta: '2026-10-15',
+        tipo: 'Motorista',
+        desconto_kz: 1272.73,
+        viagem: 'ambas',
+      },
+      {
+        id: 'f-today',
+        id_acordo: 'acordo-uuid-001',
+        data_falta: '2026-10-01',
+        tipo: 'Passageiro',
+        desconto_kz: 500,
+        viagem: 'ambas',
+      },
+    ]);
+
+    render(<AbsenceTracker />);
+
+    expect(await screen.findByTestId('absence-card')).toBeInTheDocument();
+    expect(faltasDisplay.filterFaltasEsteMes).toHaveBeenCalled();
+    expect(screen.getAllByTestId('absence-card')).toHaveLength(1);
+    expect(screen.queryByText('1272,73')).not.toBeInTheDocument();
   });
 
   it('bloqueia registo de falta sem pagamento em custódia', async () => {
