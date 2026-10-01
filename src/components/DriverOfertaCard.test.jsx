@@ -42,6 +42,9 @@ describe('DriverOfertaCard', () => {
     const kebabBtn = screen.getByRole('button', { name: /Mais acções/i });
 
     expect(detailBtn.contains(kebabBtn)).toBe(false);
+    expect(detailBtn).toContainElement(screen.getByText('120 000 Kz'));
+    expect(detailBtn).toContainElement(screen.getByText(/07:15/));
+    expect(detailBtn.querySelector('button')).toBeNull();
   });
 
   it('tap na rota/preço abre detalhe; kebab Editar não dispara detalhe', () => {
