@@ -24,6 +24,7 @@ function labelModo(modo) {
  *   horario: string,
  *   reviews: Array<import('../utils/propostaReview').PropostaReview>,
  *   loading?: boolean,
+ *   summaryCounts?: { recebidas?: number, enviadas?: number, concluidas?: number },
  *   onClose: () => void,
  *   onVerReview: (review: object) => void,
  * }} props
@@ -33,11 +34,19 @@ function ProposalSheet({
   horario,
   reviews,
   loading = false,
+  summaryCounts,
   onClose,
   onVerReview,
 }) {
   const count = reviews.length;
-  const summary = buildPropostasSheetSummary({ tituloOferta, horario, count });
+  const summary = buildPropostasSheetSummary({
+    tituloOferta,
+    horario,
+    count,
+    recebidas: summaryCounts?.recebidas,
+    enviadas: summaryCounts?.enviadas ?? 0,
+    concluidas: summaryCounts?.concluidas ?? 0,
+  });
 
   return (
     <OverlayShell

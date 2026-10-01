@@ -31,16 +31,59 @@ export function labelPropostaSheetRow(review) {
 }
 
 /**
+ * @param {number} n
+ * @param {string} singular
+ * @param {string} plural
+ */
+function countPart(n, singular, plural) {
+  return n === 1 ? `1 ${singular}` : `${n} ${plural}`;
+}
+
+/**
  * Resumo no header da sheet («Oferta flexível · 07:15 · 2 propostas recebidas»).
- * @param {{ tituloOferta: string, horario: string, count: number }} opts
+ * @param {{
+ *   tituloOferta: string,
+ *   horario: string,
+ *   count: number,
+ *   recebidas?: number,
+ *   enviadas?: number,
+ *   concluidas?: number,
+ * }} opts
  * @returns {string}
  */
-export function buildPropostasSheetSummary({ tituloOferta, horario, count }) {
-  const nLabel = count === 1 ? '1 proposta recebida' : `${count} propostas recebidas`;
+export function buildPropostasSheetSummary({
+  tituloOferta,
+  horario,
+  count,
+  recebidas,
+  enviadas = 0,
+  concluidas = 0,
+}) {
+  const prefix = `${tituloOferta} · ${horario}`;
   if (count === 0) {
-    return `${tituloOferta} · ${horario} · 0 propostas`;
+    return `${prefix} · 0 propostas`;
   }
-  return `${tituloOferta} · ${horario} · ${nLabel}`;
+
+  const recebidasCount = recebidas ?? (enviadas === 0 && concluidas === 0 ? count : 0);
+
+  const mixed = enviadas > 0 || concluidas > 0;
+  if (mixed) {
+    const parts = [
+      recebidasCount > 0 ? countPart(recebidasCount, 'recebida', 'recebidas') : null,
+      enviadas > 0 ? countPart(enviadas, 'enviada', 'enviadas') : null,
+      concluidas > 0 ? countPart(concluidas, 'concluída', 'concluídas') : null,
+    ].filter(Boolean);
+    if (parts.length > 0) {
+      return `${prefix} · ${parts.join(' · ')}`;
+    }
+  }
+
+  if (recebidasCount === count && count > 0) {
+    const nLabel = count === 1 ? '1 proposta recebida' : `${count} propostas recebidas`;
+    return `${prefix} · ${nLabel}`;
+  }
+
+  return `${prefix} · ${count === 1 ? '1 proposta' : `${count} propostas`}`;
 }
 
 /**

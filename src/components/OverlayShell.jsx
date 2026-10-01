@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useId } from 'react';
 import ModalPortal from './ModalPortal';
+import { getTopOverlay, popOverlay, pushOverlay } from '../utils/overlayStack';
 
 /**
  * Overlay full-screen acima da bottom nav (portal + z-modal).
@@ -25,6 +26,7 @@ function OverlayShell({
   panelTestId,
 }) {
   const isBottom = variant === 'bottom';
+  const overlayId = useId();
 
   const handleOverlayClick = () => {
     if (dismissDisabled || !onDismiss) return;
@@ -34,16 +36,22 @@ function OverlayShell({
   useEffect(() => {
     if (!onDismiss || dismissDisabled) return undefined;
 
+    pushOverlay(overlayId, onDismiss);
+
     const onKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onDismiss();
-      }
+      if (e.key !== 'Escape') return;
+      const top = getTopOverlay();
+      if (top?.id !== overlayId) return;
+      e.preventDefault();
+      onDismiss();
     };
 
     document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [onDismiss, dismissDisabled]);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      popOverlay(overlayId);
+    };
+  }, [onDismiss, dismissDisabled, overlayId]);
 
   return (
     <ModalPortal>

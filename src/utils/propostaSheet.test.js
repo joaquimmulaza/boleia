@@ -33,6 +33,19 @@ describe('propostaSheet utils', () => {
     ).toBe('Oferta flexível · 07:15 · 2 propostas recebidas');
   });
 
+  it('buildPropostasSheetSummary descreve mix recebidas + enviadas + concluídas', () => {
+    expect(
+      buildPropostasSheetSummary({
+        tituloOferta: 'Oferta flexível',
+        horario: '07:15',
+        count: 4,
+        recebidas: 2,
+        enviadas: 1,
+        concluidas: 1,
+      }),
+    ).toBe('Oferta flexível · 07:15 · 2 recebidas · 1 enviada · 1 concluída');
+  });
+
   it('chipPropostaSheet devolve Pendente para aberta', () => {
     expect(chipPropostaSheet('aberta')?.label).toBe('Pendente');
     expect(chipPropostaSheet('aceite')).toBeNull();

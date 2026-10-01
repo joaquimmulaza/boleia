@@ -480,6 +480,7 @@ const DriverDashboard = () => {
   /** @param {import('../components/PropostaReviewCard').PropostaReview} review */
   const handleAbrirContraProposta = (review) => {
     const { proposta } = review;
+    setSelectedReview(null);
     setContraPropostaSheet({
       propostaId: proposta.id,
       oferta_id: proposta.oferta_id || selectedOfertaId,
@@ -995,6 +996,11 @@ const DriverDashboard = () => {
           tituloOferta={tituloOfertaLabel(ofertaSeleccionada)}
           horario={formatIdaRegresso(ofertaSeleccionada.departure_time, ofertaSeleccionada.return_time)}
           reviews={sheetReviews}
+          summaryCounts={{
+            recebidas: reviews.length,
+            enviadas: enviadas.length,
+            concluidas: terminadasRecebidas.length + terminadasEnviadas.length,
+          }}
           loading={loadingPropostas}
           onClose={closePropostasFlow}
           onVerReview={setSelectedReview}

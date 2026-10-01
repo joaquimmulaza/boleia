@@ -77,30 +77,31 @@ function DriverOfertaCard({
       className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden"
       data-testid={`driver-oferta-card-${oferta.id}`}
     >
+      <div className="flex items-start justify-between gap-2 px-5 pt-5 pb-0">
+        <div className="flex items-center gap-2 flex-wrap min-w-0">
+          <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${chip.className}`}>
+            {chip.label}
+          </span>
+          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            {tipoRota}
+          </span>
+        </div>
+        <OfertaKebabMenu
+          canEdit={canEdit}
+          canDespublicar={canDespublicar}
+          disabled={ofertaBusy}
+          onEditar={onEditar}
+          onDespublicar={onDespublicar}
+        />
+      </div>
+
       <button
         type="button"
+        data-testid="driver-oferta-detail-trigger"
         onClick={onOpenDetail}
-        className="w-full text-left p-5 space-y-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+        className="w-full text-left px-5 pb-5 pt-3 space-y-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
         aria-label="Ver detalhe da oferta"
       >
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2 flex-wrap min-w-0">
-            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${chip.className}`}>
-              {chip.label}
-            </span>
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-              {tipoRota}
-            </span>
-          </div>
-          <OfertaKebabMenu
-            canEdit={canEdit}
-            canDespublicar={canDespublicar}
-            disabled={ofertaBusy}
-            onEditar={onEditar}
-            onDespublicar={onDespublicar}
-          />
-        </div>
-
         <OfertaRotaTitulo oferta={oferta} />
 
         <div className="flex items-center gap-3 text-sm text-slate-500">
