@@ -5,6 +5,8 @@ import PreferentialPointsMap from './PreferentialPointsMap';
 import { formatKwanza } from '../utils/formatKwanza';
 import { buildPreferentialMapPoints } from '../utils/propostaReview';
 import { chipEstadoProposta } from '../utils/propostaEstado';
+import { buildContratoSnapshotFromProposta } from '../utils/buildAcordoContratoSnapshot';
+import AcordoContratoSnapshot from './AcordoContratoSnapshot';
 
 /**
  * @typedef {{
@@ -123,6 +125,11 @@ function PropostaReviewCard({
   const mostraNotaParcial = totalMembros > 0 && comPickup > 0 && comPickup < totalMembros;
   const selectionOk = !needsPicker || selectedIds.length === nProposto;
   const canAceitar = Boolean(onAceitar) && selectionOk && !busy;
+  const contratoSnapshot = buildContratoSnapshotFromProposta({
+    modo_preco: review.proposta.modo_preco,
+    n_passageiros_propostos: nProposto,
+    pricing,
+  });
 
   /** IDs a enviar no aceite: picker explícito ou lista completa do grupo quando N_actual = N. */
   const resolveAceiteMemberIds = () => {
@@ -358,11 +365,18 @@ function PropostaReviewCard({
         isOpen={confirmOpen}
         title={isCriador ? 'Cancelar esta proposta?' : 'Aceitar esta proposta?'}
         message={
-          isCriador
-            ? 'A proposta deixa de ficar disponível para a contraparte. Podes enviar outra mais tarde.'
-            : needsPicker
-              ? `Vais criar um acordo com ${nProposto} passageiros seleccionados. Esta acção não se pode desfazer.`
-              : 'Vais criar um acordo com estes passageiros. Esta acção não se pode desfazer.'
+          isCriador ? (
+            'A proposta deixa de ficar disponível para a contraparte. Podes enviar outra mais tarde.'
+          ) : (
+            <>
+              <p className="text-center text-pretty">
+                {needsPicker
+                  ? `Vais criar um acordo com ${nProposto} passageiros seleccionados. Esta acção não se pode desfazer.`
+                  : 'Vais criar um acordo com estes passageiros. Esta acção não se pode desfazer.'}
+              </p>
+              <AcordoContratoSnapshot snapshot={contratoSnapshot} variant="compact" />
+            </>
+          )
         }
         confirmText={isCriador ? 'Confirmar cancelamento' : 'Confirmar'}
         cancelText="Voltar"

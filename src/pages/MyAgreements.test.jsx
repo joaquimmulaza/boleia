@@ -131,6 +131,7 @@ function mockPagamentosGate(acordo, viewerId, emCustodia = true) {
 const acordoMotorista = {
   id: 'acordo-1',
   estado: 'activo',
+  modo_preco: 'POR_PASSAGEIRO',
   n_passageiros_contrato: 3,
   valor_mensal_por_passageiro_kz: 40000,
   valor_mensal_total_kz: 120000,
@@ -169,6 +170,7 @@ const acordoMotorista = {
 const acordoPassageiro = {
   id: 'acordo-pax',
   estado: 'activo',
+  modo_preco: 'POR_PASSAGEIRO',
   n_passageiros_contrato: 3,
   valor_mensal_por_passageiro_kz: 40000,
   valor_mensal_total_kz: 120000,
@@ -275,10 +277,14 @@ describe('MyAgreements — marketplace 1:N', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
-    expect(within(dialog).getByText(/Preço combinado/i)).toBeInTheDocument();
+    expect(within(dialog).getByTestId('acordo-contrato-snapshot')).toBeInTheDocument();
+    expect(within(dialog).getByText(/Contrato acordado/i)).toBeInTheDocument();
     expect(
       within(dialog).getByText(/O valor fica congelado durante este acordo/i),
     ).toBeInTheDocument();
+    const snapshot = within(dialog).getByTestId('acordo-contrato-snapshot');
+    expect(within(snapshot).getAllByText(/Por passageiro/i).length).toBeGreaterThanOrEqual(1);
+    expect(within(snapshot).getByText(/Grupo · 3 pessoas/i)).toBeInTheDocument();
     expect(within(dialog).getByText(/Passageiros · 3/i)).toBeInTheDocument();
 
     expect(within(dialog).getByText('Ana Costa')).toBeInTheDocument();
@@ -305,10 +311,12 @@ describe('MyAgreements — marketplace 1:N', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
-    expect(within(dialog).getByText(/Preço combinado/i)).toBeInTheDocument();
+    expect(within(dialog).getByTestId('acordo-contrato-snapshot')).toBeInTheDocument();
+    expect(within(dialog).getByText(/Contrato acordado/i)).toBeInTheDocument();
     expect(
       within(dialog).getByText(/O valor fica congelado durante este acordo/i),
     ).toBeInTheDocument();
+    expect(within(dialog).getByTestId('contrato-quota-destaque')).toBeInTheDocument();
 
     const ownRow = within(dialog).getByTestId('passenger-row-pax-viewer');
     expect(ownRow).toHaveAttribute('data-highlighted', 'true');
@@ -930,7 +938,7 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
         ...acordoMotorista,
         adenda_pendente: {
           estado: 'aceite',
-          effective_from: '2026-10-01',
+          effective_from: '2026-11-01',
           modo_preco: 'POR_PASSAGEIRO',
           valor_mensal_por_passageiro_kz: 45000,
           valor_mensal_total_kz: 90000,
@@ -945,8 +953,8 @@ describe('MyAgreements — T29 adenda / renegociar preço', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
-    expect(within(dialog).getByText(/Preço combinado/i)).toBeInTheDocument();
-    expect(within(dialog).getByTestId('quota-destaque')).toHaveTextContent(/40/);
+    expect(within(dialog).getByTestId('acordo-contrato-snapshot')).toBeInTheDocument();
+    expect(within(dialog).getByText(/Contrato acordado/i)).toBeInTheDocument();
     const pendente = within(dialog).getByTestId('adenda-pendente');
     expect(within(pendente).getByTestId('adenda-chip')).toHaveTextContent(/Aceite vigora em/i);
     expect(within(pendente).getByTestId('adenda-precos-comparacao')).toBeInTheDocument();

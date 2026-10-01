@@ -6,7 +6,7 @@ import ModalPortal from './ModalPortal';
  * @param {{
  *   isOpen: boolean,
  *   title: string,
- *   message: string,
+ *   message: React.ReactNode,
  *   onConfirm: () => void,
  *   onCancel: () => void,
  *   confirmText?: string,
@@ -60,9 +60,9 @@ const ConfirmationModal = ({
             <h3 id="modal-title" className="text-xl font-bold text-slate-900 dark:text-white mb-3">
               {title}
             </h3>
-            <p className="text-slate-500 dark:text-slate-400 text-base leading-relaxed">
+            <div className="text-slate-500 dark:text-slate-400 text-base leading-relaxed text-left space-y-3">
               {message}
-            </p>
+            </div>
           </div>
 
           <div className="flex flex-col gap-2 p-4 pt-0 pb-safe">
