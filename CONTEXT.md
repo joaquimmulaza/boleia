@@ -2,7 +2,7 @@
 
 Fonte de verdade arquitectónica e de estado: **`AGENTS.md`** (relatório na secção 9).
 
-**2026-10-02 — Cantos inferiores dos sheets:** `OverlayShell` bottom com margem 12px / `16px + safe-area` e raio 34px, no estilo do cartão Find My. Spec `.specs/quick/sheet-bottom-radius/`.
+**2026-10-02 — Cantos inferiores dos sheets:** `OverlayShell` bottom com margem 12px / `16px + safe-area` e raio 34px, no estilo do cartão Find My. Folga interior `pb-sheet` (2.5rem) num filho do scroll. Sheets de alerta (instruções PWA, actualização, convite e permissões) fecham ao deslizar para baixo. Spec `.specs/quick/sheet-bottom-radius/`.
 
 **2026-09-10 — Preview reconcile #2:** `supabase/migrations/` = 61 versões remotas (MCP produção). Sem DDL. Spec `.specs/quick/supabase-preview-reconcile-2/`.
 

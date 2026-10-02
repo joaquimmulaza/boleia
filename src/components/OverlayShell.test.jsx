@@ -33,7 +33,8 @@ describe('OverlayShell', () => {
 
     const panel = screen.getByTestId('bottom-panel');
     expect(panel.className).toMatch(/overflow-y-auto/);
-    expect(panel.className).toMatch(/pb-sheet/);
+    expect(panel.firstElementChild?.className).toMatch(/pb-sheet/);
+    expect(panel.className).not.toMatch(/\bpb-sheet\b/);
     expect(panel.className).not.toMatch(/pb-safe/);
     expect(panel.className).toMatch(/max-h-\[90dvh\]/);
   });
@@ -53,6 +54,7 @@ describe('OverlayShell', () => {
     expect(shell.className).toMatch(/sheet-bottom-inset/);
     const css = readFileSync(resolve(process.cwd(), 'src/index.css'), 'utf8');
     expect(css).toMatch(/--sheet-bottom-inset:\s*calc\(16px \+ env\(safe-area-inset-bottom, 0px\)\)/);
+    expect(css).toMatch(/\.pb-sheet\s*\{[^}]*padding-bottom:\s*2\.5rem/);
   });
 
   it('variant center: content wrapper centrado', () => {

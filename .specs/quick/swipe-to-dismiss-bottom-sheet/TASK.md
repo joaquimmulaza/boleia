@@ -7,7 +7,7 @@
 - Gesto em `OverlayShell` quando `variant="bottom"`, há `onDismiss` e `dismissDisabled` é falso.
 - `SheetDragHandle` fica só o grabber visual (`touch-none`). Quem ainda passa `onDismiss` ao handle não ganha um segundo sistema de estado.
 - Variante `center` inalterada. Backdrop tap e Escape mantêm-se.
-- Fora de âmbito: `InstallAppPrompt`, `UpdatePrompt`, `InstallAppInstructionsModal`, `ConfirmationModal`.
+- `InstallAppPrompt`, `UpdatePrompt`, `InstallAppInstructionsModal` e `OnboardingPermissions` usam o mesmo gesto (shell ou `useSheetDrag`). `ConfirmationModal` continua fora.
 
 ## Comportamento
 - `sheetY = max(0, dy)` via `translate3d` (sem re-render no drag).

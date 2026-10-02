@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import OnboardingPermissions from './OnboardingPermissions';
 import { markPermissionsEligible } from '../utils/permissionsPrompt';
+import { flickSheetDown, flushMotion, mockSheetMotion } from '../test/sheetPointer';
 
 Object.defineProperty(global, 'Notification', {
   value: {
@@ -25,13 +26,16 @@ Object.defineProperty(global.navigator, 'geolocation', {
   writable: true,
 });
 
-vi.mock('../contexts/AuthContext', () => ({
-  useAuth: () => ({
-    user: { id: 'user-1' },
-    profile: { onboarding_completed: false },
-    refreshProfile: vi.fn(),
-  }),
-}));
+vi.mock('../contexts/AuthContext', () => {
+  const profile = { onboarding_completed: false };
+  return {
+    useAuth: () => ({
+      user: { id: 'user-1' },
+      profile,
+      refreshProfile: vi.fn(),
+    }),
+  };
+});
 
 vi.mock('../hooks/usePushNotifications', () => ({
   usePushNotifications: () => ({
@@ -76,5 +80,22 @@ describe('OnboardingPermissions — adiamento', () => {
     expect(await screen.findByText(/Ativar Recursos/i)).toBeInTheDocument();
     expect(screen.getByText(/ponto de recolha combinado/i)).toBeInTheDocument();
     expect(screen.queryByText(/boleias perto de ti/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId('sheet-drag-handle')).toBeInTheDocument();
+    const panel = screen.getByTestId('onboarding-permissions-panel');
+    expect(panel.firstElementChild?.className).toMatch(/pb-sheet/);
+  });
+
+  it('fecha ao deslizar para baixo', async () => {
+    const restoreMotion = mockSheetMotion();
+    render(<OnboardingPermissions />);
+    markPermissionsEligible();
+
+    flickSheetDown(await screen.findByRole('heading', { name: /Ative os Recursos Essenciais/i }));
+    await flushMotion();
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: /Ative os Recursos Essenciais/i })).not.toBeInTheDocument();
+    });
+    restoreMotion();
   });
 });

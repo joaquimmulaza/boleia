@@ -134,9 +134,9 @@ body {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* Folga interior dos sheets. Não usar .pb-safe no painel: essa regra vem depois do Tailwind e zera o pb-* quando a safe area é 0. */
+/* Folga interior dos sheets. Fica num filho do painel com scroll: no iOS o padding-bottom do próprio overflow não aparece. */
 .pb-sheet {
-  padding-bottom: 1.75rem;
+  padding-bottom: 2.5rem;
 }
 
 .pb-shell {

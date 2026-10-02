@@ -1,6 +1,7 @@
 import React from 'react';
 import { Share, PlusSquare, CheckCircle2, Smartphone } from 'lucide-react';
-import ModalPortal from './ModalPortal';
+import OverlayShell from './OverlayShell';
+import SheetDragHandle from './SheetDragHandle';
 
 /**
  * @typedef {import('../utils/pwaInstall').InstallPlatform} InstallPlatform
@@ -25,23 +26,16 @@ const InstallAppInstructionsModal = ({
   const isIos = platform === 'ios';
 
   return (
-    <ModalPortal>
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Adicionar ao ecrã — instruções"
-        className="fixed inset-0 z-modal flex items-end justify-center sm:items-center px-3 pb-[var(--sheet-bottom-inset)] sm:p-4"
-        style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
-        onClick={onClose}
-      >
-        <div
-          role="document"
-          className="w-full max-w-sm max-h-[90dvh] overflow-y-auto bg-white dark:bg-zinc-900 px-6 pb-sheet shadow-2xl rounded-[34px] border border-gray-200 dark:border-zinc-800"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex justify-center pt-4 pb-2">
-            <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full" aria-hidden="true" />
-          </div>
+    <OverlayShell
+      variant="bottom"
+      onDismiss={onClose}
+      overlayClassName="bg-black/60"
+      panelClassName="max-w-sm bg-white dark:bg-zinc-900 px-6 shadow-2xl border border-gray-200 dark:border-zinc-800"
+      testId="install-instructions-overlay"
+      panelTestId="install-instructions-panel"
+    >
+      <div role="dialog" aria-modal="true" aria-label="Adicionar ao ecrã — instruções">
+          <SheetDragHandle />
 
           <div className="flex justify-center mt-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
@@ -125,9 +119,8 @@ const InstallAppInstructionsModal = ({
           >
             Fechar
           </button>
-        </div>
       </div>
-    </ModalPortal>
+    </OverlayShell>
   );
 };
 

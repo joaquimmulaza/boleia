@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import SheetDragHandle from './SheetDragHandle';
+import { useSheetDrag } from '../hooks/useSheetDrag';
 
 const DISMISS_STORAGE_KEY = 'pwa-update-dismissed';
 
@@ -72,10 +74,6 @@ const UpdatePrompt = () => {
     pendingVersion != null && getDismissedUpdateVersion() === pendingVersion;
   const showPrompt = needRefresh && pendingVersion != null && !dismissed;
 
-  if (!showPrompt) {
-    return null;
-  }
-
   const handleDismiss = () => {
     if (pendingVersion) {
       setDismissedUpdateVersion(pendingVersion);
@@ -83,19 +81,30 @@ const UpdatePrompt = () => {
     setNeedRefresh(false);
   };
 
+  const { panelRef } = useSheetDrag({ enabled: showPrompt, onDismiss: handleDismiss });
+
+  if (!showPrompt) {
+    return null;
+  }
+
   const handleUpdate = () => {
     clearDismissedUpdateVersion();
     updateServiceWorker(true);
   };
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-overlay px-3 pb-[var(--sheet-bottom-inset)] md:p-6">
-      <div className="bg-white dark:bg-zinc-900 rounded-[34px] shadow-2xl border border-gray-200 dark:border-zinc-800 animate-slide-up w-full max-w-md mx-auto overflow-hidden">
-        <div className="w-full flex justify-center pt-3 pb-2 md:hidden">
-          <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
-        </div>
+    <div className="fixed inset-x-0 bottom-0 z-overlay px-3 pb-[var(--sheet-bottom-inset)] md:p-6 pointer-events-none">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Atualização disponível"
+        data-testid="update-prompt-panel"
+        className="pointer-events-auto bg-white dark:bg-zinc-900 rounded-[34px] shadow-2xl border border-gray-200 dark:border-zinc-800 w-full max-w-md mx-auto overflow-hidden"
+      >
+        <SheetDragHandle />
 
-        <div className="px-6 pb-sheet pt-4 md:pt-6">
+        <div className="px-6 pb-sheet pt-2 md:pt-6">
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2 text-center">
             Atualização disponível
           </h3>

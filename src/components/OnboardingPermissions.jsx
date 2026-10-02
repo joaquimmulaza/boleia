@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Bell, MapPin, Navigation } from 'lucide-react'
-import ModalPortal from './ModalPortal'
+import OverlayShell from './OverlayShell'
+import SheetDragHandle from './SheetDragHandle'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { usePushNotifications } from '../hooks/usePushNotifications'
@@ -30,7 +31,6 @@ const OnboardingPermissions = () => {
   const { user, profile, refreshProfile } = useAuth()
   const { subscribe, isSupported } = usePushNotifications()
   const [visible, setVisible] = useState(false)
-  const [animating, setAnimating] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -38,7 +38,6 @@ const OnboardingPermissions = () => {
     const evaluate = async () => {
       if (!isPermissionsEligible()) {
         if (!cancelled) {
-          setAnimating(false)
           setVisible(false)
         }
         return
@@ -47,11 +46,7 @@ const OnboardingPermissions = () => {
       const skip = await shouldSkipOnboardingPermissions(profile)
       if (!cancelled && !skip) {
         setVisible(true)
-        requestAnimationFrame(() => {
-          if (!cancelled) setAnimating(true)
-        })
       } else if (!cancelled) {
-        setAnimating(false)
         setVisible(false)
       }
     }
@@ -72,11 +67,8 @@ const OnboardingPermissions = () => {
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
   const handleClose = () => {
-    setAnimating(false)
-    setTimeout(() => {
-      setVisible(false)
-      notifyOnboardingPermissionsClosed()
-    }, 300)
+    setVisible(false)
+    notifyOnboardingPermissionsClosed()
   }
 
   // ─── Cenário C: Ativar Recursos ──────────────────────────────────────────────
@@ -133,34 +125,16 @@ const OnboardingPermissions = () => {
   if (!visible) return null
 
   return (
-    <ModalPortal>
-      {/* Backdrop — dark translucent overlay (M3 scrim) */}
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Ative os Recursos Essenciais"
-        className="fixed inset-0 z-modal flex items-end justify-center px-3 pb-[var(--sheet-bottom-inset)]"
-        style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
-        onClick={handleDismiss}
-      >
-        {/* Bottom Sheet — M3 Level 3 elevation, 24px nos quatro cantos */}
-        <div
-          role="document"
-          className="w-full max-w-sm max-h-[90dvh] overflow-y-auto bg-white px-6 pb-sheet shadow-2xl rounded-[34px]"
-          style={{
-            transform: animating ? 'translateY(0)' : 'translateY(100%)',
-            transition: 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
-          }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Handle bar — M3 Bottom Sheet drag indicator */}
-        <div className="flex justify-center pt-4 pb-2">
-          <div
-            className="bg-gray-300 rounded-full"
-            style={{ width: '40px', height: '4px' }}
-            aria-hidden="true"
-          />
-        </div>
+    <OverlayShell
+      variant="bottom"
+      onDismiss={handleDismiss}
+      overlayClassName="bg-black/60"
+      panelClassName="max-w-sm bg-white px-6 shadow-2xl"
+      testId="onboarding-permissions-overlay"
+      panelTestId="onboarding-permissions-panel"
+    >
+      <div role="dialog" aria-modal="true" aria-label="Ative os Recursos Essenciais">
+        <SheetDragHandle />
 
         {/* Brand Icon — car/navigation in brand green circle */}
         <div className="flex justify-center mt-6">
@@ -332,9 +306,8 @@ const OnboardingPermissions = () => {
           Podes alterar as permissões a qualquer momento nas definições do
           dispositivo.
         </p>
-        </div>
       </div>
-    </ModalPortal>
+    </OverlayShell>
   )
 }
 

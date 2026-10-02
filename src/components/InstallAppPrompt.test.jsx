@@ -69,6 +69,8 @@ describe('InstallAppPrompt', () => {
     });
 
     expect(screen.getByText(/Tens a app no ecrã/i)).toBeInTheDocument();
+    expect(screen.getByTestId('sheet-drag-handle')).toBeInTheDocument();
+    expect(screen.getByTestId('install-prompt-panel').querySelector('.pb-sheet')).toBeTruthy();
   });
 
   it('Agora não persiste dismiss', async () => {

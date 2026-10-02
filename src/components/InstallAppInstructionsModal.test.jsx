@@ -1,7 +1,8 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import InstallAppInstructionsModal from './InstallAppInstructionsModal';
+import { flickSheetDown, flushMotion, mockSheetMotion } from '../test/sheetPointer';
 
 describe('InstallAppInstructionsModal', () => {
   it('não renderiza quando isOpen é false', () => {
@@ -29,4 +30,29 @@ describe('InstallAppInstructionsModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /Fechar/i }));
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('deixa folga interior por baixo do botão, fora do painel com scroll', () => {
+    render(<InstallAppInstructionsModal isOpen onClose={vi.fn()} platform="ios" />);
+    const panel = screen.getByTestId('install-instructions-panel');
+    expect(panel.className).toMatch(/overflow-y-auto/);
+    expect(panel.className).not.toMatch(/\bpb-sheet\b/);
+    expect(panel.firstElementChild?.className).toMatch(/pb-sheet/);
+  });
+
+  it('fecha ao deslizar para baixo no título', async () => {
+    const restoreMotion = mockSheetMotion();
+    const onClose = vi.fn();
+    render(<InstallAppInstructionsModal isOpen onClose={onClose} platform="ios" />);
+
+    flickSheetDown(screen.getByRole('heading', { name: /Adicionar ao ecrã/i }));
+    await flushMotion();
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    restoreMotion();
+  });
+});
+
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
 });

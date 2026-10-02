@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Smartphone } from 'lucide-react';
 import ModalPortal from './ModalPortal';
+import SheetDragHandle from './SheetDragHandle';
+import { useSheetDrag } from '../hooks/useSheetDrag';
 import { useAuth } from '../contexts/AuthContext';
 import { usePwaInstall } from '../hooks/usePwaInstall';
 import { getInstallDismissed, setInstallDismissed } from '../utils/pwaInstall';
@@ -26,7 +28,6 @@ const InstallAppPrompt = () => {
   } = usePwaInstall();
 
   const [visible, setVisible] = useState(false);
-  const [animating, setAnimating] = useState(false);
   const [instructionsOpen, setInstructionsOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -41,7 +42,6 @@ const InstallAppPrompt = () => {
     const timer = window.setTimeout(() => {
       if (!shouldOfferInstall()) return;
       setVisible(true);
-      requestAnimationFrame(() => setAnimating(true));
     }, SHOW_DELAY_MS);
 
     return () => window.clearTimeout(timer);
@@ -79,9 +79,10 @@ const InstallAppPrompt = () => {
 
   const handleDismiss = () => {
     setInstallDismissed();
-    setAnimating(false);
-    setTimeout(() => setVisible(false), 300);
+    setVisible(false);
   };
+
+  const { panelRef } = useSheetDrag({ enabled: visible, onDismiss: handleDismiss });
 
   const handlePrimary = async () => {
     if (canInstallNative) {
@@ -123,17 +124,13 @@ const InstallAppPrompt = () => {
           className="fixed inset-x-0 bottom-0 z-overlay px-3 pb-[var(--sheet-bottom-inset)] md:p-6"
         >
           <div
+            ref={panelRef}
+            data-testid="install-prompt-panel"
             className="bg-white dark:bg-zinc-900 rounded-[34px] shadow-2xl border border-gray-200 dark:border-zinc-800 w-full max-w-md mx-auto overflow-hidden"
-            style={{
-              transform: animating ? 'translateY(0)' : 'translateY(100%)',
-              transition: 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
-            }}
           >
-            <div className="w-full flex justify-center pt-3 pb-2 md:hidden">
-              <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full" aria-hidden="true" />
-            </div>
+            <SheetDragHandle />
 
-            <div className="px-6 pb-sheet pt-4 md:pt-6 text-center">
+            <div className="px-6 pb-sheet pt-2 md:pt-6 text-center">
               <div className="flex justify-center mb-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
                   <Smartphone className="text-primary" size={28} aria-hidden="true" />
