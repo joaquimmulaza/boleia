@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import OverlayShell from './OverlayShell';
@@ -44,11 +46,12 @@ describe('OverlayShell', () => {
 
     const shell = screen.getByTestId('bottom-shell');
     const panel = screen.getByTestId('bottom-panel');
-    expect(panel.className).toMatch(/rounded-b-\[20px\]/);
-    expect(panel.className).toMatch(/rounded-t-\[20px\]/);
+    expect(panel.className).toMatch(/rounded-\[34px\]/);
     expect(shell.className).not.toMatch(/(?:^|\s)p-0(?:\s|$)/);
-    expect(shell.className).toMatch(/px-2/);
+    expect(shell.className).toMatch(/px-3/);
     expect(shell.className).toMatch(/sheet-bottom-inset/);
+    const css = readFileSync(resolve(process.cwd(), 'src/index.css'), 'utf8');
+    expect(css).toMatch(/--sheet-bottom-inset:\s*calc\(16px \+ env\(safe-area-inset-bottom, 0px\)\)/);
   });
 
   it('variant center: content wrapper centrado', () => {
