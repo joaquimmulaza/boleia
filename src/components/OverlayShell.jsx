@@ -61,8 +61,10 @@ function OverlayShell({
       <div
         data-testid={testId}
         className={`fixed inset-0 z-modal flex ${
-          isBottom ? 'flex-col justify-end' : 'items-end sm:items-center justify-center'
-        } p-4 ${isBottom ? 'p-0 sm:p-4' : ''}`}
+          isBottom
+            ? 'flex-col justify-end px-2 pb-[var(--sheet-bottom-inset)] sm:p-4'
+            : 'items-end sm:items-center justify-center p-4'
+        }`}
       >
         <div
           ref={backdropRef}
@@ -75,7 +77,7 @@ function OverlayShell({
           <div
             ref={panelRef}
             data-testid={panelTestId}
-            className={`relative w-full max-w-md mx-auto max-h-[90dvh] overflow-y-auto overscroll-y-contain touch-pan-y rounded-t-xl sm:rounded-2xl pb-safe ${panelClassName}`}
+            className={`relative w-full max-w-md mx-auto max-h-[90dvh] overflow-y-auto overscroll-y-contain touch-pan-y rounded-t-[20px] rounded-b-[20px] pb-safe ${panelClassName}`}
           >
             {children}
           </div>

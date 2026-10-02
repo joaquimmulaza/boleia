@@ -27,6 +27,7 @@
   --bottom-nav-height: 4rem;
   --bottom-nav-height-sm: 5rem;
   --shell-bottom-inset: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+  --sheet-bottom-inset: max(0.5rem, env(safe-area-inset-bottom, 0px));
 }
 
 .dark {

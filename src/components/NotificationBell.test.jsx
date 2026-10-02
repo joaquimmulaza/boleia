@@ -69,7 +69,7 @@ describe('NotificationBell', () => {
     expect(screen.getByTestId('sheet-drag-handle')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Fechar' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Notificações' })).toBeInTheDocument();
-    expect(panel.className).toMatch(/rounded-t-xl/);
+    expect(panel.className).toMatch(/rounded-b-\[20px\]/);
     expect(panel.className).not.toMatch(/translate-x/);
     expect(screen.queryByLabelText(/Fechar notificações/i)).not.toBeInTheDocument();
   });

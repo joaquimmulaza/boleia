@@ -139,20 +139,18 @@ const OnboardingPermissions = () => {
         role="dialog"
         aria-modal="true"
         aria-label="Ative os Recursos Essenciais"
-        className="fixed inset-0 z-modal flex items-end justify-center"
+        className="fixed inset-0 z-modal flex items-end justify-center px-2 pb-[var(--sheet-bottom-inset)]"
         style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
         onClick={handleDismiss}
       >
-        {/* Bottom Sheet — M3 Level 3 elevation, 24px top radius */}
+        {/* Bottom Sheet — M3 Level 3 elevation, 24px nos quatro cantos */}
         <div
           role="document"
-          className="w-full max-w-sm max-h-[90dvh] overflow-y-auto bg-white px-6 pb-8 pb-safe shadow-2xl"
-        style={{
-          borderTopLeftRadius: '24px',
-          borderTopRightRadius: '24px',
-          transform: animating ? 'translateY(0)' : 'translateY(100%)',
-          transition: 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
-        }}
+          className="w-full max-w-sm max-h-[90dvh] overflow-y-auto bg-white px-6 pb-8 pb-safe shadow-2xl rounded-t-[24px] rounded-b-[24px]"
+          style={{
+            transform: animating ? 'translateY(0)' : 'translateY(100%)',
+            transition: 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
+          }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Handle bar — M3 Bottom Sheet drag indicator */}
