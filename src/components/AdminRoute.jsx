@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { needsProfileSetup } from '../utils/oauth';
 
 /**
  * Rota reservada a administradores da plataforma (`perfis.is_admin`).
@@ -23,6 +24,10 @@ const AdminRoute = () => {
 
   if (passwordRecoveryPending) {
     return <Navigate to="/auth?mode=update-password" replace />;
+  }
+
+  if (needsProfileSetup(profile)) {
+    return <Navigate to="/auth?mode=completar-perfil" replace />;
   }
 
   // Perfil falhou ou ainda null após fetch — sem admin

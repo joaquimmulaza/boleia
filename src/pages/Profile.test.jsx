@@ -8,10 +8,15 @@ import * as ProfileService from '../services/ProfileService';
 
 // Mock das libs
 vi.mock('../lib/supabase', () => ({
-  supabase: {
-    auth: { getUser: vi.fn() },
-    from: vi.fn(),
-  },
+    supabase: {
+      auth: {
+        getUser: vi.fn(),
+        getUserIdentities: vi.fn(),
+        linkIdentity: vi.fn(),
+        unlinkIdentity: vi.fn(),
+      },
+      from: vi.fn(),
+    },
 }));
 
 vi.mock('../services/ProfileService', () => ({
@@ -31,7 +36,11 @@ describe('Profile Component', () => {
     vi.clearAllMocks();
 
     supabase.auth.getUser.mockResolvedValue({
-      data: { user: { id: 'user-123', email: 'teste@exemplo.com' } },
+      data: { user: { id: 'user-123', email: 'teste@exemplo.com', user_metadata: {} } },
+      error: null,
+    });
+    supabase.auth.getUserIdentities.mockResolvedValue({
+      data: { identities: [{ provider: 'email', id: 'e1' }] },
       error: null,
     });
 

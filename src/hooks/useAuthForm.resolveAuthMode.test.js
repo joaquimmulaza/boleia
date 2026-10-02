@@ -7,5 +7,6 @@ describe('resolveAuthMode', () => {
     expect(resolveAuthMode('register')).toBe('register');
     expect(resolveAuthMode('forgot')).toBe('forgot');
     expect(resolveAuthMode('update-password')).toBe('update-password');
+    expect(resolveAuthMode('completar-perfil')).toBe('completar-perfil');
   });
 });

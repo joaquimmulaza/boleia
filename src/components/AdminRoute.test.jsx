@@ -70,6 +70,19 @@ describe('AdminRoute', () => {
     expect(screen.getByText('Acordos')).toBeInTheDocument();
   });
 
+  it('redirecciona perfil incompleto para completar perfil', () => {
+    useAuth.mockReturnValue({
+      session: { user: { id: 'u1' } },
+      loading: false,
+      profileLoading: false,
+      profile: { id: 'u1', is_admin: true, perfil_completo: false },
+      passwordRecoveryPending: false,
+    });
+    renderAdminRoute();
+    expect(screen.getByText('Auth')).toBeInTheDocument();
+    expect(screen.queryByText('Admin OK')).not.toBeInTheDocument();
+  });
+
   it('redirecciona para update-password quando passwordRecoveryPending', () => {
     useAuth.mockReturnValue({
       session: { user: { id: 'admin-1' } },

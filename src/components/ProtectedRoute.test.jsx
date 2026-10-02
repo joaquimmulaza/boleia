@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 
 // Mock useAuth
@@ -161,5 +161,48 @@ describe('ProtectedRoute', () => {
       expect(screen.getByText('Página de Auth Recovery')).toBeInTheDocument();
     });
     expect(screen.queryByText('Conteúdo Protegido')).not.toBeInTheDocument();
+  });
+
+  it('espera o perfil antes de decidir a rota', () => {
+    useAuth.mockReturnValue({
+      session: { user: { id: '123' } },
+      loading: false,
+      profileLoading: true,
+      tipoPerfil: null,
+      profile: null,
+    });
+
+    renderWithRouter(<></>, { initialEntries: ['/protegido'] });
+    expect(screen.getByText(/a carregar perfil/i)).toBeInTheDocument();
+  });
+
+  it('manda perfil incompleto para completar perfil', async () => {
+    useAuth.mockReturnValue({
+      session: { user: { id: '123' } },
+      loading: false,
+      profileLoading: false,
+      tipoPerfil: null,
+      profile: { perfil_completo: false },
+    });
+
+    function AuthProbe() {
+      const location = useLocation();
+      return <div>Destino {location.pathname}{location.search}</div>;
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/protegido']}>
+        <Routes>
+          <Route path="/auth" element={<AuthProbe />} />
+          <Route path="/protegido" element={<ProtectedRoute allowedRole="Passageiro" />}>
+            <Route index element={<div>Conteúdo Protegido</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Destino /auth?mode=completar-perfil')).toBeInTheDocument();
+    });
   });
 });
