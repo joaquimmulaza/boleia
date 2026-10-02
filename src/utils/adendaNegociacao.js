@@ -1,5 +1,14 @@
 import { formatEffectiveFromLongPt, formatEffectiveFromShortPt } from './precoProximoMes.js';
 import { formatMesAdendaPt } from './adendaStatus.js';
+import { formatKwanza } from './formatKwanza.js';
+
+// Caching the Intl.DateTimeFormat instance significantly improves performance
+// compared to calling .toLocaleDateString() on every invocation.
+const adendaDateFormatter = new Intl.DateTimeFormat('pt-PT', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+});
 
 /** Estados de negociação activa (máx. uma por acordo). */
 export const NEGOCIACAO_ESTADOS_ATIVOS = new Set([
@@ -198,7 +207,7 @@ export function describeHistoricoAdenda(adenda, ctx = {}) {
     return `${formatEffectiveFromLongPt(adenda?.effective_from)} · ${mesActual} ficou intacto`;
   }
   if (valor != null) {
-    return `Proposta de ${valor.toLocaleString('pt-PT')} Kz`;
+    return `Proposta de ${formatKwanza(valor)} Kz`;
   }
   return 'Proposta de preço';
 }
@@ -210,7 +219,7 @@ export function describeHistoricoAdenda(adenda, ctx = {}) {
 export function footerHistoricoAdenda(adenda) {
   const e = String(adenda?.estado || '').toLowerCase();
   const data = adenda?.created_at
-    ? new Date(adenda.created_at).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short', year: 'numeric' })
+    ? adendaDateFormatter.format(new Date(adenda.created_at))
     : '';
   if (e === 'cancelada_iniciador') return data ? `Retirada · ${data}` : 'Retirada';
   if (e === 'cancelada_substituta') return data ? `Contra-proposta · ${data}` : 'Substituída';
