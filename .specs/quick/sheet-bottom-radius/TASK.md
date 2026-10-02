@@ -7,7 +7,7 @@ No telemóvel, `OverlayShell` (`variant="bottom"`) usa `p-0` e só arredonda o t
 - Forma canónica em `OverlayShell` quando `variant="bottom"`.
 - Fora do shell, a mesma margem e o raio inferior: `InstallAppPrompt`, `UpdatePrompt`, `InstallAppInstructionsModal`, `OnboardingPermissions`.
 - `MyAgreements` (diálogo inline com `rounded-2xl` e `p-4`) fica como está.
-- Gesto de arrastar para fechar não muda. Variante `center` inalterada.
+- O gesto de arrastar para fechar mantém-se no `OverlayShell`. Os sheets de alerta (`InstallAppInstructionsModal`, `UpdatePrompt`, `InstallAppPrompt`, `OnboardingPermissions`) usam o mesmo gesto. Variante `center` inalterada.
 
 ## Design
 Sem ecrã Stitch novo: é chrome do primitivo existente, não um fluxo novo. UI Skills MCP não está neste ambiente; constraints de baseline aplicadas à mão:
@@ -20,7 +20,7 @@ Sem ecrã Stitch novo: é chrome do primitivo existente, não um fluxo novo. UI 
 ## Comportamento
 - Contentor bottom: `px-3` e `pb-[var(--sheet-bottom-inset)]` no telemóvel; `sm:p-4` a partir de `sm`. Sem `p-0`.
 - `--sheet-bottom-inset: calc(16px + env(safe-area-inset-bottom, 0px))` em `src/index.css`.
-- Painel: `rounded-[34px]` e `pb-sheet` (1.75rem). `pb-safe` no painel zera o padding quando a safe area é 0, por isso a folga interior é uma classe própria.
+- Painel: `rounded-[34px]`. A folga interior é `pb-sheet` (2.5rem) num filho do painel com scroll — no iOS o `padding-bottom` do próprio `overflow` não aparece. `pb-safe` no painel zera o padding quando a safe area é 0.
 - `rounded-t-[20px]` sai de `OfertaDetailSheet`, `ProposalSheet` e `PropostaDetailSheet`.
 - Prompts e onboarding: o mesmo `rounded-[34px]`, `px-3` e a mesma margem inferior. `pb-safe` no contentor exterior sai quando a margem do sheet já cobre a safe area, para não anular o padding Tailwind.
 
