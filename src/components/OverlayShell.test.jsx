@@ -35,6 +35,22 @@ describe('OverlayShell', () => {
     expect(panel.className).toMatch(/max-h-\[90dvh\]/);
   });
 
+  it('variant bottom: cantos inferiores arredondados e margem no telemóvel', () => {
+    render(
+      <OverlayShell variant="bottom" testId="bottom-shell" panelTestId="bottom-panel">
+        <button type="button">Confirmar</button>
+      </OverlayShell>,
+    );
+
+    const shell = screen.getByTestId('bottom-shell');
+    const panel = screen.getByTestId('bottom-panel');
+    expect(panel.className).toMatch(/rounded-b-\[20px\]/);
+    expect(panel.className).toMatch(/rounded-t-\[20px\]/);
+    expect(shell.className).not.toMatch(/(?:^|\s)p-0(?:\s|$)/);
+    expect(shell.className).toMatch(/px-2/);
+    expect(shell.className).toMatch(/sheet-bottom-inset/);
+  });
+
   it('variant center: content wrapper centrado', () => {
     render(
       <OverlayShell variant="center" testId="center-overlay">

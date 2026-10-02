@@ -2,6 +2,8 @@
 
 Fonte de verdade arquitectónica e de estado: **`AGENTS.md`** (relatório na secção 9).
 
+**2026-10-02 — Cantos inferiores dos sheets:** `OverlayShell` bottom com margem `--sheet-bottom-inset` e raio 20px nos quatro cantos. Spec `.specs/quick/sheet-bottom-radius/`.
+
 **2026-09-10 — Preview reconcile #2:** `supabase/migrations/` = 61 versões remotas (MCP produção). Sem DDL. Spec `.specs/quick/supabase-preview-reconcile-2/`.
 
 **2026-09-08 — Editar/cancelar procura:** RPC `update_procura` / `cancel_procura`; spec `.specs/features/editar-procura/`.

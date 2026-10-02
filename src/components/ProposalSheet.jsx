@@ -52,7 +52,7 @@ function ProposalSheet({
     <OverlayShell
       variant="bottom"
       overlayClassName="bg-black/45"
-      panelClassName="bg-white dark:bg-slate-900 shadow-2xl rounded-t-[20px] px-4 pt-2.5 pb-7"
+      panelClassName="bg-white dark:bg-slate-900 shadow-2xl px-4 pt-2.5 pb-7"
       testId="proposal-sheet"
       panelTestId="proposal-sheet-panel"
       onDismiss={onClose}

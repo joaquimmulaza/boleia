@@ -35,7 +35,7 @@ function OfertaDetailSheet({
     <OverlayShell
       variant="bottom"
       overlayClassName="bg-black/45"
-      panelClassName="bg-white dark:bg-slate-900 shadow-2xl rounded-t-[20px] px-5 pt-2.5 pb-7"
+      panelClassName="bg-white dark:bg-slate-900 shadow-2xl px-5 pt-2.5 pb-7"
       testId="oferta-detail-sheet"
       onDismiss={onClose}
     >

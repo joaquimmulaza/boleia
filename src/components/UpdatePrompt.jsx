@@ -89,8 +89,8 @@ const UpdatePrompt = () => {
   };
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-overlay md:p-6 pb-safe">
-      <div className="bg-white dark:bg-zinc-900 rounded-t-[24px] md:rounded-b-[24px] shadow-2xl border border-gray-200 dark:border-zinc-800 animate-slide-up w-full max-w-md mx-auto">
+    <div className="fixed inset-x-0 bottom-0 z-overlay px-2 pb-[var(--sheet-bottom-inset)] md:p-6">
+      <div className="bg-white dark:bg-zinc-900 rounded-t-[24px] rounded-b-[24px] shadow-2xl border border-gray-200 dark:border-zinc-800 animate-slide-up w-full max-w-md mx-auto overflow-hidden">
         <div className="w-full flex justify-center pt-3 pb-2 md:hidden">
           <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
         </div>
