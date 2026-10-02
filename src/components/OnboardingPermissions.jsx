@@ -146,7 +146,7 @@ const OnboardingPermissions = () => {
         {/* Bottom Sheet — M3 Level 3 elevation, 24px nos quatro cantos */}
         <div
           role="document"
-          className="w-full max-w-sm max-h-[90dvh] overflow-y-auto bg-white px-6 pb-8 pb-safe shadow-2xl rounded-[34px]"
+          className="w-full max-w-sm max-h-[90dvh] overflow-y-auto bg-white px-6 pb-sheet shadow-2xl rounded-[34px]"
           style={{
             transform: animating ? 'translateY(0)' : 'translateY(100%)',
             transition: 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)',

@@ -24,7 +24,7 @@ describe('OverlayShell', () => {
     expect(document.body.contains(shell)).toBe(true);
   });
 
-  it('variant bottom: painel tem scroll e pb-safe', () => {
+  it('variant bottom: painel tem scroll e folga interior', () => {
     render(
       <OverlayShell variant="bottom" panelTestId="bottom-panel">
         <button type="button">Confirmar</button>
@@ -33,7 +33,8 @@ describe('OverlayShell', () => {
 
     const panel = screen.getByTestId('bottom-panel');
     expect(panel.className).toMatch(/overflow-y-auto/);
-    expect(panel.className).toMatch(/pb-safe/);
+    expect(panel.className).toMatch(/pb-sheet/);
+    expect(panel.className).not.toMatch(/pb-safe/);
     expect(panel.className).toMatch(/max-h-\[90dvh\]/);
   });
 
