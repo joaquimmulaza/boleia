@@ -95,7 +95,7 @@ const UpdatePrompt = () => {
           <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
         </div>
 
-        <div className="px-6 pb-6 pt-4 md:pt-6">
+        <div className="px-6 pb-sheet pt-4 md:pt-6">
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2 text-center">
             Atualização disponível
           </h3>

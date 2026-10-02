@@ -36,7 +36,7 @@ const InstallAppInstructionsModal = ({
       >
         <div
           role="document"
-          className="w-full max-w-sm max-h-[90dvh] overflow-y-auto bg-white dark:bg-zinc-900 px-6 pb-8 pb-safe shadow-2xl rounded-[34px] border border-gray-200 dark:border-zinc-800"
+          className="w-full max-w-sm max-h-[90dvh] overflow-y-auto bg-white dark:bg-zinc-900 px-6 pb-sheet shadow-2xl rounded-[34px] border border-gray-200 dark:border-zinc-800"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex justify-center pt-4 pb-2">

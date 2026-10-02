@@ -133,7 +133,7 @@ const InstallAppPrompt = () => {
               <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full" aria-hidden="true" />
             </div>
 
-            <div className="px-6 pb-6 pt-4 md:pt-6 text-center">
+            <div className="px-6 pb-sheet pt-4 md:pt-6 text-center">
               <div className="flex justify-center mb-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
                   <Smartphone className="text-primary" size={28} aria-hidden="true" />
