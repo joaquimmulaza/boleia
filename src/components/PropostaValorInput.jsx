@@ -4,6 +4,7 @@ import {
   aplicarValidacaoNativaValorProposta,
   labelValorProposta,
 } from '../utils/propostaValor.js';
+import { formatKwanza } from '../utils/formatKwanza.js';
 
 /**
  * Campo editável do valor mensal da proposta (counter-ask).
@@ -44,7 +45,7 @@ function PropostaValorInput({ modoPreco, value, onChange, disabled = false, askK
       />
       {askKz != null ? (
         <span className="text-xs font-normal text-slate-500">
-          Preço publicado: {Number(askKz).toLocaleString('pt-PT')} Kz — podes propor outro valor.
+          Preço publicado: {formatKwanza(askKz)} Kz — podes propor outro valor.
         </span>
       ) : null}
     </label>

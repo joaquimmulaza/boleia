@@ -1,4 +1,5 @@
 import { ADENDA_TIMEZONE } from './adendaEffectiveFrom.js';
+import { formatKwanza } from './formatKwanza.js';
 
 /** Dia do mês (Luanda) até ao qual se pode propor preço para o mês seguinte. */
 export const PROPOSTA_PRECO_DIA_LIMITE = 28;
@@ -97,5 +98,5 @@ export function formatPrecoDiffPt(actual, proposed) {
   if (diff === 0) return 'Sem alteração';
   const sinal = diff > 0 ? '+' : '−';
   const abs = Math.abs(diff);
-  return `${sinal}${abs.toLocaleString('pt-PT')} Kz / mês`;
+  return `${sinal}${formatKwanza(abs)} Kz / mês`;
 }

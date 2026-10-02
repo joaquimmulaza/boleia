@@ -18,6 +18,7 @@ import {
 } from '../utils/precoProximoMes.js';
 import { firstDayNextMonthLuanda } from '../utils/adendaEffectiveFrom.js';
 import { formatMesAdendaPt } from '../utils/adendaStatus.js';
+import { formatKwanza } from '../utils/formatKwanza.js';
 
 /**
  * Criar proposta de preço para o próximo mês (Figma 9:93).
@@ -102,7 +103,7 @@ export default function AcordoPrecoNovo() {
 
         <p className="text-sm text-slate-700 dark:text-slate-300 text-pretty">
           Propõe o valor do lugar para {mesFuturoCap}. {mesActualLabel} continua a{' '}
-          {ctx.precoActual.toLocaleString('pt-PT')} Kz.
+          {formatKwanza(ctx.precoActual)} Kz.
         </p>
 
         <AcordoPrecoValorInput
