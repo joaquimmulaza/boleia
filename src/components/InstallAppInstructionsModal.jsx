@@ -30,13 +30,13 @@ const InstallAppInstructionsModal = ({
         role="dialog"
         aria-modal="true"
         aria-label="Adicionar ao ecrã — instruções"
-        className="fixed inset-0 z-modal flex items-end justify-center sm:items-center px-2 pb-[var(--sheet-bottom-inset)] sm:p-4"
+        className="fixed inset-0 z-modal flex items-end justify-center sm:items-center px-3 pb-[var(--sheet-bottom-inset)] sm:p-4"
         style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
         onClick={onClose}
       >
         <div
           role="document"
-          className="w-full max-w-sm max-h-[90dvh] overflow-y-auto bg-white dark:bg-zinc-900 px-6 pb-8 pb-safe shadow-2xl rounded-t-[24px] rounded-b-[24px] border border-gray-200 dark:border-zinc-800"
+          className="w-full max-w-sm max-h-[90dvh] overflow-y-auto bg-white dark:bg-zinc-900 px-6 pb-sheet shadow-2xl rounded-[34px] border border-gray-200 dark:border-zinc-800"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex justify-center pt-4 pb-2">

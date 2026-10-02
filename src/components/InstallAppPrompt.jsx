@@ -120,10 +120,10 @@ const InstallAppPrompt = () => {
           role="dialog"
           aria-modal="true"
           aria-label="Tens a app no ecrã?"
-          className="fixed inset-x-0 bottom-0 z-overlay px-2 pb-[var(--sheet-bottom-inset)] md:p-6"
+          className="fixed inset-x-0 bottom-0 z-overlay px-3 pb-[var(--sheet-bottom-inset)] md:p-6"
         >
           <div
-            className="bg-white dark:bg-zinc-900 rounded-t-[24px] rounded-b-[24px] shadow-2xl border border-gray-200 dark:border-zinc-800 w-full max-w-md mx-auto overflow-hidden"
+            className="bg-white dark:bg-zinc-900 rounded-[34px] shadow-2xl border border-gray-200 dark:border-zinc-800 w-full max-w-md mx-auto overflow-hidden"
             style={{
               transform: animating ? 'translateY(0)' : 'translateY(100%)',
               transition: 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
@@ -133,7 +133,7 @@ const InstallAppPrompt = () => {
               <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full" aria-hidden="true" />
             </div>
 
-            <div className="px-6 pb-6 pt-4 md:pt-6 text-center">
+            <div className="px-6 pb-sheet pt-4 md:pt-6 text-center">
               <div className="flex justify-center mb-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
                   <Smartphone className="text-primary" size={28} aria-hidden="true" />

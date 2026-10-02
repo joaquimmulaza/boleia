@@ -12,20 +12,20 @@ No telemóvel, `OverlayShell` (`variant="bottom"`) usa `p-0` e só arredonda o t
 ## Design
 Sem ecrã Stitch novo: é chrome do primitivo existente, não um fluxo novo. UI Skills MCP não está neste ambiente; constraints de baseline aplicadas à mão:
 
-- Um raio por família: sheets do marketplace `20px`; prompts PWA/onboarding que já usam `24px` mantêm `24px` também em baixo.
-- Margem na escala de 8px (`px-2`) e base `max(0.5rem, env(safe-area-inset-bottom))`, para o cartão não ficar debaixo do indicador.
+- Raio único de 34px nos quatro cantos, alinhado ao cartão flutuante do Find My.
+- Margem lateral 12px (`px-3`). Base `calc(16px + env(safe-area-inset-bottom))`: 16px além da safe area, para o fundo aparecer por baixo do cartão.
 - O scrim continua por cima da BottomBar (`z-modal` > `z-bottom-nav`). A margem mostra o scrim nos cantos.
 - O raio fica no mesmo elemento que o fundo e o `overflow`, para o conteúdo não quadrar os cantos.
 
 ## Comportamento
-- Contentor bottom: `px-2` e `pb-[var(--sheet-bottom-inset)]` no telemóvel; `sm:p-4` a partir de `sm`. Sem `p-0`.
-- `--sheet-bottom-inset: max(0.5rem, env(safe-area-inset-bottom, 0px))` em `src/index.css`.
-- Painel: `rounded-t-[20px] rounded-b-[20px]`. `overflow-y-auto` e `pb-safe` mantêm-se.
+- Contentor bottom: `px-3` e `pb-[var(--sheet-bottom-inset)]` no telemóvel; `sm:p-4` a partir de `sm`. Sem `p-0`.
+- `--sheet-bottom-inset: calc(16px + env(safe-area-inset-bottom, 0px))` em `src/index.css`.
+- Painel: `rounded-[34px]` e `pb-sheet` (1.75rem). `pb-safe` no painel zera o padding quando a safe area é 0, por isso a folga interior é uma classe própria.
 - `rounded-t-[20px]` sai de `OfertaDetailSheet`, `ProposalSheet` e `PropostaDetailSheet`.
-- Prompts 24px: `rounded-b-[24px]` sempre (não só `md`/`sm`) e a mesma margem inferior. `pb-safe` no contentor exterior sai quando a margem do sheet já cobre a safe area, para não anular o padding Tailwind.
+- Prompts e onboarding: o mesmo `rounded-[34px]`, `px-3` e a mesma margem inferior. `pb-safe` no contentor exterior sai quando a margem do sheet já cobre a safe area, para não anular o padding Tailwind.
 
 ## AC
-- Painel bottom de `OverlayShell` inclui `rounded-b-[20px]`; o contentor não tem `p-0`.
+- Painel bottom de `OverlayShell` inclui `rounded-[34px]` e `px-3`; o contentor não tem `p-0`.
 - Notificações deixam de exigir `rounded-t-xl`.
-- Sheets fora do shell têm `rounded-b-[24px]` e margem inferior.
+- Sheets fora do shell têm `rounded-[34px]` e a mesma margem.
 - Testes de `OverlayShell` e `NotificationBell` verdes; lint limpo nos ficheiros tocados.

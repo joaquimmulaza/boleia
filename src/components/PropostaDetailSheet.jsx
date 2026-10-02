@@ -35,7 +35,7 @@ function PropostaDetailSheet({
     <OverlayShell
       variant="bottom"
       overlayClassName="bg-black/45"
-      panelClassName="bg-white dark:bg-slate-900 shadow-2xl px-4 pt-2.5 pb-7"
+      panelClassName="bg-white dark:bg-slate-900 shadow-2xl px-4 pt-2.5"
       testId="proposta-detail-sheet"
       onDismiss={onClose}
     >

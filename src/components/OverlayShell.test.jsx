@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import OverlayShell from './OverlayShell';
@@ -22,7 +24,7 @@ describe('OverlayShell', () => {
     expect(document.body.contains(shell)).toBe(true);
   });
 
-  it('variant bottom: painel tem scroll e pb-safe', () => {
+  it('variant bottom: painel tem scroll e folga interior', () => {
     render(
       <OverlayShell variant="bottom" panelTestId="bottom-panel">
         <button type="button">Confirmar</button>
@@ -31,7 +33,8 @@ describe('OverlayShell', () => {
 
     const panel = screen.getByTestId('bottom-panel');
     expect(panel.className).toMatch(/overflow-y-auto/);
-    expect(panel.className).toMatch(/pb-safe/);
+    expect(panel.className).toMatch(/pb-sheet/);
+    expect(panel.className).not.toMatch(/pb-safe/);
     expect(panel.className).toMatch(/max-h-\[90dvh\]/);
   });
 
@@ -44,11 +47,12 @@ describe('OverlayShell', () => {
 
     const shell = screen.getByTestId('bottom-shell');
     const panel = screen.getByTestId('bottom-panel');
-    expect(panel.className).toMatch(/rounded-b-\[20px\]/);
-    expect(panel.className).toMatch(/rounded-t-\[20px\]/);
+    expect(panel.className).toMatch(/rounded-\[34px\]/);
     expect(shell.className).not.toMatch(/(?:^|\s)p-0(?:\s|$)/);
-    expect(shell.className).toMatch(/px-2/);
+    expect(shell.className).toMatch(/px-3/);
     expect(shell.className).toMatch(/sheet-bottom-inset/);
+    const css = readFileSync(resolve(process.cwd(), 'src/index.css'), 'utf8');
+    expect(css).toMatch(/--sheet-bottom-inset:\s*calc\(16px \+ env\(safe-area-inset-bottom, 0px\)\)/);
   });
 
   it('variant center: content wrapper centrado', () => {

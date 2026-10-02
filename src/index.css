@@ -27,7 +27,7 @@
   --bottom-nav-height: 4rem;
   --bottom-nav-height-sm: 5rem;
   --shell-bottom-inset: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
-  --sheet-bottom-inset: max(0.5rem, env(safe-area-inset-bottom, 0px));
+  --sheet-bottom-inset: calc(16px + env(safe-area-inset-bottom, 0px));
 }
 
 .dark {
@@ -132,6 +132,11 @@ body {
 
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Folga interior dos sheets. Não usar .pb-safe no painel: essa regra vem depois do Tailwind e zera o pb-* quando a safe area é 0. */
+.pb-sheet {
+  padding-bottom: 1.75rem;
 }
 
 .pb-shell {
