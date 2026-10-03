@@ -95,7 +95,7 @@
 - O CTA autenticado abre `OpportunityProposalSheet`. Anónimo em `/explorar` continua para `/auth`.
 - Total do acordo do passageiro: um preço, sem stepper. Por passageiro: o stepper multiplica só o total.
 - N acima de 1 neste feed, sem grupo, não cria procura: a folha fica aberta com o erro já usado em `createProposta`.
-- Cabeçalho dos dois: ícone `boleia-logo.png` + «Boleia Certa» (`BrandLockup`).
+- Cabeçalho dos dois: só o ícone `boleia-logo.png` (`BrandLockup`), sem a palavra ao lado. Spec: `.specs/quick/explorar-logo-sem-wordmark/`.
 - Spec: `.specs/quick/explorar-proposta-passageiro/`.
 
 ## Quick (2026-10-03) — Detalhe da oportunidade
