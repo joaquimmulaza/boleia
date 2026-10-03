@@ -74,7 +74,10 @@ describe('MarketplaceExplore', () => {
 
     fireEvent.click(screen.getByText('Disponível para acordos'));
     expect(navigate).not.toHaveBeenCalled();
+    expect(screen.getByTestId('opportunity-detail-sheet')).toBeInTheDocument();
+    expect(screen.queryByTestId('route-indicator')).not.toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Propor acordo' }));
     expect(navigate).toHaveBeenCalledWith('/auth?mode=register&role=passenger');
   });
@@ -95,7 +98,10 @@ describe('MarketplaceExplore', () => {
 
     fireEvent.click(screen.getByText('Talatona'));
     expect(navigate).not.toHaveBeenCalled();
+    expect(screen.getByTestId('opportunity-detail-sheet')).toBeInTheDocument();
+    expect(screen.getAllByTestId('route-indicator').length).toBeGreaterThan(0);
 
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Enviar proposta' }));
     expect(navigate).toHaveBeenCalledWith('/auth?mode=register&role=driver');
   });
