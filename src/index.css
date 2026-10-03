@@ -154,10 +154,22 @@ body {
   display: none;
 }
 
-/* TextFade — truncagem single-line com fade, sem ellipsis */
+/* TextFade — fade sem ellipsis. 1 linha à direita; 2 linhas cortam a 3.ª. */
 .text-fade {
   overflow: hidden;
   white-space: nowrap;
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 1.25rem), transparent);
   mask-image: linear-gradient(to right, #000 calc(100% - 1.25rem), transparent);
+}
+
+.text-fade-cap {
+  overflow: hidden;
+  max-height: 3rem;
+  line-height: 1.5rem;
+  white-space: normal;
+}
+
+.text-fade-lines {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 0.85rem), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 0.85rem), transparent);
 }

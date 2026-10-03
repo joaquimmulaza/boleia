@@ -1,14 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ArrowRight, Clock, Users } from 'lucide-react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { listOfertasDisponiveis, isOfertaFlexivel, labelOfertaRota } from '../services/OfertaService';
+import { listOfertasDisponiveis } from '../services/OfertaService';
 import { listProcurasDisponiveis } from '../services/ProcuraService';
-import { formatKwanza } from '../utils/formatKwanza';
-import { formatTime24h } from '../utils/formatTime';
-import { labelModoPreco } from '../utils/ofertaLabels';
-import { getFriendlyErrorMessage } from '../utils/errorHandler';
+import {
+  COPY_A_CARREGAR,
+  COPY_ERRO_OPORTUNIDADES,
+  COPY_TENTAR_NOVAMENTE,
+  isLiveOpportunity,
+} from '../utils/opportunityCard';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import OpportunityCard from '../components/OpportunityCard';
 import ThemeToggle from '../components/ThemeToggle';
 
 /**
@@ -36,7 +38,8 @@ export default function MarketplaceExplore() {
       setOfertas(ofs);
       setProcuras(prs);
     } catch (err) {
-      setError(getFriendlyErrorMessage(err));
+      console.error('Erro ao carregar oportunidades:', err);
+      setError(COPY_ERRO_OPORTUNIDADES);
     } finally {
       setLoading(false);
     }
@@ -64,6 +67,9 @@ export default function MarketplaceExplore() {
     const q = role ? `?mode=register&role=${role}` : '';
     navigate(`/auth${q}`);
   };
+
+  const ofertasVivas = ofertas.filter((oferta) => isLiveOpportunity('oferta', oferta));
+  const procurasVivas = procuras.filter((procura) => isLiveOpportunity('procura', procura));
 
   return (
     <div
@@ -135,107 +141,56 @@ export default function MarketplaceExplore() {
         </div>
 
         {error ? (
-          <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
+          <div role="alert" className="space-y-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <p>{error}</p>
+            <button
+              type="button"
+              onClick={() => { void carregar(); }}
+              className="font-bold text-red-800"
+            >
+              {COPY_TENTAR_NOVAMENTE}
+            </button>
           </div>
         ) : null}
 
-        {loading ? <LoadingSkeleton /> : null}
+        {loading ? (
+          <div role="status" className="space-y-3">
+            <p className="text-sm text-slate-500">{COPY_A_CARREGAR}</p>
+            <LoadingSkeleton />
+          </div>
+        ) : null}
 
         {!loading && tab === 'ofertas' ? (
           <section className="space-y-3" data-testid="explore-ofertas-feed">
-            {ofertas.length === 0 ? (
+            {ofertasVivas.length === 0 ? (
               <p className="text-sm text-slate-500">Ainda não há ofertas publicadas.</p>
             ) : (
-              ofertas.map((oferta) => {
-                const rota = labelOfertaRota(oferta);
-                return (
-                  <article
-                    key={oferta.id}
-                    className="space-y-3 rounded-xl border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                    data-testid="explore-oferta-card"
-                  >
-                    <div className="flex items-center gap-2 font-bold">
-                      {isOfertaFlexivel(oferta) || rota ? (
-                        <span>{rota || 'Oferta flexível'}</span>
-                      ) : (
-                        <>
-                          <span>{oferta.origin_name || 'Origem'}</span>
-                          <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
-                          <span>{oferta.destination_name || 'Destino'}</span>
-                        </>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-3 text-sm text-slate-500">
-                      <span className="flex items-center gap-1">
-                        <Clock size={14} aria-hidden="true" />
-                        {formatTime24h(oferta.departure_time)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Users size={14} aria-hidden="true" />
-                        {oferta.vagas_disponiveis ?? oferta.vagas_totais ?? '—'} lugares
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between pt-1">
-                      <div>
-                        <strong className="tabular-nums text-primary">
-                          {formatKwanza(oferta.valor_mensal_ask_kz)} Kz
-                        </strong>
-                        <p className="text-xs text-slate-400">{labelModoPreco(oferta.modo_preco)}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => goAuth('passenger')}
-                        className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white"
-                      >
-                        Entrar para propor
-                      </button>
-                    </div>
-                  </article>
-                );
-              })
+              ofertasVivas.map((oferta) => (
+                <div key={oferta.id} data-testid="explore-oferta-card">
+                  <OpportunityCard
+                    kind="oferta"
+                    item={oferta}
+                    onCta={() => goAuth('passenger')}
+                  />
+                </div>
+              ))
             )}
           </section>
         ) : null}
 
         {!loading && tab === 'procuras' ? (
           <section className="space-y-3" data-testid="explore-procuras-feed">
-            {procuras.length === 0 ? (
+            {procurasVivas.length === 0 ? (
               <p className="text-sm text-slate-500">Ainda não há procuras no marketplace.</p>
             ) : (
-              procuras.map((procura) => (
-                <article
-                  key={procura.id}
-                  className="space-y-3 rounded-xl border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                  data-testid="explore-procura-card"
-                >
-                  <div className="flex items-center gap-2 font-bold">
-                    <span>{procura.origin_name || 'Origem'}</span>
-                    <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
-                    <span>{procura.destination_name || 'Destino'}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-3 text-sm text-slate-500">
-                    <span className="flex items-center gap-1">
-                      <Clock size={14} aria-hidden="true" />
-                      {formatTime24h(procura.preferred_time)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Users size={14} aria-hidden="true" />
-                      {(procura.n_candidato ?? 1) === 1
-                        ? '1 pessoa'
-                        : `${procura.n_candidato} pessoas`}
-                    </span>
-                  </div>
-                  <div className="flex justify-end pt-1">
-                    <button
-                      type="button"
-                      onClick={() => goAuth('driver')}
-                      className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white"
-                    >
-                      Entrar para propor
-                    </button>
-                  </div>
-                </article>
+              procurasVivas.map((procura) => (
+                <div key={procura.id} data-testid="explore-procura-card">
+                  <OpportunityCard
+                    kind="procura"
+                    item={procura}
+                    onCta={() => goAuth('driver')}
+                  />
+                </div>
               ))
             )}
           </section>
