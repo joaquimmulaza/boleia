@@ -1249,9 +1249,13 @@ describe('DriverDashboard — marketplace', () => {
     await screen.findByText('Talatona');
     fireEvent.click(screen.getByRole('tab', { name: /Procuras e grupos/i }));
 
-    expect(await screen.findByText('Sem compatibilidade com esta oferta')).toBeInTheDocument();
-    expect(screen.getByText('Cacuaco')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Enviar proposta/i })).not.toBeInTheDocument();
+    const nota = await screen.findByText('Sem compatibilidade com esta oferta');
+    const cartao = nota.closest('[data-testid="opportunity-card"]');
+    expect(cartao).toBeTruthy();
+    expect(within(cartao).getByText('Cacuaco')).toBeInTheDocument();
+    const cta = within(cartao).getByRole('button', { name: 'Enviar proposta' });
+    expect(cta).toBeDisabled();
+    fireEvent.click(cta);
     expect(screen.queryByTestId('opportunity-proposal-sheet')).not.toBeInTheDocument();
   });
 

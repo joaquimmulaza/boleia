@@ -91,7 +91,7 @@
 3. **Não** zonas/polígonos; **não** merge automático em `main`
 
 ## Quick (2026-10-03) — Hub motorista: cartões Procuras e grupos
-- A lista reusa `OpportunityCard` + `RouteIndicator`. Sem segundo cartão e sem montar o sheet de proposta.
+- A lista reusa `OpportunityCard` + `RouteIndicator`. Sem segundo cartão.
 - OD real → rota. Sem OD: sem «Origem»/«Destino» e sem rota inventada. Oferta flexível continua «Disponível para acordos» no modelo do cartão.
 - «Sem compatibilidade com esta oferta» desliga o CTA. Preço da oferta seleccionada no rodapé.
 - Spec: `.specs/quick/hub-procuras-opportunity-card/`.
