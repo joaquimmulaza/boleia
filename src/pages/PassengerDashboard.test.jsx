@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import PassengerDashboard from './PassengerDashboard';
@@ -204,6 +204,73 @@ describe('PassengerDashboard — marketplace', () => {
   function textoKz(valor) {
     return new RegExp(`${formatKwanza(valor).replace(/\s/g, '\\s')}\\sKz`);
   }
+
+  const ofertaExplorar = {
+    id: 'of-detalhe',
+    flexibilidade_rota: false,
+    origin_name: 'Viana',
+    destination_name: 'Talatona',
+    origin_lat: -8.9,
+    origin_lng: 13.18,
+    destination_lat: -8.92,
+    destination_lng: 13.28,
+    departure_time: '07:15',
+    dias_semana: [1, 2, 3, 4, 5],
+    vagas_disponiveis: 4,
+    valor_mensal_ask_kz: 10000,
+    modo_preco: 'POR_PASSAGEIRO',
+    estado: 'disponivel',
+  };
+
+  it('explorar autenticado: o corpo abre o detalhe e não a proposta', async () => {
+    listOfertasDisponiveis.mockResolvedValue([ofertaExplorar]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByTestId('opportunity-open'));
+
+    expect(screen.getByTestId('opportunity-detail-sheet')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Fechar' })).toBeInTheDocument();
+    expect(screen.queryByTestId('opportunity-proposal-sheet')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('propor-browse-sheet')).not.toBeInTheDocument();
+  });
+
+  it('explorar autenticado: o CTA do detalhe abre a proposta', async () => {
+    listOfertasDisponiveis.mockResolvedValue([ofertaExplorar]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByTestId('opportunity-open'));
+    const detalhe = screen.getByTestId('opportunity-detail-sheet');
+    fireEvent.click(within(detalhe).getByRole('button', { name: 'Propor acordo' }));
+
+    expect(await screen.findByTestId('opportunity-proposal-sheet')).toBeInTheDocument();
+    expect(screen.queryByTestId('opportunity-detail-sheet')).not.toBeInTheDocument();
+  });
+
+  it('explorar autenticado: o CTA abre a proposta e não o detalhe', async () => {
+    listOfertasDisponiveis.mockResolvedValue([ofertaExplorar]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Propor acordo' }));
+
+    expect(await screen.findByTestId('opportunity-proposal-sheet')).toBeInTheDocument();
+    expect(screen.getByText('Nova proposta')).toBeInTheDocument();
+    expect(screen.queryByTestId('opportunity-detail-sheet')).not.toBeInTheDocument();
+  });
 
   it('explorar autenticado abre Nova proposta e o total por passageiro acompanha só o N', async () => {
     listOfertasDisponiveis.mockResolvedValue([

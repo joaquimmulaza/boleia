@@ -13,6 +13,7 @@ import GrupoProcuraPanel from '../components/GrupoProcuraPanel';
 import GrupoDescobertaPanel from '../components/GrupoDescobertaPanel';
 import OfertaMatchCard from '../components/OfertaMatchCard';
 import OpportunityCard from '../components/OpportunityCard';
+import OpportunityDetailSheet from '../components/OpportunityDetailSheet';
 import OpportunityProposalSheet from '../components/OpportunityProposalSheet';
 import TextFade from '../components/TextFade';
 import PropostaReviewCard from '../components/PropostaReviewCard';
@@ -154,6 +155,7 @@ const PassengerDashboard = () => {
   /** @type {[null | { oferta: object, gaps: Array<'time' | 'od'>, source: 'browse' | 'hub', form: object }, Function]} */
   const [proporSheet, setProporSheet] = useState(null);
   const [propostaOferta, setPropostaOferta] = useState(null);
+  const [detalheOferta, setDetalheOferta] = useState(null);
   const [propostaErro, setPropostaErro] = useState('');
   /** @type {[null | { propostaId: string, oferta_id: string, procura_id: string, grupo_id?: string | null, modo_preco: string, n_passageiros_propostos: number, valor_mensal_ask_kz: string, precoPublicadoKz?: number | null }, Function]} */
   const [contraPropostaSheet, setContraPropostaSheet] = useState(null);
@@ -1002,6 +1004,7 @@ const PassengerDashboard = () => {
                   key={oferta.id}
                   kind="oferta"
                   item={oferta}
+                  onOpen={() => setDetalheOferta(oferta)}
                   onCta={
                     ofertasComPropostaAberta.has(oferta.id)
                       ? undefined
@@ -1601,6 +1604,23 @@ const PassengerDashboard = () => {
           }
         }}
       />
+      {detalheOferta ? (
+        <OpportunityDetailSheet
+          kind="oferta"
+          item={detalheOferta}
+          onClose={() => setDetalheOferta(null)}
+          onCta={
+            ofertasComPropostaAberta.has(detalheOferta.id)
+              ? undefined
+              : () => {
+                  const oferta = detalheOferta;
+                  setDetalheOferta(null);
+                  abrirPropostaBrowse(oferta);
+                }
+          }
+        />
+      ) : null}
+
       {propostaOferta ? (
         <OpportunityProposalSheet
           papel="passageiro"

@@ -59,6 +59,24 @@ describe('MarketplaceExplore', () => {
     ]);
   });
 
+  it('anónimo: o corpo abre o detalhe e o CTA «Propor acordo» vai para /auth', async () => {
+    render(
+      <MemoryRouter>
+        <MarketplaceExplore />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByTestId('opportunity-open'));
+    expect(screen.getByTestId('opportunity-detail-sheet')).toBeInTheDocument();
+    expect(navigate).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+    expect(screen.queryByTestId('opportunity-detail-sheet')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Propor acordo' }));
+    expect(navigate).toHaveBeenCalledWith('/auth?mode=register&role=passenger');
+    expect(screen.queryByTestId('opportunity-detail-sheet')).not.toBeInTheDocument();
+  });
+
   it('mostra ofertas públicas; o CTA pede acordo e o toque não navega', async () => {
     render(
       <MemoryRouter>
