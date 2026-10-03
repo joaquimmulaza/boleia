@@ -13,6 +13,11 @@ export const RATING_MOMENTO = Object.freeze({
   SAIDA: /** @type {RatingMomento} */ ('saida'),
 });
 
+// Caching the Intl.DateTimeFormat instance significantly improves performance
+// compared to calling .toLocaleDateString() or instantiating on every invocation.
+const ratingDateFormatter = new Intl.DateTimeFormat('pt-PT', { month: 'short', year: 'numeric' });
+
+
 /**
  * @param {string | null | undefined} estado
  * @returns {boolean}
@@ -139,7 +144,7 @@ export function formatMesRatingCurto(mesReferencia) {
   if (!mesReferencia) return '';
   const d = new Date(`${String(mesReferencia).slice(0, 10)}T12:00:00`);
   if (Number.isNaN(d.getTime())) return '';
-  return new Intl.DateTimeFormat('pt-PT', { month: 'short', year: 'numeric' }).format(d);
+  return ratingDateFormatter.format(d);
 }
 
 /**
