@@ -2,11 +2,11 @@
 
 ## Problem Statement
 
-A Boleia Certa só autentica com email e palavra-passe via Supabase Auth. Quem já tem Google, Apple, Facebook ou LinkedIn tem de criar outra palavra-passe. Um segundo sistema de sessão partiria as contas, os guards e o perfil `perfis`.
+A Boleia Certa só autentica com email e palavra-passe via Supabase Auth. Quem já tem Google, Facebook ou LinkedIn tem de criar outra palavra-passe. Um segundo sistema de sessão partiria as contas, os guards e o perfil `perfis`. Apple Sign-In saiu da UI (sem conta Apple Developer); a configuração de servidor ficou intacta.
 
 ## Goals
 
-- [ ] Continuar com Google, Apple, Facebook e LinkedIn no mesmo shell `/auth`
+- [ ] Continuar com Google, Facebook e LinkedIn no mesmo shell `/auth`
 - [ ] Reutilizar `supabase.auth` (PKCE), `auth.users` e `auth.identities`
 - [ ] Não duplicar utilizador quando o email do provider vem verificado e já existe
 - [ ] Conta nova sem telefone ou papel passa por `/auth?mode=completar-perfil` antes do hub
@@ -28,15 +28,15 @@ A Boleia Certa só autentica com email e palavra-passe via Supabase Auth. Quem j
 
 ### P1: Iniciar sessão ou criar conta com um provider ⭐ MVP
 
-**User Story**: Como pessoa em Luanda, quero continuar com Google, Apple, Facebook ou LinkedIn para entrar sem criar outra palavra-passe.
+**User Story**: Como pessoa em Luanda, quero continuar com Google, Facebook ou LinkedIn para entrar sem criar outra palavra-passe.
 
 **Acceptance Criteria**:
 
-1. WHEN o modo é Entrar ou Criar Conta THEN o sistema SHALL mostrar «Continuar com Google», «Continuar com Apple», «Continuar com Facebook» e «Continuar com LinkedIn»
+1. WHEN o modo é Entrar ou Criar Conta THEN o sistema SHALL mostrar «Continuar com Google», «Continuar com Facebook» e «Continuar com LinkedIn», e SHALL NOT mostrar «Continuar com Apple»
 2. WHEN o utilizador clica num botão THEN o sistema SHALL chamar `signInWithOAuth` com esse provider, `redirectTo` = origem + `/auth`, e PKCE
 3. WHEN o modo é Criar Conta THEN `options.data.tipo_perfil` SHALL ser o papel escolhido no toggle
 4. WHEN o modo é Entrar THEN o sistema SHALL NOT enviar `tipo_perfil` (conta nova escolhe o papel depois)
-5. WHILE um provider está a abrir THEN os quatro botões SHALL ficar desactivados e o clicado SHALL dizer «A ligar ao {Provider}...»
+5. WHILE um provider está a abrir THEN os botões sociais SHALL ficar desactivados e o clicado SHALL dizer «A ligar ao {Provider}...»
 6. WHEN o provider devolve erro imediato THEN os botões SHALL voltar ao estado normal e a mensagem SHALL ser PT-PT, sem secrets
 
 **Requirement IDs**: SL-01, SL-02, SL-18
@@ -100,7 +100,7 @@ A Boleia Certa só autentica com email e palavra-passe via Supabase Auth. Quem j
 
 | ID | Descrição | Priority |
 | ---- | --------- | -------- |
-| SL-01 | Botões Continuar com os quatro providers | P1 |
+| SL-01 | Botões Continuar com Google, Facebook e LinkedIn | P1 |
 | SL-02 | signInWithOAuth + redirect `/auth` + PKCE | P1 |
 | SL-09 | Linking só com email verificado | P1 |
 | SL-10 | Cancelamento OAuth | P1 |

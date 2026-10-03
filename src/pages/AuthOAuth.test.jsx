@@ -69,10 +69,10 @@ describe('Auth OAuth', () => {
     supabase.auth.signOut.mockResolvedValue({ error: null });
   });
 
-  it('mostra os quatro botões e mantém o login por palavra-passe', async () => {
+  it('mostra Google, Facebook e LinkedIn e mantém o login por palavra-passe', async () => {
     render(<Auth />);
     expect(screen.getByRole('button', { name: 'Continuar com Google' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Continuar com Apple' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Continuar com Apple' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Continuar com Facebook' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Continuar com LinkedIn' })).toBeInTheDocument();
     expect(screen.getByText('ou')).toBeInTheDocument();
@@ -102,19 +102,22 @@ describe('Auth OAuth', () => {
     expect(screen.getByRole('button', { name: 'A ligar ao Google...' })).toBeDisabled();
   });
 
-  it('no registo, Apple recebe o papel escolhido', async () => {
+  it('no registo, Facebook recebe o papel escolhido', async () => {
     render(<Auth />);
     fireEvent.click(screen.getByRole('button', { name: /Criar Conta/i }));
     fireEvent.click(screen.getByRole('radio', { name: /Sou Motorista/i }));
-    fireEvent.click(screen.getByRole('button', { name: 'Continuar com Apple' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar com Facebook' }));
     await waitFor(() => {
       expect(supabase.auth.signInWithOAuth).toHaveBeenCalledWith(expect.objectContaining({
-        provider: 'apple',
+        provider: 'facebook',
         options: expect.objectContaining({
           data: { tipo_perfil: 'Motorista' },
         }),
       }));
     });
+    expect(supabase.auth.signInWithOAuth).not.toHaveBeenCalledWith(
+      expect.objectContaining({ provider: 'apple' }),
+    );
   });
 
   it('ignora o segundo clique enquanto o primeiro pedido está aberto', async () => {

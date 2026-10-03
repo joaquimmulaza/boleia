@@ -18,13 +18,13 @@ describe('oauth', () => {
     sessionStorage.clear();
   });
 
-  it('lista Google, Apple, Facebook e LinkedIn OIDC por esta ordem', () => {
+  it('lista Google, Facebook e LinkedIn OIDC por esta ordem', () => {
     expect(OAUTH_PROVIDERS.map((item) => item.id)).toEqual([
       'google',
-      'apple',
       'facebook',
       'linkedin_oidc',
     ]);
+    expect(OAUTH_PROVIDERS.some((item) => item.id === 'apple')).toBe(false);
   });
 
   it('needsProfileSetup só quando perfil_completo é false', () => {
@@ -70,8 +70,8 @@ describe('oauth', () => {
   });
 
   it('isProviderLinked reconhece o provider', () => {
-    expect(isProviderLinked([{ provider: 'apple' }], 'apple')).toBe(true);
-    expect(isProviderLinked([{ provider: 'apple' }], 'google')).toBe(false);
+    expect(isProviderLinked([{ provider: 'facebook' }], 'facebook')).toBe(true);
+    expect(isProviderLinked([{ provider: 'facebook' }], 'google')).toBe(false);
   });
 
   it('parseOAuthCallback lê error e descrição', () => {
@@ -92,8 +92,8 @@ describe('oauth', () => {
       .toBe('Não foi possível concluir o redireccionamento. Tenta novamente.');
     expect(mapOAuthError({ error: 'identity_already_exists' }))
       .toBe('Este método já está associado a outra conta.');
-    expect(mapOAuthError({ error: 'server_error', providerLabel: 'Apple' }))
-      .toBe('Não foi possível iniciar sessão com Apple. Tenta novamente.');
+    expect(mapOAuthError({ error: 'server_error', providerLabel: 'Facebook' }))
+      .toBe('Não foi possível iniciar sessão com Facebook. Tenta novamente.');
     expect(mapOAuthError({ errorCode: 'token=secret-value' })).not.toMatch(/secret-value/);
   });
 
@@ -130,6 +130,16 @@ describe('oauth', () => {
     });
     expect(signInWithOAuth.mock.calls[0][0].options.data).toBeUndefined();
     expect(signInWithOAuth.mock.calls[0][0].provider).toBe('linkedin_oidc');
+  });
+
+  it('startOAuthSignIn recusa Apple e não chama o cliente', async () => {
+    const signInWithOAuth = vi.fn();
+    const result = await startOAuthSignIn({ auth: { signInWithOAuth } }, 'apple', {
+      redirectTo: 'https://boleia-cyan.vercel.app/auth',
+    });
+    expect(signInWithOAuth).not.toHaveBeenCalled();
+    expect(result.error).toBeTruthy();
+    expect(sessionStorage.getItem(OAUTH_PENDING_KEY)).toBeNull();
   });
 
   it('startOAuthSignIn limpa o pending quando o provider falha logo', async () => {

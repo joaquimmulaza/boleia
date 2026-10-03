@@ -1,13 +1,12 @@
-/** @typedef {'google' | 'apple' | 'facebook' | 'linkedin_oidc'} OAuthProviderId */
+/** @typedef {'google' | 'facebook' | 'linkedin_oidc'} OAuthProviderId */
 
 export const OAUTH_PENDING_KEY = 'bc_oauth_pending';
 export const OAUTH_PROVIDER_KEY = 'bc_oauth_provider';
 export const OAUTH_MESSAGE_KEY = 'bc_oauth_message';
 
-/** Ordem visual: Google, Apple, Facebook, LinkedIn. */
+/** Ordem visual: Google, Facebook, LinkedIn. Apple não é oferecido. */
 export const OAUTH_PROVIDERS = [
   { id: 'google', label: 'Google' },
-  { id: 'apple', label: 'Apple' },
   { id: 'facebook', label: 'Facebook' },
   { id: 'linkedin_oidc', label: 'LinkedIn' },
 ];
@@ -129,6 +128,10 @@ export function mapOAuthError({ error = '', errorCode = '', providerLabel = 'o f
  * @param {{ tipoPerfil?: string, redirectTo: string }} options
  */
 export async function startOAuthSignIn(client, provider, { tipoPerfil, redirectTo } = {}) {
+  if (!isOAuthProvider(provider)) {
+    return { data: null, error: { message: 'provider_disabled' } };
+  }
+
   if (typeof sessionStorage !== 'undefined') {
     sessionStorage.setItem(OAUTH_PENDING_KEY, '1');
     sessionStorage.setItem(OAUTH_PROVIDER_KEY, provider);
