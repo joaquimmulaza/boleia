@@ -98,6 +98,28 @@ describe('opportunityProposal — snapshot e preço', () => {
     expect(JSON.stringify(sheet)).not.toContain(COPY_N_FIXO);
   });
 
+  it('total do acordo do passageiro é um preço, sem stepper', () => {
+    const sheet = resolveOpportunityProposal({
+      papel: 'passageiro',
+      alvo: 'passageiro',
+      item: { flexibilidade_rota: true, departure_time: '06:00', dias_semana: [1, 2, 3, 4, 5] },
+      nProposto: 3,
+      valorKz: 30000,
+      modoPreco: 'TOTAL_ACORDO',
+    });
+
+    expect(sheet.stepper).toBe(false);
+    expect(sheet.contagem).toBe('');
+    expect(sheet.snapshotNote).toBeNull();
+    expect(sheet.precoUnico).toEqual({
+      valor: `${formatKwanza(30000)} Kz`,
+      modo: 'Total do acordo',
+    });
+    expect(sheet.total).toBeNull();
+    expect(sheet.rota).toBeNull();
+    expect(JSON.stringify(sheet)).not.toContain(formatKwanza(90000));
+  });
+
   it('oferta fixa sem destino não inventa rota', () => {
     const sheet = resolveOpportunityProposal({
       papel: 'motorista',

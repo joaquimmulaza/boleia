@@ -1,7 +1,7 @@
 # Quick Task: Explorar — mesmo cartão e proposta do passageiro
 
 **Date:** 2026-10-03
-**Status:** In Progress
+**Status:** Done
 
 ## Plano
 
@@ -22,8 +22,8 @@ Diff mínimo:
 
 ## Verification
 
-- [ ] Autenticado no Explorar abre «Nova proposta» a partir de «Propor acordo».
-- [ ] Anónimo em `/explorar`: CTA continua para `/auth`.
-- [ ] `POR_PASSAGEIRO`: stepper, total = unidade × N. `TOTAL_ACORDO`: um preço, sem × N.
-- [ ] Flexível sem rota inventada. Fixa com a rota real.
-- [ ] Os dois cabeçalhos mostram ícone e «Boleia Certa».
+- [x] Autenticado no Explorar abre «Nova proposta» a partir de «Propor acordo».
+- [x] Anónimo em `/explorar`: CTA continua para `/auth`.
+- [x] `POR_PASSAGEIRO`: stepper, total = unidade × N. `TOTAL_ACORDO`: um preço, sem stepper e sem × N.
+- [x] Flexível sem rota inventada. Fixa com a rota real.
+- [x] Os dois cabeçalhos mostram ícone e «Boleia Certa».

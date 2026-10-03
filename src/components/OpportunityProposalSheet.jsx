@@ -10,7 +10,9 @@ const ctaClass = 'w-full rounded-xl bg-primary px-4 py-3 text-[15px] font-medium
 
 /**
  * Proposta a partir de uma oportunidade.
- * Motorista: N é snapshot e a frase fica visível. Passageiro: stepper, sem essa frase.
+ * Motorista: N é snapshot e a frase fica visível.
+ * Passageiro por pessoa: stepper, sem essa frase.
+ * Passageiro com total do acordo: um preço, sem stepper.
  * @param {{
  *   papel: 'motorista' | 'passageiro',
  *   alvo?: 'grupo' | 'passageiro',
@@ -121,9 +123,9 @@ function OpportunityProposalSheet({
               </button>
             </div>
           </div>
-        ) : (
+        ) : sheet.contagem ? (
           <p className="text-[15px] font-medium text-slate-900 dark:text-white">{sheet.contagem}</p>
-        )}
+        ) : null}
 
         {sheet.snapshotNote ? (
           <p className="text-xs leading-4 text-slate-500">{sheet.snapshotNote}</p>

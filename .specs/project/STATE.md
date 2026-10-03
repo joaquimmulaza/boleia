@@ -93,6 +93,7 @@
 ## Quick (2026-10-03) — Explorar: cartão e proposta do passageiro
 - O feed Explorar sem procura (`PassengerDashboard`) usa `OpportunityCard`, o mesmo de `/explorar`.
 - O CTA autenticado abre `OpportunityProposalSheet`. Anónimo em `/explorar` continua para `/auth`.
+- Total do acordo do passageiro: um preço, sem stepper. Por passageiro: o stepper multiplica só o total.
 - Cabeçalho dos dois: ícone `boleia-logo.png` + «Boleia Certa» (`BrandLockup`).
 - Spec: `.specs/quick/explorar-proposta-passageiro/`.
 
