@@ -1159,9 +1159,10 @@ describe('DriverDashboard — marketplace', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Enviar proposta/i }));
 
     const sheet = await screen.findByTestId('opportunity-proposal-sheet');
-    expect(within(sheet).getByText('Grupo')).toBeInTheDocument();
-    expect(within(sheet).getByText('Viana')).toBeInTheDocument();
-    expect(within(sheet).getByText('Talatona')).toBeInTheDocument();
+    const rota = within(sheet).getByTestId('route-indicator').parentElement;
+    expect(within(rota).getByText('Grupo')).toBeInTheDocument();
+    expect(within(rota).getByText('Viana')).toBeInTheDocument();
+    expect(within(rota).getByText('Talatona')).toBeInTheDocument();
     expect(within(sheet).getByText('3 passageiros')).toBeInTheDocument();
     expect(within(sheet).getByText(COPY_N_FIXO)).toBeInTheDocument();
     expect(within(sheet).getByText(textoKz(10000, ' por passageiro'))).toBeInTheDocument();
