@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { MapPin, AlertCircle, ArrowRight, Clock, Users } from 'lucide-react';
+import { MapPin, AlertCircle } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -28,7 +28,7 @@ import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 import EmptyState from '../components/EmptyState';
 import LoadingSkeleton from '../components/LoadingSkeleton';
-import TextFade from '../components/TextFade';
+import OpportunityCard from '../components/OpportunityCard';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { filterPropostasParaInbox, filterPropostasEnviadas, filterPropostasTerminadasRecebidas, filterPropostasTerminadasEnviadas } from '../utils/propostaInbox';
@@ -64,9 +64,27 @@ function labelTipoRota(oferta) {
   return isOfertaFlexivel(oferta) ? 'Flexível' : 'Fixa';
 }
 
-function labelProcuraN(n) {
-  if (n === 1) return 'Individual';
-  return `Grupo · ${n} pessoas`;
+/**
+ * Procura de uma pessoa ou grupo. Não trata 0/null — o cartão já resolve isso.
+ * @param {object} procura
+ * @returns {'procura' | 'grupo'}
+ */
+function kindDaProcura(procura) {
+  const n = Number(procura?.n_candidato);
+  return Number.isFinite(n) && n > 1 ? 'grupo' : 'procura';
+}
+
+/**
+ * Preço da oferta seleccionada, no rodapé do cartão.
+ * @param {object | null | undefined} oferta
+ * @returns {{ valor: string, modo: string } | undefined}
+ */
+function precoDaOferta(oferta) {
+  if (!oferta) return undefined;
+  return {
+    valor: `${formatKwanza(oferta.valor_mensal_ask_kz)} Kz`,
+    modo: labelModo(oferta.modo_preco),
+  };
 }
 
 /**
@@ -866,72 +884,22 @@ const DriverDashboard = () => {
                 .map((procura) => {
                   const isDirect =
                     !ofertaSeleccionada || matchDirectIds.has(procura.id);
-                  const podePropor =
-                    isDirect && !procurasComPropostaEnviada.has(procura.id);
+                  const enviada = isDirect && procurasComPropostaEnviada.has(procura.id);
+                  const podePropor = isDirect && !enviada;
+                  const incompativel = Boolean(ofertaSeleccionada) && !isDirect && !sóCompatíveis;
+                  const mostrarCta = podePropor || incompativel || enviada;
                   return (
-                    <section
-                      key={procura.id}
-                      className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
-                      data-testid="driver-procura-match-card"
-                    >
-                      <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white min-w-0">
-                        <TextFade className="flex-1">{procura.origin_name || 'Origem'}</TextFade>
-                        <ArrowRight size={16} className="text-slate-400 shrink-0" aria-hidden="true" />
-                        <TextFade className="flex-1">{procura.destination_name || 'Destino'}</TextFade>
-                      </div>
-                      <div className="flex gap-3 text-sm text-slate-500 flex-wrap">
-                        <span className="flex items-center gap-1">
-                          <Clock size={14} aria-hidden="true" />
-                          {formatTime24h(procura.preferred_time)}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Users size={14} aria-hidden="true" />
-                          {labelProcuraN(procura.n_candidato ?? 1)}
-                        </span>
-                        {ofertaSeleccionada && !isDirect && !sóCompatíveis ? (
-                          <span className="text-xs font-medium text-slate-400">
-                            Sem compatibilidade com esta oferta
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="flex items-center justify-between pt-1">
-                        <div>
-                          {ofertaSeleccionada ? (
-                            <>
-                              <strong className="text-primary tabular-nums">
-                                {formatKwanza(ofertaSeleccionada.valor_mensal_ask_kz)} Kz
-                              </strong>
-                              <p className="text-xs text-slate-400">
-                                {labelModo(ofertaSeleccionada.modo_preco)}
-                              </p>
-                            </>
-                          ) : (
-                            <p className="text-xs text-slate-500 text-pretty">
-                              Define o valor ao enviar a proposta
-                            </p>
-                          )}
-                        </div>
-                        {isDirect && procurasComPropostaEnviada.has(procura.id) ? (
-                          <button
-                            type="button"
-                            disabled
-                            className="bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400 text-sm font-bold px-4 py-2.5 rounded-xl cursor-not-allowed"
-                          >
-                            Proposta enviada
-                          </button>
-                        ) : null}
-                        {podePropor ? (
-                          <button
-                            type="button"
-                            disabled={busyId === procura.id}
-                            onClick={() => openProporSheet(procura)}
-                            className="bg-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl disabled:opacity-60"
-                          >
-                            Enviar proposta
-                          </button>
-                        ) : null}
-                      </div>
-                    </section>
+                    <div key={procura.id} data-testid="driver-procura-match-card">
+                      <OpportunityCard
+                        kind={kindDaProcura(procura)}
+                        item={procura}
+                        nota={incompativel ? 'Sem compatibilidade com esta oferta' : undefined}
+                        ctaDisabled={!podePropor || busyId === procura.id}
+                        ctaLabel={enviada ? 'Proposta enviada' : undefined}
+                        preco={precoDaOferta(ofertaSeleccionada)}
+                        onCta={mostrarCta ? () => { if (podePropor) openProporSheet(procura); } : undefined}
+                      />
+                    </div>
                   );
                 })}
 
@@ -947,29 +915,15 @@ const DriverDashboard = () => {
                   {procurasVisiveis
                     .filter((procura) => matchWaitlistIds.has(procura.id))
                     .map((procura) => (
-                      <section
-                        key={procura.id}
-                        className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
-                      >
-                        <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
-                          <span>{procura.origin_name || 'Origem'}</span>
-                          <ArrowRight size={16} className="text-slate-400" aria-hidden="true" />
-                          <span>{procura.destination_name || 'Destino'}</span>
-                        </div>
-                        <div className="flex gap-3 text-sm text-slate-500">
-                          <span className="flex items-center gap-1">
-                            <Clock size={14} aria-hidden="true" />
-                            {formatTime24h(procura.preferred_time)}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Users size={14} aria-hidden="true" />
-                            {labelProcuraN(procura.n_candidato ?? 1)}
-                          </span>
-                        </div>
+                      <div key={procura.id} className="space-y-2">
+                        <OpportunityCard
+                          kind={kindDaProcura(procura)}
+                          item={procura}
+                        />
                         <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">
                           Grupo maior que os lugares disponíveis
                         </p>
-                      </section>
+                      </div>
                     ))}
                 </div>
               ) : null}

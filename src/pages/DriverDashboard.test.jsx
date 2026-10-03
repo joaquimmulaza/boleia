@@ -900,7 +900,7 @@ describe('DriverDashboard — marketplace', () => {
     });
 
     expect(await screen.findByText('Viana')).toBeInTheDocument();
-    expect(screen.getByText(/Individual/i)).toBeInTheDocument();
+    expect(screen.getByText('1 passageiro')).toBeInTheDocument();
     expect(
       screen.getByText(/matching por horário, dias e lugares/i),
     ).toBeInTheDocument();
