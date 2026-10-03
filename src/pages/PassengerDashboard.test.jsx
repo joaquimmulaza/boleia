@@ -260,6 +260,44 @@ describe('PassengerDashboard — marketplace', () => {
     expect(depois).not.toMatch(/×/);
   });
 
+  it('explorar autenticado com mais de uma pessoa não cria procura sem grupo', async () => {
+    listOfertasDisponiveis.mockResolvedValue([
+      {
+        id: 'of-pp',
+        flexibilidade_rota: false,
+        origin_name: 'Viana',
+        destination_name: 'Talatona',
+        origin_lat: -8.9,
+        origin_lng: 13.18,
+        destination_lat: -8.92,
+        destination_lng: 13.28,
+        departure_time: '07:15',
+        dias_semana: [1, 2, 3, 4, 5],
+        vagas_disponiveis: 4,
+        valor_mensal_ask_kz: 10000,
+        modo_preco: 'POR_PASSAGEIRO',
+        estado: 'disponivel',
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Propor acordo' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Mais passageiros' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar proposta' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Para propor com mais de uma pessoa é necessário um grupo ligado à procura.',
+    );
+    expect(screen.getByTestId('opportunity-proposal-sheet')).toBeInTheDocument();
+    expect(createProcura).not.toHaveBeenCalled();
+    expect(createProposta).not.toHaveBeenCalled();
+  });
+
   it('explorar autenticado em total do acordo mostra um preço e não multiplica por N', async () => {
     listOfertasDisponiveis.mockResolvedValue([
       {
@@ -295,16 +333,8 @@ describe('PassengerDashboard — marketplace', () => {
     expect(sheet).not.toHaveTextContent('por passageiro');
     expect(sheet).not.toHaveTextContent(COPY_N_FIXO);
     expect(texto).not.toMatch(/×/);
-
-    const mais = screen.queryByRole('button', { name: 'Mais passageiros' });
-    if (mais) {
-      fireEvent.click(mais);
-      const depois = sheet.textContent.replace(/\s/g, ' ');
-      expect(depois).toContain(`${formatKwanza(30000).replace(/\s/g, ' ')} Kz`);
-      expect(depois).not.toMatch(textoKz(60000));
-      expect(depois).not.toMatch(textoKz(90000));
-      expect(depois).not.toMatch(/×/);
-    }
+    expect(screen.queryByRole('button', { name: 'Mais passageiros' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Passageiros')).not.toBeInTheDocument();
   });
 
   it('browse sem procura: CTA Propor acordo cria procura mínima + proposta', async () => {

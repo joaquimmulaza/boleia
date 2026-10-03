@@ -154,6 +154,7 @@ const PassengerDashboard = () => {
   /** @type {[null | { oferta: object, gaps: Array<'time' | 'od'>, source: 'browse' | 'hub', form: object }, Function]} */
   const [proporSheet, setProporSheet] = useState(null);
   const [propostaOferta, setPropostaOferta] = useState(null);
+  const [propostaErro, setPropostaErro] = useState('');
   /** @type {[null | { propostaId: string, oferta_id: string, procura_id: string, grupo_id?: string | null, modo_preco: string, n_passageiros_propostos: number, valor_mensal_ask_kz: string, precoPublicadoKz?: number | null }, Function]} */
   const [contraPropostaSheet, setContraPropostaSheet] = useState(null);
   /** @type {[Set<string>, Function]} ids de propostas recebidas com contra-proposta enviada nesta sessão */
@@ -591,6 +592,7 @@ const PassengerDashboard = () => {
       openProporBrowseSheet(oferta);
       return;
     }
+    setPropostaErro('');
     setPropostaOferta(oferta);
   };
 
@@ -608,6 +610,14 @@ const PassengerDashboard = () => {
     if (ofertasComPropostaAberta.has(oferta.id)) {
       return;
     }
+    if (nPassageiros > 1) {
+      setFeedback({
+        type: 'error',
+        text: 'Para propor com mais de uma pessoa é necessário um grupo ligado à procura.',
+      });
+      return;
+    }
+
     setBrowseBusy(true);
     setBusyId(oferta.id);
     setFeedback({ type: '', text: '' });
@@ -1598,9 +1608,18 @@ const PassengerDashboard = () => {
           nProposto={1}
           valorKz={propostaOferta.valor_mensal_ask_kz}
           modoPreco={propostaOferta.modo_preco}
-          onClose={() => setPropostaOferta(null)}
+          erro={propostaErro}
+          onClose={() => {
+            setPropostaErro('');
+            setPropostaOferta(null);
+          }}
           onSubmit={(n) => {
+            if (n > 1) {
+              setPropostaErro('Para propor com mais de uma pessoa é necessário um grupo ligado à procura.');
+              return;
+            }
             const oferta = propostaOferta;
+            setPropostaErro('');
             setPropostaOferta(null);
             void submitProporBrowse(oferta, {}, Number(oferta.valor_mensal_ask_kz), n);
           }}

@@ -25,5 +25,6 @@ Diff mínimo:
 - [x] Autenticado no Explorar abre «Nova proposta» a partir de «Propor acordo».
 - [x] Anónimo em `/explorar`: CTA continua para `/auth`.
 - [x] `POR_PASSAGEIRO`: stepper, total = unidade × N. `TOTAL_ACORDO`: um preço, sem stepper e sem × N.
+- [x] N acima de 1 sem grupo não chama `createProcura` nem `createProposta`. A folha fica aberta.
 - [x] Flexível sem rota inventada. Fixa com a rota real.
 - [x] Os dois cabeçalhos mostram ícone e «Boleia Certa».

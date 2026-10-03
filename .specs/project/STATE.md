@@ -94,6 +94,7 @@
 - O feed Explorar sem procura (`PassengerDashboard`) usa `OpportunityCard`, o mesmo de `/explorar`.
 - O CTA autenticado abre `OpportunityProposalSheet`. Anónimo em `/explorar` continua para `/auth`.
 - Total do acordo do passageiro: um preço, sem stepper. Por passageiro: o stepper multiplica só o total.
+- N acima de 1 neste feed, sem grupo, não cria procura: a folha fica aberta com o erro já usado em `createProposta`.
 - Cabeçalho dos dois: ícone `boleia-logo.png` + «Boleia Certa» (`BrandLockup`).
 - Spec: `.specs/quick/explorar-proposta-passageiro/`.
 
