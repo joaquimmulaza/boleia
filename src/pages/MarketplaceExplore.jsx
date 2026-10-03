@@ -11,6 +11,7 @@ import {
 } from '../utils/opportunityCard';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import OpportunityCard from '../components/OpportunityCard';
+import OpportunityDetailSheet from '../components/OpportunityDetailSheet';
 import ThemeToggle from '../components/ThemeToggle';
 
 /**
@@ -26,6 +27,7 @@ export default function MarketplaceExplore() {
   const [procuras, setProcuras] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [detalhe, setDetalhe] = useState(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -116,7 +118,7 @@ export default function MarketplaceExplore() {
             type="button"
             role="tab"
             aria-selected={tab === 'ofertas'}
-            onClick={() => setTab('ofertas')}
+            onClick={() => { setTab('ofertas'); setDetalhe(null); }}
             className={`flex-1 rounded-lg py-2.5 text-sm font-bold ${
               tab === 'ofertas'
                 ? 'bg-white text-primary shadow-sm dark:bg-slate-900'
@@ -129,7 +131,7 @@ export default function MarketplaceExplore() {
             type="button"
             role="tab"
             aria-selected={tab === 'procuras'}
-            onClick={() => setTab('procuras')}
+            onClick={() => { setTab('procuras'); setDetalhe(null); }}
             className={`flex-1 rounded-lg py-2.5 text-sm font-bold ${
               tab === 'procuras'
                 ? 'bg-white text-primary shadow-sm dark:bg-slate-900'
@@ -170,6 +172,7 @@ export default function MarketplaceExplore() {
                   <OpportunityCard
                     kind="oferta"
                     item={oferta}
+                    onOpen={() => setDetalhe({ kind: 'oferta', item: oferta })}
                     onCta={() => goAuth('passenger')}
                   />
                 </div>
@@ -188,6 +191,7 @@ export default function MarketplaceExplore() {
                   <OpportunityCard
                     kind="procura"
                     item={procura}
+                    onOpen={() => setDetalhe({ kind: 'procura', item: procura })}
                     onCta={() => goAuth('driver')}
                   />
                 </div>
@@ -196,6 +200,15 @@ export default function MarketplaceExplore() {
           </section>
         ) : null}
       </main>
+
+      {detalhe ? (
+        <OpportunityDetailSheet
+          kind={detalhe.kind}
+          item={detalhe.item}
+          onClose={() => setDetalhe(null)}
+          onCta={() => goAuth(detalhe.kind === 'oferta' ? 'passenger' : 'driver')}
+        />
+      ) : null}
     </div>
   );
 }
