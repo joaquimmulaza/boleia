@@ -78,11 +78,22 @@ function OpportunityProposalSheet({
           <p className="text-[13px] font-medium leading-[18px] text-slate-500">Para</p>
         ) : null}
 
-        {sheet.nome ? (
+        {sheet.nome && sheet.rota ? (
+          <div className="flex items-stretch gap-3">
+            <RouteIndicator />
+            <div className="flex min-w-0 flex-1 flex-col gap-3">
+              <p className={placeNameClass} data-testid="opportunity-place-name">{sheet.nome}</p>
+              <p className={placeNameClass} data-testid="opportunity-place-name">{sheet.rota.origem}</p>
+              <p className={placeNameClass} data-testid="opportunity-place-name">{sheet.rota.destino}</p>
+            </div>
+          </div>
+        ) : null}
+
+        {sheet.nome && !sheet.rota ? (
           <p className={placeNameClass} data-testid="opportunity-place-name">{sheet.nome}</p>
         ) : null}
 
-        {sheet.rota ? (
+        {!sheet.nome && sheet.rota ? (
           <div className="flex items-stretch gap-3">
             <RouteIndicator />
             <div className="flex min-w-0 flex-1 flex-col gap-3">

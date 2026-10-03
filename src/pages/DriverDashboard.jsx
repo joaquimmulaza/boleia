@@ -43,6 +43,7 @@ import PropostaDetailSheet from '../components/PropostaDetailSheet';
 import OfertaDetailSheet from '../components/OfertaDetailSheet';
 import { OfertaRotaTitulo } from '../components/DriverOfertaCard';
 import PropostaValorInput from '../components/PropostaValorInput';
+import OpportunityProposalSheet from '../components/OpportunityProposalSheet';
 import { parseValorPropostaKz, validarValorPropostaKz } from '../utils/propostaValor.js';
 import { FEEDBACK_PROPOSTA_ENVIADA_PASSAGEIRO } from '../utils/propostaFeedback';
 
@@ -85,6 +86,15 @@ function precoDaOferta(oferta) {
     valor: `${formatKwanza(oferta.valor_mensal_ask_kz)} Kz`,
     modo: labelModo(oferta.modo_preco),
   };
+}
+
+/**
+ * N>1 no hub é grupo. O sheet mostra esse snapshot e não o edita.
+ * @param {object} procura
+ * @returns {'grupo' | 'passageiro'}
+ */
+function alvoPropostaHub(procura) {
+  return Number(procura?.n_candidato) > 1 ? 'grupo' : 'passageiro';
 }
 
 /**
@@ -131,7 +141,7 @@ const DriverDashboard = () => {
   const [editProcurasById, setEditProcurasById] = useState({});
   /** @type {[Set<string>, Function]} */
   const [procurasComPropostaEnviada, setProcurasComPropostaEnviada] = useState(() => new Set());
-  /** @type {[null | { procura: object, valor_mensal_ask_kz: string, modo_preco?: string }, Function]} */
+  /** @type {[null | { procura: object, valor_mensal_ask_kz: string, modo_preco?: string, sheetOportunidade?: boolean }, Function]} */
   const [proporSheet, setProporSheet] = useState(null);
   /** @type {[null | { propostaId: string, oferta_id: string, procura_id: string, grupo_id?: string | null, modo_preco: string, n_passageiros_propostos: number, valor_mensal_ask_kz: string, precoPublicadoKz?: number | null }, Function]} */
   const [contraPropostaSheet, setContraPropostaSheet] = useState(null);
@@ -365,15 +375,17 @@ const DriverDashboard = () => {
   /** @param {object} procura */
   const openProporSheet = (procura) => {
     if (procurasComPropostaEnviada.has(procura.id)) return;
+    const valor = String(ofertaSeleccionada?.valor_mensal_ask_kz ?? '');
     setProporSheet({
       procura,
-      valor_mensal_ask_kz: String(ofertaSeleccionada?.valor_mensal_ask_kz ?? ''),
+      valor_mensal_ask_kz: valor,
       modo_preco: ofertaSeleccionada?.modo_preco ?? 'POR_PASSAGEIRO',
+      sheetOportunidade: Number(valor) > 0,
     });
   };
 
   const handleProporSheetSubmit = async (e) => {
-    e.preventDefault();
+    e?.preventDefault?.();
     if (!proporSheet) return;
 
     const valorParsed = parseValorPropostaKz(proporSheet.valor_mensal_ask_kz);
@@ -392,7 +404,7 @@ const DriverDashboard = () => {
     }
 
     const procura = proporSheet.procura;
-    if (procurasComPropostaEnviada.has(procura.id)) return;
+    if (procurasComPropostaEnviada.has(procura.id) || busyId === procura.id) return;
 
     setBusyId(procura.id);
     setFeedback({ type: '', text: '' });
@@ -1018,7 +1030,20 @@ const DriverDashboard = () => {
         />
       ) : null}
 
-      {proporSheet ? (
+      {proporSheet?.sheetOportunidade ? (
+        <OpportunityProposalSheet
+          papel="motorista"
+          alvo={alvoPropostaHub(proporSheet.procura)}
+          item={proporSheet.procura}
+          nProposto={proporSheet.procura.n_candidato ?? 1}
+          valorKz={Number(proporSheet.valor_mensal_ask_kz)}
+          modoPreco={proporSheet.modo_preco || 'POR_PASSAGEIRO'}
+          onClose={() => setProporSheet(null)}
+          onSubmit={() => {
+            void handleProporSheetSubmit();
+          }}
+        />
+      ) : proporSheet ? (
         <OverlayShell
           variant="bottom"
           overlayClassName="bg-slate-900/60 dark:bg-black/80"

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { formatKwanza } from '../utils/formatKwanza';
 import { COPY_N_FIXO } from '../utils/opportunityProposal';
@@ -34,6 +34,10 @@ describe('OpportunityProposalSheet', () => {
     );
 
     expect(screen.getByText(COPY_N_FIXO)).toBeInTheDocument();
+    const rotaGrupo = screen.getByTestId('route-indicator').parentElement;
+    expect(within(rotaGrupo).getByText('Grupo da paróquia de Viana')).toBeInTheDocument();
+    expect(within(rotaGrupo).getByText('Viana')).toBeInTheDocument();
+    expect(within(rotaGrupo).getByText('Talatona')).toBeInTheDocument();
     expect(screen.getByText('3 passageiros')).toBeInTheDocument();
     expect(screen.getByText(textoKz(30000))).toBeInTheDocument();
     expect(screen.queryByText(textoKz(80000))).not.toBeInTheDocument();

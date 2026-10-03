@@ -18,6 +18,13 @@ import { getAgreementsForDriver } from '../services/AgreementService';
 import { supabase } from '../lib/supabase';
 import { expectNoUserFacingJargon } from '../test/jargonBan';
 import { confirmPropostaSheet } from '../test/confirmPropostaSheet.js';
+import { formatKwanza } from '../utils/formatKwanza';
+import { COPY_N_FIXO } from '../utils/opportunityProposal';
+
+function textoKz(valor, sufixo = '') {
+  const numero = formatKwanza(valor).replace(/\s/g, '\\s');
+  return new RegExp(`^${numero}\\sKz${sufixo}$`);
+}
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' }),
@@ -1062,6 +1069,194 @@ describe('DriverDashboard — marketplace', () => {
     await waitFor(() => {
       expect(scrollIntoView).toHaveBeenCalled();
     });
+  });
+
+  it('sheet da procura no hub: N=1, total igual ao preço, sem stepper', async () => {
+    listOfertasByDriver.mockResolvedValue([{
+      ...ofertaFixa,
+      modo_preco: 'POR_PASSAGEIRO',
+      valor_mensal_ask_kz: 10000,
+    }]);
+    const procura = {
+      id: 'pr-viana',
+      origin_name: 'Viana',
+      destination_name: 'Talatona',
+      preferred_time: '07:15:00',
+      n_candidato: 1,
+    };
+    listProcurasDisponiveis.mockResolvedValue([procura]);
+    findCompatibleProcuras.mockResolvedValue({
+      direct: [procura],
+      waitlist: [],
+      incompatible: [],
+    });
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Talatona');
+    fireEvent.click(screen.getByRole('tab', { name: /Procuras e grupos/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Enviar proposta/i }));
+
+    const sheet = await screen.findByTestId('opportunity-proposal-sheet');
+    expect(within(sheet).getByText('Para')).toBeInTheDocument();
+    expect(within(sheet).getByText('Viana')).toBeInTheDocument();
+    expect(within(sheet).getByText('Talatona')).toBeInTheDocument();
+    expect(within(sheet).getByText('1 passageiro')).toBeInTheDocument();
+    expect(within(sheet).getByText(COPY_N_FIXO)).toBeInTheDocument();
+    expect(within(sheet).getByText(textoKz(10000, ' por passageiro'))).toBeInTheDocument();
+    expect(within(sheet).getByText(textoKz(10000))).toBeInTheDocument();
+    expect(within(sheet).queryByRole('button', { name: 'Mais passageiros' })).not.toBeInTheDocument();
+    expect(within(sheet).queryByRole('button', { name: 'Menos passageiros' })).not.toBeInTheDocument();
+    expect(within(sheet).queryByText('Grupo')).not.toBeInTheDocument();
+
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Enviar proposta' }));
+    await waitFor(() => {
+      expect(createProposta).toHaveBeenCalledWith(
+        expect.objectContaining({
+          procura_id: 'pr-viana',
+          grupo_id: null,
+          n_passageiros_propostos: 1,
+          modo_preco: 'POR_PASSAGEIRO',
+          valor_mensal_ask_kz: 10000,
+        }),
+      );
+    });
+  });
+
+  it('sheet do grupo no hub multiplica o preço por passageiro pelo N snapshot', async () => {
+    listOfertasByDriver.mockResolvedValue([{
+      ...ofertaFixa,
+      modo_preco: 'POR_PASSAGEIRO',
+      valor_mensal_ask_kz: 10000,
+    }]);
+    const procura = {
+      id: 'pr-grupo',
+      origin_name: 'Viana',
+      destination_name: 'Talatona',
+      preferred_time: '07:15:00',
+      n_candidato: 3,
+    };
+    listProcurasDisponiveis.mockResolvedValue([procura]);
+    findCompatibleProcuras.mockResolvedValue({
+      direct: [procura],
+      waitlist: [],
+      incompatible: [],
+    });
+    getGrupoByProcura.mockResolvedValue({ id: 'g-3' });
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Talatona');
+    fireEvent.click(screen.getByRole('tab', { name: /Procuras e grupos/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Enviar proposta/i }));
+
+    const sheet = await screen.findByTestId('opportunity-proposal-sheet');
+    const rota = within(sheet).getByTestId('route-indicator').parentElement;
+    expect(within(rota).getByText('Grupo')).toBeInTheDocument();
+    expect(within(rota).getByText('Viana')).toBeInTheDocument();
+    expect(within(rota).getByText('Talatona')).toBeInTheDocument();
+    expect(within(sheet).getByText('3 passageiros')).toBeInTheDocument();
+    expect(within(sheet).getByText(COPY_N_FIXO)).toBeInTheDocument();
+    expect(within(sheet).getByText(textoKz(10000, ' por passageiro'))).toBeInTheDocument();
+    expect(within(sheet).getByText(textoKz(30000))).toBeInTheDocument();
+    expect(within(sheet).queryByRole('button', { name: 'Mais passageiros' })).not.toBeInTheDocument();
+    expect(screen.queryByText(new RegExp(formatKwanza(80000)))).not.toBeInTheDocument();
+
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Enviar proposta' }));
+    await waitFor(() => {
+      expect(createProposta).toHaveBeenCalledWith(
+        expect.objectContaining({
+          procura_id: 'pr-grupo',
+          grupo_id: 'g-3',
+          n_passageiros_propostos: 3,
+          modo_preco: 'POR_PASSAGEIRO',
+          valor_mensal_ask_kz: 10000,
+        }),
+      );
+    });
+  });
+
+  it('sheet do grupo com total do acordo mostra um preço e não multiplica por N', async () => {
+    listOfertasByDriver.mockResolvedValue([{
+      ...ofertaFixa,
+      modo_preco: 'TOTAL_ACORDO',
+      valor_mensal_ask_kz: 10000,
+    }]);
+    const procura = {
+      id: 'pr-total',
+      origin_name: 'Viana',
+      destination_name: 'Talatona',
+      preferred_time: '07:15:00',
+      n_candidato: 3,
+    };
+    listProcurasDisponiveis.mockResolvedValue([procura]);
+    findCompatibleProcuras.mockResolvedValue({
+      direct: [procura],
+      waitlist: [],
+      incompatible: [],
+    });
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Talatona');
+    fireEvent.click(screen.getByRole('tab', { name: /Procuras e grupos/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Enviar proposta/i }));
+
+    const sheet = await screen.findByTestId('opportunity-proposal-sheet');
+    expect(within(sheet).getByText('3 passageiros')).toBeInTheDocument();
+    expect(within(sheet).getByText(COPY_N_FIXO)).toBeInTheDocument();
+    expect(within(sheet).getByText(textoKz(10000))).toBeInTheDocument();
+    expect(within(sheet).getByText('Total do acordo')).toBeInTheDocument();
+    expect(within(sheet).queryByText(/por passageiro/i)).not.toBeInTheDocument();
+    expect(within(sheet).queryByText(new RegExp(formatKwanza(30000)))).not.toBeInTheDocument();
+    expect(within(sheet).queryByRole('button', { name: 'Mais passageiros' })).not.toBeInTheDocument();
+    expect(within(sheet).getByTestId('route-indicator')).toBeInTheDocument();
+  });
+
+  it('sem compatibilidade mantém a linha no cartão e não abre o sheet', async () => {
+    const procura = {
+      id: 'pr-fora',
+      origin_name: 'Cacuaco',
+      destination_name: 'Maianga',
+      preferred_time: '18:40:00',
+      n_candidato: 1,
+    };
+    listProcurasDisponiveis.mockResolvedValue([procura]);
+    findCompatibleProcuras.mockResolvedValue({
+      direct: [],
+      waitlist: [],
+      incompatible: [procura],
+    });
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Talatona');
+    fireEvent.click(screen.getByRole('tab', { name: /Procuras e grupos/i }));
+
+    const nota = await screen.findByText('Sem compatibilidade com esta oferta');
+    const cartao = nota.closest('[data-testid="opportunity-card"]');
+    expect(cartao).toBeTruthy();
+    expect(within(cartao).getByText('Cacuaco')).toBeInTheDocument();
+    const cta = within(cartao).getByRole('button', { name: 'Enviar proposta' });
+    expect(cta).toBeDisabled();
+    fireEvent.click(cta);
+    expect(screen.queryByTestId('opportunity-proposal-sheet')).not.toBeInTheDocument();
   });
 
   it('não expõe jargon de produto na UI do hub motorista', async () => {

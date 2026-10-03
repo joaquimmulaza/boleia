@@ -91,7 +91,7 @@
 3. **Não** zonas/polígonos; **não** merge automático em `main`
 
 ## Quick (2026-10-03) — Hub motorista: cartões Procuras e grupos
-- A lista reusa `OpportunityCard` + `RouteIndicator`. Sem segundo cartão e sem montar o sheet de proposta.
+- A lista reusa `OpportunityCard` + `RouteIndicator`. Sem segundo cartão.
 - OD real → rota. Sem OD: sem «Origem»/«Destino» e sem rota inventada. Oferta flexível continua «Disponível para acordos» no modelo do cartão.
 - «Sem compatibilidade com esta oferta» desliga o CTA. Preço da oferta seleccionada no rodapé.
 - Spec: `.specs/quick/hub-procuras-opportunity-card/`.
@@ -113,7 +113,8 @@
 ## Quick (2026-10-03) — Detalhe da oportunidade
 - Sheet de detalhe em `/explorar` reusa `resolveOpportunityCard`, `RouteIndicator` e `OverlayShell`.
 - Flexível `TOTAL_ACORDO`: «Disponível para acordos» + horário real, um preço, sem rota inventada e sem × N.
-- Sheet de proposta do motorista (grupo e passageiro): «Este número fica fixo nesta proposta.» N = snapshot. Stepper do passageiro sem essa frase. Não montado no hub.
+- Sheet de proposta do motorista (grupo e passageiro): «Este número fica fixo nesta proposta.» N = snapshot. Stepper do passageiro sem essa frase.
+- **Hub motorista (2026-10-03):** procura e grupo com preço na oferta abrem `OpportunityProposalSheet`. Spec: `.specs/quick/driver-hub-proposal-sheet/`.
 
 ## Decisão (2026-10-01) — Marketplace browse público
 - Anónimo vê ofertas e procuras em `/explorar` (só leitura; CTAs → `/auth`)
