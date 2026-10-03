@@ -90,6 +90,12 @@
 2. TTL reservas (opcional) + polish admin Critiquito
 3. **Não** zonas/polígonos; **não** merge automático em `main`
 
+## Quick (2026-10-03) — Explorar autenticado: detalhe no corpo
+- O feed Explorar do passageiro reusa `OpportunityDetailSheet` (PR #182) no `onOpen` do `OpportunityCard`.
+- O CTA «Propor acordo» continua a abrir `OpportunityProposalSheet`. O CTA dentro do detalhe faz a mesma acção.
+- `/explorar` anónimo não muda: corpo abre o detalhe; CTA «Propor acordo» vai para `/auth`.
+- Spec: `.specs/quick/explorar-passageiro-detalhe/`.
+
 ## Quick (2026-10-03) — Explorar: cartão e proposta do passageiro
 - O feed Explorar sem procura (`PassengerDashboard`) usa `OpportunityCard`, o mesmo de `/explorar`.
 - O CTA autenticado abre `OpportunityProposalSheet`. Anónimo em `/explorar` continua para `/auth`.
