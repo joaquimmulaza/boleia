@@ -117,8 +117,11 @@ describe('Layout Component', () => {
       renderWithRouterAndTheme(<Layout />);
     });
 
-    const logo = screen.getByTestId('brand-lockup').querySelector('img');
+    const lockup = screen.getByTestId('brand-lockup');
+    const logo = lockup.querySelector('img');
     expect(logo).toHaveAttribute('src', '/boleia-logo.png');
+    expect(logo).toHaveAttribute('alt', 'Boleia Certa');
+    expect(lockup).not.toHaveTextContent('Boleia Certa');
     expect(screen.getByRole('heading', { name: 'Boleia Certa' })).toBeInTheDocument();
   });
 
