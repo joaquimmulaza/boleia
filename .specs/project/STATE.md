@@ -113,7 +113,8 @@
 ## Quick (2026-10-03) — Detalhe da oportunidade
 - Sheet de detalhe em `/explorar` reusa `resolveOpportunityCard`, `RouteIndicator` e `OverlayShell`.
 - Flexível `TOTAL_ACORDO`: «Disponível para acordos» + horário real, um preço, sem rota inventada e sem × N.
-- Sheet de proposta do motorista (grupo e passageiro): «Este número fica fixo nesta proposta.» N = snapshot. Stepper do passageiro sem essa frase. Não montado no hub.
+- Sheet de proposta do motorista (grupo e passageiro): «Este número fica fixo nesta proposta.» N = snapshot. Stepper do passageiro sem essa frase.
+- **Hub motorista (2026-10-03):** procura e grupo com preço na oferta abrem `OpportunityProposalSheet`. Spec: `.specs/quick/driver-hub-proposal-sheet/`.
 
 ## Decisão (2026-10-01) — Marketplace browse público
 - Anónimo vê ofertas e procuras em `/explorar` (só leitura; CTAs → `/auth`)

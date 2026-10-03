@@ -1,6 +1,15 @@
-import { screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent, within } from '@testing-library/react';
 
-/** Confirma sheet de counter-ask (#30) nos testes de proposta. */
+/**
+ * Confirma o sheet de proposta aberto.
+ * No hub do motorista, procura e grupo usam OpportunityProposalSheet.
+ * Os outros fluxos mantêm «Confirmar proposta».
+ */
 export async function confirmPropostaSheet() {
+  const oportunidade = screen.queryByTestId('opportunity-proposal-sheet');
+  if (oportunidade) {
+    fireEvent.click(within(oportunidade).getByRole('button', { name: 'Enviar proposta' }));
+    return;
+  }
   fireEvent.click(await screen.findByRole('button', { name: /Confirmar proposta/i }));
 }

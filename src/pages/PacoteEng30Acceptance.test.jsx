@@ -2,7 +2,7 @@
  * PACOTE ENG #30 — Counter-ask: valor mensal editável ao propor.
  */
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import PassengerDashboard from './PassengerDashboard';
@@ -160,7 +160,7 @@ describe('PACOTE ENG #30 — counter-ask preço na proposta', () => {
     });
   });
 
-  it('ENG30-3: motorista counter-ask ao enviar proposta', async () => {
+  it('ENG30-3: motorista envia o preço da oferta no sheet, sem o editar', async () => {
     const { useAuth } = await import('../contexts/AuthContext');
     useAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
 
@@ -212,18 +212,20 @@ describe('PACOTE ENG #30 — counter-ask preço na proposta', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Procuras e grupos/i }));
     fireEvent.click(await screen.findByRole('button', { name: /Enviar proposta/i }));
 
-    const valorInput = await screen.findByLabelText(/valor.*proposta/i);
-    expect(valorInput).toHaveValue(120000);
-
-    fireEvent.change(valorInput, { target: { value: '95000' } });
-    fireEvent.click(screen.getByRole('button', { name: /Confirmar proposta/i }));
+    const sheet = await screen.findByTestId('opportunity-proposal-sheet');
+    expect(within(sheet).getByText('Este número fica fixo nesta proposta.')).toBeInTheDocument();
+    expect(within(sheet).queryByRole('button', { name: 'Mais passageiros' })).not.toBeInTheDocument();
+    expect(within(sheet).queryByLabelText(/valor.*proposta/i)).not.toBeInTheDocument();
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Enviar proposta' }));
 
     await waitFor(() => {
       expect(createProposta).toHaveBeenCalledWith(
         expect.objectContaining({
           oferta_id: 'of-1',
           procura_id: 'pr-1',
-          valor_mensal_ask_kz: 95000,
+          valor_mensal_ask_kz: 120000,
+          modo_preco: 'TOTAL_ACORDO',
+          n_passageiros_propostos: 1,
         }),
       );
     });
