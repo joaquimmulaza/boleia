@@ -4,6 +4,7 @@ import { getOAuthRedirectUrl } from '../utils/appOrigin';
 import {
   OAUTH_PROVIDERS,
   canUnlinkIdentity,
+  isOAuthProvider,
   isProviderLinked,
   mapOAuthError,
 } from '../utils/oauth';
@@ -43,7 +44,7 @@ const LoginMethodsSection = () => {
   }, []);
 
   const handleLink = async (providerId) => {
-    if (busy) return;
+    if (busy || !isOAuthProvider(providerId)) return;
     setBusy(providerId);
     setMessage(null);
     const { error } = await supabase.auth.linkIdentity({

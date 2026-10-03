@@ -16,7 +16,7 @@ Constraints aplicadas (baseline de UI, sem inventar outro visual):
 
 ## Flow
 
-1. Entrar ou Criar Conta mostra quatro botões, divisor «ou», depois email e palavra-passe.
+1. Entrar ou Criar Conta mostra os botões Google, Facebook e LinkedIn, divisor «ou», depois email e palavra-passe. Apple não aparece.
 2. Clique → «A ligar ao {Provider}...» → redirect do Supabase.
 3. Volta a `/auth`. Perfil incompleto → completar nome, telefone e papel. Perfil completo → hub.
 4. Cancelamento ou erro → mesma página, botões outra vez activos, alerta curto.

@@ -79,6 +79,12 @@
 - Spec: `.specs/features/esqueceu-palavra-passe/`
 - **Ops pendente:** Redirect URLs no Supabase Dashboard
 
+## Decisão (2026-10-03) — Apple Sign-In fora da UI
+- Sem conta Apple Developer: `/auth` e «Associar» no perfil não oferecem Apple.
+- Google, Facebook e LinkedIn (OIDC) mantêm-se.
+- `supabase/config.toml`, `.env.example` e o Dashboard Supabase não foram alterados.
+- Spec: `.specs/quick/remove-apple-sign-in/`
+
 ## Next Steps
 1. Redirect URLs recovery (Supabase Auth URL Configuration)
 2. TTL reservas (opcional) + polish admin Critiquito

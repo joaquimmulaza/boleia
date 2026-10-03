@@ -1,4 +1,4 @@
-# Login social (Google, Apple, Facebook, LinkedIn)
+# Login social (Google, Facebook, LinkedIn)
 
 A app usa **Supabase Auth**. O browser chama `signInWithOAuth` com PKCE. Os client secrets ficam no Supabase (Dashboard em produção, variáveis de ambiente no CLI local). Nada disto leva o prefixo `VITE_`.
 
@@ -9,9 +9,10 @@ Não há teste end-to-end contra os fornecedores neste repositório: as credenci
 | Provider na app | Id Supabase | Produto na consola |
 | --- | --- | --- |
 | Google | `google` | Google Cloud OAuth client (Web) |
-| Apple | `apple` | Sign in with Apple (Services ID) |
 | Facebook | `facebook` | Facebook Login |
 | LinkedIn | `linkedin_oidc` | Sign In with LinkedIn using OpenID Connect |
+
+Apple (`apple`) não aparece em `/auth` nem em «Associar» no perfil. O bloco `[auth.external.apple]` em `supabase/config.toml` e as variáveis `SUPABASE_AUTH_EXTERNAL_APPLE_*` ficam no repositório para não alterar a configuração partilhada com os outros providers. Não voltar a oferecer o botão sem conta Apple Developer.
 
 Scopes: os mínimos do GoTrue (`openid`, `email`, `profile` onde o provider os usa). Não pedir permissões extra.
 
@@ -61,7 +62,9 @@ O `SUPABASE_AUTH_EXTERNAL_APPLE_SECRET` é o client secret **já gerado** (JWT).
 3. Client ID = App ID. Client secret = App Secret.
 4. O email pode não vir. O provider local tem `email_optional = true`. A app deixa continuar e pede telefone no ecrã de completar perfil.
 
-### Apple
+### Apple (não oferecido na app)
+
+A UI não chama este provider. A secção fica só como registo da configuração de servidor, que não foi removida.
 
 1. Apple Developer → Identifiers → Services ID (este é o Client ID) com Sign in with Apple.
 2. Return URL: o callback Supabase.
@@ -77,7 +80,7 @@ O `SUPABASE_AUTH_EXTERNAL_APPLE_SECRET` é o client secret **já gerado** (JWT).
 
 ## Configuração local
 
-`supabase/config.toml` tem os quatro providers com `env(...)` e `enable_manual_linking = true`. Sem as variáveis, o CLI local não consegue falar com o IdP. A app em Vite contra o projecto remoto usa o Dashboard, não este ficheiro.
+`supabase/config.toml` tem Google, Facebook, LinkedIn (OIDC) e o bloco Apple deixado no sítio, com `env(...)` e `enable_manual_linking = true`. Sem as variáveis, o CLI local não consegue falar com o IdP. A app em Vite contra o projecto remoto usa o Dashboard, não este ficheiro. A UI só lista Google, Facebook e LinkedIn.
 
 ## Configuração de produção
 
@@ -117,7 +120,7 @@ Num iPhone com a PWA no ecrã inicial, o fornecedor pode abrir o Safari. A sess�
 
 ## O que fica manual
 
-- Criar as quatro apps nas consolas e colar secrets no Dashboard.
+- Criar as apps Google, Facebook e LinkedIn nas consolas e colar secrets no Dashboard.
 - Correr o script de redirects (precisa de `SUPABASE_ACCESS_TOKEN`).
 - Ligar Manual linking em produção.
 - Apple: Team ID, Key ID e `.p8` só no Dashboard.

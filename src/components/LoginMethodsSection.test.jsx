@@ -34,15 +34,19 @@ describe('LoginMethodsSection', () => {
     render(<LoginMethodsSection />);
 
     expect(await screen.findByText('Email e palavra-passe')).toBeInTheDocument();
+    expect(screen.queryByText('Apple')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Desassociar' })).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole('button', { name: 'Associar' })[0]);
 
     await waitFor(() => {
       expect(supabase.auth.linkIdentity).toHaveBeenCalledWith({
-        provider: 'apple',
+        provider: 'facebook',
         options: { redirectTo: 'https://boleia-cyan.vercel.app/auth' },
       });
     });
+    expect(supabase.auth.linkIdentity).not.toHaveBeenCalledWith(
+      expect.objectContaining({ provider: 'apple' }),
+    );
   });
 
   it('não desassocia quando só há uma identidade social', async () => {
