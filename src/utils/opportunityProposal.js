@@ -46,6 +46,7 @@ export function resolveOpportunityProposal({
 }) {
   const n = snapshotN(nProposto);
   const totalAcordo = modoPreco === 'TOTAL_ACORDO';
+  const passageiroTotal = papel === 'passageiro' && totalAcordo;
   const flexivel = Boolean(item?.flexibilidade_rota);
   const card = resolveOpportunityCard({
     kind: flexivel ? 'oferta' : (alvo === 'grupo' ? 'grupo' : 'procura'),
@@ -61,9 +62,9 @@ export function resolveOpportunityProposal({
     horario: card.horario,
     mostrarHorario: totalAcordo || papel === 'passageiro',
     nome: alvo === 'grupo' ? (String(item?.nome || '').trim() || 'Grupo') : null,
-    contagem: n === 1 ? '1 passageiro' : `${n} passageiros`,
+    contagem: passageiroTotal ? '' : (n === 1 ? '1 passageiro' : `${n} passageiros`),
     n,
-    stepper: papel === 'passageiro',
+    stepper: papel === 'passageiro' && !totalAcordo,
     snapshotNote: papel === 'motorista' ? COPY_N_FIXO : null,
     precoPorPassageiro: !totalAcordo && unit != null
       ? `${formatKwanza(unit)} Kz por passageiro`

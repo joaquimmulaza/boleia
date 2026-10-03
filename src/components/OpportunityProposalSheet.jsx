@@ -10,7 +10,9 @@ const ctaClass = 'w-full rounded-xl bg-primary px-4 py-3 text-[15px] font-medium
 
 /**
  * Proposta a partir de uma oportunidade.
- * Motorista: N é snapshot e a frase fica visível. Passageiro: stepper, sem essa frase.
+ * Motorista: N é snapshot e a frase fica visível.
+ * Passageiro por pessoa: stepper, sem essa frase.
+ * Passageiro com total do acordo: um preço, sem stepper.
  * @param {{
  *   papel: 'motorista' | 'passageiro',
  *   alvo?: 'grupo' | 'passageiro',
@@ -18,6 +20,7 @@ const ctaClass = 'w-full rounded-xl bg-primary px-4 py-3 text-[15px] font-medium
  *   nProposto: number,
  *   valorKz?: number | null,
  *   modoPreco?: string | null,
+ *   erro?: string,
  *   onClose: () => void,
  *   onSubmit?: (n: number) => void,
  * }} props
@@ -29,6 +32,7 @@ function OpportunityProposalSheet({
   nProposto,
   valorKz,
   modoPreco,
+  erro = '',
   onClose,
   onSubmit,
 }) {
@@ -121,9 +125,9 @@ function OpportunityProposalSheet({
               </button>
             </div>
           </div>
-        ) : (
+        ) : sheet.contagem ? (
           <p className="text-[15px] font-medium text-slate-900 dark:text-white">{sheet.contagem}</p>
-        )}
+        ) : null}
 
         {sheet.snapshotNote ? (
           <p className="text-xs leading-4 text-slate-500">{sheet.snapshotNote}</p>
@@ -150,6 +154,10 @@ function OpportunityProposalSheet({
             <span className="text-slate-500">{sheet.total.label}</span>
             <span className="font-semibold text-slate-900 dark:text-white">{sheet.total.valor}</span>
           </div>
+        ) : null}
+
+        {erro ? (
+          <p role="alert" className="text-sm text-red-700 dark:text-red-300">{erro}</p>
         ) : null}
 
         <button type="submit" className={ctaClass}>

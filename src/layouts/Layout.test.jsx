@@ -117,9 +117,9 @@ describe('Layout Component', () => {
       renderWithRouterAndTheme(<Layout />);
     });
 
-    const logo = screen.getByAltText(/Boleia Certa/i);
-    expect(logo).toBeInTheDocument();
+    const logo = screen.getByTestId('brand-lockup').querySelector('img');
     expect(logo).toHaveAttribute('src', '/boleia-logo.png');
+    expect(screen.getByRole('heading', { name: 'Boleia Certa' })).toBeInTheDocument();
   });
 
   it('terminar sessão chama signOut', async () => {

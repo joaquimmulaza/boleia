@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { formatKwanza } from '../utils/formatKwanza';
 import { COPY_N_FIXO } from '../utils/opportunityProposal';
@@ -126,9 +126,12 @@ describe('OpportunityProposalSheet', () => {
     );
 
     expect(screen.queryByText(COPY_N_FIXO)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Mais passageiros' }));
+    expect(screen.queryByRole('button', { name: 'Mais passageiros' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Passageiros')).not.toBeInTheDocument();
     expect(screen.getByText(textoKz(30000))).toBeInTheDocument();
+    expect(screen.getByText('Total do acordo')).toBeInTheDocument();
     expect(screen.queryByText(textoKz(60000))).not.toBeInTheDocument();
+    expect(screen.queryByText(/×/)).not.toBeInTheDocument();
   });
 
   it('o nome na proposta é o texto completo, sem fade nem reticências', () => {

@@ -18,6 +18,8 @@ import { getGrupoByProcura, listMembrosGrupo } from '../services/GrupoService';
 import { listWaitlistByProcura } from '../services/WaitlistService';
 import { expectNoUserFacingJargon } from '../test/jargonBan';
 import { confirmPropostaSheet } from '../test/confirmPropostaSheet.js';
+import { formatKwanza } from '../utils/formatKwanza';
+import { COPY_N_FIXO } from '../utils/opportunityProposal';
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'pax-1' }, tipoPerfil: 'Passageiro' }),
@@ -191,9 +193,148 @@ describe('PassengerDashboard — marketplace', () => {
     );
 
     expect(await screen.findByText('Oferta flexível')).toBeInTheDocument();
-    expect(screen.getByText('Sem origem/destino fixos')).toBeInTheDocument();
+    expect(screen.getByText('Disponível para acordos')).toBeInTheDocument();
+    expect(screen.queryByText(/Sem origem/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Publicada')).not.toBeInTheDocument();
     expect(screen.queryByText(/^Origem$/)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Destino$/)).not.toBeInTheDocument();
+    expect(screen.getByText('Por passageiro')).toBeInTheDocument();
+  });
+
+  function textoKz(valor) {
+    return new RegExp(`${formatKwanza(valor).replace(/\s/g, '\\s')}\\sKz`);
+  }
+
+  it('explorar autenticado abre Nova proposta e o total por passageiro acompanha só o N', async () => {
+    listOfertasDisponiveis.mockResolvedValue([
+      {
+        id: 'of-pp',
+        flexibilidade_rota: false,
+        origin_name: 'Viana',
+        destination_name: 'Talatona',
+        origin_lat: -8.9,
+        origin_lng: 13.18,
+        destination_lat: -8.92,
+        destination_lng: 13.28,
+        departure_time: '07:15',
+        dias_semana: [1, 2, 3, 4, 5],
+        vagas_disponiveis: 4,
+        valor_mensal_ask_kz: 10000,
+        modo_preco: 'POR_PASSAGEIRO',
+        estado: 'disponivel',
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId('opportunity-card')).toBeInTheDocument();
+    expect(screen.queryByText('Publicada')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Sem origem/)).not.toBeInTheDocument();
+    expect(screen.getByText('Por passageiro')).toBeInTheDocument();
+    expect(screen.getByTestId('route-indicator')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Propor acordo' }));
+
+    const sheet = await screen.findByTestId('opportunity-proposal-sheet');
+    const texto = sheet.textContent.replace(/\s/g, ' ');
+    expect(sheet).toHaveTextContent('Nova proposta');
+    expect(sheet).toHaveTextContent('Viana');
+    expect(sheet).toHaveTextContent('Talatona');
+    expect(texto).toContain(`${formatKwanza(10000).replace(/\s/g, ' ')} Kz por passageiro`);
+    expect(sheet).toHaveTextContent('Total estimado');
+    expect(texto).toContain(`${formatKwanza(10000).replace(/\s/g, ' ')} Kz`);
+    expect(sheet).not.toHaveTextContent(COPY_N_FIXO);
+    const nome = sheet.querySelector('[data-testid="opportunity-place-name"]');
+    expect(nome.className).toMatch(/break-words/);
+    expect(nome.className).not.toMatch(/ellipsis|truncate|line-clamp|text-fade/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mais passageiros' }));
+    const depois = sheet.textContent.replace(/\s/g, ' ');
+    expect(depois).toContain(`${formatKwanza(10000).replace(/\s/g, ' ')} Kz por passageiro`);
+    expect(depois).toMatch(textoKz(20000));
+    expect(depois).not.toMatch(textoKz(30000));
+    expect(depois).not.toMatch(/×/);
+  });
+
+  it('explorar autenticado com mais de uma pessoa não cria procura sem grupo', async () => {
+    listOfertasDisponiveis.mockResolvedValue([
+      {
+        id: 'of-pp',
+        flexibilidade_rota: false,
+        origin_name: 'Viana',
+        destination_name: 'Talatona',
+        origin_lat: -8.9,
+        origin_lng: 13.18,
+        destination_lat: -8.92,
+        destination_lng: 13.28,
+        departure_time: '07:15',
+        dias_semana: [1, 2, 3, 4, 5],
+        vagas_disponiveis: 4,
+        valor_mensal_ask_kz: 10000,
+        modo_preco: 'POR_PASSAGEIRO',
+        estado: 'disponivel',
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Propor acordo' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Mais passageiros' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar proposta' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Para propor com mais de uma pessoa é necessário um grupo ligado à procura.',
+    );
+    expect(screen.getByTestId('opportunity-proposal-sheet')).toBeInTheDocument();
+    expect(createProcura).not.toHaveBeenCalled();
+    expect(createProposta).not.toHaveBeenCalled();
+  });
+
+  it('explorar autenticado em total do acordo mostra um preço e não multiplica por N', async () => {
+    listOfertasDisponiveis.mockResolvedValue([
+      {
+        id: 'of-total',
+        flexibilidade_rota: true,
+        departure_time: '06:00',
+        dias_semana: [1, 2, 3, 4, 5],
+        vagas_disponiveis: 4,
+        valor_mensal_ask_kz: 30000,
+        modo_preco: 'TOTAL_ACORDO',
+        estado: 'disponivel',
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Disponível para acordos')).toBeInTheDocument();
+    expect(screen.queryByTestId('route-indicator')).not.toBeInTheDocument();
+    expect(screen.getByText('Total do acordo')).toBeInTheDocument();
+    expect(screen.queryByText(/Sem origem/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Propor acordo' }));
+    const sheet = await screen.findByTestId('opportunity-proposal-sheet');
+    const texto = sheet.textContent.replace(/\s/g, ' ');
+    expect(sheet).toHaveTextContent('Nova proposta');
+    expect(sheet).toHaveTextContent('Disponível para acordos');
+    expect(sheet).toHaveTextContent('Total do acordo');
+    expect(texto).toContain(`${formatKwanza(30000).replace(/\s/g, ' ')} Kz`);
+    expect(sheet).not.toHaveTextContent('por passageiro');
+    expect(sheet).not.toHaveTextContent(COPY_N_FIXO);
+    expect(texto).not.toMatch(/×/);
+    expect(screen.queryByRole('button', { name: 'Mais passageiros' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Passageiros')).not.toBeInTheDocument();
   });
 
   it('browse sem procura: CTA Propor acordo cria procura mínima + proposta', async () => {
@@ -228,7 +369,7 @@ describe('PassengerDashboard — marketplace', () => {
 
     expect(await screen.findByTestId('browse-ofertas-feed')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Propor acordo/i }));
-    await confirmPropostaSheet();
+    fireEvent.click(await screen.findByRole('button', { name: 'Enviar proposta' }));
 
     await waitFor(() => {
       expect(createProcura).toHaveBeenCalledWith(
@@ -368,7 +509,7 @@ describe('PassengerDashboard — marketplace', () => {
     );
 
     fireEvent.click(await screen.findByRole('button', { name: /Propor acordo/i }));
-    await confirmPropostaSheet();
+    fireEvent.click(await screen.findByRole('button', { name: 'Enviar proposta' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/Procura criada, mas não foi possível enviar a proposta/i);
     expect(createProcura).toHaveBeenCalled();
