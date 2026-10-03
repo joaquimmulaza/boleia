@@ -7,16 +7,24 @@ const ctaClass = 'shrink-0 rounded-xl bg-primary px-4 py-3 text-[15px] font-medi
 
 /**
  * Cartão de descoberta. O corpo abre o detalhe; o CTA é outra acção.
- * Não cria proposta.
+ * Não cria proposta. `nota` / `ctaDisabled` / `preco` são contexto do hub
+ * (compatibilidade, preço da oferta seleccionada) — o mesmo cartão.
  * @param {{
  *   kind: 'oferta' | 'procura' | 'grupo',
  *   item: object,
  *   onOpen?: () => void,
  *   onCta?: () => void,
+ *   nota?: string,
+ *   ctaDisabled?: boolean,
+ *   ctaLabel?: string,
+ *   preco?: { valor: string, modo?: string | null } | null,
  * }} props
  */
-function OpportunityCard({ kind, item, onOpen, onCta }) {
+function OpportunityCard({ kind, item, onOpen, onCta, nota, ctaDisabled = false, ctaLabel, preco }) {
   const card = resolveOpportunityCard({ kind, item });
+  const precoRodape = preco === undefined ? card.preco : preco;
+  const desligado = Boolean(card.ctaDisabled || ctaDisabled);
+  const rotulo = ctaLabel || card.cta;
   const corpo = (
     <>
       <p className="text-xs font-medium tracking-wide text-primary">{card.tipo}</p>
@@ -39,9 +47,12 @@ function OpportunityCard({ kind, item, onOpen, onCta }) {
       {card.horario.map((linha) => (
         <p key={linha} className="text-[15px] leading-5 text-slate-500">{linha}</p>
       ))}
-      <p className={`text-[15px] font-medium leading-5 ${card.ctaDisabled ? 'text-slate-500' : 'text-slate-900 dark:text-white'}`}>
+      <p className={`text-[15px] font-medium leading-5 ${desligado ? 'text-slate-500' : 'text-slate-900 dark:text-white'}`}>
         {card.capacidade}
       </p>
+      {nota ? (
+        <p className="text-[15px] leading-5 text-slate-500">{nota}</p>
+      ) : null}
     </>
   );
 
@@ -68,11 +79,11 @@ function OpportunityCard({ kind, item, onOpen, onCta }) {
       <div className="h-px w-full bg-[#e2e8e5] dark:bg-slate-800" />
 
       <div className="flex items-center justify-between gap-3" data-testid="opportunity-footer">
-        {card.preco ? (
+        {precoRodape ? (
           <div className="min-w-0">
-            <p className="text-base font-semibold leading-snug text-slate-900 dark:text-white">{card.preco.valor}</p>
-            {card.preco.modo ? (
-              <p className="text-xs text-slate-500">{card.preco.modo}</p>
+            <p className="text-base font-semibold leading-snug text-slate-900 dark:text-white">{precoRodape.valor}</p>
+            {precoRodape.modo ? (
+              <p className="text-xs text-slate-500">{precoRodape.modo}</p>
             ) : null}
           </div>
         ) : <span className="min-w-0" />}
@@ -80,10 +91,10 @@ function OpportunityCard({ kind, item, onOpen, onCta }) {
           <button
             type="button"
             className={ctaClass}
-            disabled={card.ctaDisabled}
+            disabled={desligado}
             onClick={onCta}
           >
-            {card.cta}
+            {rotulo}
           </button>
         ) : null}
       </div>

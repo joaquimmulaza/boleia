@@ -247,9 +247,12 @@ describe('PACOTE ENG #27 — hub motorista todas procuras + toggle', () => {
     expect(screen.getByText('Viana')).toBeInTheDocument();
 
     const proporButtons = screen.getAllByRole('button', { name: /Enviar proposta/i });
-    expect(proporButtons).toHaveLength(1);
+    const activos = proporButtons.filter((botao) => !botao.disabled);
+    expect(activos).toHaveLength(1);
+    expect(proporButtons.some((botao) => botao.disabled)).toBe(true);
+    expect(screen.getByText('Sem compatibilidade com esta oferta')).toBeInTheDocument();
 
-    fireEvent.click(proporButtons[0]);
+    fireEvent.click(activos[0]);
     await confirmPropostaSheet();
 
     await waitFor(() => {
