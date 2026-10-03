@@ -90,6 +90,12 @@
 2. TTL reservas (opcional) + polish admin Critiquito
 3. **Não** zonas/polígonos; **não** merge automático em `main`
 
+## Quick (2026-10-03) — Explorar: cartão e proposta do passageiro
+- O feed Explorar sem procura (`PassengerDashboard`) usa `OpportunityCard`, o mesmo de `/explorar`.
+- O CTA autenticado abre `OpportunityProposalSheet`. Anónimo em `/explorar` continua para `/auth`.
+- Cabeçalho dos dois: ícone `boleia-logo.png` + «Boleia Certa» (`BrandLockup`).
+- Spec: `.specs/quick/explorar-proposta-passageiro/`.
+
 ## Quick (2026-10-03) — Detalhe da oportunidade
 - Sheet de detalhe em `/explorar` reusa `resolveOpportunityCard`, `RouteIndicator` e `OverlayShell`.
 - Flexível `TOTAL_ACORDO`: «Disponível para acordos» + horário real, um preço, sem rota inventada e sem × N.

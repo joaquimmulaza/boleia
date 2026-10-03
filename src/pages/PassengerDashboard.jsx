@@ -12,6 +12,8 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import GrupoProcuraPanel from '../components/GrupoProcuraPanel';
 import GrupoDescobertaPanel from '../components/GrupoDescobertaPanel';
 import OfertaMatchCard from '../components/OfertaMatchCard';
+import OpportunityCard from '../components/OpportunityCard';
+import OpportunityProposalSheet from '../components/OpportunityProposalSheet';
 import TextFade from '../components/TextFade';
 import PropostaReviewCard from '../components/PropostaReviewCard';
 import {
@@ -151,6 +153,7 @@ const PassengerDashboard = () => {
   const [browseOfertasComProposta, setBrowseOfertasComProposta] = useState(() => new Set());
   /** @type {[null | { oferta: object, gaps: Array<'time' | 'od'>, source: 'browse' | 'hub', form: object }, Function]} */
   const [proporSheet, setProporSheet] = useState(null);
+  const [propostaOferta, setPropostaOferta] = useState(null);
   /** @type {[null | { propostaId: string, oferta_id: string, procura_id: string, grupo_id?: string | null, modo_preco: string, n_passageiros_propostos: number, valor_mensal_ask_kz: string, precoPublicadoKz?: number | null }, Function]} */
   const [contraPropostaSheet, setContraPropostaSheet] = useState(null);
   /** @type {[Set<string>, Function]} ids de propostas recebidas com contra-proposta enviada nesta sessão */
@@ -578,6 +581,20 @@ const PassengerDashboard = () => {
   const openProporBrowseSheet = (oferta) => openProporSheet(oferta, 'browse');
 
   /**
+   * Explorar autenticado: a folha de proposta já existente.
+   * Lacunas de oferta fixa incompleta continuam no sheet de dados em falta.
+   * @param {object} oferta
+   */
+  const abrirPropostaBrowse = (oferta) => {
+    if (ofertasComPropostaAberta.has(oferta.id)) return;
+    if (getPropostaBrowseGaps(oferta).length > 0) {
+      openProporBrowseSheet(oferta);
+      return;
+    }
+    setPropostaOferta(oferta);
+  };
+
+  /**
    * Browse: cria procura mínima + proposta (valores da oferta).
    * @param {object} oferta
    * @param {object} overrides
@@ -587,7 +604,7 @@ const PassengerDashboard = () => {
    * @param {object} overrides
    * @param {number} valorMensalKz
    */
-  const submitProporBrowse = async (oferta, overrides, valorMensalKz) => {
+  const submitProporBrowse = async (oferta, overrides, valorMensalKz, nPassageiros = 1) => {
     if (ofertasComPropostaAberta.has(oferta.id)) {
       return;
     }
@@ -606,7 +623,7 @@ const PassengerDashboard = () => {
           grupo_id: null,
           modo_preco: oferta.modo_preco,
           valor_mensal_ask_kz: valorMensalKz,
-          n_passageiros_propostos: 1,
+          n_passageiros_propostos: nPassageiros,
         });
         propostaOk = true;
         setFeedback({ type: 'success', text: FEEDBACK_PROPOSTA_ENVIADA_MOTORISTA });
@@ -971,16 +988,14 @@ const PassengerDashboard = () => {
               </p>
             ) : (
               browseOfertas.map((oferta) => (
-                <OfertaMatchCard
+                <OpportunityCard
                   key={oferta.id}
-                  oferta={oferta}
-                  variant="browse"
-                  busy={busyId === oferta.id}
-                  propostaEnviada={ofertasComPropostaAberta.has(oferta.id)}
-                  onPropor={
+                  kind="oferta"
+                  item={oferta}
+                  onCta={
                     ofertasComPropostaAberta.has(oferta.id)
                       ? undefined
-                      : () => openProporBrowseSheet(oferta)
+                      : () => abrirPropostaBrowse(oferta)
                   }
                 />
               ))
@@ -1576,6 +1591,22 @@ const PassengerDashboard = () => {
           }
         }}
       />
+      {propostaOferta ? (
+        <OpportunityProposalSheet
+          papel="passageiro"
+          item={propostaOferta}
+          nProposto={1}
+          valorKz={propostaOferta.valor_mensal_ask_kz}
+          modoPreco={propostaOferta.modo_preco}
+          onClose={() => setPropostaOferta(null)}
+          onSubmit={(n) => {
+            const oferta = propostaOferta;
+            setPropostaOferta(null);
+            void submitProporBrowse(oferta, {}, Number(oferta.valor_mensal_ask_kz), n);
+          }}
+        />
+      ) : null}
+
       {proporSheet ? (
         <OverlayShell
           variant="bottom"

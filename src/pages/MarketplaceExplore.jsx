@@ -12,6 +12,7 @@ import {
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import OpportunityCard from '../components/OpportunityCard';
 import OpportunityDetailSheet from '../components/OpportunityDetailSheet';
+import BrandLockup from '../components/BrandLockup';
 import ThemeToggle from '../components/ThemeToggle';
 
 /**
@@ -83,9 +84,10 @@ export default function MarketplaceExplore() {
           <button
             type="button"
             onClick={() => navigate('/')}
-            className="text-sm font-bold text-primary"
+            className="rounded-lg"
+            aria-label="Boleia Certa"
           >
-            Boleia Certa
+            <BrandLockup />
           </button>
           <div className="flex items-center gap-2">
             <ThemeToggle />

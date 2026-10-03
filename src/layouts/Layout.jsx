@@ -8,6 +8,7 @@ import OnboardingPermissions from '../components/OnboardingPermissions';
 import InstallAppPrompt from '../components/InstallAppPrompt';
 import { useAuth } from '../contexts/AuthContext';
 import { clearAppBadge } from '../utils/appBadge';
+import BrandLockup from '../components/BrandLockup';
 
 /**
  * Layout global que envolve todas as páginas autenticadas.
@@ -36,7 +37,7 @@ const Layout = () => {
     <div className="flex h-full min-h-0 flex-col bg-background-light dark:bg-background-dark transition-colors">
       <header className="shrink-0 z-header flex items-center justify-between px-4 py-3 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 max-w-md mx-auto w-full transition-colors shadow-sm">
         <h1 className="flex items-center">
-          <img src="/boleia-logo.png" alt="Boleia Certa" className="h-9 w-auto object-contain" />
+          <BrandLockup />
         </h1>
         <div className="flex items-center gap-1 sm:gap-2">
           <NotificationBell />

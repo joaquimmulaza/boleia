@@ -67,6 +67,11 @@ describe('MarketplaceExplore', () => {
     );
 
     expect(await screen.findByTestId('marketplace-explore')).toBeInTheDocument();
+    const lockup = screen.getByTestId('brand-lockup');
+    expect(lockup.querySelector('img')).toHaveAttribute('src', '/boleia-logo.png');
+    expect(lockup).toHaveTextContent('Boleia Certa');
+    expect(screen.getByRole('button', { name: 'Propor acordo' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Entrar para propor/i })).not.toBeInTheDocument();
     expect(await screen.findByTestId('explore-oferta-card')).toBeInTheDocument();
     expect(screen.getByText(/Oferta flexível/i)).toBeInTheDocument();
     expect(screen.getByText('Disponível para acordos')).toBeInTheDocument();
