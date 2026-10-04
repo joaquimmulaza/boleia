@@ -294,7 +294,7 @@ When creating a subagent:
 ```
 ✅ Subagent created successfully!
 
-📁 Location: .agent/subagents/[name].md
+📁 Location: `.cursor/skills/boleia-agent-loop/<papel>/SKILL.md` (the loop loads this file into the `Task` prompt)
 🎯 Purpose: [brief description]
 🔧 How to invoke:
    - Automatic: Agent delegates when it detects [context]
