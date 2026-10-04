@@ -94,7 +94,7 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
 **REGRA ABSOLUTA:** Esta secção do documento (`CONTEXT.md` e `AGENTS.md`) tem de ser **obrigatoriamente atualizada** sempre que uma nova funcionalidade for implementada, refatorada ou corrigida. O objetivo central é garantir que qualquer Agente de IA que leia este ficheiro saiba com exatidão o ponto de situação do projeto, evitando redundâncias, reinvenção da roda ou duplicação de lógicas já existentes (DRY - Don't Repeat Yourself). Antes de iniciar qualquer tarefa, o agente deve assumir este relatório como a única fonte de verdade arquitetónica.
 
 🏛️ Relatório de Estado da Arquitetura: Boleia Certa
-**Última Atualização:** 3 de Outubro de 2026 
+**Última Atualização:** 4 de Outubro de 2026 
 **Fase Atual:** Marketplace Oferta/Procura (Phase 6–7) + **Landing refresh** + **Agent loop Cursor** + **Graphify/Graphlore** + **Stitch + UI Skills** + **PWA Offline Wave 3–4** + **PACOTE ENG#8 cancelamento** + **Esqueceu a palavra-passe** + **Login social OAuth**. Spec ENG#8: `.specs/quick/pacote-eng-8-cancelamento/`. Spec recovery: `.specs/features/esqueceu-palavra-passe/`.
 
 **O que já está implementado e validado:**
@@ -180,5 +180,7 @@ Gerador SoT = **Stitch MCP** + **UI Skills MCP** (sync obrigatório) + shadcn JS
 
 * **Swipe-to-dismiss (2026-10-01):** `OverlayShell` `variant="bottom"` segue o dedo (`translate3d`), o backdrop perde opacidade, e o mesmo `onDismiss` fecha ao passar ~28% da altura ou num flick (≥ 0.75 px/ms e 24px). Abaixo do limiar volta com easing. Scroll interno no topo é que distingue dismiss de scroll. `SheetDragHandle` fica só o grabber. Sem biblioteca nova. Spec: `.specs/quick/swipe-to-dismiss-bottom-sheet/`.
 * **Cantos inferiores dos sheets (2026-10-02):** `OverlayShell` bottom flutua como o cartão Find My: `px-3`, `--sheet-bottom-inset` (`16px + safe-area`) e `rounded-[34px]`. A folga interior é `pb-sheet` (2.5rem) num filho do painel com scroll — o padding no próprio overflow some no iOS. `pb-safe` no painel zerava o padding. Prompts PWA/onboarding usam a mesma forma e fecham ao deslizar para baixo. Spec: `.specs/quick/sheet-bottom-radius/`.
+
+* **Faltas UI (2026-10-04):** hub, detalhe, custódia e sheets alinhados ao Figma `119:2` (hub `119:3`). Rota só com origem e destino reais; meia quota e o gate de custódia ficam os da produção; cabeçalho de Faltas = ícone + «Boleia Certa» (Explorar continua só com o ícone). Spec: `.specs/quick/faltas-ui-figma/`.
 
 **Próximo:** polish admin Critiquito; Redirect URLs recovery em produção. **Fora do MVP:** zonas/polígonos/raio residencial; adenda bilateral completa (hoje motorista inicia). Commits só se o utilizador pedir.

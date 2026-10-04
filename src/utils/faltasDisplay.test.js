@@ -4,6 +4,8 @@ import {
   sumDescontoFaltas,
   todayLuandaISO,
   isFutureFaltaDate,
+  formatFaltaDiaCurto,
+  resolveFaltasHubCard,
 } from './faltasDisplay';
 
 describe('faltasDisplay', () => {
@@ -39,5 +41,65 @@ describe('faltasDisplay', () => {
     expect(isFutureFaltaDate('2026-10-15', refOct1)).toBe(true);
     expect(isFutureFaltaDate('2026-10-01', refOct1)).toBe(false);
     expect(isFutureFaltaDate('2026-09-30', refOct1)).toBe(false);
+  });
+
+  it('formata o dia do histórico como no ecrã (2 Out)', () => {
+    expect(formatFaltaDiaCurto('2026-10-02')).toBe('2 Out');
+    expect(formatFaltaDiaCurto('2026-10-03')).toBe('3 Out');
+  });
+
+  it('mostra a rota do hub só com origem e destino reais', () => {
+    const flexUmaPessoa = resolveFaltasHubCard({
+      n_passageiros_contrato: 1,
+      valor_mensal_por_passageiro_kz: 10000,
+      ofertas_capacidade: { flexibilidade_rota: true, origin_name: null, destination_name: null },
+    });
+    expect(flexUmaPessoa.titulo).toBe('Acordo flexível · 1 pessoa');
+    expect(flexUmaPessoa.rota).toBeNull();
+
+    const fixoTres = resolveFaltasHubCard({
+      n_passageiros_contrato: 3,
+      valor_mensal_por_passageiro_kz: 8000,
+      ofertas_capacidade: {
+        flexibilidade_rota: false,
+        origin_name: 'Viana',
+        destination_name: 'Talatona',
+      },
+    });
+    expect(fixoTres.titulo).toBe('Acordo fixo · 3 pessoas');
+    expect(fixoTres.rota).toEqual({ origem: 'Viana', destino: 'Talatona' });
+
+    const fixoUmaPessoa = resolveFaltasHubCard({
+      n_passageiros_contrato: 1,
+      valor_mensal_por_passageiro_kz: 5000,
+      ofertas_capacidade: {
+        flexibilidade_rota: false,
+        origin_name: 'Kilamba',
+        destination_name: 'Mutamba',
+      },
+    });
+    expect(fixoUmaPessoa.titulo).toBe('Acordo fixo · 1 pessoa');
+    expect(fixoUmaPessoa.rota).toEqual({ origem: 'Kilamba', destino: 'Mutamba' });
+
+    const flexTres = resolveFaltasHubCard({
+      n_passageiros_contrato: 3,
+      valor_mensal_por_passageiro_kz: 9000,
+      ofertas_capacidade: { flexibilidade_rota: true },
+    });
+    expect(flexTres.titulo).toBe('Acordo flexível · 3 pessoas');
+    expect(flexTres.rota).toBeNull();
+  });
+
+  it('não inventa Origem ou Destino quando falta um dos lados', () => {
+    const card = resolveFaltasHubCard({
+      n_passageiros_contrato: 2,
+      ofertas_capacidade: {
+        flexibilidade_rota: false,
+        origin_name: 'Viana',
+        destination_name: '   ',
+      },
+    });
+    expect(card.rota).toBeNull();
+    expect(card.titulo).toBe('Acordo fixo · 2 pessoas');
   });
 });

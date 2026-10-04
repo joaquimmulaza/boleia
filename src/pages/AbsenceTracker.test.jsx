@@ -112,8 +112,8 @@ describe('AbsenceTracker — marketplace', () => {
 
   it('apresenta desconto com sinal coerente entre total e histórico', async () => {
     render(<AbsenceTracker />);
-    expect(await screen.findByText('1363,64')).toBeInTheDocument();
-    expect(screen.queryByText('-1363,64')).not.toBeInTheDocument();
+    expect(await screen.findAllByText(/1363,64/)).toHaveLength(2);
+    expect(screen.queryByText(/-1363,64/)).not.toBeInTheDocument();
   });
 
   it('usa filtro «Este mês» no total e no histórico', async () => {
@@ -146,6 +146,14 @@ describe('AbsenceTracker — marketplace', () => {
     expect(faltasDisplay.filterFaltasEsteMes).toHaveBeenCalled();
     expect(screen.getAllByTestId('absence-card')).toHaveLength(1);
     expect(screen.queryByText('1272,73')).not.toBeInTheDocument();
+  });
+
+  it('mostra o vazio do mês sem faltas', async () => {
+    mockGetAbsences.mockResolvedValue([]);
+    render(<AbsenceTracker />);
+    expect(await screen.findByText('Sem faltas este mês')).toBeInTheDocument();
+    expect(screen.getByText('Não há faltas registadas neste acordo.')).toBeInTheDocument();
+    expect(screen.queryByText(/divisores fixos/i)).not.toBeInTheDocument();
   });
 
   it('bloqueia registo de falta sem pagamento em custódia', async () => {
@@ -185,7 +193,54 @@ describe('AbsenceTracker — marketplace', () => {
     ]);
     render(<AbsenceTracker />);
     expect(await screen.findByTestId('acordo-faltas-item')).toBeInTheDocument();
-    expect(screen.getByText(/Acordo · 3 pessoas/i)).toBeInTheDocument();
+    expect(screen.getByText('Acordo flexível · 3 pessoas')).toBeInTheDocument();
+    expect(screen.queryByText('Origem')).not.toBeInTheDocument();
+    expect(screen.queryByText('Destino')).not.toBeInTheDocument();
+  });
+
+  it('mostra a rota no cartão fixo e omite-a no flexível, independentemente de N', async () => {
+    mockAcordoId = null;
+    mockGetAgreementsForPassenger.mockResolvedValue([
+      {
+        id: 'flex-1',
+        estado: 'activo',
+        n_passageiros_contrato: 1,
+        valor_mensal_por_passageiro_kz: 10000,
+        ofertas_capacidade: { flexibilidade_rota: true, origin_name: null, destination_name: null },
+      },
+      {
+        id: 'fixo-3',
+        estado: 'activo',
+        n_passageiros_contrato: 3,
+        valor_mensal_por_passageiro_kz: 8000,
+        ofertas_capacidade: {
+          flexibilidade_rota: false,
+          origin_name: 'Viana',
+          destination_name: 'Talatona',
+        },
+      },
+      {
+        id: 'fixo-1',
+        estado: 'activo',
+        n_passageiros_contrato: 1,
+        valor_mensal_por_passageiro_kz: 5000,
+        ofertas_capacidade: {
+          flexibilidade_rota: false,
+          origin_name: 'Kilamba',
+          destination_name: 'Mutamba',
+        },
+      },
+    ]);
+    render(<AbsenceTracker />);
+    expect(await screen.findByText('Acordo flexível · 1 pessoa')).toBeInTheDocument();
+    expect(screen.getByText('Acordo fixo · 3 pessoas')).toBeInTheDocument();
+    expect(screen.getByText('Viana')).toBeInTheDocument();
+    expect(screen.getByText('Talatona')).toBeInTheDocument();
+    expect(screen.getByText('Kilamba')).toBeInTheDocument();
+    expect(screen.getByText('Mutamba')).toBeInTheDocument();
+    const flexCard = screen.getByText('Acordo flexível · 1 pessoa').closest('button');
+    expect(flexCard).not.toHaveTextContent('Origem');
+    expect(flexCard).not.toHaveTextContent('Destino');
   });
 
   it('não expõe jargon de produto na UI de faltas', async () => {
@@ -199,7 +254,8 @@ describe('AbsenceTracker — marketplace', () => {
       },
     ]);
     render(<AbsenceTracker />);
-    expect(await screen.findByText(/Registo de Faltas/i)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Faltas' })).toBeInTheDocument();
+    expect(screen.queryByText(/divisores fixos/i)).not.toBeInTheDocument();
     expectNoUserFacingJargon(document.body.textContent);
   });
 });

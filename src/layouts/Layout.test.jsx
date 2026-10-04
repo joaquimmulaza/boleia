@@ -125,6 +125,28 @@ describe('Layout Component', () => {
     expect(screen.getByRole('heading', { name: 'Boleia Certa' })).toBeInTheDocument();
   });
 
+  it('no ecrã de Faltas o cabeçalho mostra o ícone e a palavra Boleia Certa', async () => {
+    useAuth.mockReturnValue({ tipoPerfil: 'Passageiro' });
+
+    await act(async () => {
+      render(
+        <ThemeProvider>
+          <MemoryRouter initialEntries={['/faltas']}>
+            <Routes>
+              <Route element={<Layout />}>
+                <Route path="/faltas" element={<div>Faltas</div>} />
+              </Route>
+            </Routes>
+          </MemoryRouter>
+        </ThemeProvider>,
+      );
+    });
+
+    const lockup = screen.getByTestId('brand-lockup');
+    expect(lockup.querySelector('img')).toHaveAttribute('src', '/boleia-logo.png');
+    expect(lockup).toHaveTextContent('Boleia Certa');
+  });
+
   it('terminar sessão chama signOut', async () => {
     useAuth.mockReturnValue({ tipoPerfil: 'Passageiro' });
     supabase.auth.signOut.mockResolvedValue({ error: null });
