@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { User, Loader2, Landmark } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getProfile, updateProfile, getVehicle, updateVehicle } from '../services/ProfileService';
+import { deleteOwnAccount } from '../services/AccountService';
+import { getFriendlyErrorMessage } from '../utils/errorHandler';
+import { clearAppBadge } from '../utils/appBadge';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import InstallAppCard from '../components/InstallAppCard';
 import LoginMethodsSection from '../components/LoginMethodsSection';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const Profile = () => {
   const [loading, setLoading] = useState(true);
@@ -29,6 +33,8 @@ const Profile = () => {
   });
   const [feedback, setFeedback] = useState(null);
   const [bankingEditing, setBankingEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const hasBankingData = Boolean(profileData.iban.trim() || profileData.iban_titular.trim());
   const showBankingForm = hasBankingData || bankingEditing;
@@ -117,6 +123,28 @@ const Profile = () => {
     } finally {
       setSaving(false);
       setTimeout(() => setFeedback(null), 3000);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    setFeedback(null);
+
+    try {
+      await deleteOwnAccount();
+    } catch (error) {
+      console.error('Erro ao apagar conta:', error);
+      setFeedback({ type: 'error', text: getFriendlyErrorMessage(error) });
+      setDeletingAccount(false);
+      setConfirmDelete(false);
+      return;
+    }
+
+    try {
+      await clearAppBadge();
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (error) {
+      console.error('Erro ao terminar a sessão depois de apagar a conta:', error);
     }
   };
 
@@ -309,6 +337,17 @@ const Profile = () => {
           </div>
         )}
 
+        <div className="space-y-3" data-testid="profile-delete-account">
+          <h3 className="text-sm font-bold text-slate-400 uppercase px-1">Conta</h3>
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            className="w-full font-semibold py-3.5 px-4 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/60 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+          >
+            Apagar conta
+          </button>
+        </div>
+
         <div data-testid="profile-sticky-spacer" className="h-6 shrink-0" aria-hidden="true" />
 
         <div
@@ -333,6 +372,17 @@ const Profile = () => {
           </div>
         </div>
       </form>
+
+      <ConfirmationModal
+        isOpen={confirmDelete}
+        title="Apagar a conta?"
+        message="A conta e os dados que lhe pertencem são apagados agora. Não há volta."
+        confirmText="Apagar a conta"
+        onConfirm={handleDeleteAccount}
+        onCancel={() => setConfirmDelete(false)}
+        busy={deletingAccount}
+        testId="profile-delete-account-modal"
+      />
     </PageShell>
   );
 };

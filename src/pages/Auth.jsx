@@ -42,7 +42,11 @@ const Auth = () => {
     handleLeaveComplete,
   } = useAuthForm();
 
-  const showSocial = !isForgot && !isUpdatePassword && !isCompleteProfile;
+  const isEntryScreen = !isForgot && !isUpdatePassword && !isCompleteProfile;
+  const showSocial = isEntryScreen;
+  const brandMark = (
+    <img src="/boleia-logo.png" alt="Boleia Certa" className="h-20 w-auto object-contain" />
+  );
   const { pendingProvider, callbackMessage, start } = useSocialAuth({ enabled: showSocial || isCompleteProfile });
 
   const submitLabel = isLoading
@@ -64,7 +68,11 @@ const Auth = () => {
         {/* Header Section */}
         <div className="flex flex-col items-center pt-16 pb-8 px-8 text-center">
           <h1 className="flex items-center justify-center mb-4">
-            <img src="/boleia-logo.png" alt="Boleia Certa" className="h-20 w-auto object-contain" />
+            {isEntryScreen ? (
+              <a href="/" className="inline-flex rounded-lg">
+                {brandMark}
+              </a>
+            ) : brandMark}
           </h1>
           <p className="text-gray-500 dark:text-slate-400 text-[15px] leading-relaxed max-w-[260px] text-pretty">
             {isForgot

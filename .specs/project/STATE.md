@@ -85,10 +85,23 @@
 - `supabase/config.toml`, `.env.example` e o Dashboard Supabase não foram alterados.
 - Spec: `.specs/quick/remove-apple-sign-in/`
 
+## Decisão (2026-10-04) — Apagar a própria conta
+
+- Quem está autenticado apaga a própria conta em `/perfil`, com confirmação, na hora.
+- A app chama a RPC `delete_own_account()` já em produção (`20261004072610`). Sem id. Sem migração neste PR.
+- «Terminar sessão» continua a ser só `signOut`.
+- Sem prazo, sem email de suporte, sem rota pública de eliminação neste trabalho.
+- Spec: `.specs/quick/apagar-conta-autenticada/`.
+
 ## Next Steps
 1. Redirect URLs recovery (Supabase Auth URL Configuration)
 2. TTL reservas (opcional) + polish admin Critiquito
 3. **Não** zonas/polígonos; **não** merge automático em `main`
+
+## Quick (2026-10-04) — Título do estado de custódia em Faltas
+- A frase já existente «Registo de faltas disponível após pagamento validado em custódia.» é o título desse estado.
+- O detalhe com pagamento em custódia continua «Registo de Faltas». Hub, sheets e Explorar não mudam.
+- Spec: `.specs/quick/faltas-custodia-titulo/`.
 
 ## Quick (2026-10-03) — Hub motorista: cartões Procuras e grupos
 - A lista reusa `OpportunityCard` + `RouteIndicator`. Sem segundo cartão.
@@ -127,6 +140,10 @@
 - O cliente não pede `telefone`, `iban` nem `is_admin` em `perfis`.
 - Convite: `lookup_perfil_por_telefone` (`id`, `nome_completo`). Dono: `get_own_perfil_contacto`. Admin: `is_platform_admin()` e `admin_motoristas_tem_iban`.
 - Spec: `.specs/quick/perfis-colunas-sensiveis/`.
+## Quick (2026-10-04) — Login e criar conta: cabeçalho para `/`
+- Login e criar conta (`Auth`, `isLogin` / `isRegister`) ligam o ícone existente a `/`.
+- Os outros modos de `/auth` e o `BrandLockup` do shell autenticado ficam sem esse link.
+- Spec: `.specs/quick/auth-header-home-link/`.
 
 ## Key links
 - Plan: `.cursor/plans/marketplace_oferta_procura_74cbb52a.plan.md`

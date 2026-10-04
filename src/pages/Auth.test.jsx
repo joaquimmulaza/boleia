@@ -54,6 +54,29 @@ describe('Auth Component', () => {
     expect(screen.getByRole('button', { name: /Criar Conta/i })).toBeInTheDocument();
   });
 
+  it('no início de sessão o ícone Boleia Certa liga à página inicial', () => {
+    render(<Auth />);
+
+    const home = screen.getByRole('link', { name: /Boleia Certa/i });
+    expect(home).toHaveAttribute('href', '/');
+    expect(home).toContainElement(screen.getByAltText(/Boleia Certa/i));
+  });
+
+  it('em criar conta o ícone Boleia Certa liga à página inicial', () => {
+    render(<Auth />);
+    fireEvent.click(screen.getByRole('button', { name: /Criar Conta/i }));
+
+    expect(screen.getByRole('link', { name: /Boleia Certa/i })).toHaveAttribute('href', '/');
+  });
+
+  it('recuperar palavra-passe não liga o cabeçalho à página inicial', () => {
+    mockSearch = '?mode=forgot';
+    render(<Auth />);
+
+    expect(screen.queryByRole('link', { name: /Boleia Certa/i })).not.toBeInTheDocument();
+    expect(screen.getByAltText(/Boleia Certa/i)).toBeInTheDocument();
+  });
+
   it('NÃO renderiza o Toggle de Perfil em modo Login', () => {
     render(<Auth />);
     expect(screen.queryByRole('radio', { name: /Sou Passageiro/i })).not.toBeInTheDocument();

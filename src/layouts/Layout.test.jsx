@@ -122,6 +122,7 @@ describe('Layout Component', () => {
     expect(logo).toHaveAttribute('src', '/boleia-logo.png');
     expect(logo).toHaveAttribute('alt', 'Boleia Certa');
     expect(lockup).not.toHaveTextContent('Boleia Certa');
+    expect(lockup.closest('a')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Boleia Certa' })).toBeInTheDocument();
   });
 
