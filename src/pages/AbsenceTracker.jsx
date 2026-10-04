@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronRight, Info, Plus } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getAbsences, logAbsence } from '../services/AbsenceService';
 import {
@@ -10,14 +10,28 @@ import {
 import { listPagamentosByAcordo } from '../services/PaymentService';
 import { allowsAssiduidadeFaltasForAcordo } from '../utils/paymentStatus';
 import LogAbsenceModal from '../components/LogAbsenceModal';
-import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
-import EmptyState from '../components/EmptyState';
 import LoadingSkeleton from '../components/LoadingSkeleton';
-import { formatDate } from '../utils/formatters';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
-import { filterFaltasEsteMes, sumDescontoFaltas } from '../utils/faltasDisplay';
+import {
+  filterFaltasEsteMes,
+  formatFaltaDiaCurto,
+  resolveFaltasHubCard,
+  sumDescontoFaltas,
+} from '../utils/faltasDisplay';
+
+/**
+ * @param {string | null | undefined} viagem
+ * @returns {string}
+ */
+function labelViagemFalta(viagem) {
+  const v = String(viagem || '').toLowerCase();
+  if (v === 'ida') return 'Só ida';
+  if (v === 'regresso') return 'Só regresso';
+  if (v === 'ambas') return 'Ida e regresso';
+  return '';
+}
 
 const AbsenceTracker = () => {
   const { acordoId } = useParams();
@@ -32,19 +46,26 @@ const AbsenceTracker = () => {
   const [submitting, setSubmitting] = useState(false);
   const [podeRegistarFaltas, setPodeRegistarFaltas] = useState(false);
   const [gateLoading, setGateLoading] = useState(false);
+  const [acordoDetalhe, setAcordoDetalhe] = useState(null);
 
   const carregarGatePagamento = useCallback(async () => {
     if (!acordoId || !user?.id) {
       setPodeRegistarFaltas(false);
+      setAcordoDetalhe(null);
       return;
     }
     setGateLoading(true);
     try {
-      const pagamentos = await listPagamentosByAcordo(acordoId);
+      const [pagamentos, acordos] = await Promise.all([
+        listPagamentosByAcordo(acordoId),
+        tipoPerfil === 'Motorista'
+          ? getAgreementsForDriver(user.id)
+          : getAgreementsForPassenger(user.id),
+      ]);
+      const acordo = (acordos || []).find((a) => a.id === acordoId) || null;
+      setAcordoDetalhe(acordo);
       let idsRequired = [];
       if (tipoPerfil === 'Motorista') {
-        const acordos = await getAgreementsForDriver(user.id);
-        const acordo = (acordos || []).find((a) => a.id === acordoId);
         idsRequired = (acordo?.acordos_passageiros || [])
           .filter((p) => p.estado?.toLowerCase() === 'activo')
           .map((p) => p.passenger_id)
@@ -58,6 +79,7 @@ const AbsenceTracker = () => {
     } catch (err) {
       console.error('Erro ao verificar pagamento para faltas:', err);
       setPodeRegistarFaltas(false);
+      setAcordoDetalhe(null);
     } finally {
       setGateLoading(false);
     }
@@ -138,42 +160,58 @@ const AbsenceTracker = () => {
 
   const renderHub = () => (
     <>
-      <PageHeader
-        title="Registo de Faltas"
-        subtitle="Selecciona um acordo para ver ou registar faltas"
-      />
+      <header className="mb-3 flex flex-col gap-3">
+        <h1 className="text-[22px] font-bold leading-[30px] text-slate-900 dark:text-white">Faltas</h1>
+        <p className="text-sm leading-[19px] text-slate-500 dark:text-slate-400">
+          Selecciona um acordo para ver ou registar faltas
+        </p>
+      </header>
       <div className="space-y-3">
         {loading ? (
           <LoadingSkeleton variant="list" count={3} />
         ) : acordosActivos.length === 0 ? (
-          <EmptyState
-            title="Sem acordos activos"
-            message="Não tens acordos activos. As faltas só podem ser registadas em boleias activas."
-            actionLabel="Ver acordos"
-            onAction={() => navigate('/acordos')}
-          />
-        ) : (
-          acordosActivos.map((acordo) => (
+          <div className="px-2 py-9 text-center">
+            <p className="text-base font-bold text-slate-900 dark:text-white">Sem acordos activos</p>
+            <p className="mx-auto mt-3 max-w-xs text-sm leading-5 text-slate-500 dark:text-slate-400">
+              Não tens acordos activos. As faltas só podem ser registadas em boleias activas.
+            </p>
             <button
-              key={acordo.id}
               type="button"
-              data-testid="acordo-faltas-item"
-              onClick={() => navigate(`/faltas/${acordo.id}`)}
-              className="w-full bg-white dark:bg-slate-900/50 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex justify-between items-center text-left hover:border-primary/30 transition-colors"
+              onClick={() => navigate('/acordos')}
+              className="mt-4 h-12 w-full rounded-xl bg-primary text-[15px] font-semibold text-[#06130b]"
             >
-              <div>
-                <p className="font-bold text-slate-900 dark:text-slate-100">
-                  Acordo · {acordo.n_passageiros_contrato}{' '}
-                  {acordo.n_passageiros_contrato === 1 ? 'pessoa' : 'pessoas'}
-                </p>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 tabular-nums">
-                  {formatKwanza(acordo.valor_mensal_por_passageiro_kz)} Kz /
-                  pessoa
-                </p>
-              </div>
-              <ChevronRight className="text-primary shrink-0" size={20} aria-hidden="true" />
+              Ver acordos
             </button>
-          ))
+          </div>
+        ) : (
+          acordosActivos.map((acordo) => {
+            const card = resolveFaltasHubCard(acordo);
+            return (
+              <button
+                key={acordo.id}
+                type="button"
+                data-testid="acordo-faltas-item"
+                onClick={() => navigate(`/faltas/${acordo.id}`)}
+                className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left dark:border-slate-800 dark:bg-slate-900/50"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-semibold leading-5 text-slate-900 dark:text-slate-100">
+                    {card.titulo}
+                  </span>
+                  {card.rota ? (
+                    <span className="mt-1 block text-[13px] leading-[18px] text-slate-500 dark:text-slate-400">
+                      <span className="block">{card.rota.origem}</span>
+                      <span className="block">{card.rota.destino}</span>
+                    </span>
+                  ) : null}
+                  <span className="mt-1 block text-[13px] leading-[18px] text-slate-500 tabular-nums dark:text-slate-400">
+                    {formatKwanza(card.precoKz)} Kz / pessoa
+                  </span>
+                </span>
+                <ChevronRight className="shrink-0 text-slate-400" size={16} aria-hidden="true" />
+              </button>
+            );
+          })
         )}
       </div>
     </>
@@ -181,81 +219,92 @@ const AbsenceTracker = () => {
 
   const renderDetalhe = () => (
     <>
-      <PageHeader title="Registo de Faltas" onBack={() => navigate('/faltas')} />
+      <header className="mb-3 flex flex-col gap-3">
+        <button
+          type="button"
+          onClick={() => navigate('/faltas')}
+          className="w-fit text-sm font-semibold leading-[19px] text-primary"
+        >
+          Faltas
+        </button>
+        <h1 className="text-[22px] font-bold leading-[30px] text-slate-900 dark:text-white">
+          Registo de Faltas
+        </h1>
+      </header>
 
-      <div className="mt-2 p-6 bg-primary/10 dark:bg-primary/20 rounded-xl border border-primary/20">
-        <p className="text-primary font-semibold text-sm uppercase">Total a descontar</p>
-        <div className="flex items-baseline gap-1 mt-1">
-          <span className="text-3xl font-bold text-slate-900 dark:text-slate-50 tabular-nums">
-            {formatKwanza(totalDesconto)}
-          </span>
-          <span className="text-lg font-semibold text-slate-600 dark:text-slate-400">Kz</span>
-        </div>
-        <div className="mt-4 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-          <Info size={14} aria-hidden="true" />
-          <span className="text-pretty">
-            Desconto com base na quota mensal do acordo (por pessoa), sem divisores fixos.
-          </span>
-        </div>
+      {!gateLoading && !podeRegistarFaltas ? (
+        <p
+          className="mb-3 text-base font-bold leading-snug text-slate-900 dark:text-white"
+          data-testid="faltas-gate-pagamento"
+        >
+          Registo de faltas disponível após pagamento validado em custódia.
+        </p>
+      ) : null}
+
+      <div className="flex flex-col gap-1 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/50">
+        <p className="text-[13px] font-semibold leading-[18px] text-slate-500 dark:text-slate-400">
+          Total a descontar
+        </p>
+        <p className="text-[28px] font-bold leading-[38px] text-slate-900 tabular-nums dark:text-white">
+          {formatKwanza(totalDesconto)} Kz
+        </p>
       </div>
+      <p className="mt-3 text-xs leading-4 text-slate-500 dark:text-slate-400">
+        Desconto com base na quota mensal do acordo (por pessoa).
+      </p>
 
-      <div className="mt-8 mb-4 flex justify-between items-center">
-        <h2 className="text-lg font-bold text-balance">Histórico de Ausências</h2>
-        <span className="text-sm text-primary font-medium">Este mês</span>
+      <div className="mb-3 mt-3 flex items-center justify-between gap-3">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white">Histórico de Ausências</h2>
+        <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+          Este mês
+        </span>
       </div>
 
       <div className="space-y-3">
         {loading ? (
           <LoadingSkeleton variant="list" count={4} />
         ) : faltasEsteMes.length === 0 ? (
-          <EmptyState message="Não há faltas registadas neste acordo." />
+          podeRegistarFaltas ? (
+            <div className="py-7 text-center">
+              <p className="text-base font-bold text-slate-900 dark:text-white">Sem faltas este mês</p>
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                Não há faltas registadas neste acordo.
+              </p>
+            </div>
+          ) : null
         ) : (
-          faltasEsteMes.map((falta) => (
-            <div
-              key={falta.id}
-              data-testid="absence-card"
-              className="bg-white dark:bg-slate-900/50 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex justify-between items-center"
-            >
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-base font-bold tabular-nums">
-                    {formatDate(falta.data_falta) || falta.data_falta}
+          faltasEsteMes.map((falta) => {
+            const viagem = labelViagemFalta(falta.viagem);
+            return (
+              <div
+                key={falta.id}
+                data-testid="absence-card"
+                className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/50"
+              >
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <span className="text-[15px] font-semibold leading-5 text-slate-900 dark:text-white">
+                    {formatFaltaDiaCurto(falta.data_falta)}
                   </span>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                      falta.tipo?.toLowerCase() === 'motorista'
-                        ? 'bg-primary/10 text-primary'
-                        : 'bg-red-100 text-red-600'
-                    }`}
-                  >
-                    {falta.tipo}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full border border-slate-200 bg-[#f6f8f6] px-2 py-0.5 text-[11px] font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
+                      {falta.tipo}
+                    </span>
+                    {viagem ? (
+                      <span className="text-[13px] leading-[18px] text-slate-500 dark:text-slate-400">
+                        {viagem}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  {falta.observacao || '-'}
-                  {falta.viagem
-                    ? ` · ${
-                      String(falta.viagem).toLowerCase() === 'ambas'
-                        ? 'Ida e regresso'
-                        : String(falta.viagem).toLowerCase() === 'ida'
-                          ? 'Só ida'
-                          : String(falta.viagem).toLowerCase() === 'regresso'
-                            ? 'Só regresso'
-                            : falta.viagem
-                    }`
-                    : ''}
-                </p>
-              </div>
-              <div className="text-right">
                 <p
-                  className="text-base font-bold text-red-600 dark:text-red-400 tabular-nums"
+                  className="shrink-0 text-[15px] font-semibold text-slate-900 tabular-nums dark:text-white"
                   aria-label={`Desconto de ${formatKwanza(falta.desconto_kz)} Kz`}
                 >
                   {formatKwanza(falta.desconto_kz)} Kz
                 </p>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </>
@@ -278,28 +327,18 @@ const AbsenceTracker = () => {
 
       {acordoId ? renderDetalhe() : renderHub()}
 
-      {acordoId && (
+      {acordoId && podeRegistarFaltas ? (
         <div className="fixed bottom-24 right-4 z-header">
-          {podeRegistarFaltas ? (
-            <button
-              type="button"
-              onClick={() => setIsModalOpen(true)}
-              disabled={submitting || gateLoading}
-              className="bg-primary hover:bg-primary/90 text-white flex items-center gap-2 px-5 py-3.5 rounded-full shadow-lg shadow-primary/30 font-bold transition-all active:scale-95 disabled:opacity-60"
-            >
-              <Plus size={20} aria-hidden="true" />
-              <span>Registar Falta</span>
-            </button>
-          ) : !gateLoading ? (
-            <p
-              className="max-w-[14rem] rounded-xl bg-slate-900/90 text-white text-xs p-3 shadow-lg text-pretty"
-              data-testid="faltas-gate-pagamento"
-            >
-              Registo de faltas disponível após pagamento validado em custódia.
-            </p>
-          ) : null}
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            disabled={submitting || gateLoading}
+            className="rounded-xl bg-primary px-4 py-3.5 text-[15px] font-semibold text-[#06130b] disabled:opacity-60"
+          >
+            Registar Falta
+          </button>
         </div>
-      )}
+      ) : null}
 
       <LogAbsenceModal
         key={tipoPerfil}
@@ -307,6 +346,8 @@ const AbsenceTracker = () => {
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleLogAbsence}
         tipoPerfil={tipoPerfil}
+        quotaMensalKz={acordoDetalhe?.valor_mensal_por_passageiro_kz}
+        diasUteisMes={acordoDetalhe?.dias_uteis_mes}
       />
     </PageShell>
   );

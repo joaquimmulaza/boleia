@@ -644,7 +644,7 @@ export async function getAgreementsForDriver(driverId) {
   const { data, error } = await supabase
     .from('acordos')
     .select(
-      '*, acordos_passageiros(*), ofertas_capacidade(origin_name, destination_name, departure_time), acordos_adendas(*)',
+      '*, acordos_passageiros(*), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota), acordos_adendas(*)',
     )
     .eq('driver_id', driverId)
     .order('created_at', { ascending: false });
@@ -665,7 +665,7 @@ export async function getAgreementsForPassenger(passengerId) {
   const { data, error } = await supabase
     .from('acordos_passageiros')
     .select(
-      'id, acordo_id, passenger_id, estado, quota_mensal_kz, acordos(*, acordos_passageiros(*), ofertas_capacidade(origin_name, destination_name, departure_time), acordos_adendas(*))',
+      'id, acordo_id, passenger_id, estado, quota_mensal_kz, acordos(*, acordos_passageiros(*), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota), acordos_adendas(*))',
     )
     .eq('passenger_id', passengerId)
     .in('estado', ['activo', 'reservado', 'expirado']);

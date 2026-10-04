@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Home, CarFront, User, HandshakeIcon, CalendarX2, LogOut } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import ThemeToggle from '../components/ThemeToggle';
@@ -17,7 +17,9 @@ import BrandLockup from '../components/BrandLockup';
  */
 const Layout = () => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { tipoPerfil } = useAuth();
+  const faltasHeader = pathname === '/faltas' || pathname.startsWith('/faltas/');
 
   const handleLogout = async () => {
     await clearAppBadge();
@@ -37,7 +39,7 @@ const Layout = () => {
     <div className="flex h-full min-h-0 flex-col bg-background-light dark:bg-background-dark transition-colors">
       <header className="shrink-0 z-header flex items-center justify-between px-4 py-3 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 max-w-md mx-auto w-full transition-colors shadow-sm">
         <h1 className="flex items-center">
-          <BrandLockup />
+          <BrandLockup withName={faltasHeader} />
         </h1>
         <div className="flex items-center gap-1 sm:gap-2">
           <NotificationBell />
