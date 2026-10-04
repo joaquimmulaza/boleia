@@ -46,20 +46,25 @@ export function AuthProvider({ children }) {
 
     setProfileLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('perfis')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      const [{ data, error }, contactoResult] = await Promise.all([
+        supabase.from('perfis').select('*').eq('id', userId).single(),
+        supabase.rpc('get_own_perfil_contacto'),
+      ]);
 
-      if (error) {
-        console.warn('[AuthContext] Erro ao carregar perfil:', error);
+      if (error || contactoResult.error) {
+        console.warn('[AuthContext] Erro ao carregar perfil:', error || contactoResult.error);
         setProfile(null);
         return null;
       }
 
-      setProfile(data);
-      return data;
+      const { is_admin: _isAdmin, ...resto } = data;
+      const profile = {
+        ...resto,
+        telefone: contactoResult.data?.telefone ?? null,
+        iban: contactoResult.data?.iban ?? null,
+      };
+      setProfile(profile);
+      return profile;
     } finally {
       setProfileLoading(false);
     }

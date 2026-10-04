@@ -33,7 +33,10 @@ export function findMotoristasSemIban(custodiaRows) {
     const driverId = row.acordos?.driver_id;
     if (!driverId || byDriver.has(driverId)) continue;
     const perfil = row.acordos?.perfis;
-    if (!motoristaTemIbanCompleto(perfil)) {
+    const semIban = typeof perfil?.iban_completo === 'boolean'
+      ? !perfil.iban_completo
+      : !motoristaTemIbanCompleto(perfil);
+    if (semIban) {
       byDriver.set(driverId, { driverId });
     }
   }

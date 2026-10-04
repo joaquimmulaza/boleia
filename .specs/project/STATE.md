@@ -122,6 +122,12 @@
 - Passageiro browse sem procura: já coberto (ENG#4/#23)
 - RLS: GRANT SELECT anon + policies por estado activo
 
+## Decisão (2026-10-04) — SELECT de perfis
+- Versão já em produção: `20261004073111`. O ficheiro SQL entra noutro PR.
+- O cliente não pede `telefone`, `iban` nem `is_admin` em `perfis`.
+- Convite: `lookup_perfil_por_telefone` (`id`, `nome_completo`). Dono: `get_own_perfil_contacto`. Admin: `is_platform_admin()` e `admin_motoristas_tem_iban`.
+- Spec: `.specs/quick/perfis-colunas-sensiveis/`.
+
 ## Key links
 - Plan: `.cursor/plans/marketplace_oferta_procura_74cbb52a.plan.md`
 - Spec · Design · Tasks · Checkpoint sob `.specs/features/marketplace-oferta-procura/`

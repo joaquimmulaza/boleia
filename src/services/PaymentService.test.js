@@ -6,6 +6,8 @@ import {
   adminValidatePayment,
   getAcordoContactos,
   listPagamentosPendentesValidacao,
+  listPagamentosEmCustodia,
+  listRepassesMotorista,
 } from './PaymentService.js';
 import { supabase } from '../lib/supabase';
 
@@ -115,5 +117,53 @@ describe('PaymentService', () => {
 
     const rows = await listPagamentosPendentesValidacao();
     expect(rows).toHaveLength(1);
+    const select = supabase.from.mock.results[0].value.select;
+    expect(select).toHaveBeenCalledWith(
+      '*, acordos(oferta_id, driver_id), perfis!pagamentos_acordo_passenger_id_fkey(nome_completo)',
+    );
+  });
+
+  it('listPagamentosEmCustodia marca IBAN completo sem pedir a coluna iban', async () => {
+    const select = vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        order: vi.fn().mockResolvedValue({
+          data: [{
+            id: 'pag-3',
+            acordos: { oferta_id: 'of-1', driver_id: 'drv-1' },
+            perfis: { nome_completo: 'Ana' },
+          }],
+          error: null,
+        }),
+      }),
+    });
+    supabase.from.mockReturnValue({ select });
+    supabase.rpc.mockResolvedValue({
+      data: [{ driver_id: 'drv-1', completo: false }],
+      error: null,
+    });
+
+    const rows = await listPagamentosEmCustodia();
+
+    expect(select).toHaveBeenCalledWith(
+      '*, acordos(oferta_id, driver_id), perfis!pagamentos_acordo_passenger_id_fkey(nome_completo)',
+    );
+    expect(supabase.rpc).toHaveBeenCalledWith('admin_motoristas_tem_iban', {
+      p_driver_ids: ['drv-1'],
+    });
+    expect(rows[0].acordos.perfis).toEqual({ iban_completo: false });
+    expect(rows[0].perfis.nome_completo).toBe('Ana');
+  });
+
+  it('listRepassesMotorista pede só o nome do motorista', async () => {
+    const select = vi.fn().mockReturnValue({
+      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+    });
+    supabase.from.mockReturnValue({ select });
+
+    await listRepassesMotorista();
+
+    expect(select).toHaveBeenCalledWith(
+      '*, perfis!repasses_motorista_driver_id_fkey(nome_completo)',
+    );
   });
 });
