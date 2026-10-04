@@ -217,6 +217,8 @@ const AbsenceTracker = () => {
     </>
   );
 
+  const custodiaBloqueada = !gateLoading && !podeRegistarFaltas;
+
   const renderDetalhe = () => (
     <>
       <header className="mb-3 flex flex-col gap-3">
@@ -227,19 +229,15 @@ const AbsenceTracker = () => {
         >
           Faltas
         </button>
-        <h1 className="text-[22px] font-bold leading-[30px] text-slate-900 dark:text-white">
-          Registo de Faltas
+        <h1
+          className="text-[22px] font-bold leading-[30px] text-slate-900 dark:text-white"
+          {...(custodiaBloqueada ? { 'data-testid': 'faltas-gate-pagamento' } : {})}
+        >
+          {custodiaBloqueada
+            ? 'Registo de faltas disponível após pagamento validado em custódia.'
+            : 'Registo de Faltas'}
         </h1>
       </header>
-
-      {!gateLoading && !podeRegistarFaltas ? (
-        <p
-          className="mb-3 text-base font-bold leading-snug text-slate-900 dark:text-white"
-          data-testid="faltas-gate-pagamento"
-        >
-          Registo de faltas disponível após pagamento validado em custódia.
-        </p>
-      ) : null}
 
       <div className="flex flex-col gap-1 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/50">
         <p className="text-[13px] font-semibold leading-[18px] text-slate-500 dark:text-slate-400">

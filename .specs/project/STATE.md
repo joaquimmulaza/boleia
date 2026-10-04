@@ -90,6 +90,11 @@
 2. TTL reservas (opcional) + polish admin Critiquito
 3. **Não** zonas/polígonos; **não** merge automático em `main`
 
+## Quick (2026-10-04) — Título do estado de custódia em Faltas
+- A frase já existente «Registo de faltas disponível após pagamento validado em custódia.» é o título desse estado.
+- O detalhe com pagamento em custódia continua «Registo de Faltas». Hub, sheets e Explorar não mudam.
+- Spec: `.specs/quick/faltas-custodia-titulo/`.
+
 ## Quick (2026-10-03) — Hub motorista: cartões Procuras e grupos
 - A lista reusa `OpportunityCard` + `RouteIndicator`. Sem segundo cartão.
 - OD real → rota. Sem OD: sem «Origem»/«Destino» e sem rota inventada. Oferta flexível continua «Disponível para acordos» no modelo do cartão.
