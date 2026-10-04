@@ -5,6 +5,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import Profile from './Profile';
 import { supabase } from '../lib/supabase';
 import * as ProfileService from '../services/ProfileService';
+import * as AccountService from '../services/AccountService';
 
 // Mock das libs
 vi.mock('../lib/supabase', () => ({
@@ -14,6 +15,7 @@ vi.mock('../lib/supabase', () => ({
         getUserIdentities: vi.fn(),
         linkIdentity: vi.fn(),
         unlinkIdentity: vi.fn(),
+        signOut: vi.fn(),
       },
       from: vi.fn(),
     },
@@ -24,6 +26,10 @@ vi.mock('../services/ProfileService', () => ({
   updateProfile: vi.fn(),
   getVehicle: vi.fn(),
   updateVehicle: vi.fn(),
+}));
+
+vi.mock('../services/AccountService', () => ({
+  deleteOwnAccount: vi.fn(),
 }));
 
 describe('Profile Component', () => {
@@ -53,6 +59,8 @@ describe('Profile Component', () => {
     });
 
     ProfileService.getVehicle.mockResolvedValue(null);
+    supabase.auth.signOut.mockResolvedValue({ error: null });
+    AccountService.deleteOwnAccount.mockResolvedValue(undefined);
   });
 
   describe('Renderização Inicial e Visualização (Passageiro)', () => {
@@ -205,5 +213,38 @@ describe('Profile Component', () => {
         });
         expect(screen.getByTestId('profile-sticky-spacer')).toBeInTheDocument();
       });
+  });
+
+  describe('Apagar conta', () => {
+    it('pede confirmação e só então apaga a sessão actual', async () => {
+      await renderComponent();
+      fireEvent.click(await screen.findByRole('button', { name: 'Apagar conta' }));
+
+      const dialog = await screen.findByRole('dialog');
+      expect(dialog).toHaveTextContent(/apagados agora/i);
+      expect(dialog).not.toHaveTextContent(/dias|email|suporte/i);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Voltar' }));
+      expect(AccountService.deleteOwnAccount).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Apagar conta' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Apagar a conta' }));
+
+      await waitFor(() => {
+        expect(AccountService.deleteOwnAccount).toHaveBeenCalledTimes(1);
+        expect(AccountService.deleteOwnAccount).toHaveBeenCalledWith();
+      });
+      expect(supabase.auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
+    });
+
+    it('mostra o erro e mantém a sessão se a RPC falhar', async () => {
+      AccountService.deleteOwnAccount.mockRejectedValue(new Error('row-level security policy'));
+      await renderComponent();
+      fireEvent.click(await screen.findByRole('button', { name: 'Apagar conta' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Apagar a conta' }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(/não tem permissão/i);
+      expect(supabase.auth.signOut).not.toHaveBeenCalled();
+    });
   });
 });

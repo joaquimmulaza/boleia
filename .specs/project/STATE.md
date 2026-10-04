@@ -85,6 +85,14 @@
 - `supabase/config.toml`, `.env.example` e o Dashboard Supabase não foram alterados.
 - Spec: `.specs/quick/remove-apple-sign-in/`
 
+## Decisão (2026-10-04) — Apagar a própria conta
+
+- Quem está autenticado apaga a própria conta em `/perfil`, com confirmação, na hora.
+- A app chama a RPC `delete_own_account()` já em produção (`20261004072610`). Sem id. Sem migração neste PR.
+- «Terminar sessão» continua a ser só `signOut`.
+- Sem prazo, sem email de suporte, sem rota pública de eliminação neste trabalho.
+- Spec: `.specs/quick/apagar-conta-autenticada/`.
+
 ## Next Steps
 1. Redirect URLs recovery (Supabase Auth URL Configuration)
 2. TTL reservas (opcional) + polish admin Critiquito
