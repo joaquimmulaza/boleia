@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { PERFIL_COLUNAS_SELECT } from '../services/ProfileService';
 import {
   readPasswordRecoveryPending,
   markPasswordRecoveryPending,
@@ -47,7 +48,7 @@ export function AuthProvider({ children }) {
     setProfileLoading(true);
     try {
       const [{ data, error }, contactoResult] = await Promise.all([
-        supabase.from('perfis').select('*').eq('id', userId).single(),
+        supabase.from('perfis').select(PERFIL_COLUNAS_SELECT).eq('id', userId).single(),
         supabase.rpc('get_own_perfil_contacto'),
       ]);
 

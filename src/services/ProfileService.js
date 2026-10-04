@@ -1,6 +1,9 @@
 import { supabase } from '../lib/supabase';
 import { validateTelefone } from '../utils/validation';
 
+/** Colunas que `authenticated` ainda pode ler em `perfis`. Sem `*` — o PostgREST rejeita o wildcard. */
+export const PERFIL_COLUNAS_SELECT = 'id, nome_completo, tipo_perfil, created_at, onboarding_completed, iban_titular, perfil_completo';
+
 /**
  * Normaliza telefone angolano para E.164 (+244…).
  * @param {string} tel
@@ -38,7 +41,7 @@ export async function findPassageiroByTelefone(telefone) {
 export const getProfile = async (userId) => {
   const { data, error } = await supabase
     .from('perfis')
-    .select('*')
+    .select(PERFIL_COLUNAS_SELECT)
     .eq('id', userId)
     .single();
 
@@ -65,7 +68,7 @@ export const updateProfile = async (userId, updates) => {
     .from('perfis')
     .update(updates)
     .eq('id', userId)
-    .select()
+    .select(PERFIL_COLUNAS_SELECT)
     .single();
 
   if (error) throw error;

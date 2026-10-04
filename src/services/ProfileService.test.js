@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import {
+  PERFIL_COLUNAS_SELECT,
   getProfile,
   updateProfile,
   findPassageiroByTelefone,
@@ -52,6 +53,9 @@ describe('ProfileService', () => {
     const profile = await getProfile('user-1');
 
     expect(supabase.from).toHaveBeenCalledWith('perfis');
+    expect(mockSelect).toHaveBeenCalledWith(PERFIL_COLUNAS_SELECT);
+    expect(PERFIL_COLUNAS_SELECT).not.toMatch(/\*/);
+    expect(PERFIL_COLUNAS_SELECT).not.toMatch(/\b(telefone|iban|is_admin)\b/);
     expect(supabase.rpc).toHaveBeenCalledWith('get_own_perfil_contacto');
     expect(profile.nome_completo).toBe('Teste');
     expect(profile.telefone).toBe('+244923000111');
@@ -80,6 +84,7 @@ describe('ProfileService', () => {
     const result = await updateProfile('user-1', { nome_completo: 'Novo Nome' });
     expect(supabase.from).toHaveBeenCalledWith('perfis');
     expect(mockUpdate).toHaveBeenCalledWith({ nome_completo: 'Novo Nome' });
+    expect(mockSelect).toHaveBeenCalledWith(PERFIL_COLUNAS_SELECT);
     expect(result.nome_completo).toBe('Novo Nome');
   });
 
