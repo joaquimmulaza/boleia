@@ -43,4 +43,21 @@ describe('getFriendlyErrorMessage', () => {
       'Aguarde um momento antes de pedir novamente a recuperação.'
     );
   });
+
+  it('email por confirmar diz que a sessão ainda não existe', () => {
+    const error = { message: 'Email not confirmed', code: 'email_not_confirmed' };
+    expect(getFriendlyErrorMessage(error)).toBe(
+      'Confirme o email antes de entrar. A sessão só existe depois dessa confirmação.'
+    );
+  });
+
+  it('palavra-passe vazada pede outra palavra-passe', () => {
+    const error = {
+      message: 'Password is known to be weak and easy to guess, please choose a different one.',
+      code: 'weak_password',
+    };
+    expect(getFriendlyErrorMessage(error)).toBe(
+      'Esta palavra-passe já apareceu numa fuga de dados. Escolha outra.'
+    );
+  });
 });

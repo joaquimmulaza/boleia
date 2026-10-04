@@ -24,6 +24,12 @@ export function getFriendlyErrorMessage(error) {
   if (/New password should be different/i.test(msg)) {
     return 'A nova palavra-passe deve ser diferente da actual.';
   }
+  if (/email not confirmed/i.test(msg) || error.code === 'email_not_confirmed') {
+    return 'Confirme o email antes de entrar. A sessão só existe depois dessa confirmação.';
+  }
+  if (/known to be weak and easy to guess/i.test(msg)) {
+    return 'Esta palavra-passe já apareceu numa fuga de dados. Escolha outra.';
+  }
   if (/only request this after|rate.?limit|security purposes/i.test(msg)) {
     return 'Aguarde um momento antes de pedir novamente a recuperação.';
   }
