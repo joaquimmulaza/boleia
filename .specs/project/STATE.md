@@ -127,6 +127,11 @@
 - Passageiro browse sem procura: já coberto (ENG#4/#23)
 - RLS: GRANT SELECT anon + policies por estado activo
 
+## Quick (2026-10-04) — Login e criar conta: cabeçalho para `/`
+- Login e criar conta (`Auth`, `isLogin` / `isRegister`) ligam o ícone existente a `/`.
+- Os outros modos de `/auth` e o `BrandLockup` do shell autenticado ficam sem esse link.
+- Spec: `.specs/quick/auth-header-home-link/`.
+
 ## Key links
 - Plan: `.cursor/plans/marketplace_oferta_procura_74cbb52a.plan.md`
 - Spec · Design · Tasks · Checkpoint sob `.specs/features/marketplace-oferta-procura/`
