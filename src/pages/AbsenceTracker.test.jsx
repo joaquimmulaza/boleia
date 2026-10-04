@@ -106,6 +106,10 @@ describe('AbsenceTracker — marketplace', () => {
 
   it('mostra histórico de faltas no detalhe', async () => {
     render(<AbsenceTracker />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Registo de Faltas' })).toBeInTheDocument();
+    expect(
+      screen.queryByText('Registo de faltas disponível após pagamento validado em custódia.'),
+    ).not.toBeInTheDocument();
     expect(await screen.findByText(/Histórico de Ausências/i)).toBeInTheDocument();
     expect(await screen.findByTestId('absence-card')).toBeInTheDocument();
   });
@@ -161,7 +165,17 @@ describe('AbsenceTracker — marketplace', () => {
       { passenger_id: 'user-1', estado: 'pendente_pagamento' },
     ]);
     render(<AbsenceTracker />);
-    expect(await screen.findByTestId('faltas-gate-pagamento')).toBeInTheDocument();
+    const titulo = await screen.findByRole('heading', {
+      level: 1,
+      name: 'Registo de faltas disponível após pagamento validado em custódia.',
+    });
+    expect(titulo).toHaveAttribute('data-testid', 'faltas-gate-pagamento');
+    expect(
+      screen.queryByRole('heading', { level: 1, name: 'Registo de Faltas' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getAllByText('Registo de faltas disponível após pagamento validado em custódia.'),
+    ).toHaveLength(1);
     expect(screen.queryByRole('button', { name: /Registar Falta/i })).not.toBeInTheDocument();
   });
 
