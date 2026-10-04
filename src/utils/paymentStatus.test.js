@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  findMotoristasSemIban,
   PAYMENT_STATES,
   TAKE_RATE_PCT,
   allowsContactReveal,
@@ -95,6 +96,14 @@ describe('paymentStatus — máquina de estados PACOTE ENG #5', () => {
   it('helpEstadoPagamento glossário para custódia e liquidado', () => {
     expect(helpEstadoPagamento('em_custodia')).toMatch(/plataforma/i);
     expect(helpEstadoPagamento('liquidado')).toMatch(/motorista/i);
+  });
+
+  it('findMotoristasSemIban aceita o boolean iban_completo sem ler o IBAN', () => {
+    const rows = [
+      { acordos: { driver_id: 'com', perfis: { iban_completo: true } } },
+      { acordos: { driver_id: 'sem', perfis: { iban_completo: false } } },
+    ];
+    expect(findMotoristasSemIban(rows)).toEqual([{ driverId: 'sem' }]);
   });
 
   it('chipClassEstadoPagamento devolve classes por estado', () => {

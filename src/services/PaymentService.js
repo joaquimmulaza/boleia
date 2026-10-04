@@ -72,13 +72,36 @@ export async function listPagamentosEmCustodia() {
   const { data, error } = await supabase
     .from('pagamentos_acordo')
     .select(
-      '*, acordos(oferta_id, driver_id, perfis!acordos_driver_id_fkey(iban, iban_titular)), perfis!pagamentos_acordo_passenger_id_fkey(nome_completo, telefone)',
+      '*, acordos(oferta_id, driver_id), perfis!pagamentos_acordo_passenger_id_fkey(nome_completo)',
     )
     .eq('estado', 'em_custodia')
     .order('validado_em', { ascending: true });
 
   if (error) throw error;
-  return data || [];
+  const rows = data || [];
+  const driverIds = [...new Set(rows.map((row) => row.acordos?.driver_id).filter(Boolean))];
+  if (driverIds.length === 0) return rows;
+
+  const { data: flags, error: flagError } = await supabase.rpc('admin_motoristas_tem_iban', {
+    p_driver_ids: driverIds,
+  });
+  if (flagError) throw flagError;
+
+  const completoPorMotorista = new Map(
+    (Array.isArray(flags) ? flags : []).map((flag) => [flag.driver_id, flag.completo === true]),
+  );
+
+  return rows.map((row) => {
+    const driverId = row.acordos?.driver_id;
+    if (!driverId) return row;
+    return {
+      ...row,
+      acordos: {
+        ...row.acordos,
+        perfis: { iban_completo: completoPorMotorista.get(driverId) === true },
+      },
+    };
+  });
 }
 
 /**
@@ -127,7 +150,7 @@ export async function adminLiquidatePeriod(mesReferencia, driverId = null, idemp
 export async function listRepassesMotorista() {
   const { data, error } = await supabase
     .from('repasses_motorista')
-    .select('*, perfis!repasses_motorista_driver_id_fkey(nome_completo, iban, iban_titular)')
+    .select('*, perfis!repasses_motorista_driver_id_fkey(nome_completo)')
     .order('liquidado_em', { ascending: false });
 
   if (error) throw error;
@@ -137,7 +160,7 @@ export async function listRepassesMotorista() {
 export async function listPagamentosPendentesValidacao() {
   const { data, error } = await supabase
     .from('pagamentos_acordo')
-    .select('*, acordos(oferta_id, driver_id), perfis!pagamentos_acordo_passenger_id_fkey(nome_completo, telefone)')
+    .select('*, acordos(oferta_id, driver_id), perfis!pagamentos_acordo_passenger_id_fkey(nome_completo)')
     .eq('estado', 'comprovativo_enviado')
     .order('comprovativo_enviado_em', { ascending: true });
 

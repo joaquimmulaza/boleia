@@ -133,7 +133,7 @@ export async function listMembrosGrupo(grupoId) {
 
   const { data, error } = await supabase
     .from('membros_grupo')
-    .select('*, perfis(nome_completo, telefone)')
+    .select('*, perfis(nome_completo)')
     .eq('grupo_id', grupoId)
     .eq('estado', 'activo')
     .order('ordem_insercao', { ascending: true });
@@ -366,7 +366,7 @@ export async function listPedidosPendentes(grupoId) {
 
   const { data, error } = await supabase
     .from('membros_grupo')
-    .select('*, perfis(nome_completo, telefone)')
+    .select('*, perfis(nome_completo)')
     .eq('grupo_id', grupoId)
     .eq('estado', 'pendente')
     .order('created_at', { ascending: true });

@@ -1,6 +1,9 @@
 import { supabase } from '../lib/supabase';
 import { validateTelefone } from '../utils/validation';
 
+/** Colunas que `authenticated` ainda pode ler em `perfis`. Sem `*` — o PostgREST rejeita o wildcard. */
+export const PERFIL_COLUNAS_SELECT = 'id, nome_completo, tipo_perfil, created_at, onboarding_completed, iban_titular, perfil_completo';
+
 /**
  * Normaliza telefone angolano para E.164 (+244…).
  * @param {string} tel
@@ -16,7 +19,7 @@ function toE164Angola(tel) {
 /**
  * Procura um perfil pelo telefone (para adicionar colegas ao grupo).
  * @param {string} telefone
- * @returns {Promise<{ id: string, nome_completo?: string, telefone?: string }>}
+ * @returns {Promise<{ id: string, nome_completo?: string }>}
  */
 export async function findPassageiroByTelefone(telefone) {
   if (!validateTelefone(telefone)) {
@@ -24,28 +27,40 @@ export async function findPassageiroByTelefone(telefone) {
   }
 
   const e164 = toE164Angola(telefone);
-  const { data, error } = await supabase
-    .from('perfis')
-    .select('id, nome_completo, telefone, tipo_perfil')
-    .eq('telefone', e164)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc('lookup_perfil_por_telefone', {
+    p_telefone: e164,
+  });
 
   if (error) throw error;
-  if (!data) {
+  if (!data?.id) {
     throw new Error('Não encontrámos nenhum utilizador com este telefone.');
   }
-  return data;
+  return { id: data.id, nome_completo: data.nome_completo };
 }
 
 export const getProfile = async (userId) => {
   const { data, error } = await supabase
     .from('perfis')
-    .select('*')
+    .select(PERFIL_COLUNAS_SELECT)
     .eq('id', userId)
     .single();
 
   if (error) throw error;
-  return data;
+
+  const { is_admin: _isAdmin, ...resto } = data;
+  const { data: authData } = await supabase.auth.getUser();
+  if (authData?.user?.id !== userId) {
+    return resto;
+  }
+
+  const { data: contacto, error: contactoError } = await supabase.rpc('get_own_perfil_contacto');
+  if (contactoError) throw contactoError;
+
+  return {
+    ...resto,
+    telefone: contacto?.telefone ?? null,
+    iban: contacto?.iban ?? null,
+  };
 };
 
 export const updateProfile = async (userId, updates) => {
@@ -53,7 +68,7 @@ export const updateProfile = async (userId, updates) => {
     .from('perfis')
     .update(updates)
     .eq('id', userId)
-    .select()
+    .select(PERFIL_COLUNAS_SELECT)
     .single();
 
   if (error) throw error;

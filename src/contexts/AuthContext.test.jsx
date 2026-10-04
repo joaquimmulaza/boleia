@@ -3,6 +3,7 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import React from 'react';
 
 import { AuthProvider, useAuth } from './AuthContext';
+import { PERFIL_COLUNAS_SELECT } from '../services/ProfileService';
 import { supabase } from '../lib/supabase';
 
 const mockSingle = vi.fn();
@@ -18,6 +19,7 @@ vi.mock('../lib/supabase', () => ({
     from: vi.fn(() => ({
       select: mockSelect,
     })),
+    rpc: vi.fn(() => Promise.resolve({ data: { telefone: null, iban: null }, error: null })),
   }
 }));
 
@@ -31,6 +33,8 @@ const TestComponent = () => {
       <div data-testid="user">{user ? user.id : 'no-user'}</div>
       <div data-testid="tipoPerfil">{tipoPerfil || 'no-perfil'}</div>
       <div data-testid="onboarding">{profile?.onboarding_completed ? 'done' : 'pending'}</div>
+      <div data-testid="telefone">{profile?.telefone || 'sem-telefone'}</div>
+      <div data-testid="admin">{profile?.is_admin ? 'admin' : 'nao-admin'}</div>
       <div data-testid="recovery">{passwordRecoveryPending ? 'pending' : 'idle'}</div>
       <button type="button" data-testid="clear-recovery" onClick={clearPasswordRecovery}>
         Limpar recovery
@@ -109,6 +113,48 @@ describe('AuthContext', () => {
     expect(screen.getByTestId('user')).toHaveTextContent('user-123');
     expect(screen.getByTestId('tipoPerfil')).toHaveTextContent('Motorista');
     expect(supabase.from).toHaveBeenCalledWith('perfis');
+    expect(mockSelect).toHaveBeenCalledWith(PERFIL_COLUNAS_SELECT);
+    expect(screen.getByTestId('admin')).toHaveTextContent('nao-admin');
+  });
+
+  it('junta telefone e IBAN da RPC própria e não trata is_admin do select', async () => {
+    mockSingle.mockResolvedValue({
+      data: {
+        id: 'user-123',
+        tipo_perfil: 'Passageiro',
+        onboarding_completed: false,
+        is_admin: true,
+        telefone: '+244900000000',
+      },
+      error: null,
+    });
+    supabase.rpc.mockResolvedValue({
+      data: { telefone: '+244923111222', iban: 'AO06PROPRIO' },
+      error: null,
+    });
+    supabase.auth.getSession.mockResolvedValue({
+      data: {
+        session: {
+          user: { id: 'user-123', user_metadata: { tipo_perfil: 'passageiro' } },
+        },
+      },
+      error: null,
+    });
+    supabase.auth.onAuthStateChange.mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    });
+
+    render(
+      <AuthProvider>
+        <TestComponent />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('telefone')).toHaveTextContent('+244923111222');
+    });
+    expect(supabase.rpc).toHaveBeenCalledWith('get_own_perfil_contacto');
+    expect(screen.getByTestId('admin')).toHaveTextContent('nao-admin');
   });
 
   it('onAuthStateChange actualiza o user ao disparar SIGNED_IN', async () => {
