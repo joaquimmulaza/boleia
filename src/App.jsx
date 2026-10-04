@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import LandingPage from './pages/LandingPage';
 import Auth from './pages/Auth';
 import MarketplaceExplore from './pages/MarketplaceExplore';
+import PublicLegalPage from './pages/PublicLegalPage';
 import Layout from './layouts/Layout';
 import PassengerDashboard from './pages/PassengerDashboard';
 import DriverDashboard from './pages/DriverDashboard';
@@ -58,7 +59,11 @@ function AppShell() {
   usePasswordRecoveryRouteRedirect();
   const { isOffline } = useNetworkStatus();
   const { pathname } = useLocation();
-  const isPublicRoute = pathname === '/' || pathname === '/auth' || pathname === '/explorar';
+  const isPublicRoute = pathname === '/'
+    || pathname === '/auth'
+    || pathname === '/explorar'
+    || pathname === '/privacidade'
+    || pathname === '/eliminacao-de-dados';
 
   const routes = (
     <Routes>
@@ -66,6 +71,8 @@ function AppShell() {
       <Route path="/" element={<RootRoute />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/explorar" element={<MarketplaceExplore />} />
+      <Route path="/privacidade" element={<PublicLegalPage page="privacidade" />} />
+      <Route path="/eliminacao-de-dados" element={<PublicLegalPage page="eliminacao" />} />
 
       {/* Rotas protegidas envolvidas pelo Layout global (com BottomBar) */}
       <Route element={<Layout />}>
