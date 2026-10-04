@@ -53,19 +53,40 @@ const AddressInput = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // ⚡ Bolt: Added a debounce timeout ref to optimize performance
+  // Why: Prevents unnecessary API calls to the geocoding service on every single keystroke.
+  // Impact: Reduces the number of requests sent and improves input responsiveness.
+  const debounceTimeoutRef = useRef(null);
+
   const handleChange = (e) => {
     const newVal = e.target.value;
     setInputValue(newVal);
     onChange({ target: { name, value: newVal } });
 
+    // ⚡ Bolt: Clear the timeout on subsequent rapid keystrokes to effectively debounce the call.
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
     if (newVal.length > 2) {
       setShowDropdown(true);
-      fetchPredictions(newVal);
+      // ⚡ Bolt: Wait for 300ms of inactivity before triggering the API call
+      debounceTimeoutRef.current = setTimeout(() => {
+        fetchPredictions(newVal);
+      }, 300);
     } else {
       setShowDropdown(false);
       clearSuggestions();
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSelect = async (suggestion) => {
     setInputValue(suggestion.description);
