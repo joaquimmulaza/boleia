@@ -16,6 +16,10 @@ vi.mock('./pages/MarketplaceExplore', () => ({
   default: () => <div data-testid="marketplace-explore">Explorar</div>,
 }));
 
+vi.mock('./pages/PublicLegalPage', () => ({
+  default: () => <div data-testid="public-legal-page">Legal</div>,
+}));
+
 vi.mock('./layouts/Layout', () => ({
   default: () => <div data-testid="app-layout">Layout</div>,
 }));
@@ -84,6 +88,21 @@ describe('AppShell — scroll por tipo de rota', () => {
     expect(screen.getByTestId('marketplace-explore')).toBeInTheDocument();
     expect(exploreRender.container.querySelector('.overflow-hidden.h-dvh')).toBeNull();
     expect(screen.queryByTestId('offline-banner')).not.toBeInTheDocument();
+    exploreRender.unmount();
+
+    for (const path of ['/privacidade', '/eliminacao-de-dados']) {
+      const legalRender = render(
+        <MemoryRouter initialEntries={[path]}>
+          <AppShell />
+        </MemoryRouter>,
+      );
+
+      expect(screen.getByTestId('public-legal-page')).toBeInTheDocument();
+      expect(screen.queryByTestId('app-layout')).not.toBeInTheDocument();
+      expect(legalRender.container.querySelector('.overflow-hidden.h-dvh')).toBeNull();
+      expect(screen.queryByTestId('offline-banner')).not.toBeInTheDocument();
+      legalRender.unmount();
+    }
   });
 
   it('rotas autenticadas mantêm shell h-dvh overflow-hidden com OfflineBanner', () => {

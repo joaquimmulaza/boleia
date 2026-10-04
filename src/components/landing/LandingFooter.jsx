@@ -23,12 +23,12 @@ export default function LandingFooter() {
           <a className="hover:text-primary" href={`mailto:${CONTACT_EMAIL}?subject=Termos%20de%20uso`}>
             Termos
           </a>
-          <a
-            className="hover:text-primary"
-            href={`mailto:${CONTACT_EMAIL}?subject=Privacidade`}
-          >
+          <Link className="hover:text-primary" to="/privacidade">
             Privacidade
-          </a>
+          </Link>
+          <Link className="hover:text-primary" to="/eliminacao-de-dados">
+            Eliminação de dados
+          </Link>
         </nav>
         <p className="text-xs text-slate-400">
           © {new Date().getFullYear()} Boleia Certa. Todos os direitos reservados.

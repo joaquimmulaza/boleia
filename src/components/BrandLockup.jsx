@@ -2,7 +2,7 @@ import React from 'react';
 
 /**
  * Ícone oficial do shell.
- * `withName` só no cabeçalho de Faltas (ícone + «Boleia Certa»).
+ * `withName` no cabeçalho de Faltas e nas páginas públicas legais (ícone + «Boleia Certa»).
  * Explorar e o resto do shell ficam só com o ícone.
  * @param {{ withName?: boolean }} props
  */
