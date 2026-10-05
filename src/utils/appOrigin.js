@@ -12,12 +12,13 @@ export const getAppOrigin = () => {
 };
 
 /**
- * Origem do browser actual (ignora VITE_APP_URL).
- * Usada no registo para o link de confirmação bater certo com o domínio onde a pessoa se inscreveu.
+ * Redirect pós-confirmação de email no registo (ignora VITE_APP_URL).
+ * Usa a origem do browser + `/auth` para bater com a allow-list GoTrue
+ * (`…/auth`, não só a origem nua).
  * @returns {string}
  */
 export const getEmailConfirmRedirectUrl = () => {
-  if (typeof window !== 'undefined') return window.location.origin;
+  if (typeof window !== 'undefined') return `${window.location.origin}/auth`;
   return '';
 };
 

@@ -41,8 +41,8 @@ describe('appOrigin', () => {
     expect(getOAuthRedirectUrl()).toBe('https://boleia-cyan.vercel.app/auth');
   });
 
-  it('getEmailConfirmRedirectUrl usa a origem do browser, não VITE_APP_URL', () => {
+  it('getEmailConfirmRedirectUrl usa origem do browser + /auth, não VITE_APP_URL', () => {
     vi.stubEnv('VITE_APP_URL', 'https://boleia-cyan.vercel.app');
-    expect(getEmailConfirmRedirectUrl()).toBe(window.location.origin);
+    expect(getEmailConfirmRedirectUrl()).toBe(`${window.location.origin}/auth`);
   });
 });
