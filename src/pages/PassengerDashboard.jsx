@@ -48,7 +48,7 @@ import {
   filterPropostasTerminadasRecebidas,
   filterPropostasTerminadasEnviadas,
 } from '../utils/propostaInbox';
-import { DIAS_SEMANA, DIAS_UTEIS_DEFAULT } from '../utils/diasSemana';
+import { DIAS_SEMANA, DIAS_UTEIS_DEFAULT, formatDiasSemana } from '../utils/diasSemana';
 import { getModoTetoPreferido, setModoTetoPreferido } from '../utils/procuraTetoPrefs';
 import { resolveCapacityN } from '../utils/capacityGate.js';
 import { canEditProcura } from '../utils/canEditProcura';
@@ -125,6 +125,9 @@ const PassengerDashboard = () => {
   const [terminadasEnviadas, setTerminadasEnviadas] = useState([]);
   const [loadingInbox, setLoadingInbox] = useState(false);
   const [view, setView] = useState('hub'); // hub | form | matches
+  /** explorar | procura — troca de feed no mesmo Início, sem sair da rota */
+  const [hubTab, setHubTab] = useState('explorar');
+  const deepLinkTabAppliedRef = useRef(false);
   /** null | 'propostas' — deep-link proposal_received força painel de propostas */
   const [hubFocus, setHubFocus] = useState(null);
   const [feedback, setFeedback] = useState({ type: '', text: '' });
@@ -180,6 +183,25 @@ const PassengerDashboard = () => {
       const lista = await listProcurasByOwner(user.id);
       const activa = lista.find((p) => p.estado === 'activa' || p.estado === 'em_negociacao') || null;
       setProcura(activa);
+      const browsePromise = (async () => {
+        setLoadingBrowse(true);
+        try {
+          const [ofertas, abertas] = await Promise.all([
+            listOfertasDisponiveis(),
+            listOpenPropostasByCreator(user.id),
+          ]);
+          setBrowseOfertas(ofertas);
+          setBrowseOfertasComProposta(
+            new Set(abertas.map((p) => p.oferta_id).filter(Boolean)),
+          );
+        } catch (err) {
+          console.error(err);
+          setBrowseOfertas([]);
+          setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
+        } finally {
+          setLoadingBrowse(false);
+        }
+      })();
       if (activa) {
         setLoadingInbox(true);
         try {
@@ -239,24 +261,8 @@ const PassengerDashboard = () => {
         setTerminadasRecebidas([]);
         setTerminadasEnviadas([]);
         setLoadingInbox(false);
-        setLoadingBrowse(true);
-        try {
-          const [ofertas, abertas] = await Promise.all([
-            listOfertasDisponiveis(),
-            listOpenPropostasByCreator(user.id),
-          ]);
-          setBrowseOfertas(ofertas);
-          setBrowseOfertasComProposta(
-            new Set(abertas.map((p) => p.oferta_id).filter(Boolean)),
-          );
-        } catch (err) {
-          console.error(err);
-          setBrowseOfertas([]);
-          setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
-        } finally {
-          setLoadingBrowse(false);
-        }
       }
+      await browsePromise;
     } catch (err) {
       console.error(err);
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
@@ -304,6 +310,7 @@ const PassengerDashboard = () => {
     if (openOfertaId || focus === 'propostas' || propostaId) {
       setView('hub');
       setHubFocus('propostas');
+      deepLinkTabAppliedRef.current = false;
       propostaDeepLinkHandledRef.current = false;
       propostaDeepLinkLoadStartedRef.current = false;
       pendingPropostaDeepLinkRef.current = {
@@ -312,6 +319,15 @@ const PassengerDashboard = () => {
       };
     }
   }, [location.search]);
+
+  useEffect(() => {
+    if (deepLinkTabAppliedRef.current || hubFocus !== 'propostas' || !procura || loading) {
+      return undefined;
+    }
+    deepLinkTabAppliedRef.current = true;
+    setHubTab('procura');
+    return undefined;
+  }, [hubFocus, procura, loading]);
 
   useEffect(() => {
     const pending = pendingPropostaDeepLinkRef.current;
@@ -336,31 +352,27 @@ const PassengerDashboard = () => {
     if (loadingInbox || loading) return undefined;
 
     const propostaId = pending?.propostaId;
+    const selector = propostaId
+      ? `[data-proposta-id="${propostaId}"]`
+      : '[data-testid="propostas-recebidas-section"]';
     if (propostaId) {
       const visible = [...inboxReviews, ...enviadasReviews, ...terminadasRecebidas, ...terminadasEnviadas]
         .some((r) => r.proposta.id === propostaId);
       if (!visible) return undefined;
-
-      propostaDeepLinkHandledRef.current = true;
-      requestAnimationFrame(() => {
-        document.querySelector(`[data-proposta-id="${propostaId}"]`)?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest',
-        });
-      });
-      return undefined;
     }
+
+    const node = document.querySelector(selector)
+      || document.querySelector('[data-testid="propostas-recebidas-section"]');
+    if (!node) return undefined;
 
     propostaDeepLinkHandledRef.current = true;
     requestAnimationFrame(() => {
-      document.querySelector('[data-testid="propostas-recebidas-section"]')?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-      });
+      node.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
     return undefined;
   }, [
     hubFocus,
+    hubTab,
     loadingInbox,
     loading,
     inboxReviews,
@@ -458,6 +470,7 @@ const PassengerDashboard = () => {
       setProcura(actualizada);
       setEditing(false);
       setView('hub');
+      setHubTab('procura');
       setConfirmEditN(null);
       await carregar();
       setFeedback({ type: 'success', text: 'Procura actualizada.' });
@@ -515,7 +528,8 @@ const PassengerDashboard = () => {
       setModoTetoPreferido(modoTeto);
       setModoTetoActivo(modoTeto);
       setProcura(criada);
-      setView('matches');
+      setView('hub');
+      setHubTab('explorar');
       markPermissionsEligible();
       await carregar();
       setFeedback({ type: 'success', text: 'Procura criada.' });
@@ -926,34 +940,114 @@ const PassengerDashboard = () => {
     ? (membrosCount > 0 ? membrosCount : procura?.n_candidato ?? 1)
     : (procura?.n_candidato ?? 1);
   const chipProcura = procura ? chipEstadoProcura(procura.estado) : null;
+  const tabActivo = view === 'matches' ? 'procura' : hubTab;
+  const mostrarSegmented = Boolean(procura) && (view === 'hub' || view === 'matches');
+  const rotaProcura = procura ? labelRotaProcura(procura) : null;
+  const procuraFlexivel = rotaProcura?.origem === 'Procura flexível';
+  const metaSticky = (() => {
+    if (!procura) return '';
+    const partes = [];
+    const dias = formatDiasSemana(procura.dias_semana);
+    if (dias) partes.push(dias);
+    if (procura.preferred_time) partes.push(formatTime24h(procura.preferred_time));
+    if (procura.teto_mensal_kz != null && Number(procura.teto_mensal_kz) > 0) {
+      const sufixo = modoTetoActivo === 'TOTAL_ACORDO' ? '' : ' / pax';
+      partes.push(`Teto ${formatKwanza(procura.teto_mensal_kz)} Kz${sufixo}`);
+    }
+    return partes.join(' · ');
+  })();
+
+  const irParaOfertasCompativeis = () => {
+    setView('hub');
+    setHubTab('procura');
+    requestAnimationFrame(() => {
+      document.getElementById('ofertas-compativeis')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  };
+
+  const proporNoFeed = (oferta) => {
+    if (procura) {
+      handlePropor(oferta);
+      return;
+    }
+    abrirPropostaBrowse(oferta);
+  };
 
   return (
     <PageShell>
-      <PageHeader
-        title={
-          view === 'form'
-            ? (editing ? 'Editar procura' : 'Nova procura')
-            : procura
-              ? 'A minha procura'
+      {(view === 'form' || !mostrarSegmented) && (
+        <PageHeader
+          title={
+            view === 'form'
+              ? (editing ? 'Editar procura' : 'Nova procura')
               : hubFocus === 'propostas'
                 ? 'Propostas'
                 : 'Explorar'
-        }
-        subtitle={
-          view === 'form'
-            ? (editing
-              ? 'Corrige origem, destino, horário, dias ou teto.'
-              : 'Define a tua rota diária casa–trabalho.')
-            : procura
-              ? 'Encontra ofertas compatíveis com o teu horário.'
+          }
+          subtitle={
+            view === 'form'
+              ? (editing
+                ? 'Corrige origem, destino, horário, dias ou teto.'
+                : 'Define a tua rota diária casa–trabalho.')
               : hubFocus === 'propostas'
                 ? 'Propostas recebidas e enviadas nesta oferta.'
                 : 'Explora ofertas e propõe acordo directamente — ou cria procura para filtrar matches.'
-        }
-        {...(view !== 'hub'
-          ? { onBack: () => setView(procura ? 'matches' : 'hub') }
-          : {})}
-      />
+          }
+          {...(view !== 'hub'
+            ? {
+                onBack: () => {
+                  setView('hub');
+                  if (procura) setHubTab(editing ? 'procura' : 'explorar');
+                },
+              }
+            : {})}
+        />
+      )}
+
+      {!loading && mostrarSegmented ? (
+        <div
+          role="tablist"
+          aria-label="Início"
+          className="mb-4 flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800"
+          data-testid="hub-segmented"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tabActivo === 'explorar'}
+            className={`min-h-11 flex-1 rounded-lg text-sm font-bold ${
+              tabActivo === 'explorar'
+                ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
+                : 'text-slate-500'
+            }`}
+            onClick={() => {
+              setView('hub');
+              setHubTab('explorar');
+            }}
+          >
+            Explorar
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tabActivo === 'procura'}
+            className={`min-h-11 flex-1 rounded-lg text-sm font-bold ${
+              tabActivo === 'procura'
+                ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
+                : 'text-slate-500'
+            }`}
+            onClick={() => {
+              setView('hub');
+              setHubTab('procura');
+            }}
+          >
+            A minha procura
+          </button>
+        </div>
+      ) : null}
 
       {feedback.text ? (
         <FeedbackAlert
@@ -965,7 +1059,7 @@ const PassengerDashboard = () => {
 
       {loading && <LoadingSkeleton />}
 
-      {!loading && view === 'hub' && !procura && hubFocus !== 'propostas' && (
+      {!loading && view === 'hub' && (!procura ? hubFocus !== 'propostas' : tabActivo === 'explorar') && (
         <div className="space-y-4 relative">
           {browseBusy ? (
             <div
@@ -977,16 +1071,65 @@ const PassengerDashboard = () => {
               <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">A enviar proposta…</p>
             </div>
           ) : null}
+          {procura ? (
+            <section
+              className="sticky top-0 z-10 space-y-3 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+              data-testid="procura-sticky"
+            >
+              <div className="flex items-center gap-2">
+                {chipProcura ? (
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipProcura.className}`}>
+                    {chipProcura.label}
+                  </span>
+                ) : null}
+                {procuraFlexivel ? (
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    Flexível
+                  </span>
+                ) : null}
+              </div>
+              {procuraFlexivel ? (
+                <p className="font-bold text-slate-900 dark:text-white">Sem origem/destino fixos</p>
+              ) : (
+                <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white min-w-0">
+                  <TextFade className="flex-1">{rotaProcura.origem}</TextFade>
+                  <ArrowRight size={16} className="text-slate-400 shrink-0" aria-hidden="true" />
+                  <TextFade className="flex-1">{rotaProcura.destino}</TextFade>
+                </div>
+              )}
+              {metaSticky ? (
+                <p className="text-sm text-slate-500 tabular-nums">{metaSticky}</p>
+              ) : null}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="min-h-11 flex-1 rounded-xl border border-slate-200 font-bold dark:border-slate-700"
+                  onClick={() => setHubTab('procura')}
+                >
+                  Ver detalhe
+                </button>
+                <button
+                  type="button"
+                  className="min-h-11 flex-1 rounded-xl bg-primary font-bold text-white"
+                  onClick={irParaOfertasCompativeis}
+                >
+                  Ver ofertas compatíveis
+                </button>
+              </div>
+            </section>
+          ) : null}
           <section className="space-y-3" data-testid="browse-ofertas-feed">
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-lg font-bold text-balance">Ofertas disponíveis</h2>
-              <button
-                type="button"
-                className="text-sm font-bold text-primary shrink-0"
-                onClick={() => setView('form')}
-              >
-                Criar procura
-              </button>
+              {procura ? null : (
+                <button
+                  type="button"
+                  className="text-sm font-bold text-primary shrink-0"
+                  onClick={() => setView('form')}
+                >
+                  Criar procura
+                </button>
+              )}
             </div>
             <p className="text-sm text-slate-500 text-pretty">
               Toca «Propor acordo» numa oferta para enviar proposta já — ou «Criar procura» para filtrar por horário e trajeto.
@@ -999,23 +1142,26 @@ const PassengerDashboard = () => {
                 Ainda não há ofertas publicadas. Volta mais tarde.
               </p>
             ) : (
-              browseOfertas.map((oferta) => (
-                <OpportunityCard
-                  key={oferta.id}
-                  kind="oferta"
-                  item={oferta}
-                  onOpen={() => setDetalheOferta(oferta)}
-                  onCta={
-                    ofertasComPropostaAberta.has(oferta.id)
-                      ? undefined
-                      : () => abrirPropostaBrowse(oferta)
-                  }
-                />
-              ))
+              browseOfertas.map((oferta) => {
+                const enviada = ofertasComPropostaAberta.has(oferta.id);
+                return (
+                  <OpportunityCard
+                    key={oferta.id}
+                    kind="oferta"
+                    item={oferta}
+                    onOpen={() => setDetalheOferta(oferta)}
+                    ctaDisabled={enviada}
+                    ctaLabel={enviada ? 'Proposta enviada' : undefined}
+                    onCta={() => {
+                      if (!enviada) proporNoFeed(oferta);
+                    }}
+                  />
+                );
+              })
             )}
           </section>
 
-          <GrupoDescobertaPanel userId={user.id} />
+          <GrupoDescobertaPanel userId={user.id} excludeGrupoId={grupo?.id ?? null} />
         </div>
       )}
 
@@ -1317,21 +1463,30 @@ const PassengerDashboard = () => {
         </form>
       )}
 
-      {!loading && procura && (view === 'hub' || view === 'matches') && (
-        <div className="space-y-4">
+      {!loading && procura && (view === 'hub' || view === 'matches') && tabActivo === 'procura' && (
+        <div className="space-y-4" data-testid="procura-detail">
           <section className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
               {chipProcura && (
                 <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipProcura.className}`}>
                   {chipProcura.label}
                 </span>
               )}
+              {procuraFlexivel ? (
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                  Flexível
+                </span>
+              ) : null}
             </div>
-            <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white min-w-0">
-              <TextFade className="flex-1">{labelRotaProcura(procura).origem}</TextFade>
-              <ArrowRight size={16} className="text-slate-400 shrink-0" aria-hidden="true" />
-              <TextFade className="flex-1">{labelRotaProcura(procura).destino}</TextFade>
-            </div>
+            {procuraFlexivel ? (
+              <p className="font-bold text-slate-900 dark:text-white">Sem origem/destino fixos</p>
+            ) : (
+              <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white min-w-0">
+                <TextFade className="flex-1">{rotaProcura.origem}</TextFade>
+                <ArrowRight size={16} className="text-slate-400 shrink-0" aria-hidden="true" />
+                <TextFade className="flex-1">{rotaProcura.destino}</TextFade>
+              </div>
+            )}
             <div className="flex gap-3 text-sm text-slate-500 flex-wrap">
               <span className="flex items-center gap-1 tabular-nums">
                 <Clock size={14} aria-hidden="true" />
@@ -1356,7 +1511,7 @@ const PassengerDashboard = () => {
             <button
               type="button"
               className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-primary/20"
-              onClick={() => setView('matches')}
+              onClick={irParaOfertasCompativeis}
             >
               Ver ofertas compatíveis
             </button>
@@ -1364,6 +1519,7 @@ const PassengerDashboard = () => {
               <>
                 <button
                   type="button"
+                  aria-label="Editar procura"
                   className="w-full min-h-12 border border-slate-200 dark:border-slate-700 font-bold py-3.5 rounded-xl"
                   onClick={() => {
                     prefillFormFromProcura(procura);
@@ -1371,7 +1527,7 @@ const PassengerDashboard = () => {
                     setView('form');
                   }}
                 >
-                  Editar procura
+                  Editar
                 </button>
                 <button
                   type="button"
@@ -1388,11 +1544,6 @@ const PassengerDashboard = () => {
             procura={procura}
             userId={user.id}
             onGrupoChange={carregar}
-          />
-
-          <GrupoDescobertaPanel
-            userId={user.id}
-            excludeGrupoId={grupo?.id ?? null}
           />
 
           <section className="space-y-3" data-testid="waitlist-bucket">
@@ -1549,7 +1700,7 @@ const PassengerDashboard = () => {
 
           {(view === 'matches' || view === 'hub') && (
             <>
-              <h2 className="text-lg font-bold text-balance">Ofertas compatíveis</h2>
+              <h2 id="ofertas-compativeis" className="text-lg font-bold text-balance">Ofertas compatíveis</h2>
               <p className="text-sm font-semibold text-slate-500">
                 {matches.direct.length === 1
                   ? '1 oferta compatível'
@@ -1615,7 +1766,7 @@ const PassengerDashboard = () => {
               : () => {
                   const oferta = detalheOferta;
                   setDetalheOferta(null);
-                  abrirPropostaBrowse(oferta);
+                  proporNoFeed(oferta);
                 }
           }
         />
@@ -1825,6 +1976,7 @@ const PassengerDashboard = () => {
             setConfirmCancelOpen(false);
             setEditing(false);
             setView('hub');
+            setHubTab('explorar');
             await carregar();
             setFeedback({ type: 'success', text: 'Procura cancelada.' });
           } catch (err) {

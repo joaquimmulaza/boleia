@@ -3,6 +3,7 @@ import {
   callRpcWithOfflineFallback,
   resolveIdempotencyKey,
 } from '../utils/callRpcWithOfflineFallback.js';
+import { acordoBloqueiaApagarGrupo } from '../utils/grupoKebab.js';
 
 const N_MAXIMO_MIN = 2;
 const N_MAXIMO_MAX = 8;
@@ -546,4 +547,130 @@ export async function sairDoGrupo(grupoId, passengerId, options = {}) {
       idempotency_key: key,
     }),
   });
+}
+
+/**
+ * Há acordo ainda vivo neste grupo ou nesta procura.
+ * Cancelado e expirado não bloqueiam apagar.
+ * @param {string | null | undefined} grupoId
+ * @param {string | null | undefined} procuraId
+ * @returns {Promise<boolean>}
+ */
+export async function grupoTemAcordoActivo(grupoId, procuraId) {
+  const partes = [];
+  if (grupoId) partes.push(`grupo_id.eq.${grupoId}`);
+  if (procuraId) partes.push(`procura_id.eq.${procuraId}`);
+  if (partes.length === 0) return false;
+
+  const { data, error } = await supabase
+    .from('acordos')
+    .select('id, estado')
+    .or(partes.join(','));
+
+  if (error) throw error;
+  return (data || []).some((row) => acordoBloqueiaApagarGrupo(row.estado));
+}
+
+/**
+ * Capacidade desejada ≥ membros activos. Não mexe em propostas.
+ * O CHECK da base continua 2–8: gravar 1 devolve mensagem explícita.
+ * @param {string} grupoId
+ * @param {number} nDesejado
+ * @returns {Promise<object>}
+ */
+export async function updateGrupoCapacidade(grupoId, nDesejado) {
+  if (!grupoId) {
+    throw new Error('ID do grupo é obrigatório.');
+  }
+
+  const { count, error: countError } = await supabase
+    .from('membros_grupo')
+    .select('*', { count: 'exact', head: true })
+    .eq('grupo_id', grupoId)
+    .eq('estado', 'activo');
+
+  if (countError) throw countError;
+
+  const nActivos = count ?? 0;
+  const floor = Math.max(1, nActivos);
+  const n = Number(nDesejado);
+  if (!Number.isInteger(n) || n < floor || n > N_MAXIMO_MAX) {
+    throw new Error(
+      `A capacidade desejada tem de ser pelo menos ${floor} e no máximo ${N_MAXIMO_MAX}.`,
+    );
+  }
+
+  const { data, error } = await supabase
+    .from('grupos')
+    .update({ n_maximo: n })
+    .eq('id', grupoId)
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === '23514') {
+      throw new Error('A capacidade mínima que podes guardar é 2 pessoas.');
+    }
+    throw error;
+  }
+  return data;
+}
+
+/**
+ * Actualiza só o ponto de recolha do membro. Não reescreve propostas.
+ * @param {string} membroId
+ * @param {{ pickup_name?: string | null, pickup_lat?: number | null, pickup_lng?: number | null }} pickup
+ */
+export async function updateMembroRecolha(membroId, pickup) {
+  if (!membroId) {
+    throw new Error('ID do membro é obrigatório.');
+  }
+
+  const pickupName = sanitizeOptionalText(pickup?.pickup_name);
+  const payload = {
+    pickup_name: pickupName,
+    pickup_lat: pickupName ? sanitizeOptionalCoord(pickup?.pickup_lat) : null,
+    pickup_lng: pickupName ? sanitizeOptionalCoord(pickup?.pickup_lng) : null,
+  };
+
+  const { data, error } = await supabase
+    .from('membros_grupo')
+    .update(payload)
+    .eq('id', membroId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Apaga o grupo só com um membro activo e sem acordo vivo.
+ * Propostas ficam com o snapshot (grupo_id passa a nulo por FK, sem UPDATE de preço/N).
+ * @param {string} grupoId
+ * @param {{ procuraId?: string | null }} [opts]
+ */
+export async function apagarGrupo(grupoId, opts = {}) {
+  if (!grupoId) {
+    throw new Error('ID do grupo é obrigatório.');
+  }
+
+  const { count, error: countError } = await supabase
+    .from('membros_grupo')
+    .select('*', { count: 'exact', head: true })
+    .eq('grupo_id', grupoId)
+    .eq('estado', 'activo');
+
+  if (countError) throw countError;
+  if ((count ?? 0) !== 1) {
+    throw new Error('Só podes apagar o grupo quando és o único membro.');
+  }
+
+  const bloqueia = await grupoTemAcordoActivo(grupoId, opts.procuraId ?? null);
+  if (bloqueia) {
+    throw new Error('Não podes apagar o grupo enquanto houver um acordo activo.');
+  }
+
+  const { error } = await supabase.from('grupos').delete().eq('id', grupoId);
+  if (error) throw error;
 }

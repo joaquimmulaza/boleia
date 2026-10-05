@@ -1,5 +1,13 @@
 ﻿# Boleia Certa Project Memory & State
 
+## Quick (2026-10-05) — Hub passageiro: Explorar + procura
+
+- Início do passageiro: segmented **Explorar | A minha procura** no mesmo `/passageiro`. Com procura activa o tab inicial é Explorar e o cartão da procura fica sticky por cima das ofertas.
+- «A minha procura» troca o feed in-place (detalhe, grupo, propostas, ofertas compatíveis). Criar procura já não substitui o Explorar.
+- Kebab do grupo: Editar (dono, capacidade ≥ membros, recolha, sem reescrever propostas), Apagar só dono sozinho e sem acordo activo (omitido, não desactivado), Sair quando há outros. Convite e WhatsApp ficam no cartão.
+- Shell autenticado: só o logotipo, com link para `/passageiro` ou `/motorista`. Páginas legais e `/explorar` público não mudam.
+- Sem migração. Spec: `.specs/quick/hub-passageiro-explorar-procura/`.
+
 ## Current Active Milestone
 - **Feature**: Marketplace Oferta / Procura
 - **Status**: Phase 6 completa · Phase 7 **T32–T35 Done** (uncommitted) · T29+T30 uncommitted · Checkpoint 2026-09-05 ~11:20
