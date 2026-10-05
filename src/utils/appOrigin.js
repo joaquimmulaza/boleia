@@ -12,6 +12,16 @@ export const getAppOrigin = () => {
 };
 
 /**
+ * Origem do browser actual (ignora VITE_APP_URL).
+ * Usada no registo para o link de confirmação bater certo com o domínio onde a pessoa se inscreveu.
+ * @returns {string}
+ */
+export const getEmailConfirmRedirectUrl = () => {
+  if (typeof window !== 'undefined') return window.location.origin;
+  return '';
+};
+
+/**
  * URL de redirect para o fluxo «esqueceu a palavra-passe».
  * @returns {string}
  */

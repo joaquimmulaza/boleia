@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getAppOrigin, getOAuthRedirectUrl, getPasswordRecoveryRedirectUrl } from './appOrigin';
+import {
+  getAppOrigin,
+  getEmailConfirmRedirectUrl,
+  getOAuthRedirectUrl,
+  getPasswordRecoveryRedirectUrl,
+} from './appOrigin';
 
 describe('appOrigin', () => {
   beforeEach(() => {
@@ -34,5 +39,10 @@ describe('appOrigin', () => {
   it('getOAuthRedirectUrl volta à página de auth', () => {
     vi.stubEnv('VITE_APP_URL', 'https://boleia-cyan.vercel.app');
     expect(getOAuthRedirectUrl()).toBe('https://boleia-cyan.vercel.app/auth');
+  });
+
+  it('getEmailConfirmRedirectUrl usa a origem do browser, não VITE_APP_URL', () => {
+    vi.stubEnv('VITE_APP_URL', 'https://boleia-cyan.vercel.app');
+    expect(getEmailConfirmRedirectUrl()).toBe(window.location.origin);
   });
 });

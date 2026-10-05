@@ -130,6 +130,7 @@ describe('Auth Component', () => {
         email: 'teste@boleia.co.ao',
         password: 'password123',
         options: {
+          emailRedirectTo: window.location.origin,
           data: {
             tipo_perfil: 'Passageiro',
             nome_completo: 'Nome Teste',
@@ -155,6 +156,7 @@ describe('Auth Component', () => {
         email: 'motorista@boleia.co.ao',
         password: 'password123',
         options: {
+          emailRedirectTo: window.location.origin,
           data: {
             tipo_perfil: 'Motorista',
             nome_completo: 'Nome Teste',

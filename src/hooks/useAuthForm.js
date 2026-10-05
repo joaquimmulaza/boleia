@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { validateTelefone, validatePassword, MIN_PASSWORD_LENGTH } from '../utils/validation';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
-import { getPasswordRecoveryRedirectUrl } from '../utils/appOrigin';
+import { getEmailConfirmRedirectUrl, getPasswordRecoveryRedirectUrl } from '../utils/appOrigin';
 import { useAuth } from '../contexts/AuthContext';
 
 /**
@@ -272,6 +272,7 @@ export const useAuthForm = () => {
         email,
         password,
         options: {
+          emailRedirectTo: getEmailConfirmRedirectUrl(),
           data: {
             tipo_perfil: profileTypeValue,
             nome_completo: nomeValue,
