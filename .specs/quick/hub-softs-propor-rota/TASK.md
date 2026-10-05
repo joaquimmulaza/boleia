@@ -25,7 +25,11 @@ Os checks do #201 são só `Vercel Preview Comments` (success) e `Supabase Previ
 
 ## Gate «Propor acordo»
 
-Só no feed Explorar (`proporNoFeed`), com procura activa. Ofertas compatíveis no separador «A minha procura» continuam a ir directas para a folha. OD incompleto na oferta (ou na procura) é incompatível e mostra o aviso. Confirmar abre a folha actual; enviar continua no «Confirmar proposta». Cancelar não abre a folha nem cria proposta.
+Só no feed Explorar (`proporNoFeed`), com procura activa. Ofertas compatíveis no separador «A minha procura» continuam a ir directas para a folha. Oferta flexível (`flexibilidade_rota`) é compatível em rota, como `evaluateMatch` — não pede aviso mesmo sem OD. Oferta fixa sem OD completo, ou procura sem OD completo, é incompatível e mostra o aviso. Confirmar abre a folha actual; enviar continua no «Confirmar proposta». Cancelar não abre a folha nem cria proposta.
+
+## Nota de produto — pedidos pendentes depois do dono sair
+
+Não se altera agora. `leave_grupo_membro` não transfere a posse. Depois de o dono sair, ninguém vê os pedidos de entrada pendentes: o painel do hub só abre a procura do próprio passageiro e já não há dono membro para os aprovar.
 
 ## Files
 
