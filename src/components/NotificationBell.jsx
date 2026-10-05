@@ -166,7 +166,7 @@ export default function NotificationBell() {
                 <button
                   type="button"
                   onClick={markAllAsRead}
-                  className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors"
+                  className="text-sm font-semibold text-primary rounded-md hover:text-primary/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
                 >
                   Marcar todas lidas
                 </button>
@@ -184,7 +184,14 @@ export default function NotificationBell() {
                   {notifications.map((notif) => (
                     <li
                       key={notif.id}
-                      className={`flex items-start gap-3 px-5 py-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer ${
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleNotificationClick(notif);
+                        }
+                      }}
+                      className={`flex items-start gap-3 px-5 py-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${
                         !notif.lida ? 'bg-primary/5 dark:bg-primary/10' : ''
                       }`}
                       onClick={() => handleNotificationClick(notif)}

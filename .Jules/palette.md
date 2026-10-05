@@ -4,3 +4,6 @@
 ## 2024-05-24 - Missing keyboard focus states in navigation headers
 **Learning:** Header navigation elements (like back and action buttons) often lack explicit focus states because they are plain icons or text links, making keyboard navigation difficult to track.
 **Action:** Apply the standard focus state (`focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900`) and ensure a border radius (`rounded-md` or `rounded-full`) is present so the ring shapes correctly.
+## 2024-05-18 - Missing interactive role for custom interactive elements
+**Learning:** Using `tabIndex={0}` and `onKeyDown` allows users to navigate list items via keyboard, but screen readers may not announce them as actionable elements without a proper semantic role (e.g., `role="button"` or `role="link"`).
+**Action:** Always complement `tabIndex={0}` with appropriate ARIA roles on non-semantic interactive elements.
