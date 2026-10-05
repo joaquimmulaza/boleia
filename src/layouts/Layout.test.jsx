@@ -122,11 +122,23 @@ describe('Layout Component', () => {
     expect(logo).toHaveAttribute('src', '/boleia-logo.png');
     expect(logo).toHaveAttribute('alt', 'Boleia Certa');
     expect(lockup).not.toHaveTextContent('Boleia Certa');
-    expect(lockup.closest('a')).toBeNull();
+    expect(lockup.closest('a')).toHaveAttribute('href', '/passageiro');
     expect(screen.getByRole('heading', { name: 'Boleia Certa' })).toBeInTheDocument();
   });
 
-  it('no ecrã de Faltas o cabeçalho mostra o ícone e a palavra Boleia Certa', async () => {
+  it('o logótipo do motorista abre o início do motorista e não mostra a palavra', async () => {
+    useAuth.mockReturnValue({ tipoPerfil: 'Motorista' });
+
+    await act(async () => {
+      renderWithRouterAndTheme(<Layout />);
+    });
+
+    const lockup = screen.getByTestId('brand-lockup');
+    expect(lockup).not.toHaveTextContent('Boleia Certa');
+    expect(lockup.closest('a')).toHaveAttribute('href', '/motorista');
+  });
+
+  it('no ecrã de Faltas o cabeçalho fica só com o ícone', async () => {
     useAuth.mockReturnValue({ tipoPerfil: 'Passageiro' });
 
     await act(async () => {
@@ -145,7 +157,8 @@ describe('Layout Component', () => {
 
     const lockup = screen.getByTestId('brand-lockup');
     expect(lockup.querySelector('img')).toHaveAttribute('src', '/boleia-logo.png');
-    expect(lockup).toHaveTextContent('Boleia Certa');
+    expect(lockup).not.toHaveTextContent('Boleia Certa');
+    expect(lockup.closest('a')).toHaveAttribute('href', '/passageiro');
   });
 
   it('terminar sessão chama signOut', async () => {

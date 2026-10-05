@@ -155,6 +155,7 @@ describe('PACOTE ENG #34 — contra-proposta na proposta recebida', () => {
       </MemoryRouter>,
     );
 
+    fireEvent.click(await screen.findByRole('tab', { name: 'A minha procura' }));
     expect(await screen.findByRole('button', { name: /Fazer contra-proposta/i })).toBeInTheDocument();
     expect(screen.getByText(/Valor proposto:/i)).toBeInTheDocument();
     expect(screen.getByText(/Preço publicado:/i)).toBeInTheDocument();
@@ -176,6 +177,7 @@ describe('PACOTE ENG #34 — contra-proposta na proposta recebida', () => {
       </MemoryRouter>,
     );
 
+    fireEvent.click(await screen.findByRole('tab', { name: 'A minha procura' }));
     fireEvent.click(await screen.findByRole('button', { name: /Fazer contra-proposta/i }));
 
     const sheet = await screen.findByTestId('contra-proposta-sheet');
@@ -225,6 +227,7 @@ describe('PACOTE ENG #34 — contra-proposta na proposta recebida', () => {
       </MemoryRouter>,
     );
 
+    fireEvent.click(await screen.findByRole('tab', { name: 'A minha procura' }));
     expect(await screen.findByRole('button', { name: /Fazer contra-proposta/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Fazer contra-proposta/i }));

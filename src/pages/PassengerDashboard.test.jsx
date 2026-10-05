@@ -76,6 +76,11 @@ vi.mock('../services/GrupoService', () => ({
   pedirEntradaGrupo: vi.fn(),
   aprovarEntrada: vi.fn(),
   rejeitarEntrada: vi.fn(),
+  grupoTemAcordoActivo: vi.fn().mockResolvedValue(false),
+  updateGrupoCapacidade: vi.fn(),
+  updateMembroRecolha: vi.fn(),
+  apagarGrupo: vi.fn(),
+  sairDoGrupo: vi.fn(),
 }));
 
 vi.mock('../services/ProfileService', () => ({
@@ -127,6 +132,13 @@ const ofertaDirect = {
   modo_preco: 'TOTAL_ACORDO',
 };
 
+async function abrirMinhaProcura() {
+  const tab = await screen.findByRole('tab', { name: 'A minha procura' });
+  if (tab.getAttribute('aria-selected') !== 'true') {
+    fireEvent.click(tab);
+  }
+}
+
 describe('PassengerDashboard — marketplace', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -140,7 +152,6 @@ describe('PassengerDashboard — marketplace', () => {
     listPropostasByProcura.mockResolvedValue([]);
     enrichPropostasForReview.mockResolvedValue([]);
   });
-
   it('sem procura activa mostra feed de ofertas e grupos (sem form obrigatório)', async () => {
     listOfertasDisponiveis.mockResolvedValue([
       {
@@ -482,8 +493,38 @@ describe('PassengerDashboard — marketplace', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('Procura flexível')).toBeInTheDocument();
+    expect(await screen.findByTestId('procura-sticky')).toBeInTheDocument();
+    expect(screen.getByText('Flexível')).toBeInTheDocument();
     expect(screen.getByText('Sem origem/destino fixos')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'A minha procura' })).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Explorar' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('browse-ofertas-feed')).toBeInTheDocument();
+  });
+
+  it('com procura activa o Início fica em Explorar e A minha procura troca o feed no mesmo ecrã', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId('procura-sticky')).toBeInTheDocument();
+    expect(screen.getByTestId('browse-ofertas-feed')).toBeInTheDocument();
+    expect(screen.queryByTestId('procura-detail')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'A minha procura' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'A minha procura' }));
+
+    expect(await screen.findByTestId('procura-detail')).toBeInTheDocument();
+    expect(screen.queryByTestId('browse-ofertas-feed')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('procura-sticky')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Editar procura' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Explorar' }));
+    expect(await screen.findByTestId('browse-ofertas-feed')).toBeInTheDocument();
+    expect(screen.getByTestId('procura-sticky')).toBeInTheDocument();
   });
 
   it('carregar procura flex: matching recebe origin_lat null (não 0)', async () => {
@@ -506,6 +547,8 @@ describe('PassengerDashboard — marketplace', () => {
         <PassengerDashboard />
       </MemoryRouter>,
     );
+
+    await abrirMinhaProcura();
 
     await waitFor(() => {
       expect(findCompatibleOfertas).toHaveBeenCalledWith(
@@ -630,6 +673,8 @@ describe('PassengerDashboard — marketplace', () => {
       </MemoryRouter>,
     );
 
+    await abrirMinhaProcura();
+
     expect(
       await screen.findByText(/Ainda não há ofertas compatíveis com o teu horário e trajeto/i),
     ).toBeInTheDocument();
@@ -647,6 +692,8 @@ describe('PassengerDashboard — marketplace', () => {
         <PassengerDashboard />
       </MemoryRouter>,
     );
+
+    await abrirMinhaProcura();
 
     await waitFor(() => {
       expect(findCompatibleOfertas).toHaveBeenCalledWith(
@@ -680,6 +727,8 @@ describe('PassengerDashboard — marketplace', () => {
       </MemoryRouter>,
     );
 
+    await abrirMinhaProcura();
+
     expect(await screen.findByText('Oferta flexível')).toBeInTheDocument();
     expect(screen.queryByText(/^Origem$/)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Destino$/)).not.toBeInTheDocument();
@@ -693,6 +742,8 @@ describe('PassengerDashboard — marketplace', () => {
         <PassengerDashboard />
       </MemoryRouter>,
     );
+
+    await abrirMinhaProcura();
 
     expect(await screen.findByRole('button', { name: /Criar grupo/i })).toBeInTheDocument();
     expect(screen.getByText(/Grupo de viagem/i)).toBeInTheDocument();
@@ -718,6 +769,8 @@ describe('PassengerDashboard — marketplace', () => {
         <PassengerDashboard />
       </MemoryRouter>,
     );
+
+    await abrirMinhaProcura();
 
     fireEvent.click(await screen.findByRole('button', { name: /Propor acordo/i }));
     await confirmPropostaSheet();
@@ -753,6 +806,8 @@ describe('PassengerDashboard — marketplace', () => {
       </MemoryRouter>,
     );
 
+    await abrirMinhaProcura();
+
     await waitFor(() => {
       expect(findCompatibleOfertas).toHaveBeenCalledWith(
         expect.objectContaining({ n_candidato: 2 }),
@@ -781,6 +836,8 @@ describe('PassengerDashboard — marketplace', () => {
       </MemoryRouter>,
     );
 
+    await abrirMinhaProcura();
+
     fireEvent.click(await screen.findByRole('button', { name: /Propor acordo/i }));
     await confirmPropostaSheet();
 
@@ -808,6 +865,8 @@ describe('PassengerDashboard — marketplace', () => {
         <PassengerDashboard />
       </MemoryRouter>,
     );
+
+    await abrirMinhaProcura();
 
     fireEvent.click(await screen.findByRole('button', { name: /Propor acordo/i }));
 
@@ -841,6 +900,8 @@ describe('PassengerDashboard — marketplace', () => {
       </MemoryRouter>,
     );
 
+    await abrirMinhaProcura();
+
     expect(
       await screen.findByText(/Abriu-se uma vaga numa oferta em que estás em espera/i),
     ).toBeInTheDocument();
@@ -868,6 +929,8 @@ describe('PassengerDashboard — marketplace', () => {
       </MemoryRouter>,
     );
 
+    await abrirMinhaProcura();
+
     expect(await screen.findByText('Grupo · 2 de 4')).toBeInTheDocument();
     expect(screen.getByText('Activa')).toBeInTheDocument();
     expect(screen.queryByText(/N_actual/i)).not.toBeInTheDocument();
@@ -887,6 +950,8 @@ describe('PassengerDashboard — marketplace', () => {
         <PassengerDashboard />
       </MemoryRouter>,
     );
+
+    await abrirMinhaProcura();
 
     expect(await screen.findByText('2 lugares disponíveis')).toBeInTheDocument();
     expect(screen.getByText('Por passageiro')).toBeInTheDocument();
@@ -918,6 +983,8 @@ describe('PassengerDashboard — marketplace', () => {
         <PassengerDashboard />
       </MemoryRouter>,
     );
+
+    await abrirMinhaProcura();
 
     expect(await screen.findByText('Lista de espera')).toBeInTheDocument();
     expect(screen.getByText('Por passageiro')).toBeInTheDocument();
@@ -971,6 +1038,8 @@ describe('PassengerDashboard — marketplace', () => {
         <PassengerDashboard />
       </MemoryRouter>,
     );
+
+    await abrirMinhaProcura();
 
     expect(await screen.findByText('Propostas enviadas')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Cancelar proposta/i })).toBeInTheDocument();
@@ -1061,6 +1130,8 @@ describe('PassengerDashboard — marketplace', () => {
       </MemoryRouter>,
     );
 
+    await abrirMinhaProcura();
+
     expect(await screen.findByText(/50[\s.]?000\s*Kz/i)).toBeInTheDocument();
     expect(screen.getByText(/Teto por passageiro/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Ver ofertas compatíveis/i })).toBeInTheDocument();
@@ -1149,6 +1220,8 @@ describe('PassengerDashboard — marketplace', () => {
       </MemoryRouter>,
     );
 
+    await abrirMinhaProcura();
+
     expect(await screen.findByText(/Teto total do acordo/i)).toBeInTheDocument();
   });
 
@@ -1192,6 +1265,8 @@ describe('PassengerDashboard — marketplace', () => {
       </MemoryRouter>,
     );
 
+    await abrirMinhaProcura();
+
     expect(await screen.findByText('Propostas recebidas')).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /Aceitar proposta/i })).toBeInTheDocument();
 
@@ -1213,6 +1288,8 @@ describe('PassengerDashboard — marketplace', () => {
         <PassengerDashboard />
       </MemoryRouter>,
     );
+
+    await abrirMinhaProcura();
 
     expect(await screen.findByTestId('waitlist-bucket')).toBeInTheDocument();
     expect(screen.getByText('Lista de espera')).toBeInTheDocument();
@@ -1252,6 +1329,8 @@ describe('PassengerDashboard — marketplace', () => {
       </MemoryRouter>,
     );
 
+    await abrirMinhaProcura();
+
     expect(await screen.findByText('Propostas concluídas')).toBeInTheDocument();
     expect(screen.getByText('Rejeitada')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Cancelar proposta/i })).not.toBeInTheDocument();
@@ -1290,6 +1369,8 @@ describe('PassengerDashboard — marketplace', () => {
       </MemoryRouter>,
     );
 
+    await abrirMinhaProcura();
+
     expect(await screen.findByText('Aguarda resposta')).toBeInTheDocument();
   });
 
@@ -1325,6 +1406,8 @@ describe('PassengerDashboard — marketplace', () => {
         <PassengerDashboard />
       </MemoryRouter>,
     );
+
+    await abrirMinhaProcura();
 
     expect(await screen.findByText('Propostas concluídas')).toBeInTheDocument();
     expect(screen.getByText('Aceite')).toBeInTheDocument();
@@ -1375,6 +1458,8 @@ describe('PassengerDashboard — marketplace', () => {
       </MemoryRouter>,
     );
 
+    await abrirMinhaProcura();
+
     expect(await screen.findByText('Ofertas compatíveis')).toBeInTheDocument();
     expect(screen.getByText('1 oferta compatível')).toBeInTheDocument();
     expect(screen.queryByText('3 ofertas compatíveis')).not.toBeInTheDocument();
@@ -1395,6 +1480,8 @@ describe('PassengerDashboard — marketplace', () => {
       </MemoryRouter>,
     );
 
+    await abrirMinhaProcura();
+
     expect(await screen.findByTestId('waitlist-bucket')).toBeInTheDocument();
     expect(screen.getAllByTestId('waitlist-entry-orfa')).toHaveLength(1);
     expect(screen.getByText('Em espera')).toBeInTheDocument();
@@ -1409,6 +1496,8 @@ describe('PassengerDashboard — marketplace', () => {
         <PassengerDashboard />
       </MemoryRouter>,
     );
+
+    await abrirMinhaProcura();
 
     expect(await screen.findByRole('button', { name: /Editar procura/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Cancelar procura/i })).toBeInTheDocument();
@@ -1443,6 +1532,8 @@ describe('PassengerDashboard — marketplace', () => {
         <PassengerDashboard />
       </MemoryRouter>,
     );
+
+    await abrirMinhaProcura();
 
     fireEvent.click(await screen.findByRole('button', { name: /Editar procura/i }));
     expect(screen.getByRole('button', { name: /Guardar alterações/i })).toBeInTheDocument();
@@ -1520,6 +1611,8 @@ describe('PassengerDashboard — marketplace', () => {
         <PassengerDashboard />
       </MemoryRouter>,
     );
+
+    await abrirMinhaProcura();
 
     fireEvent.click(await screen.findByRole('button', { name: /Editar procura/i }));
     fireEvent.change(screen.getByLabelText('Hora preferida'), {
@@ -1653,6 +1746,8 @@ describe('PassengerDashboard — marketplace', () => {
       </MemoryRouter>,
     );
 
+    await abrirMinhaProcura();
+
     expect(await screen.findByText('Propostas recebidas')).toBeInTheDocument();
     const search = screen.getByTestId('location-search').textContent || '';
     expect(search).toContain('focus=propostas');
@@ -1716,6 +1811,8 @@ describe('PassengerDashboard — marketplace', () => {
       </MemoryRouter>,
     );
 
+    await abrirMinhaProcura();
+
     expect(await screen.findByRole('button', { name: /Fazer contra-proposta/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Fazer contra-proposta/i }));
@@ -1767,6 +1864,8 @@ describe('PassengerDashboard — marketplace', () => {
         <PassengerDashboard />
       </MemoryRouter>,
     );
+
+    await abrirMinhaProcura();
 
     expect(await screen.findByTestId('chip-acima-do-teto')).toHaveTextContent('Acima do teto');
   });

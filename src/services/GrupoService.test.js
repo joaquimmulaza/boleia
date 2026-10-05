@@ -10,6 +10,10 @@ import {
   aprovarEntrada,
   rejeitarEntrada,
   sairDoGrupo,
+  grupoTemAcordoActivo,
+  updateGrupoCapacidade,
+  updateMembroRecolha,
+  apagarGrupo,
 } from './GrupoService';
 
 vi.mock('../lib/supabase', () => ({
@@ -1019,5 +1023,165 @@ describe('GrupoService — Task 5 snapshot N_proposto imutável', () => {
     expect(mockPropostasUpdate).not.toHaveBeenCalled();
     expect(propostasExistentes[0].n_passageiros_propostos).toBe(nPropostoAntes);
     expect(propostasExistentes[0].n_passageiros_propostos).toBe(2);
+  });
+});
+
+describe('GrupoService — editar e apagar grupo', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function mockContagem(count) {
+    return {
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ count, error: null }),
+        }),
+      }),
+    };
+  }
+
+  it('updateGrupoCapacidade grava n_maximo ≥ membros e não toca em propostas', async () => {
+    const update = vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { id: 'g-1', n_maximo: 4 },
+            error: null,
+          }),
+        }),
+      }),
+    });
+    supabase.from.mockImplementation((table) => {
+      if (table === 'membros_grupo') return mockContagem(1);
+      if (table === 'grupos') return { update };
+      if (table === 'propostas') return { update: vi.fn() };
+      return {};
+    });
+
+    const row = await updateGrupoCapacidade('g-1', 4);
+
+    expect(row.n_maximo).toBe(4);
+    expect(update).toHaveBeenCalledWith({ n_maximo: 4 });
+    expect(supabase.from).not.toHaveBeenCalledWith('propostas');
+  });
+
+  it('updateGrupoCapacidade recusa capacidade abaixo dos membros actuais', async () => {
+    supabase.from.mockImplementation((table) => {
+      if (table === 'membros_grupo') return mockContagem(3);
+      return {};
+    });
+
+    await expect(updateGrupoCapacidade('g-1', 2)).rejects.toThrow(/pelo menos 3/i);
+  });
+
+  it('updateGrupoCapacidade traduz o CHECK 2–8 quando a base recusa 1', async () => {
+    const update = vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: null,
+            error: { code: '23514', message: 'check' },
+          }),
+        }),
+      }),
+    });
+    supabase.from.mockImplementation((table) => {
+      if (table === 'membros_grupo') return mockContagem(1);
+      if (table === 'grupos') return { update };
+      return {};
+    });
+
+    await expect(updateGrupoCapacidade('g-1', 1)).rejects.toThrow(/mínima que podes guardar é 2/i);
+  });
+
+  it('updateMembroRecolha só actualiza o ponto de recolha', async () => {
+    const update = vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { id: 'm-1', pickup_name: 'Kilamba' },
+            error: null,
+          }),
+        }),
+      }),
+    });
+    supabase.from.mockImplementation((table) => {
+      if (table === 'membros_grupo') return { update };
+      return { update: vi.fn() };
+    });
+
+    await updateMembroRecolha('m-1', {
+      pickup_name: 'Kilamba, Luanda',
+      pickup_lat: -8.9,
+      pickup_lng: 13.2,
+    });
+
+    expect(supabase.from).toHaveBeenCalledWith('membros_grupo');
+    expect(update).toHaveBeenCalledWith({
+      pickup_name: 'Kilamba, Luanda',
+      pickup_lat: -8.9,
+      pickup_lng: 13.2,
+    });
+    expect(supabase.from).not.toHaveBeenCalledWith('propostas');
+  });
+
+  it('apagarGrupo recusa acordo activo e não apaga', async () => {
+    const apagar = vi.fn();
+    supabase.from.mockImplementation((table) => {
+      if (table === 'membros_grupo') return mockContagem(1);
+      if (table === 'acordos') {
+        return {
+          select: vi.fn().mockReturnValue({
+            or: vi.fn().mockResolvedValue({
+              data: [{ id: 'a-1', estado: 'activo' }],
+              error: null,
+            }),
+          }),
+        };
+      }
+      if (table === 'grupos') return { delete: apagar };
+      return {};
+    });
+
+    await expect(apagarGrupo('g-1', { procuraId: 'pr-1' })).rejects.toThrow(/acordo activo/i);
+    expect(apagar).not.toHaveBeenCalled();
+  });
+
+  it('apagarGrupo remove o grupo quando só há um membro e o acordo está cancelado', async () => {
+    const eqDelete = vi.fn().mockResolvedValue({ error: null });
+    supabase.from.mockImplementation((table) => {
+      if (table === 'membros_grupo') return mockContagem(1);
+      if (table === 'acordos') {
+        return {
+          select: vi.fn().mockReturnValue({
+            or: vi.fn().mockResolvedValue({
+              data: [{ id: 'a-1', estado: 'cancelado' }],
+              error: null,
+            }),
+          }),
+        };
+      }
+      if (table === 'grupos') return { delete: vi.fn().mockReturnValue({ eq: eqDelete }) };
+      if (table === 'propostas') return { update: vi.fn() };
+      return {};
+    });
+
+    await apagarGrupo('g-1', { procuraId: 'pr-1' });
+    expect(eqDelete).toHaveBeenCalledWith('id', 'g-1');
+    expect(supabase.from).not.toHaveBeenCalledWith('propostas');
+  });
+
+  it('grupoTemAcordoActivo ignora estados terminais', async () => {
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        or: vi.fn().mockResolvedValue({
+          data: [{ id: 'a-1', estado: 'expirado' }],
+          error: null,
+        }),
+      }),
+    });
+
+    await expect(grupoTemAcordoActivo('g-1', 'pr-1')).resolves.toBe(false);
   });
 });

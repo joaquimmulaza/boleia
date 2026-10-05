@@ -2,8 +2,8 @@ import React from 'react';
 
 /**
  * Ícone oficial do shell.
- * `withName` no cabeçalho de Faltas e nas páginas públicas legais (ícone + «Boleia Certa»).
- * Explorar e o resto do shell ficam só com o ícone.
+ * `withName` só nas páginas públicas legais (ícone + «Boleia Certa»).
+ * O shell autenticado fica só com o ícone.
  * @param {{ withName?: boolean }} props
  */
 export default function BrandLockup({ withName = false }) {
