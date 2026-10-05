@@ -18,6 +18,10 @@ Depois de refresh, um grupo em que o passageiro já tem pedido `pendente` em `me
 - `src/components/GrupoDescobertaPanel.jsx` — hidrata o CTA no carregamento
 - `src/components/GrupoDescobertaPanel.test.jsx` — comportamento após refresh
 
+## Commit
+
+`da992b2` — fix(grupos): hidratar pedido pendente nos grupos abertos
+
 ## Verification
 
 - [x] Com pedido pendente, o CTA é «Pedido enviado» e `pedirEntradaGrupo` não é chamado.

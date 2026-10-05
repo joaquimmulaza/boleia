@@ -4,4 +4,4 @@ O refresh deixava o CTA em «Pedir entrada» porque `enviados` só existia em me
 
 ## Commit
 
-`fix(grupos): hidratar pedido pendente nos grupos abertos`
+`da992b2` — fix(grupos): hidratar pedido pendente nos grupos abertos
