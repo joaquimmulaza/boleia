@@ -7,6 +7,19 @@ import { getPasswordRecoveryRedirectUrl } from '../utils/appOrigin';
 import { useAuth } from '../contexts/AuthContext';
 
 /**
+ * GoTrue, com confirmação ligada, responde 200 a um email já confirmado
+ * (`user_repeated_signup`, p.ex. conta Google) e ofusca o utilizador:
+ * `identities` vem vazio. O carimbo `confirmation_sent_at` é falso — não
+ * indica que o correio saiu. Sem o array, ou com identidade, o registo é novo
+ * (ou ainda por confirmar) e o ecrã de confirmação mantém-se.
+ * @param {{ identities?: ReadonlyArray<unknown> | null } | null | undefined} user
+ * @returns {boolean}
+ */
+export const isRepeatedConfirmedSignup = (user) => (
+  Array.isArray(user?.identities) && user.identities.length === 0
+);
+
+/**
  * Resolve modo especial a partir da query (forgot / update-password / register).
  * @param {string | null} modeParam
  * @returns {'login' | 'register' | 'forgot' | 'update-password'}
@@ -275,6 +288,11 @@ export const useAuthForm = () => {
 
     if (error) {
       setFeedback({ type: 'error', message: getFriendlyErrorMessage(error) });
+    } else if (!isLogin && isRepeatedConfirmedSignup(sessionUser)) {
+      setFeedback({
+        type: 'error',
+        message: 'Já existe uma conta com este email — tenta entrar.',
+      });
     } else if (!isLogin) {
       setFeedback({ type: 'success', message: 'Registo efetuado! Verifique o seu email para confirmar a conta.' });
       if (session) {
