@@ -10,7 +10,9 @@
 export function acordoBloqueiaApagarGrupo(estado) {
   const normalizado = String(estado || '').trim().toLowerCase();
   if (!normalizado) return false;
-  return normalizado !== 'cancelado' && normalizado !== 'expirado';
+  return normalizado !== 'cancelado'
+    && normalizado !== 'expirado'
+    && normalizado !== 'cancelado_justificado';
 }
 
 /**
@@ -38,7 +40,8 @@ export function grupoKebabActions({
 }
 
 /**
- * Dono = owner da procura, ou o primeiro membro activo quando o id não vem na linha.
+ * Dono = owner da procura (ou o primeiro membro activo) que ainda está activo.
+ * Sair não transfere a procura: quem saiu deixa de ser dono neste painel.
  * @param {{
  *   userId?: string | null,
  *   ownerId?: string | null,
@@ -54,10 +57,10 @@ export function resolveGrupoPapel({ userId, ownerId, membros }) {
   const primeiro = [...activos].sort(
     (a, b) => (Number(a.ordem_insercao) || 0) - (Number(b.ordem_insercao) || 0),
   )[0];
-  const isOwner = ownerId ? ownerId === userId : primeiro?.passenger_id === userId;
+  const donoDaProcura = ownerId ? ownerId === userId : primeiro?.passenger_id === userId;
   const isMember = activos.some((membro) => membro.passenger_id === userId);
   return {
-    isOwner: Boolean(isOwner),
+    isOwner: Boolean(donoDaProcura) && isMember,
     isMember,
     memberCount: activos.length,
   };

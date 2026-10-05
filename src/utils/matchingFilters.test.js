@@ -6,6 +6,7 @@ import {
   canAcceptDirectly,
   isDaysCompatible,
   evaluateMatch,
+  isOfertaRotaCompativelComProcura,
 } from './matchingFilters';
 import {
   MATCH_TIME_TOLERANCE_MINUTES,
@@ -394,5 +395,60 @@ describe('evaluateMatch', () => {
         n_candidato: 2,
       }),
     ).toBe('direct');
+  });
+});
+
+describe('isOfertaRotaCompativelComProcura', () => {
+  const procura = {
+    origin_name: 'Talatona',
+    origin_lat: -8.9,
+    origin_lng: 13.1,
+    destination_name: 'Centro',
+    destination_lat: -8.8,
+    destination_lng: 13.2,
+  };
+
+  it('aceita a mesma origem e o mesmo destino dentro do raio do matching', () => {
+    expect(isOfertaRotaCompativelComProcura({
+      origin_lat: -8.9,
+      origin_lng: 13.1,
+      destination_lat: -8.801,
+      destination_lng: 13.201,
+    }, procura)).toBe(true);
+  });
+
+  it('rejeita origem e destino fora do raio, mesmo com horário igual', () => {
+    expect(isOfertaRotaCompativelComProcura({
+      origin_name: 'Viana',
+      origin_lat: -8.5,
+      origin_lng: 13.5,
+      destination_name: 'Cacuaco',
+      destination_lat: -9.2,
+      destination_lng: 13.8,
+      departure_time: '07:15',
+    }, procura)).toBe(false);
+  });
+
+  it('trata oferta sem OD completo como incompatível', () => {
+    expect(isOfertaRotaCompativelComProcura({
+      origin_name: 'Viana',
+      destination_name: 'Cacuaco',
+      flexibilidade_rota: true,
+    }, procura)).toBe(false);
+    expect(isOfertaRotaCompativelComProcura({
+      origin_lat: -8.9,
+      origin_lng: 13.1,
+      destination_lat: null,
+      destination_lng: null,
+    }, procura)).toBe(false);
+  });
+
+  it('trata procura sem OD completo como incompatível', () => {
+    expect(isOfertaRotaCompativelComProcura({
+      origin_lat: -8.9,
+      origin_lng: 13.1,
+      destination_lat: -8.8,
+      destination_lng: 13.2,
+    }, { origin_name: 'Talatona' })).toBe(false);
   });
 });

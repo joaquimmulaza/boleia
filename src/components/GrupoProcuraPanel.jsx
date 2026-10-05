@@ -23,7 +23,6 @@ import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { grupoKebabActions, resolveGrupoPapel } from '../utils/grupoKebab';
 
 const CAPACIDADES = [2, 3, 4, 5, 6, 7, 8];
-const CAPACIDADES_EDICAO = [1, 2, 3, 4, 5, 6, 7, 8];
 
 /**
  * Painel para criar/gerir o grupo ligado a uma procura.
@@ -251,7 +250,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
 
   const abrirEditar = () => {
     const eu = membros.find((membro) => membro.passenger_id === userId);
-    const floor = Math.max(1, membros.length);
+    const floor = Math.max(2, membros.length);
     const actual = Number(grupo?.n_maximo) || 4;
     setEditCapacidade(Math.max(floor, Math.min(8, actual)));
     setEditPickup({
@@ -585,8 +584,8 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
             <fieldset className="space-y-2">
               <legend className="text-sm font-semibold">Tamanho desejado</legend>
               <div className="flex flex-wrap gap-2" role="group" aria-label="Tamanho desejado">
-                {CAPACIDADES_EDICAO.map((n) => {
-                  const floor = Math.max(1, membros.length);
+                {CAPACIDADES.map((n) => {
+                  const floor = Math.max(2, membros.length);
                   const abaixo = n < floor;
                   const activo = editCapacidade === n;
                   return (
@@ -608,7 +607,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
                 })}
               </div>
               <p className="text-xs text-slate-500">
-                Mínimo {Math.max(1, membros.length)} — os colegas têm de sair antes de reduzir.
+                Mínimo {Math.max(2, membros.length)} — os colegas têm de sair antes de reduzir.
               </p>
             </fieldset>
             <AddressInput

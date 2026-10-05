@@ -25,6 +25,8 @@ import {
   cancelProcura,
 } from '../services/ProcuraService';
 import { findCompatibleOfertas, toProcuraMatchInput } from '../services/MatchingService';
+import { isOfertaRotaCompativelComProcura } from '../utils/matchingFilters';
+import { buildAvisoProporRota } from '../utils/proporRotaAviso';
 import { listOfertasDisponiveis } from '../services/OfertaService';
 import { getGrupoByProcura, listMembrosGrupo } from '../services/GrupoService';
 import {
@@ -127,6 +129,14 @@ const PassengerDashboard = () => {
   const [view, setView] = useState('hub'); // hub | form | matches
   /** explorar | procura — troca de feed no mesmo Início, sem sair da rota */
   const [hubTab, setHubTab] = useState('explorar');
+  const [avisoRota, setAvisoRota] = useState(null);
+  const hubTabFocusRef = useRef(null);
+  useEffect(() => {
+    const id = hubTabFocusRef.current;
+    if (!id) return;
+    hubTabFocusRef.current = null;
+    document.getElementById(id)?.focus();
+  }, [hubTab, view]);
   const deepLinkTabAppliedRef = useRef(false);
   /** null | 'propostas' — deep-link proposal_received força painel de propostas */
   const [hubFocus, setHubFocus] = useState(null);
@@ -958,6 +968,7 @@ const PassengerDashboard = () => {
   })();
 
   const irParaOfertasCompativeis = () => {
+    hubTabFocusRef.current = null;
     setView('hub');
     setHubTab('procura');
     requestAnimationFrame(() => {
@@ -970,10 +981,36 @@ const PassengerDashboard = () => {
 
   const proporNoFeed = (oferta) => {
     if (procura) {
+      if (!isOfertaRotaCompativelComProcura(oferta, procura)) {
+        setAvisoRota(oferta);
+        return;
+      }
       handlePropor(oferta);
       return;
     }
     abrirPropostaBrowse(oferta);
+  };
+
+  const onHubTabKeyDown = (event) => {
+    const order = ['explorar', 'procura'];
+    const current = tabActivo === 'procura' ? 1 : 0;
+    let next = current;
+    if (event.key === 'ArrowRight') next = (current + 1) % order.length;
+    else if (event.key === 'ArrowLeft') next = (current - 1 + order.length) % order.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = order.length - 1;
+    else return;
+    event.preventDefault();
+    const id = order[next];
+    const buttonId = id === 'explorar' ? 'hub-tab-explorar' : 'hub-tab-procura';
+    if (id === tabActivo && view === 'hub') {
+      hubTabFocusRef.current = null;
+      document.getElementById(buttonId)?.focus();
+      return;
+    }
+    hubTabFocusRef.current = buttonId;
+    setView('hub');
+    setHubTab(id);
   };
 
   return (
@@ -1017,32 +1054,42 @@ const PassengerDashboard = () => {
           <button
             type="button"
             role="tab"
+            id="hub-tab-explorar"
+            aria-controls="hub-panel-explorar"
             aria-selected={tabActivo === 'explorar'}
+            tabIndex={tabActivo === 'explorar' ? 0 : -1}
             className={`min-h-11 flex-1 rounded-lg text-sm font-bold ${
               tabActivo === 'explorar'
                 ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
-                : 'text-slate-500'
+                : 'text-slate-600 dark:text-slate-300'
             }`}
             onClick={() => {
+              hubTabFocusRef.current = null;
               setView('hub');
               setHubTab('explorar');
             }}
+            onKeyDown={onHubTabKeyDown}
           >
             Explorar
           </button>
           <button
             type="button"
             role="tab"
+            id="hub-tab-procura"
+            aria-controls="hub-panel-procura"
             aria-selected={tabActivo === 'procura'}
+            tabIndex={tabActivo === 'procura' ? 0 : -1}
             className={`min-h-11 flex-1 rounded-lg text-sm font-bold ${
               tabActivo === 'procura'
                 ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
-                : 'text-slate-500'
+                : 'text-slate-600 dark:text-slate-300'
             }`}
             onClick={() => {
+              hubTabFocusRef.current = null;
               setView('hub');
               setHubTab('procura');
             }}
+            onKeyDown={onHubTabKeyDown}
           >
             A minha procura
           </button>
@@ -1060,7 +1107,16 @@ const PassengerDashboard = () => {
       {loading && <LoadingSkeleton />}
 
       {!loading && view === 'hub' && (!procura ? hubFocus !== 'propostas' : tabActivo === 'explorar') && (
-        <div className="space-y-4 relative">
+        <div
+          className="space-y-4 relative"
+          {...(mostrarSegmented
+            ? {
+                id: 'hub-panel-explorar',
+                role: 'tabpanel',
+                'aria-labelledby': 'hub-tab-explorar',
+              }
+            : {})}
+        >
           {browseBusy ? (
             <div
               className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-white/70 dark:bg-slate-900/70"
@@ -1464,7 +1520,13 @@ const PassengerDashboard = () => {
       )}
 
       {!loading && procura && (view === 'hub' || view === 'matches') && tabActivo === 'procura' && (
-        <div className="space-y-4" data-testid="procura-detail">
+        <div
+          className="space-y-4"
+          data-testid="procura-detail"
+          id="hub-panel-procura"
+          role="tabpanel"
+          aria-labelledby="hub-tab-procura"
+        >
           <section className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3">
             <div className="flex items-center gap-2">
               {chipProcura && (
@@ -1732,6 +1794,21 @@ const PassengerDashboard = () => {
         </div>
       )}
 
+      <ConfirmationModal
+        isOpen={Boolean(avisoRota)}
+        title="Rotas diferentes"
+        message={avisoRota && procura ? buildAvisoProporRota(avisoRota, procura) : ''}
+        confirmText="Propor na mesma"
+        cancelText="Cancelar"
+        variant="primary"
+        testId="propor-rota-aviso"
+        onCancel={() => setAvisoRota(null)}
+        onConfirm={() => {
+          const oferta = avisoRota;
+          setAvisoRota(null);
+          if (oferta) handlePropor(oferta);
+        }}
+      />
       <ConfirmationModal
         isOpen={confirmEditN != null && confirmEditN > 0}
         title={
