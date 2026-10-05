@@ -235,21 +235,48 @@ export async function addMembroGrupo(grupoId, membro) {
 }
 
 /**
+ * Grupos em que o passageiro já tem pedido de entrada pendente.
+ * @param {string} passengerId
+ * @returns {Promise<Set<string>>}
+ */
+async function grupoIdsComPedidoPendente(passengerId) {
+  const { data, error } = await supabase
+    .from('membros_grupo')
+    .select('grupo_id')
+    .eq('passenger_id', passengerId)
+    .eq('estado', 'pendente');
+
+  if (error) throw error;
+
+  const ids = new Set();
+  for (const row of data || []) {
+    if (row?.grupo_id) ids.add(row.grupo_id);
+  }
+  return ids;
+}
+
+/**
  * Grupos públicos com vagas (N_actual < n_maximo) e procura activa.
- * @param {{ excludeOwnerId?: string, excludeGrupoId?: string }} [opts]
+ * Com `passengerId`, marca `pedido_pendente` sem retirar o grupo da lista.
+ * @param {{ excludeOwnerId?: string, excludeGrupoId?: string, passengerId?: string }} [opts]
  * @returns {Promise<object[]>}
  */
 export async function listGruposAbertos(opts = {}) {
-  const { data, error } = await supabase
+  const gruposQuery = supabase
     .from('grupos')
     .select(
       'id, nome, n_maximo, procura_id, created_at, procuras(id, owner_id, origin_name, destination_name, preferred_time, n_candidato, estado)',
     );
+  const pendentesQuery = opts.passengerId
+    ? grupoIdsComPedidoPendente(opts.passengerId)
+    : Promise.resolve(null);
+
+  const [{ data, error }, pendentes] = await Promise.all([gruposQuery, pendentesQuery]);
 
   if (error) throw error;
 
   const rows = data || [];
-  return rows.filter((g) => {
+  const abertos = rows.filter((g) => {
     const p = g.procuras;
     if (!p) return false;
     const estado = String(p.estado || '').toLowerCase();
@@ -261,6 +288,10 @@ export async function listGruposAbertos(opts = {}) {
     if (opts.excludeGrupoId && g.id === opts.excludeGrupoId) return false;
     return true;
   });
+
+  if (!pendentes || pendentes.size === 0) return abertos;
+
+  return abertos.map((g) => (pendentes.has(g.id) ? { ...g, pedido_pendente: true } : g));
 }
 
 /**

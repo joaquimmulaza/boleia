@@ -140,6 +140,11 @@
 - O cliente não pede `telefone`, `iban` nem `is_admin` em `perfis`.
 - Convite: `lookup_perfil_por_telefone` (`id`, `nome_completo`). Dono: `get_own_perfil_contacto`. Admin: `is_platform_admin()` e `admin_motoristas_tem_iban`.
 - Spec: `.specs/quick/perfis-colunas-sensiveis/`.
+## Quick (2026-10-05) — Grupos abertos: pedido pendente sobrevive ao refresh
+- `enviados` em `GrupoDescobertaPanel` era só memória local. Com `passengerId`, `listGruposAbertos` lê `membros_grupo.estado = pendente` e marca `pedido_pendente`. O grupo continua na lista; o CTA passa a «Pedido enviado».
+- Sem `passengerId` não há essa leitura. Sem schema.
+- Spec: `.specs/quick/grupos-abertos-pedido-pendente/`.
+
 ## Quick (2026-10-04) — Login e criar conta: cabeçalho para `/`
 - Login e criar conta (`Auth`, `isLogin` / `isRegister`) ligam o ícone existente a `/`.
 - Os outros modos de `/auth` e o `BrandLockup` do shell autenticado ficam sem esse link.

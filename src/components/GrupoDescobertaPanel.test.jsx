@@ -54,6 +54,58 @@ describe('GrupoDescobertaPanel', () => {
     expect(screen.queryByRole('button', { name: /Pedir entrada/i })).not.toBeInTheDocument();
   });
 
+  it('após carregar, pedido pendente mostra Pedido enviado e não volta a pedir entrada', async () => {
+    listGruposAbertos.mockResolvedValue([
+      {
+        id: 'g-pendente',
+        n_maximo: 4,
+        pedido_pendente: true,
+        procuras: {
+          owner_id: 'owner-2',
+          origin_name: 'Talatona',
+          destination_name: 'Mutual',
+          preferred_time: '07:15:00',
+          n_candidato: 2,
+          estado: 'activa',
+        },
+      },
+      {
+        id: 'g-novo',
+        n_maximo: 4,
+        procuras: {
+          owner_id: 'owner-3',
+          origin_name: 'Kilamba',
+          destination_name: 'Maianga',
+          preferred_time: '08:00:00',
+          n_candidato: 1,
+          estado: 'activa',
+        },
+      },
+    ]);
+    pedirEntradaGrupo.mockResolvedValue({ id: 'm-novo', estado: 'pendente' });
+
+    render(<GrupoDescobertaPanel userId="pax-me" />);
+
+    expect(await screen.findByText('Pedido enviado')).toBeInTheDocument();
+    expect(listGruposAbertos).toHaveBeenCalledWith(
+      expect.objectContaining({ passengerId: 'pax-me' }),
+    );
+
+    const ctas = screen.getAllByRole('button', { name: 'Pedir entrada' });
+    expect(ctas).toHaveLength(1);
+
+    fireEvent.click(ctas[0]);
+
+    await waitFor(() => {
+      expect(pedirEntradaGrupo).toHaveBeenCalledTimes(1);
+    });
+    expect(pedirEntradaGrupo).toHaveBeenCalledWith(
+      'g-novo',
+      expect.objectContaining({ passenger_id: 'pax-me' }),
+    );
+    expect(screen.queryByText(/Já pediste entrada neste grupo/i)).not.toBeInTheDocument();
+  });
+
   it('mostra estado vazio quando não há grupos', async () => {
     listGruposAbertos.mockResolvedValue([]);
 
