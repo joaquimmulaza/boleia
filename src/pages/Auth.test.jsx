@@ -175,7 +175,14 @@ describe('Auth Component', () => {
 
   it('após registo sem sessão fica no ecrã a pedir confirmação do email', async () => {
     supabase.auth.signUp.mockResolvedValueOnce({
-      data: { user: { user_metadata: { tipo_perfil: 'Passageiro' } }, session: null },
+      data: {
+        user: {
+          identities: [{ provider: 'email', id: 'id-email' }],
+          confirmation_sent_at: '2026-10-05T12:00:00.000Z',
+          user_metadata: { tipo_perfil: 'Passageiro' },
+        },
+        session: null,
+      },
       error: null,
     });
 
@@ -189,6 +196,35 @@ describe('Auth Component', () => {
     await new Promise((resolve) => { setTimeout(resolve, 1200); });
     expect(mockNavigate).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: /Registar/i })).toBeInTheDocument();
+  });
+
+  it('registo com email já confirmado (conta Google) pede para entrar e não pede confirmação', async () => {
+    supabase.auth.signUp.mockResolvedValueOnce({
+      data: {
+        user: {
+          identities: [],
+          confirmation_sent_at: '2026-10-05T12:00:00.000Z',
+          email_confirmed_at: null,
+          app_metadata: { provider: 'email', providers: ['email'] },
+          user_metadata: { tipo_perfil: 'Passageiro', nome_completo: 'Nome Teste' },
+        },
+        session: null,
+      },
+      error: null,
+    });
+
+    render(<Auth />);
+    fillRegister();
+    fireEvent.click(screen.getByRole('button', { name: /Registar/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(/já existe uma conta com este email/i);
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent(/tenta entrar/i);
+    expect(screen.queryByText(/Verifique o seu email/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Entrar na minha conta/i })).toBeInTheDocument();
+    await new Promise((resolve) => { setTimeout(resolve, 1200); });
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it('após registo com sessão navega para o hub', async () => {

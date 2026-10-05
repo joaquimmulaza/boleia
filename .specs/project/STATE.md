@@ -1,5 +1,10 @@
 ﻿# Boleia Certa Project Memory & State
 
+## Quick (2026-10-05) — Registo com email já confirmado
+
+- `signUp` 200 com `identities: []` (GoTrue `user_repeated_signup` / `sanitizeUser`, p.ex. conta Google) mostra «Já existe uma conta com este email — tenta entrar.» e não o ecrã de confirmação. `confirmation_sent_at` nesse objecto é carimbo falso.
+- Identidade de email presente e sem sessão continua a pedir confirmação. Login `email_not_confirmed` não muda. Spec: `.specs/quick/auth-signup-conta-existente/`.
+
 ## Quick (2026-10-05) — Softs do hub + aviso ao propor
 
 - `cancelado_justificado` é terminal para Apagar grupo, como `cancelado` e `expirado`.
