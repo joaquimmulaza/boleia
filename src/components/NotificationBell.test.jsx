@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import NotificationBell from './NotificationBell';
 
 const deleteNotification = vi.fn();
+const markAsRead = vi.fn();
 const markAllAsRead = vi.fn();
 
 vi.mock('../hooks/useNotifications', () => ({
@@ -26,7 +27,7 @@ vi.mock('../hooks/useNotifications', () => ({
       },
     ],
     unreadCount: 1,
-    markAsRead: vi.fn(),
+    markAsRead,
     markAllAsRead,
     deleteNotification,
   }),
@@ -48,6 +49,18 @@ vi.mock('../contexts/AuthContext', () => ({
     user: { id: 'user-1' },
   }),
 }));
+
+/**
+ * O browser só gera o click do botão se o keydown não for cancelado.
+ * @param {HTMLElement} element
+ * @param {string} key
+ */
+function activateControlWithKey(element, key) {
+  const proceeded = fireEvent.keyDown(element, { key });
+  if (proceeded) {
+    fireEvent.click(element);
+  }
+}
 
 const renderBell = () =>
   render(
@@ -135,6 +148,64 @@ describe('NotificationBell', () => {
     expect(deleteNotification).toHaveBeenCalledWith('n1');
     expect(screen.queryByText(/tem a certeza/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /confirmar/i })).not.toBeInTheDocument();
+  });
+
+  it('activa a notificação com Enter e Espaço quando a linha tem o foco', () => {
+    renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+
+    const row = screen.getByRole('button', { name: 'Nova proposta recebida' });
+    fireEvent.keyDown(row, { key: 'Enter' });
+
+    expect(markAsRead).toHaveBeenCalledWith('n1');
+    expect(screen.queryByTestId('notification-panel')).not.toBeInTheDocument();
+
+    markAsRead.mockClear();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Nova proposta recebida' }), { key: ' ' });
+
+    expect(markAsRead).toHaveBeenCalledWith('n1');
+    expect(screen.queryByTestId('notification-panel')).not.toBeInTheDocument();
+  });
+
+  it('Enter e Espaço no kebab abrem o menu sem abrir a notificação', () => {
+    renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+
+    const [firstKebab, secondKebab] = screen.getAllByRole('button', { name: 'Mais acções da notificação' });
+    activateControlWithKey(firstKebab, 'Enter');
+
+    expect(screen.getByRole('menuitem', { name: /Apagar/i })).toBeInTheDocument();
+    expect(markAsRead).not.toHaveBeenCalled();
+    expect(screen.getByTestId('notification-panel')).toBeInTheDocument();
+
+    fireEvent.click(firstKebab);
+    activateControlWithKey(secondKebab, ' ');
+
+    expect(screen.getByRole('menuitem', { name: /Apagar/i })).toBeInTheDocument();
+    expect(markAsRead).not.toHaveBeenCalled();
+    expect(screen.getByTestId('notification-panel')).toBeInTheDocument();
+  });
+
+  it('apaga com o teclado em Apagar sem abrir a notificação', () => {
+    renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+
+    const [firstKebab, secondKebab] = screen.getAllByRole('button', { name: 'Mais acções da notificação' });
+    fireEvent.click(firstKebab);
+    activateControlWithKey(screen.getByRole('menuitem', { name: /Apagar/i }), 'Enter');
+
+    expect(deleteNotification).toHaveBeenCalledWith('n1');
+    expect(markAsRead).not.toHaveBeenCalled();
+    expect(screen.getByTestId('notification-panel')).toBeInTheDocument();
+
+    deleteNotification.mockClear();
+    fireEvent.click(secondKebab);
+    activateControlWithKey(screen.getByRole('menuitem', { name: /Apagar/i }), ' ');
+
+    expect(deleteNotification).toHaveBeenCalledWith('n2');
+    expect(markAsRead).not.toHaveBeenCalled();
+    expect(screen.getByTestId('notification-panel')).toBeInTheDocument();
   });
 
   it('fecha ao clicar no backdrop', () => {
