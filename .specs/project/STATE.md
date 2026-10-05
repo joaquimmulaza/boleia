@@ -1,5 +1,14 @@
 ﻿# Boleia Certa Project Memory & State
 
+## Quick (2026-10-05) — Softs do hub + aviso ao propor
+
+- `cancelado_justificado` é terminal para Apagar grupo, como `cancelado` e `expirado`.
+- Capacidade ao editar: 2–8, piso `max(2, membros activos)`.
+- `apagarGrupo` exige a linha devolvida pelo DELETE; vazio (RLS) é erro, não «Grupo apagado.».
+- Dono que sai deixa de controlar: `leave_grupo_membro` não transfere `owner_id`. O painel do hub continua só na procura do próprio passageiro.
+- Separadores Explorar | A minha procura: `aria-controls`, tabpanel e setas.
+- «Propor acordo» no Explorar, com procura activa e rota OD incompatível (ou OD incompleto), avisa e só segue se a pessoa confirmar. Spec: `.specs/quick/hub-softs-propor-rota/`.
+
 ## Quick (2026-10-05) — Hub passageiro: Explorar + procura
 
 - Início do passageiro: segmented **Explorar | A minha procura** no mesmo `/passageiro`. Com procura activa o tab inicial é Explorar e o cartão da procura fica sticky por cima das ofertas.

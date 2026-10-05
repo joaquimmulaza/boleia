@@ -208,3 +208,26 @@ export function evaluateMatch({ oferta, procura, n_candidato }) {
 
   return 'waitlist';
 }
+
+/**
+ * Rota OD da oferta face à procura, com o mesmo raio do matching.
+ * Oferta ou procura sem OD completo conta como incompatível.
+ * Não olha para horário nem dias — só origem e destino.
+ * @param {Parameters<typeof hasCompleteOd>[0]} oferta
+ * @param {Parameters<typeof hasCompleteOd>[0]} procura
+ * @returns {boolean}
+ */
+export function isOfertaRotaCompativelComProcura(oferta, procura) {
+  if (!hasCompleteOd(oferta) || !hasCompleteOd(procura)) return false;
+  return isOriginWithinRadius(
+    Number(oferta.origin_lat),
+    Number(oferta.origin_lng),
+    Number(procura.origin_lat),
+    Number(procura.origin_lng),
+  ) && isDestinationWithinRadius(
+    Number(oferta.destination_lat),
+    Number(oferta.destination_lng),
+    Number(procura.destination_lat),
+    Number(procura.destination_lng),
+  );
+}

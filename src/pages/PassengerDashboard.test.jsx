@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import PassengerDashboard from './PassengerDashboard';
@@ -525,6 +525,203 @@ describe('PassengerDashboard — marketplace', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Explorar' }));
     expect(await screen.findByTestId('browse-ofertas-feed')).toBeInTheDocument();
     expect(screen.getByTestId('procura-sticky')).toBeInTheDocument();
+  });
+
+  it('separadores do início ligam o painel e mudam com as setas', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    const explorar = await screen.findByRole('tab', { name: 'Explorar' });
+    const procura = screen.getByRole('tab', { name: 'A minha procura' });
+    expect(explorar).toHaveAttribute('aria-controls', 'hub-panel-explorar');
+    expect(explorar).toHaveAttribute('aria-selected', 'true');
+    expect(explorar).toHaveAttribute('tabindex', '0');
+    expect(procura).toHaveAttribute('aria-controls', 'hub-panel-procura');
+    expect(procura).toHaveAttribute('tabindex', '-1');
+    expect(document.getElementById('hub-panel-explorar')).toHaveAttribute('role', 'tabpanel');
+    expect(document.getElementById('hub-panel-explorar')).toHaveAttribute('aria-labelledby', explorar.id);
+
+    explorar.focus();
+    fireEvent.keyDown(explorar, { key: 'ArrowRight' });
+
+    await waitFor(() => {
+      expect(procura).toHaveAttribute('aria-selected', 'true');
+      expect(procura).toHaveFocus();
+    });
+    expect(explorar).toHaveAttribute('tabindex', '-1');
+    expect(procura).toHaveAttribute('tabindex', '0');
+    expect(document.getElementById('hub-panel-procura')).toHaveAttribute('aria-labelledby', procura.id);
+    expect(document.getElementById('hub-panel-explorar')).not.toBeInTheDocument();
+
+    fireEvent.keyDown(procura, { key: 'ArrowLeft' });
+    await waitFor(() => {
+      expect(explorar).toHaveAttribute('aria-selected', 'true');
+      expect(explorar).toHaveFocus();
+    });
+  });
+
+  it('Home ou End no separador já activo não roubam o foco do clique seguinte', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    const explorar = await screen.findByRole('tab', { name: 'Explorar' });
+    const procura = screen.getByRole('tab', { name: 'A minha procura' });
+
+    explorar.focus();
+    fireEvent.keyDown(explorar, { key: 'Home' });
+    expect(explorar).toHaveAttribute('aria-selected', 'true');
+    expect(explorar).toHaveFocus();
+
+    fireEvent.click(procura);
+    procura.focus();
+    await act(async () => {});
+    expect(procura).toHaveAttribute('aria-selected', 'true');
+    expect(procura).toHaveFocus();
+    expect(explorar).not.toHaveFocus();
+
+    fireEvent.keyDown(procura, { key: 'End' });
+    expect(procura).toHaveAttribute('aria-selected', 'true');
+    expect(procura).toHaveFocus();
+
+    fireEvent.click(explorar);
+    explorar.focus();
+    await act(async () => {});
+    expect(explorar).toHaveAttribute('aria-selected', 'true');
+    expect(explorar).toHaveFocus();
+
+    fireEvent.keyDown(procura, { key: 'Home' });
+    await waitFor(() => {
+      expect(explorar).toHaveAttribute('aria-selected', 'true');
+      expect(explorar).toHaveFocus();
+    });
+
+    fireEvent.click(procura);
+    fireEvent.keyDown(explorar, { key: 'End' });
+    await waitFor(() => {
+      expect(procura).toHaveAttribute('aria-selected', 'true');
+      expect(procura).toHaveFocus();
+    });
+  });
+
+  it('Propor acordo no Explorar: rota compatível não pede confirmação', async () => {
+    listProcurasByOwner.mockResolvedValue([procuraBase]);
+    listOfertasDisponiveis.mockResolvedValue([{
+      id: 'of-comp',
+      origin_name: 'Talatona',
+      origin_lat: -8.9,
+      origin_lng: 13.1,
+      destination_name: 'Miramar',
+      destination_lat: -8.8,
+      destination_lng: 13.2,
+      departure_time: '07:15:00',
+      vagas_disponiveis: 3,
+      valor_mensal_ask_kz: 45000,
+      modo_preco: 'POR_PASSAGEIRO',
+      flexibilidade_rota: false,
+    }]);
+    createProposta.mockResolvedValue({ id: 'prop-comp' });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Propor acordo' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await confirmPropostaSheet();
+
+    await waitFor(() => {
+      expect(createProposta).toHaveBeenCalledWith(expect.objectContaining({
+        oferta_id: 'of-comp',
+        procura_id: 'pr-1',
+      }));
+    });
+  });
+
+  it('Propor acordo no Explorar: rota diferente avisa, cancelar não envia e confirmar envia', async () => {
+    listProcurasByOwner.mockResolvedValue([{
+      ...procuraBase,
+      destination_name: 'Centro',
+    }]);
+    listOfertasDisponiveis.mockResolvedValue([{
+      id: 'of-longe',
+      origin_name: 'Viana',
+      origin_lat: -8.5,
+      origin_lng: 13.5,
+      destination_name: 'Cacuaco',
+      destination_lat: -9.2,
+      destination_lng: 13.8,
+      departure_time: '07:15:00',
+      vagas_disponiveis: 3,
+      valor_mensal_ask_kz: 45000,
+      modo_preco: 'POR_PASSAGEIRO',
+      flexibilidade_rota: false,
+    }]);
+    createProposta.mockResolvedValue({ id: 'prop-longe' });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Propor acordo' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent(
+      'Esta oferta vai de Viana a Cacuaco e a tua procura é Talatona → Centro. Queres propor na mesma?',
+    );
+    expect(createProposta).not.toHaveBeenCalled();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: /Confirmar proposta/i })).not.toBeInTheDocument();
+    expect(createProposta).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Propor acordo' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Propor na mesma' }));
+    await confirmPropostaSheet();
+
+    await waitFor(() => {
+      expect(createProposta).toHaveBeenCalledWith(expect.objectContaining({
+        oferta_id: 'of-longe',
+        procura_id: 'pr-1',
+      }));
+    });
+  });
+
+  it('Propor acordo no Explorar: oferta sem origem e destino pede confirmação', async () => {
+    listProcurasByOwner.mockResolvedValue([procuraBase]);
+    listOfertasDisponiveis.mockResolvedValue([{
+      id: 'of-flex',
+      flexibilidade_rota: true,
+      departure_time: '07:30:00',
+      vagas_disponiveis: 2,
+      valor_mensal_ask_kz: 30000,
+      modo_preco: 'POR_PASSAGEIRO',
+    }]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Propor acordo' }));
+    expect(await screen.findByRole('dialog')).toHaveTextContent(/não tem origem e destino fixos/i);
+    expect(createProposta).not.toHaveBeenCalled();
   });
 
   it('carregar procura flex: matching recebe origin_lat null (não 0)', async () => {

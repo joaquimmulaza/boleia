@@ -1075,6 +1075,18 @@ describe('GrupoService — editar e apagar grupo', () => {
     await expect(updateGrupoCapacidade('g-1', 2)).rejects.toThrow(/pelo menos 3/i);
   });
 
+  it('updateGrupoCapacidade recusa 1 antes de gravar', async () => {
+    const update = vi.fn();
+    supabase.from.mockImplementation((table) => {
+      if (table === 'membros_grupo') return mockContagem(1);
+      if (table === 'grupos') return { update };
+      return {};
+    });
+
+    await expect(updateGrupoCapacidade('g-1', 1)).rejects.toThrow(/pelo menos 2/i);
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it('updateGrupoCapacidade traduz o CHECK 2–8 quando a base recusa 1', async () => {
     const update = vi.fn().mockReturnValue({
       eq: vi.fn().mockReturnValue({
@@ -1092,7 +1104,7 @@ describe('GrupoService — editar e apagar grupo', () => {
       return {};
     });
 
-    await expect(updateGrupoCapacidade('g-1', 1)).rejects.toThrow(/mínima que podes guardar é 2/i);
+    await expect(updateGrupoCapacidade('g-1', 2)).rejects.toThrow(/mínima que podes guardar é 2/i);
   });
 
   it('updateMembroRecolha só actualiza o ponto de recolha', async () => {
@@ -1149,7 +1161,8 @@ describe('GrupoService — editar e apagar grupo', () => {
   });
 
   it('apagarGrupo remove o grupo quando só há um membro e o acordo está cancelado', async () => {
-    const eqDelete = vi.fn().mockResolvedValue({ error: null });
+    const selectDelete = vi.fn().mockResolvedValue({ data: [{ id: 'g-1' }], error: null });
+    const eqDelete = vi.fn().mockReturnValue({ select: selectDelete });
     supabase.from.mockImplementation((table) => {
       if (table === 'membros_grupo') return mockContagem(1);
       if (table === 'acordos') {
@@ -1169,7 +1182,34 @@ describe('GrupoService — editar e apagar grupo', () => {
 
     await apagarGrupo('g-1', { procuraId: 'pr-1' });
     expect(eqDelete).toHaveBeenCalledWith('id', 'g-1');
+    expect(selectDelete).toHaveBeenCalledWith('id');
     expect(supabase.from).not.toHaveBeenCalledWith('propostas');
+  });
+
+  it('apagarGrupo falha quando o DELETE não devolve a linha (RLS filtrou)', async () => {
+    const selectDelete = vi.fn().mockResolvedValue({ data: [], error: null });
+    supabase.from.mockImplementation((table) => {
+      if (table === 'membros_grupo') return mockContagem(1);
+      if (table === 'acordos') {
+        return {
+          select: vi.fn().mockReturnValue({
+            or: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+        };
+      }
+      if (table === 'grupos') {
+        return {
+          delete: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({ select: selectDelete }),
+          }),
+        };
+      }
+      return {};
+    });
+
+    await expect(apagarGrupo('g-1', { procuraId: 'pr-1' })).rejects.toThrow(
+      /não foi possível apagar o grupo/i,
+    );
   });
 
   it('grupoTemAcordoActivo ignora estados terminais', async () => {

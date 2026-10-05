@@ -551,7 +551,7 @@ export async function sairDoGrupo(grupoId, passengerId, options = {}) {
 
 /**
  * Há acordo ainda vivo neste grupo ou nesta procura.
- * Cancelado e expirado não bloqueiam apagar.
+ * Cancelado, expirado e cancelado justificado não bloqueiam apagar.
  * @param {string | null | undefined} grupoId
  * @param {string | null | undefined} procuraId
  * @returns {Promise<boolean>}
@@ -572,8 +572,8 @@ export async function grupoTemAcordoActivo(grupoId, procuraId) {
 }
 
 /**
- * Capacidade desejada ≥ membros activos. Não mexe em propostas.
- * O CHECK da base continua 2–8: gravar 1 devolve mensagem explícita.
+ * Capacidade desejada ≥ membros activos e ≥ 2. Não mexe em propostas.
+ * O CHECK da base continua 2–8.
  * @param {string} grupoId
  * @param {number} nDesejado
  * @returns {Promise<object>}
@@ -592,7 +592,7 @@ export async function updateGrupoCapacidade(grupoId, nDesejado) {
   if (countError) throw countError;
 
   const nActivos = count ?? 0;
-  const floor = Math.max(1, nActivos);
+  const floor = Math.max(2, nActivos);
   const n = Number(nDesejado);
   if (!Number.isInteger(n) || n < floor || n > N_MAXIMO_MAX) {
     throw new Error(
@@ -671,6 +671,13 @@ export async function apagarGrupo(grupoId, opts = {}) {
     throw new Error('Não podes apagar o grupo enquanto houver um acordo activo.');
   }
 
-  const { error } = await supabase.from('grupos').delete().eq('id', grupoId);
+  const { data, error } = await supabase
+    .from('grupos')
+    .delete()
+    .eq('id', grupoId)
+    .select('id');
   if (error) throw error;
+  if (!Array.isArray(data) || data.length !== 1) {
+    throw new Error('Não foi possível apagar o grupo.');
+  }
 }

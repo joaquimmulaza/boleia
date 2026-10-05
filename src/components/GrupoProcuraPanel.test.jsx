@@ -14,7 +14,6 @@ import {
   grupoTemAcordoActivo,
   updateGrupoCapacidade,
   updateMembroRecolha,
-  apagarGrupo,
 } from '../services/GrupoService';
 import { findPassageiroByTelefone } from '../services/ProfileService';
 
@@ -722,8 +721,8 @@ describe('GrupoProcuraPanel T31', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Editar' }));
 
     const sheet = await screen.findByTestId('editar-grupo-sheet');
-    const um = withinSheetButton(sheet, '1');
-    expect(um).toBeDisabled();
+    expect(withinSheetButton(sheet, '1')).toBeUndefined();
+    expect(withinSheetButton(sheet, '2')).toBeEnabled();
     fireEvent.click(withinSheetButton(sheet, '2'));
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
@@ -731,6 +730,58 @@ describe('GrupoProcuraPanel T31', () => {
       expect(updateGrupoCapacidade).toHaveBeenCalledWith('g-1', 2);
       expect(updateMembroRecolha).toHaveBeenCalled();
     });
+  });
+
+  it('editar um grupo gravado com tamanho 1 abre em 2 pessoas', async () => {
+    updateGrupoCapacidade.mockResolvedValue({ id: 'g-1', n_maximo: 2 });
+    getGrupoByProcura.mockResolvedValue({ id: 'g-1', procura_id: 'pr-1', n_maximo: 1 });
+    listMembrosGrupo.mockResolvedValue([
+      {
+        id: 'm-1',
+        passenger_id: 'pax-1',
+        estado: 'activo',
+        ordem_insercao: 0,
+        pickup_name: '',
+        perfis: { nome_completo: 'Ana' },
+      },
+    ]);
+
+    render(<GrupoProcuraPanel procura={procura} userId="pax-1" />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Mais acções do grupo' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Editar' }));
+
+    const sheet = await screen.findByTestId('editar-grupo-sheet');
+    expect(withinSheetButton(sheet, '2')).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => {
+      expect(updateGrupoCapacidade).toHaveBeenCalledWith('g-1', 2);
+    });
+  });
+
+  it('dono que já saiu não vê Editar nem convite', async () => {
+    getGrupoByProcura.mockResolvedValue({ id: 'g-1', procura_id: 'pr-1', n_maximo: 4 });
+    listMembrosGrupo.mockResolvedValue([
+      {
+        id: 'm-2',
+        passenger_id: 'pax-2',
+        estado: 'activo',
+        ordem_insercao: 1,
+        perfis: { nome_completo: 'Bruno' },
+      },
+    ]);
+
+    render(
+      <GrupoProcuraPanel
+        procura={{ ...procura, owner_id: 'pax-1' }}
+        userId="pax-1"
+      />,
+    );
+
+    expect(await screen.findByText('Bruno')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mais acções do grupo' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Convidar por telefone' })).not.toBeInTheDocument();
   });
 });
 
