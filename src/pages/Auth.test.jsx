@@ -165,6 +165,70 @@ describe('Auth Component', () => {
     });
   });
 
+  const fillRegister = () => {
+    fireEvent.click(screen.getByRole('button', { name: /Criar Conta/i }));
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'teste@boleia.co.ao' } });
+    fireEvent.change(screen.getByLabelText(/^Palavra-passe$/i), { target: { value: 'password123' } });
+    fireEvent.change(screen.getByLabelText(/Nome Completo/i), { target: { value: 'Nome Teste' } });
+    fireEvent.change(screen.getByLabelText(/Telefone/i), { target: { value: '999999999' } });
+  };
+
+  it('após registo sem sessão fica no ecrã a pedir confirmação do email', async () => {
+    supabase.auth.signUp.mockResolvedValueOnce({
+      data: { user: { user_metadata: { tipo_perfil: 'Passageiro' } }, session: null },
+      error: null,
+    });
+
+    render(<Auth />);
+    fillRegister();
+    fireEvent.click(screen.getByRole('button', { name: /Registar/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Verifique o seu email para confirmar a conta/i)).toBeInTheDocument();
+    });
+    await new Promise((resolve) => { setTimeout(resolve, 1200); });
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /Registar/i })).toBeInTheDocument();
+  });
+
+  it('após registo com sessão navega para o hub', async () => {
+    supabase.auth.signUp.mockResolvedValueOnce({
+      data: {
+        user: { user_metadata: { tipo_perfil: 'Motorista' } },
+        session: { access_token: 'sessao' },
+      },
+      error: null,
+    });
+
+    render(<Auth />);
+    fillRegister();
+    fireEvent.click(screen.getByRole('radio', { name: /Sou Motorista/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Registar/i }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/motorista');
+    }, { timeout: 2000 });
+  });
+
+  it('login com email por confirmar explica que falta confirmar e não entra no hub', async () => {
+    supabase.auth.signInWithPassword.mockResolvedValueOnce({
+      data: { user: null, session: null },
+      error: { code: 'email_not_confirmed', message: 'Email not confirmed' },
+    });
+
+    render(<Auth />);
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'delciofigueiredo@gmail.com' } });
+    fireEvent.change(screen.getByLabelText(/^Palavra-passe$/i), { target: { value: 'password123' } });
+    fireEvent.click(screen.getByRole('button', { name: /Entrar/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Confirme o email antes de entrar/i)).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/Ocorreu um erro inesperado/i)).not.toBeInTheDocument();
+    await new Promise((resolve) => { setTimeout(resolve, 1200); });
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
   it('chama signInWithPassword com email e password ao submeter em modo Entrar', async () => {
     render(<Auth />);
     fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'teste@boleia.co.ao' } });
