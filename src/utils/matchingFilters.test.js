@@ -429,18 +429,31 @@ describe('isOfertaRotaCompativelComProcura', () => {
     }, procura)).toBe(false);
   });
 
-  it('trata oferta sem OD completo como incompatível', () => {
+  it('trata oferta fixa sem OD completo como incompatível', () => {
     expect(isOfertaRotaCompativelComProcura({
       origin_name: 'Viana',
       destination_name: 'Cacuaco',
-      flexibilidade_rota: true,
+      flexibilidade_rota: false,
     }, procura)).toBe(false);
     expect(isOfertaRotaCompativelComProcura({
       origin_lat: -8.9,
       origin_lng: 13.1,
       destination_lat: null,
       destination_lng: null,
+      flexibilidade_rota: false,
     }, procura)).toBe(false);
+  });
+
+  it('trata oferta flexível com rota diferente como compatível', () => {
+    expect(isOfertaRotaCompativelComProcura({
+      origin_name: 'Viana',
+      origin_lat: -8.5,
+      origin_lng: 13.5,
+      destination_name: 'Cacuaco',
+      destination_lat: -9.2,
+      destination_lng: 13.8,
+      flexibilidade_rota: true,
+    }, procura)).toBe(true);
   });
 
   it('trata procura sem OD completo como incompatível', () => {
