@@ -35,7 +35,16 @@ export default function NotificationRowKebab({ onDelete }) {
   }, [open]);
 
   return (
-    <div ref={rootRef} className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
+    <div
+      ref={rootRef}
+      className="relative shrink-0"
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.stopPropagation();
+        }
+      }}
+    >
       <Button
         type="button"
         variant="ghost"

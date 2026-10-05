@@ -184,8 +184,11 @@ export default function NotificationBell() {
                   {notifications.map((notif) => (
                     <li
                       key={notif.id}
+                      role="button"
+                      aria-label={notif.mensagem}
                       tabIndex={0}
                       onKeyDown={(e) => {
+                        if (e.target !== e.currentTarget) return;
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
                           handleNotificationClick(notif);
