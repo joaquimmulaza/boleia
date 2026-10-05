@@ -43,4 +43,14 @@ describe('getFriendlyErrorMessage', () => {
       'Aguarde um momento antes de pedir novamente a recuperação.'
     );
   });
+
+  it('mapeia email_not_confirmed para pedir confirmação do email', () => {
+    expect(getFriendlyErrorMessage({
+      code: 'email_not_confirmed',
+      message: 'Email not confirmed',
+    })).toBe('Confirme o email antes de entrar. Abra a mensagem que enviámos para activar a conta.');
+    expect(getFriendlyErrorMessage({ code: 'email_not_confirmed' })).toBe(
+      'Confirme o email antes de entrar. Abra a mensagem que enviámos para activar a conta.'
+    );
+  });
 });

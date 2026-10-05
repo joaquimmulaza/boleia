@@ -247,11 +247,13 @@ export const useAuthForm = () => {
 
     let error;
     let sessionUser = null;
+    let session = null;
 
     if (isLogin) {
       const result = await supabase.auth.signInWithPassword({ email, password });
       error = result.error;
       sessionUser = result.data?.user;
+      session = result.data?.session;
     } else {
       const result = await supabase.auth.signUp({
         email,
@@ -266,6 +268,7 @@ export const useAuthForm = () => {
       });
       error = result.error;
       sessionUser = result.data?.user;
+      session = result.data?.session;
     }
 
     setIsLoading(false);
@@ -274,9 +277,10 @@ export const useAuthForm = () => {
       setFeedback({ type: 'error', message: getFriendlyErrorMessage(error) });
     } else if (!isLogin) {
       setFeedback({ type: 'success', message: 'Registo efetuado! Verifique o seu email para confirmar a conta.' });
-
-      const role = sessionUser?.user_metadata?.tipo_perfil || profileTypeValue;
-      navigateToHub(role);
+      if (session) {
+        const role = sessionUser?.user_metadata?.tipo_perfil || profileTypeValue;
+        navigateToHub(role);
+      }
     } else {
       setFeedback({ type: 'success', message: 'Bem-vindo de volta!' });
 

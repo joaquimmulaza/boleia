@@ -6,6 +6,10 @@ export function getFriendlyErrorMessage(error) {
   if (msg.includes('row-level security policy')) {
     return 'Não tem permissão para realizar esta operação.';
   }
+  const code = typeof error === 'object' && error ? error.code : '';
+  if (code === 'email_not_confirmed' || msg.includes('Email not confirmed')) {
+    return 'Confirme o email antes de entrar. Abra a mensagem que enviámos para activar a conta.';
+  }
   if (msg.includes('Invalid login credentials')) {
     return 'Email ou palavra-passe incorretos.';
   }
