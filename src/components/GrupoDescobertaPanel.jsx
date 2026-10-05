@@ -25,8 +25,12 @@ const GrupoDescobertaPanel = ({ userId, excludeGrupoId = null, onPedidoEnviado }
       const lista = await listGruposAbertos({
         excludeOwnerId: userId || undefined,
         excludeGrupoId: excludeGrupoId || undefined,
+        passengerId: userId || undefined,
       });
       setGrupos(lista);
+      setEnviados(
+        new Set(lista.filter((g) => g.pedido_pendente).map((g) => g.id)),
+      );
     } catch (err) {
       console.error(err);
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
@@ -40,6 +44,7 @@ const GrupoDescobertaPanel = ({ userId, excludeGrupoId = null, onPedidoEnviado }
   }, [carregar]);
 
   const handlePedir = async (grupoId) => {
+    if (enviados.has(grupoId)) return;
     setBusyId(grupoId);
     setFeedback({ type: '', text: '' });
     try {

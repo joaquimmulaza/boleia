@@ -133,9 +133,67 @@ describe('GrupoService T31 — n_maximo e pedidos de entrada', () => {
 
     const lista = await listGruposAbertos({ excludeOwnerId: 'me' });
     expect(supabase.from).toHaveBeenCalledWith('grupos');
+    expect(supabase.from).not.toHaveBeenCalledWith('membros_grupo');
     expect(lista).toHaveLength(1);
     expect(lista[0].n_maximo).toBe(4);
     expect(lista[0].procuras.n_candidato).toBe(2);
+    expect(lista[0].pedido_pendente).toBeUndefined();
+  });
+
+  it('listGruposAbertos marca pedido_pendente sem tirar o grupo da lista', async () => {
+    const rows = [
+      {
+        id: 'g-pendente',
+        n_maximo: 4,
+        procura_id: 'pr-1',
+        procuras: {
+          id: 'pr-1',
+          owner_id: 'owner-1',
+          origin_name: 'Talatona',
+          destination_name: 'Mutual',
+          n_candidato: 2,
+          estado: 'activa',
+        },
+      },
+      {
+        id: 'g-novo',
+        n_maximo: 4,
+        procura_id: 'pr-2',
+        procuras: {
+          id: 'pr-2',
+          owner_id: 'owner-2',
+          origin_name: 'Kilamba',
+          destination_name: 'Maianga',
+          n_candidato: 1,
+          estado: 'activa',
+        },
+      },
+    ];
+    const eqEstado = vi.fn().mockResolvedValue({
+      data: [{ grupo_id: 'g-pendente' }],
+      error: null,
+    });
+    const eqPassenger = vi.fn().mockReturnValue({ eq: eqEstado });
+
+    supabase.from.mockImplementation((table) => {
+      if (table === 'membros_grupo') {
+        return {
+          select: vi.fn().mockReturnValue({ eq: eqPassenger }),
+        };
+      }
+      return {
+        select: vi.fn().mockResolvedValue({ data: rows, error: null }),
+      };
+    });
+
+    const lista = await listGruposAbertos({ passengerId: 'pax-me' });
+
+    expect(supabase.from).toHaveBeenCalledWith('membros_grupo');
+    expect(eqPassenger).toHaveBeenCalledWith('passenger_id', 'pax-me');
+    expect(eqEstado).toHaveBeenCalledWith('estado', 'pendente');
+    expect(lista).toHaveLength(2);
+    expect(lista.find((g) => g.id === 'g-pendente')?.pedido_pendente).toBe(true);
+    expect(lista.find((g) => g.id === 'g-novo')?.pedido_pendente).toBeUndefined();
   });
 
   it('pedirEntradaGrupo cria membro pendente sem sincronizar N_actual', async () => {
