@@ -211,13 +211,15 @@ export function evaluateMatch({ oferta, procura, n_candidato }) {
 
 /**
  * Rota OD da oferta face à procura, com o mesmo raio do matching.
- * Oferta ou procura sem OD completo conta como incompatível.
+ * Oferta flexível é compatível em rota, como `evaluateMatch` (não exige OD).
+ * Oferta fixa ou procura sem OD completo conta como incompatível.
  * Não olha para horário nem dias — só origem e destino.
- * @param {Parameters<typeof hasCompleteOd>[0]} oferta
+ * @param {Parameters<typeof hasCompleteOd>[0] & { flexibilidade_rota?: boolean }} oferta
  * @param {Parameters<typeof hasCompleteOd>[0]} procura
  * @returns {boolean}
  */
 export function isOfertaRotaCompativelComProcura(oferta, procura) {
+  if (oferta?.flexibilidade_rota) return true;
   if (!hasCompleteOd(oferta) || !hasCompleteOd(procura)) return false;
   return isOriginWithinRadius(
     Number(oferta.origin_lat),

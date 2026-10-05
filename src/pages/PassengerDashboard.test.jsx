@@ -702,16 +702,26 @@ describe('PassengerDashboard — marketplace', () => {
     });
   });
 
-  it('Propor acordo no Explorar: oferta sem origem e destino pede confirmação', async () => {
-    listProcurasByOwner.mockResolvedValue([procuraBase]);
-    listOfertasDisponiveis.mockResolvedValue([{
-      id: 'of-flex',
-      flexibilidade_rota: true,
-      departure_time: '07:30:00',
-      vagas_disponiveis: 2,
-      valor_mensal_ask_kz: 30000,
-      modo_preco: 'POR_PASSAGEIRO',
+  it('Propor acordo no Explorar: oferta flexível com rota diferente não avisa', async () => {
+    listProcurasByOwner.mockResolvedValue([{
+      ...procuraBase,
+      destination_name: 'Centro',
     }]);
+    listOfertasDisponiveis.mockResolvedValue([{
+      id: 'of-flex-longe',
+      origin_name: 'Viana',
+      origin_lat: -8.5,
+      origin_lng: 13.5,
+      destination_name: 'Cacuaco',
+      destination_lat: -9.2,
+      destination_lng: 13.8,
+      departure_time: '07:15:00',
+      vagas_disponiveis: 3,
+      valor_mensal_ask_kz: 45000,
+      modo_preco: 'POR_PASSAGEIRO',
+      flexibilidade_rota: true,
+    }]);
+    createProposta.mockResolvedValue({ id: 'prop-flex-longe' });
 
     render(
       <MemoryRouter>
@@ -720,8 +730,15 @@ describe('PassengerDashboard — marketplace', () => {
     );
 
     fireEvent.click(await screen.findByRole('button', { name: 'Propor acordo' }));
-    expect(await screen.findByRole('dialog')).toHaveTextContent(/não tem origem e destino fixos/i);
-    expect(createProposta).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog', { name: /Rotas diferentes/i })).not.toBeInTheDocument();
+    await confirmPropostaSheet();
+
+    await waitFor(() => {
+      expect(createProposta).toHaveBeenCalledWith(expect.objectContaining({
+        oferta_id: 'of-flex-longe',
+        procura_id: 'pr-1',
+      }));
+    });
   });
 
   it('carregar procura flex: matching recebe origin_lat null (não 0)', async () => {
