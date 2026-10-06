@@ -48,6 +48,13 @@ describe('LandingHeroSearchCard', () => {
     expect(screen.getByRole('button', { name: 'Ver boleias' })).toBeInTheDocument();
   });
 
+  it('CTA Ver boleias usa texto escuro sobre verde primário', () => {
+    renderCard();
+    const cta = screen.getByRole('button', { name: 'Ver boleias' });
+    expect(cta.className).toMatch(/text-primary-foreground/);
+    expect(cta.className).not.toMatch(/text-white/);
+  });
+
   it('valida origem e destino antes de navegar', () => {
     renderCard();
 

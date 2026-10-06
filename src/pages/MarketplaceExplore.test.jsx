@@ -59,6 +59,26 @@ describe('MarketplaceExplore', () => {
     ]);
   });
 
+  it('anónimo: Entrar e Criar procura usam texto escuro sobre verde primário', async () => {
+    listOfertasDisponiveis.mockResolvedValueOnce([]);
+
+    render(
+      <MemoryRouter
+        initialEntries={['/explorar?origem=Viana&destino=Kilamba&origem_lat=-8.9&origem_lng=13.2&destino_lat=-9.0&destino_lng=13.3']}
+      >
+        <MarketplaceExplore />
+      </MemoryRouter>,
+    );
+
+    const entrar = await screen.findByRole('button', { name: 'Entrar' });
+    expect(entrar.className).toMatch(/text-primary-foreground/);
+    expect(entrar.className).not.toMatch(/text-white/);
+
+    const criarProcura = await screen.findByRole('button', { name: 'Criar procura' });
+    expect(criarProcura.className).toMatch(/text-primary-foreground/);
+    expect(criarProcura.className).not.toMatch(/text-white/);
+  });
+
   it('anónimo: o corpo abre o detalhe e o CTA «Propor acordo» vai para /auth', async () => {
     render(
       <MemoryRouter>
