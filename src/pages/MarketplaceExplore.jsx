@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { listOfertasDisponiveis } from '../services/OfertaService';
 import { listProcurasDisponiveis } from '../services/ProcuraService';
@@ -9,9 +9,17 @@ import {
   COPY_TENTAR_NOVAMENTE,
   isLiveOpportunity,
 } from '../utils/opportunityCard';
+import { filterOfertasBySearchOd, isSearchOdActive } from '../utils/exploreOdFilter';
+import {
+  exploreFilteredTitle,
+  hasExploreSearchLabels,
+  parseExploreSearchParams,
+} from '../utils/exploreSearchParams';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import OpportunityCard from '../components/OpportunityCard';
 import OpportunityDetailSheet from '../components/OpportunityDetailSheet';
+import ExploreFilteredHeader from '../components/ExploreFilteredHeader';
+import ExploreFilteredEmpty from '../components/ExploreFilteredEmpty';
 import BrandLockup from '../components/BrandLockup';
 import ThemeToggle from '../components/ThemeToggle';
 
@@ -22,13 +30,20 @@ import ThemeToggle from '../components/ThemeToggle';
  */
 export default function MarketplaceExplore() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { session, loading: authLoading, tipoPerfil } = useAuth();
-  const [tab, setTab] = useState('ofertas'); // 'ofertas' | 'procuras'
+  const [tab, setTab] = useState('ofertas');
   const [ofertas, setOfertas] = useState([]);
   const [procuras, setProcuras] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [detalhe, setDetalhe] = useState(null);
+
+  const routeSearch = useMemo(
+    () => parseExploreSearchParams(searchParams),
+    [searchParams],
+  );
+  const isFiltered = hasExploreSearchLabels(routeSearch);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -74,6 +89,12 @@ export default function MarketplaceExplore() {
   const ofertasVivas = ofertas.filter((oferta) => isLiveOpportunity('oferta', oferta));
   const procurasVivas = procuras.filter((procura) => isLiveOpportunity('procura', procura));
 
+  const ofertasVisiveis = isFiltered && isSearchOdActive(routeSearch)
+    ? filterOfertasBySearchOd(ofertasVivas, routeSearch)
+    : isFiltered
+      ? ofertasVivas.filter((o) => !o.flexibilidade_rota)
+      : ofertasVivas;
+
   return (
     <div
       className="relative flex min-h-dvh w-full flex-col bg-background-light font-display text-slate-900 dark:bg-background-dark dark:text-slate-100"
@@ -103,46 +124,55 @@ export default function MarketplaceExplore() {
       </header>
 
       <main className="mx-auto w-full max-w-md flex-1 space-y-5 px-4 py-6 pb-16">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold text-balance">Explorar marketplace</h1>
-          <p className="text-sm text-slate-500 text-pretty">
-            Vê ofertas e procuras sem criares conta. Para propor ou publicar, entra ou regista-te.
-          </p>
-        </div>
+        {isFiltered && routeSearch ? (
+          <ExploreFilteredHeader
+            search={routeSearch}
+            title={exploreFilteredTitle(routeSearch)}
+          />
+        ) : (
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold text-balance">Explorar marketplace</h1>
+            <p className="text-sm text-slate-500 text-pretty">
+              Vê ofertas e procuras sem criares conta. Para propor ou publicar, entra ou regista-te.
+            </p>
+          </div>
+        )}
 
-        <div
-          className="flex gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800"
-          role="tablist"
-          aria-label="Tipo de listagem"
-          data-testid="explore-tabs"
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === 'ofertas'}
-            onClick={() => { setTab('ofertas'); setDetalhe(null); }}
-            className={`flex-1 rounded-lg py-2.5 text-sm font-bold ${
-              tab === 'ofertas'
-                ? 'bg-white text-primary shadow-sm dark:bg-slate-900'
-                : 'text-slate-500'
-            }`}
+        {!isFiltered ? (
+          <div
+            className="flex gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800"
+            role="tablist"
+            aria-label="Tipo de listagem"
+            data-testid="explore-tabs"
           >
-            Ofertas
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === 'procuras'}
-            onClick={() => { setTab('procuras'); setDetalhe(null); }}
-            className={`flex-1 rounded-lg py-2.5 text-sm font-bold ${
-              tab === 'procuras'
-                ? 'bg-white text-primary shadow-sm dark:bg-slate-900'
-                : 'text-slate-500'
-            }`}
-          >
-            Procuras
-          </button>
-        </div>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === 'ofertas'}
+              onClick={() => { setTab('ofertas'); setDetalhe(null); }}
+              className={`flex-1 rounded-lg py-2.5 text-sm font-bold ${
+                tab === 'ofertas'
+                  ? 'bg-white text-primary shadow-sm dark:bg-slate-900'
+                  : 'text-slate-500'
+              }`}
+            >
+              Ofertas
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === 'procuras'}
+              onClick={() => { setTab('procuras'); setDetalhe(null); }}
+              className={`flex-1 rounded-lg py-2.5 text-sm font-bold ${
+                tab === 'procuras'
+                  ? 'bg-white text-primary shadow-sm dark:bg-slate-900'
+                  : 'text-slate-500'
+              }`}
+            >
+              Procuras
+            </button>
+          </div>
+        ) : null}
 
         {error ? (
           <div role="alert" className="space-y-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -164,26 +194,28 @@ export default function MarketplaceExplore() {
           </div>
         ) : null}
 
-        {!loading && tab === 'ofertas' ? (
+        {!loading && (isFiltered || tab === 'ofertas') ? (
           <section className="space-y-3" data-testid="explore-ofertas-feed">
-            {ofertasVivas.length === 0 ? (
+            {ofertasVisiveis.length === 0 && isFiltered ? (
+              <ExploreFilteredEmpty />
+            ) : null}
+            {ofertasVisiveis.length === 0 && !isFiltered ? (
               <p className="text-sm text-slate-500">Ainda não há ofertas publicadas.</p>
-            ) : (
-              ofertasVivas.map((oferta) => (
-                <div key={oferta.id} data-testid="explore-oferta-card">
-                  <OpportunityCard
-                    kind="oferta"
-                    item={oferta}
-                    onOpen={() => setDetalhe({ kind: 'oferta', item: oferta })}
-                    onCta={() => goAuth('passenger')}
-                  />
-                </div>
-              ))
-            )}
+            ) : null}
+            {ofertasVisiveis.map((oferta) => (
+              <div key={oferta.id} data-testid="explore-oferta-card">
+                <OpportunityCard
+                  kind="oferta"
+                  item={oferta}
+                  onOpen={() => setDetalhe({ kind: 'oferta', item: oferta })}
+                  onCta={() => goAuth('passenger')}
+                />
+              </div>
+            ))}
           </section>
         ) : null}
 
-        {!loading && tab === 'procuras' ? (
+        {!loading && !isFiltered && tab === 'procuras' ? (
           <section className="space-y-3" data-testid="explore-procuras-feed">
             {procurasVivas.length === 0 ? (
               <p className="text-sm text-slate-500">Ainda não há procuras no marketplace.</p>

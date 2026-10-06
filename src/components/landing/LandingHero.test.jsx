@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import LandingHero from './LandingHero';
 
 const mockNavigate = vi.fn();
@@ -12,6 +12,17 @@ vi.mock('react-router-dom', async () => {
     useNavigate: () => mockNavigate,
   };
 });
+
+vi.mock('../../hooks/useAutocomplete', () => ({
+  useAutocomplete: () => ({
+    suggestions: [],
+    loading: false,
+    error: null,
+    fetchPredictions: vi.fn(),
+    selectPlace: vi.fn(),
+    clearSuggestions: vi.fn(),
+  }),
+}));
 
 /**
  * @param {string} text
@@ -28,13 +39,14 @@ describe('LandingHero', () => {
   });
 
   /**
+   * @param {string} [initialRoute]
    * @returns {HTMLElement}
    */
-  function renderHero() {
+  function renderHero(initialRoute = '/') {
     const { container } = render(
-      <BrowserRouter>
+      <MemoryRouter initialEntries={[initialRoute]}>
         <LandingHero />
-      </BrowserRouter>,
+      </MemoryRouter>,
     );
     return container;
   }
@@ -65,14 +77,13 @@ describe('LandingHero', () => {
     expect(document.body.textContent).toMatch(/casa–trabalho/i);
   });
 
-  it('storyboard mostra rota Talatona→Centro e lugares', () => {
+  it('substitui storyboard por cartão de pesquisa OD', () => {
     renderHero();
 
-    expect(screen.getByTestId('hero-route-storyboard')).toBeInTheDocument();
-    expect(screen.getByText(/lugares do motorista/i)).toBeInTheDocument();
-    expect(screen.getByText('Talatona')).toBeInTheDocument();
-    expect(screen.getByText('Centro')).toBeInTheDocument();
-    expect(screen.getByText(/3 vagas · a partir de 25\.000 Kz/i)).toBeInTheDocument();
+    expect(screen.queryByTestId('hero-route-storyboard')).not.toBeInTheDocument();
+    expect(screen.getByTestId('hero-search-card')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('De onde sais?')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Para onde vais?')).toBeInTheDocument();
   });
 
   it('não expõe jargon nem claims proibidos', () => {
@@ -84,18 +95,25 @@ describe('LandingHero', () => {
     expect(text).not.toMatch(/seguro|segurança|verificad|garantid|multicaixa|proxypay/i);
   });
 
-  it('Explorar boleias leva ao browse público', () => {
+  it('não mostra Explorar boleias; Ver boleias está no cartão de pesquisa', () => {
     renderHero();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Explorar boleias' }));
-    expect(mockNavigate).toHaveBeenCalledWith('/explorar');
+    expect(screen.queryByRole('button', { name: 'Explorar boleias' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ver boleias' })).toBeInTheDocument();
   });
 
   it('Criar conta leva ao registo', () => {
     renderHero();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Criar conta' })[0]);
     expect(mockNavigate).toHaveBeenCalledWith('/auth?mode=register');
+  });
+
+  it('preenche pesquisa quando URL traz origem e destino (Editar)', () => {
+    renderHero('/?origem=Talatona&destino=Centro&origem_lat=-8.9&origem_lng=13.2&destino_lat=-8.8&destino_lng=13.3');
+
+    expect(screen.getByDisplayValue('Talatona')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Centro')).toBeInTheDocument();
   });
 
   it('hero não inclui Sou Passageiro nem Sou Motorista', () => {
