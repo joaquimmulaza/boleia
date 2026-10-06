@@ -22,7 +22,7 @@ export default function LandingCta() {
             type="button"
             size="lg"
             variant="secondary"
-            className="rounded-full bg-card px-8 font-bold text-[#17231c] hover:bg-card/90"
+            className="rounded-full bg-white px-8 font-bold text-[#17231c] hover:bg-white/90"
             onClick={() => navigate('/auth?mode=register&role=passenger')}
           >
             Sou Passageiro
