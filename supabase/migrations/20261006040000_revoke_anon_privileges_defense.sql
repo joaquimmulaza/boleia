@@ -10,6 +10,7 @@
 --      são re-revogados no fim.
 --   2) Tabelas/views public: REVOKE ALL FROM anon; re-GRANT SELECT só em
 --      ofertas_capacidade e procuras.
+--   3) Default privileges: novos objectos criados por postgres não herdam anon.
 --
 -- Não altera corpos de funções, RLS, nem frontend. Aplicar manualmente no
 -- projecto Supabase; depois correr as queries de verificação abaixo.
@@ -27,7 +28,7 @@ BEGIN
       p.proname AS function_name,
       pg_get_function_identity_arguments(p.oid) AS args
     FROM pg_proc p
-    JOIN pg_namespace n ON n.oid = p.prnamespace
+    JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public'
       AND NOT EXISTS (
         SELECT 1
@@ -96,6 +97,21 @@ END $$;
 
 GRANT SELECT ON TABLE public.ofertas_capacidade TO anon;
 GRANT SELECT ON TABLE public.procuras TO anon;
+
+-- ---------------------------------------------------------------------------
+-- Step 6: default privileges — novos objectos não auto-grant a anon
+-- ---------------------------------------------------------------------------
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  REVOKE ALL ON TABLES FROM anon;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  REVOKE ALL ON SEQUENCES FROM anon;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  GRANT EXECUTE ON FUNCTIONS TO authenticated, service_role;
 
 -- ---------------------------------------------------------------------------
 -- Step 3 (auditoria): políticas RLS TO anon — nenhuma invoca função public.
