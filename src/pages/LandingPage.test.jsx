@@ -64,16 +64,24 @@ describe('LandingPage', () => {
     expect(text).toMatch(/sem rota marcada/i);
   });
 
-  it('segue a ordem hero → o que muda → como funciona → perguntas → cta', () => {
+  it('segue a ordem hero → faixa motorista → o que muda → como funciona → perguntas → cta', () => {
     renderLanding();
 
-    const ids = ['o-que-muda', 'como-funciona', 'perguntas'];
-    const positions = ids.map((id) => {
-      const el = document.getElementById(id);
-      expect(el).toBeInTheDocument();
-      return Array.from(document.querySelectorAll('section')).indexOf(el);
-    });
-    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    const heroHeading = screen.getByRole('heading', { level: 1 });
+    const stripHeading = screen.getByRole('heading', { name: /já fazes este caminho\?/i });
+    const oQueMuda = document.getElementById('o-que-muda');
+    const comoFunciona = document.getElementById('como-funciona');
+    const perguntas = document.getElementById('perguntas');
+    const ctaHeading = screen.getByRole('heading', { name: /todos os dias, no mesmo carro/i });
+
+    const sections = Array.from(document.querySelectorAll('section'));
+    const indexOf = (el) => sections.indexOf(el?.closest('section') ?? el);
+
+    expect(indexOf(heroHeading)).toBeLessThan(indexOf(stripHeading));
+    expect(indexOf(stripHeading)).toBeLessThan(sections.indexOf(oQueMuda));
+    expect(sections.indexOf(oQueMuda)).toBeLessThan(sections.indexOf(comoFunciona));
+    expect(sections.indexOf(comoFunciona)).toBeLessThan(sections.indexOf(perguntas));
+    expect(sections.indexOf(perguntas)).toBeLessThan(indexOf(ctaHeading));
   });
 
   it('hero navega para /explorar e registo nos CTAs principais', () => {

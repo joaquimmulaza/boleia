@@ -23,6 +23,9 @@
   --border: #e2e8f0;
   --input: #e2e8f0;
   --ring: #10b748;
+  --inverse: #06130b;
+  --inverse-fg: #ffffff;
+  --inverse-muted: #a3b5ab;
   --radius: 0.625rem;
   --bottom-nav-height: 4rem;
   --bottom-nav-height-sm: 5rem;
@@ -50,6 +53,9 @@
   --border: #2d4a36;
   --input: #2d4a36;
   --ring: #10b748;
+  --inverse: #1d2922;
+  --inverse-fg: #ffffff;
+  --inverse-muted: #8b998f;
 }
 
 @theme {
@@ -81,6 +87,9 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-inverse: var(--inverse);
+  --color-inverse-fg: var(--inverse-fg);
+  --color-inverse-muted: var(--inverse-muted);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

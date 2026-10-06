@@ -1,5 +1,6 @@
 import LandingHeader from '../components/landing/LandingHeader';
 import LandingHero from '../components/landing/LandingHero';
+import LandingMotoristaStrip from '../components/landing/LandingMotoristaStrip';
 import LandingBenefits from '../components/landing/LandingBenefits';
 import LandingHowItWorks from '../components/landing/LandingHowItWorks';
 import LandingFaq from '../components/landing/LandingFaq';
@@ -16,6 +17,7 @@ export default function LandingPage() {
       <LandingHeader />
       <main className="public-page-main-offset flex-1">
         <LandingHero />
+        <LandingMotoristaStrip />
         <LandingBenefits />
         <LandingHowItWorks />
         <LandingFaq />
