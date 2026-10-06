@@ -34,7 +34,7 @@ describe('LandingHero', () => {
     const { container } = render(
       <BrowserRouter>
         <LandingHero />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
     return container;
   }
@@ -59,22 +59,20 @@ describe('LandingHero', () => {
     expect(countWords(support.textContent)).toBeLessThanOrEqual(45);
   });
 
-  it('mostra logo oficial e eyebrow de boleia casa–trabalho', () => {
+  it('mostra chip de boleia casa–trabalho', () => {
     renderHero();
 
-    expect(screen.getByAltText('Boleia Certa')).toHaveAttribute('src', '/boleia-logo.png');
     expect(document.body.textContent).toMatch(/casa–trabalho/i);
   });
 
-  it('mock do produto mostra rota fixa, oferta flexível sem rota marcada e acordo do mês em Kz', () => {
+  it('storyboard mostra rota Talatona→Centro e lugares', () => {
     renderHero();
 
+    expect(screen.getByTestId('hero-route-storyboard')).toBeInTheDocument();
     expect(screen.getByText(/lugares do motorista/i)).toBeInTheDocument();
-    expect(screen.getByText(/oferta flexível/i)).toBeInTheDocument();
-    expect(screen.getByText(/sem rota marcada/i)).toBeInTheDocument();
-    expect(screen.getByText(/acordo do mês/i)).toBeInTheDocument();
-    expect(screen.getByText(/1 motorista · 3 passageiros · mesmo carro/i)).toBeInTheDocument();
-    expect(screen.getByText(/25\.000 Kz por passageiro/i)).toBeInTheDocument();
+    expect(screen.getByText('Talatona')).toBeInTheDocument();
+    expect(screen.getByText('Centro')).toBeInTheDocument();
+    expect(screen.getByText(/3 vagas · a partir de 25\.000 Kz/i)).toBeInTheDocument();
   });
 
   it('não expõe jargon nem claims proibidos', () => {
@@ -93,14 +91,18 @@ describe('LandingHero', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/explorar');
   });
 
-  it('navega para auth passageiro e motorista nos CTAs', () => {
+  it('Criar conta leva ao registo', () => {
     renderHero();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sou Passageiro' }));
-    expect(mockNavigate).toHaveBeenCalledWith('/auth?mode=register&role=passenger');
+    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }));
+    expect(mockNavigate).toHaveBeenCalledWith('/auth?mode=register');
+  });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sou Motorista' }));
-    expect(mockNavigate).toHaveBeenCalledWith('/auth?mode=register&role=driver');
+  it('hero não inclui Sou Passageiro nem Sou Motorista', () => {
+    renderHero();
+
+    expect(screen.queryByRole('button', { name: 'Sou Passageiro' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sou Motorista' })).not.toBeInTheDocument();
   });
 
   it('não usa stock externo nem URLs http(s) no HTML do hero', () => {

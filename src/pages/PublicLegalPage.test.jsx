@@ -1,7 +1,22 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { render, screen, cleanup, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { ThemeProvider } from '../contexts/ThemeContext';
 import PublicLegalPage from './PublicLegalPage';
+
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation((query) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
 
 describe('Páginas públicas de privacidade e eliminação', () => {
   afterEach(() => {
@@ -13,9 +28,11 @@ describe('Páginas públicas de privacidade e eliminação', () => {
    */
   function renderPage(page) {
     render(
-      <MemoryRouter>
-        <PublicLegalPage page={page} />
-      </MemoryRouter>,
+      <ThemeProvider>
+        <MemoryRouter>
+          <PublicLegalPage page={page} />
+        </MemoryRouter>
+      </ThemeProvider>,
     );
   }
 
@@ -40,15 +57,16 @@ describe('Páginas públicas de privacidade e eliminação', () => {
     )).toBeInTheDocument();
   });
 
-  it('o cabeçalho inteiro liga a / e não tem Voltar', () => {
+  it('cabeçalho legal tem pill glass só com logo e alternar tema', () => {
     renderPage('privacidade');
 
-    const header = screen.getByRole('banner');
-    const home = screen.getByRole('link', { name: 'Boleia Certa' });
-    expect(header).toContainElement(home);
-    expect(home).toHaveAttribute('href', '/');
-    expect(screen.queryByRole('link', { name: /voltar/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /voltar/i })).not.toBeInTheDocument();
+    const header = screen.getByTestId('public-page-header');
+    expect(header.querySelector('[data-variant="legal"]')).toBeInTheDocument();
+    expect(within(header).getByRole('link', { name: 'Boleia Certa' })).toHaveAttribute('href', '/');
+    expect(within(header).getByRole('button', { name: /alternar tema/i })).toBeInTheDocument();
+    expect(within(header).queryByRole('navigation', { name: 'Navegação principal' })).not.toBeInTheDocument();
+    expect(within(header).queryByRole('button', { name: 'Criar conta' })).not.toBeInTheDocument();
+    expect(within(header).queryByRole('link', { name: /^entrar$/i })).not.toBeInTheDocument();
   });
 
   it('o rodapé liga à privacidade e à eliminação de dados', () => {
@@ -59,5 +77,11 @@ describe('Páginas públicas de privacidade e eliminação', () => {
       'href',
       '/eliminacao-de-dados',
     );
+  });
+
+  it('rodapé não inclui Termos', () => {
+    renderPage('privacidade');
+
+    expect(screen.queryByRole('link', { name: /^termos$/i })).not.toBeInTheDocument();
   });
 });

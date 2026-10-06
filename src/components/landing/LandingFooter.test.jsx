@@ -15,16 +15,9 @@ describe('LandingFooter', () => {
     render(
       <BrowserRouter>
         <LandingFooter />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
   }
-
-  it('mostra logo oficial', () => {
-    renderFooter();
-
-    const logo = screen.getByAltText(/boleia certa/i);
-    expect(logo).toHaveAttribute('src', '/boleia-logo.png');
-  });
 
   it('Entrar leva a /auth', () => {
     renderFooter();
@@ -33,15 +26,13 @@ describe('LandingFooter', () => {
     expect(entrar).toHaveAttribute('href', '/auth');
   });
 
-  it('Contacto e Termos usam o email de contacto', () => {
+  it('Contacto usa o email de contacto', () => {
     renderFooter();
 
     const contacto = screen.getByRole('link', { name: /^contacto$/i });
-    const termos = screen.getByRole('link', { name: /^termos$/i });
     const email = 'joaquimmulazadev@gmail.com';
 
     expect(contacto).toHaveAttribute('href', `mailto:${email}`);
-    expect(termos).toHaveAttribute('href', `mailto:${email}?subject=Termos%20de%20uso`);
   });
 
   it('Privacidade e Eliminação de dados são páginas públicas', () => {
@@ -54,16 +45,11 @@ describe('LandingFooter', () => {
     );
   });
 
-  it('Termos e Privacidade não são links mortos href="#"', () => {
+  it('não inclui link Termos (cancelado)', () => {
     renderFooter();
 
-    const termos = screen.getByRole('link', { name: /^termos$/i });
-    const privacidade = screen.getByRole('link', { name: /^privacidade$/i });
-
-    expect(termos.getAttribute('href')).not.toBe('#');
-    expect(privacidade.getAttribute('href')).not.toBe('#');
-    expect(termos.getAttribute('href')).toMatch(/^(mailto:|#termos|#privacidade|\/)/);
-    expect(privacidade.getAttribute('href')).toMatch(/^(mailto:|#termos|#privacidade|\/)/);
+    expect(screen.queryByRole('link', { name: /^termos$/i })).not.toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/termos de uso/i);
   });
 
   it('não inclui link Blog', () => {

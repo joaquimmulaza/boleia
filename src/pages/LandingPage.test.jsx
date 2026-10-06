@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import LandingPage from './LandingPage';
@@ -76,28 +76,32 @@ describe('LandingPage', () => {
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
   });
 
-  it('navega para /auth?role=passenger ao clicar Sou Passageiro', () => {
+  it('hero navega para /explorar e registo nos CTAs principais', () => {
+    renderLanding();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Explorar boleias' }));
+    expect(mockNavigate).toHaveBeenCalledWith('/explorar');
+
+    const hero = screen.getByRole('heading', { level: 1 }).closest('section');
+    fireEvent.click(within(hero).getByRole('button', { name: 'Criar conta' }));
+    expect(mockNavigate).toHaveBeenCalledWith('/auth?mode=register');
+  });
+
+  it('CTA final navega para registo com papel', () => {
     renderLanding();
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Sou Passageiro' })[0]);
     expect(mockNavigate).toHaveBeenCalledWith('/auth?mode=register&role=passenger');
-  });
-
-  it('navega para /auth?role=driver ao clicar Sou Motorista', () => {
-    renderLanding();
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Sou Motorista' })[0]);
     expect(mockNavigate).toHaveBeenCalledWith('/auth?mode=register&role=driver');
   });
 
-  it('renderiza logos oficiais boleia-logo.png', () => {
+  it('renderiza logo no header pill', () => {
     renderLanding();
 
-    const logos = screen.getAllByAltText(/Boleia Certa/i);
-    expect(logos.length).toBeGreaterThanOrEqual(1);
-    logos.forEach((logo) => {
-      expect(logo).toHaveAttribute('src', '/boleia-logo.png');
-    });
+    const home = screen.getByRole('link', { name: 'Boleia Certa' });
+    expect(home.querySelector('img')).toHaveAttribute('src', '/boleia-logo.png');
   });
 
   it('expõe âncoras das secções e menu mobile funcional', () => {

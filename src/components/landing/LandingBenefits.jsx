@@ -31,27 +31,27 @@ const MOTORISTA = [
 ];
 
 /**
- * @param {{ title: string, points: typeof PASSAGEIRO, testId: string, icon: typeof User }} props
+ * @param {{ title: string; points: typeof PASSAGEIRO; testId: string; icon: typeof User }} props
  */
 function RoleColumn({ title, points, testId, icon: Icon }) {
   return (
     <article
       data-testid={testId}
-      className="flex flex-col gap-6 rounded-xl border border-primary/10 bg-white p-6 shadow-sm dark:bg-slate-800"
+      className="flex flex-col gap-6 rounded-2xl border border-border bg-card p-6"
     >
       <div className="flex items-center gap-3">
-        <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent text-primary">
           <Icon size={22} aria-hidden="true" />
         </div>
-        <h3 className="text-xl font-bold text-slate-900 dark:text-white">{title}</h3>
+        <h3 className="text-xl font-bold text-foreground">{title}</h3>
       </div>
       <ul className="flex flex-col gap-5">
         {points.map((point) => (
           <li key={point.title} className="flex flex-col gap-1">
-            <h4 className="text-base font-bold text-slate-900 dark:text-white">{point.title}</h4>
+            <h4 className="text-base font-bold text-foreground">{point.title}</h4>
             <p
               data-testid="o-que-muda-ponto"
-              className="text-pretty text-sm text-slate-600 dark:text-slate-400"
+              className="text-pretty text-sm text-muted-foreground"
             >
               {point.text}
             </p>
@@ -68,13 +68,13 @@ function RoleColumn({ title, points, testId, icon: Icon }) {
  */
 export default function LandingBenefits() {
   return (
-    <section id="o-que-muda" className="px-4 py-20">
-      <div className="mx-auto flex max-w-7xl flex-col gap-12">
-        <div className="flex max-w-[720px] flex-col gap-4">
-          <h2 className="text-balance text-4xl font-black leading-tight text-slate-900 dark:text-white md:text-5xl">
+    <section id="o-que-muda" className="bg-background-light px-4 py-16 dark:bg-background-dark md:px-[7.5rem] md:py-[4.5rem]">
+      <div className="mx-auto flex max-w-[1200px] flex-col gap-10">
+        <div className="flex max-w-[640px] flex-col gap-3">
+          <h2 className="text-balance text-3xl font-black text-foreground md:text-4xl">
             O que muda
           </h2>
-          <p className="text-pretty text-lg leading-relaxed text-slate-600 dark:text-slate-400">
+          <p className="text-pretty text-base text-muted-foreground md:text-lg">
             Sai da paragem. Enche os lugares vazios. O preço do mês fica em Kz.
           </p>
         </div>
