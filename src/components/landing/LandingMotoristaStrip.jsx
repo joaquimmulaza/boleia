@@ -29,7 +29,7 @@ export default function LandingMotoristaStrip() {
         <button
           type="button"
           onClick={() => navigate(MOTORISTA_REGISTER_PATH)}
-          className="mt-1 w-full max-w-xs cursor-pointer rounded-xl bg-primary px-8 py-3.5 text-base font-bold text-slate-900 transition-all hover:brightness-105 sm:w-auto"
+          className="mt-1 w-full max-w-xs cursor-pointer rounded-xl bg-primary px-8 py-3.5 text-base font-bold text-primary-foreground transition-all hover:brightness-105 sm:w-auto"
         >
           Sou Motorista
         </button>

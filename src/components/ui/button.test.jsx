@@ -13,4 +13,11 @@ describe('Button (shadcn)', () => {
     const btn = screen.getByRole('button', { name: 'Cancelar' });
     expect(btn.className).toMatch(/border/);
   });
+
+  it('variante default usa texto escuro sobre verde (AA)', () => {
+    render(<Button>Ver boleias</Button>);
+    const btn = screen.getByRole('button', { name: 'Ver boleias' });
+    expect(btn.className).toMatch(/text-primary-foreground/);
+    expect(btn.className).not.toMatch(/text-white/);
+  });
 });

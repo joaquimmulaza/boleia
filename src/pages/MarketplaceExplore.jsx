@@ -115,7 +115,7 @@ export default function MarketplaceExplore() {
             <button
               type="button"
               onClick={() => navigate('/auth')}
-              className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-white"
+              className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"
             >
               Entrar
             </button>
