@@ -12,9 +12,9 @@ import LandingFooter from '../components/landing/LandingFooter';
  */
 export default function LandingPage() {
   return (
-    <div className="relative flex min-h-dvh w-full flex-col overflow-x-hidden bg-background-light font-display text-slate-900 dark:bg-background-dark dark:text-slate-100">
+    <div className="relative flex min-h-dvh w-full flex-col overflow-x-hidden bg-background-light font-display text-foreground dark:bg-background-dark">
       <LandingHeader />
-      <main className="flex-1">
+      <main className="public-page-main-offset flex-1">
         <LandingHero />
         <LandingBenefits />
         <LandingHowItWorks />

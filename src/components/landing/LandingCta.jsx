@@ -1,36 +1,41 @@
 import { useNavigate } from 'react-router-dom';
+import { Button } from '../ui/button';
 
 /**
- * CTA final — mesmo carro, preço do mês, dois papéis.
+ * CTA final — card verde, Sou Passageiro / Sou Motorista.
  * @typedef {Readonly<{}>} LandingCtaProps
  */
 export default function LandingCta() {
   const navigate = useNavigate();
 
   return (
-    <section className="bg-primary/10 px-4 py-16">
-      <div className="mx-auto flex max-w-3xl flex-col items-center gap-8 text-center">
-        <h2 className="text-balance text-3xl font-bold text-slate-900 dark:text-white">
+    <section className="px-4 py-16 lg:px-[7.5rem]">
+      <div className="mx-auto flex max-w-[1200px] flex-col items-center gap-6 rounded-[2rem] bg-primary px-6 py-12 text-center text-[#17231c] lg:px-[9.375rem] lg:py-12">
+        <h2 className="text-balance text-3xl font-bold md:text-4xl">
           Todos os dias, no mesmo carro.
         </h2>
-        <p className="text-pretty text-slate-700 dark:text-slate-300">
+        <p className="max-w-xl text-pretty">
           Passageiro ou motorista: o preço do mês em Kz fica combinado antes de arrancar.
         </p>
-        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:justify-center">
-          <button
+        <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row lg:justify-center">
+          <Button
             type="button"
+            size="lg"
+            variant="secondary"
+            className="rounded-full bg-white px-8 font-bold text-[#17231c] hover:bg-white/90"
             onClick={() => navigate('/auth?mode=register&role=passenger')}
-            className="w-full cursor-pointer rounded-xl bg-primary px-10 py-4 text-lg font-bold text-slate-900 transition-all hover:brightness-105 sm:w-auto"
           >
             Sou Passageiro
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            size="lg"
+            variant="outline"
+            className="rounded-full border-2 border-[#17231c]/25 bg-primary px-8 font-bold text-[#17231c] hover:bg-primary/90"
             onClick={() => navigate('/auth?mode=register&role=driver')}
-            className="w-full cursor-pointer rounded-xl border-2 border-primary/40 bg-white px-10 py-4 text-lg font-bold text-slate-900 transition-colors hover:border-primary/60 dark:bg-slate-800 dark:text-white sm:w-auto"
           >
             Sou Motorista
-          </button>
+          </Button>
         </div>
       </div>
     </section>

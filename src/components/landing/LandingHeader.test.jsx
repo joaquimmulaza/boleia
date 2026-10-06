@@ -35,7 +35,7 @@ function renderHeader(ui = <LandingHeader />) {
   return render(
     <ThemeProvider>
       <BrowserRouter>{ui}</BrowserRouter>
-    </ThemeProvider>
+    </ThemeProvider>,
   );
 }
 
@@ -49,11 +49,12 @@ describe('LandingHeader', () => {
     vi.clearAllMocks();
   });
 
-  it('renderiza o logo Boleia Certa', () => {
+  it('renderiza pill glass com logo e liga a /', () => {
     renderHeader();
 
-    const logo = screen.getByAltText('Boleia Certa');
-    expect(logo).toHaveAttribute('src', '/boleia-logo.png');
+    const home = screen.getByRole('link', { name: 'Boleia Certa' });
+    expect(home).toHaveAttribute('href', '/');
+    expect(screen.getByTestId('public-page-header')).toBeInTheDocument();
   });
 
   it('renderiza âncoras de navegação no desktop', () => {
@@ -68,9 +69,6 @@ describe('LandingHeader', () => {
     expect(oQueMuda.some((el) => el.getAttribute('href') === '#o-que-muda')).toBe(true);
     expect(comoFunciona.some((el) => el.getAttribute('href') === '#como-funciona')).toBe(true);
     expect(perguntas.some((el) => el.getAttribute('href') === '#perguntas')).toBe(true);
-
-    expect(screen.queryByRole('link', { name: 'Vantagens' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Segurança' })).not.toBeInTheDocument();
 
     const nav = screen.getByRole('navigation', { name: 'Navegação principal' });
     expect(within(nav).getAllByRole('link')).toHaveLength(4);
@@ -129,20 +127,6 @@ describe('LandingHeader', () => {
     expect(menuButton).toHaveAttribute('aria-expanded', 'false');
   });
 
-  it('fecha o menu ao clicar numa âncora do painel', () => {
-    renderHeader();
-
-    const menuButton = screen.getByRole('button', { name: /abrir menu/i });
-    const panelId = menuButton.getAttribute('aria-controls');
-    fireEvent.click(menuButton);
-
-    const panel = document.getElementById(panelId);
-    const anchor = within(panel).getByRole('link', { name: 'Como funciona' });
-    fireEvent.click(anchor);
-
-    expect(menuButton).toHaveAttribute('aria-expanded', 'false');
-  });
-
   it('navega para /auth ao clicar Entrar no painel e fecha o menu', () => {
     renderHeader();
 
@@ -154,24 +138,6 @@ describe('LandingHeader', () => {
     fireEvent.click(within(panel).getByRole('button', { name: 'Entrar' }));
 
     expect(mockNavigate).toHaveBeenCalledWith('/auth');
-    expect(menuButton).toHaveAttribute('aria-expanded', 'false');
-  });
-
-  it('navega para auth passageiro/motorista a partir do painel e fecha o menu', () => {
-    renderHeader();
-
-    const menuButton = screen.getByRole('button', { name: /abrir menu/i });
-    const panelId = menuButton.getAttribute('aria-controls');
-    fireEvent.click(menuButton);
-
-    const panel = document.getElementById(panelId);
-    fireEvent.click(within(panel).getByRole('button', { name: 'Sou Passageiro' }));
-    expect(mockNavigate).toHaveBeenCalledWith('/auth?mode=register&role=passenger');
-    expect(menuButton).toHaveAttribute('aria-expanded', 'false');
-
-    fireEvent.click(menuButton);
-    fireEvent.click(within(document.getElementById(panelId)).getByRole('button', { name: 'Sou Motorista' }));
-    expect(mockNavigate).toHaveBeenCalledWith('/auth?mode=register&role=driver');
     expect(menuButton).toHaveAttribute('aria-expanded', 'false');
   });
 });

@@ -14,19 +14,22 @@ const FAQ = [
 ];
 
 /**
- * Perguntas — três respostas curtas, fluxo real.
+ * Perguntas — cartões FAQ estáticos.
  * @typedef {Readonly<{}>} LandingFaqProps
  */
 export default function LandingFaq() {
   return (
-    <section id="perguntas" className="bg-white py-16 dark:bg-slate-900/40">
-      <div className="mx-auto flex max-w-3xl flex-col gap-8 px-4">
-        <h2 className="text-balance text-3xl font-bold text-slate-900 dark:text-white">Perguntas</h2>
-        <dl className="flex flex-col gap-6">
+    <section id="perguntas" className="bg-background-light px-4 py-16 dark:bg-background-dark md:px-[7.5rem] md:py-[4.5rem]">
+      <div className="mx-auto flex max-w-[720px] flex-col gap-6">
+        <h2 className="text-balance text-3xl font-bold text-foreground md:text-4xl">Perguntas</h2>
+        <dl className="flex flex-col gap-4">
           {FAQ.map((item) => (
-            <div key={item.q} className="flex flex-col gap-2 border-b border-primary/10 pb-6">
-              <dt className="text-lg font-bold text-slate-900 dark:text-white">{item.q}</dt>
-              <dd className="text-pretty text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+            <div
+              key={item.q}
+              className="rounded-2xl border border-border bg-card p-5"
+            >
+              <dt className="text-base font-bold text-foreground">{item.q}</dt>
+              <dd className="mt-2 text-pretty text-sm leading-relaxed text-muted-foreground">
                 {item.a}
               </dd>
             </div>

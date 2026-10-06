@@ -173,3 +173,67 @@ body {
   -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 0.85rem), transparent);
   mask-image: linear-gradient(to bottom, #000 calc(100% - 0.85rem), transparent);
 }
+
+/* Public pages — glass pill header (Figma 173:2) */
+.public-header-shell {
+  position: fixed;
+  top: 0;
+  z-index: var(--z-header);
+  width: 100%;
+  padding-top: 1rem;
+  padding-left: max(1rem, calc((100% - 75rem) / 2));
+  padding-right: max(1rem, calc((100% - 75rem) / 2));
+}
+
+.public-header-pill {
+  display: flex;
+  max-width: 75rem;
+  margin-inline: auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+  background: color-mix(in srgb, var(--card) 52%, transparent);
+  padding: 0.625rem 1rem;
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  transition: background-color 220ms ease-out, box-shadow 220ms ease-out, border-color 220ms ease-out;
+}
+
+.public-header-pill.is-scrolled {
+  background: color-mix(in srgb, var(--card) 94%, transparent);
+  box-shadow: 0 6px 20px -2px rgb(23 36 28 / 0.06);
+}
+
+.dark .public-header-pill.is-scrolled {
+  box-shadow: 0 6px 20px -2px rgb(0 0 0 / 0.25);
+}
+
+.public-page-main-offset {
+  padding-top: 5.625rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-header-pill {
+    transition: none;
+  }
+
+  .hero-route-line {
+    animation: none !important;
+  }
+}
+
+@keyframes hero-route-draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.hero-route-line {
+  transform-origin: left center;
+  animation: hero-route-draw 900ms 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
