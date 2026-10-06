@@ -19,25 +19,37 @@ describe('LandingFooter', () => {
     );
   }
 
-  it('Entrar leva a /auth', () => {
+  it('organiza três colunas: Passageiro, Motorista e Geral', () => {
     renderFooter();
 
-    const entrar = screen.getByRole('link', { name: /^entrar$/i });
-    expect(entrar).toHaveAttribute('href', '/auth');
+    expect(screen.getByRole('heading', { name: /^passageiro$/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^motorista$/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^geral$/i })).toBeInTheDocument();
   });
 
-  it('Contacto usa o email de contacto', () => {
+  it('coluna Passageiro liga Explorar, Criar conta e Entrar', () => {
     renderFooter();
 
-    const contacto = screen.getByRole('link', { name: /^contacto$/i });
+    expect(screen.getByRole('link', { name: /^explorar boleias$/i })).toHaveAttribute('href', '/explorar');
+    expect(screen.getByRole('link', { name: /^criar conta$/i })).toHaveAttribute('href', '/auth?mode=register');
+    expect(screen.getByRole('link', { name: /^entrar$/i })).toHaveAttribute('href', '/auth');
+  });
+
+  it('coluna Motorista liga Publicar oferta e Sou Motorista', () => {
+    renderFooter();
+
+    expect(screen.getByRole('link', { name: /^publicar oferta$/i })).toHaveAttribute('href', '/publicar-trajeto');
+    expect(screen.getByRole('link', { name: /^sou motorista$/i })).toHaveAttribute(
+      'href',
+      '/auth?mode=register&role=driver',
+    );
+  });
+
+  it('coluna Geral liga Contacto, Privacidade e Eliminação de dados', () => {
+    renderFooter();
+
     const email = 'joaquimmulazadev@gmail.com';
-
-    expect(contacto).toHaveAttribute('href', `mailto:${email}`);
-  });
-
-  it('Privacidade e Eliminação de dados são páginas públicas', () => {
-    renderFooter();
-
+    expect(screen.getByRole('link', { name: /^contacto$/i })).toHaveAttribute('href', `mailto:${email}`);
     expect(screen.getByRole('link', { name: /^privacidade$/i })).toHaveAttribute('href', '/privacidade');
     expect(screen.getByRole('link', { name: /^eliminação de dados$/i })).toHaveAttribute(
       'href',
@@ -57,5 +69,11 @@ describe('LandingFooter', () => {
 
     expect(screen.queryByRole('link', { name: /blog/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/^blog$/i)).not.toBeInTheDocument();
+  });
+
+  it('mostra copyright', () => {
+    renderFooter();
+
+    expect(screen.getByText(new RegExp(`© ${new Date().getFullYear()} Boleia Certa`, 'i'))).toBeInTheDocument();
   });
 });
