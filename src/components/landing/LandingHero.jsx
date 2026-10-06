@@ -13,8 +13,8 @@ export default function LandingHero() {
       className="border-b border-border bg-background-light dark:bg-background-dark"
       aria-labelledby="landing-hero-heading"
     >
-      <div className="mx-auto flex max-w-[1200px] flex-col gap-10 px-4 py-12 md:flex-row md:items-center md:gap-12 md:px-[7.5rem] md:py-16">
-        <div className="flex flex-1 flex-col gap-5 text-left">
+      <div className="mx-auto flex max-w-[1200px] flex-col gap-10 px-4 py-12 lg:flex-row lg:items-center lg:gap-12 lg:px-[7.5rem] lg:py-16">
+        <div className="flex min-w-0 flex-1 flex-col gap-5 text-left">
           <p className="inline-flex w-fit rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground">
             A boleia que faz sentido · Luanda · casa–trabalho
           </p>
@@ -53,7 +53,7 @@ export default function LandingHero() {
         </div>
 
         <div
-          className="w-full max-w-[480px] shrink-0 rounded-2xl border border-border bg-card p-6 shadow-sm md:ml-auto"
+          className="w-full min-w-0 max-w-[480px] rounded-2xl border border-border bg-card p-6 shadow-sm lg:ml-auto"
           aria-label="Pré-visualização do produto"
           data-testid="hero-route-storyboard"
         >
