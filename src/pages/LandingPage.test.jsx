@@ -14,6 +14,17 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+vi.mock('../hooks/useAutocomplete', () => ({
+  useAutocomplete: () => ({
+    suggestions: [],
+    loading: false,
+    error: null,
+    fetchPredictions: vi.fn(),
+    selectPlace: vi.fn(),
+    clearSuggestions: vi.fn(),
+  }),
+}));
+
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation((query) => ({
@@ -84,14 +95,14 @@ describe('LandingPage', () => {
     expect(sections.indexOf(perguntas)).toBeLessThan(indexOf(ctaHeading));
   });
 
-  it('hero navega para /explorar e registo nos CTAs principais', () => {
+  it('hero tem pesquisa OD e Criar conta no registo', () => {
     renderLanding();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Explorar boleias' }));
-    expect(mockNavigate).toHaveBeenCalledWith('/explorar');
+    expect(screen.getByTestId('hero-search-card')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ver boleias' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Explorar boleias' })).not.toBeInTheDocument();
 
-    const hero = screen.getByRole('heading', { level: 1 }).closest('section');
-    fireEvent.click(within(hero).getByRole('button', { name: 'Criar conta' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Criar conta' })[0]);
     expect(mockNavigate).toHaveBeenCalledWith('/auth?mode=register');
   });
 

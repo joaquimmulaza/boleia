@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import MarketplaceExplore from './MarketplaceExplore';
 
 const navigate = vi.fn();
@@ -191,5 +191,88 @@ describe('MarketplaceExplore', () => {
       expect(listOfertasDisponiveis).toHaveBeenCalled();
       expect(listProcurasDisponiveis).toHaveBeenCalled();
     });
+  });
+
+  it('modo filtrado: título, chip, exclui flexível e vazio com CTAs', async () => {
+    listOfertasDisponiveis.mockResolvedValueOnce([
+      {
+        id: 'of-match',
+        flexibilidade_rota: false,
+        origin_name: 'Talatona',
+        destination_name: 'Centro',
+        origin_lat: -8.9161,
+        origin_lng: 13.2341,
+        destination_lat: -8.8091,
+        destination_lng: 13.2341,
+        departure_time: '07:30',
+        vagas_disponiveis: 2,
+        valor_mensal_ask_kz: 40000,
+        modo_preco: 'POR_PASSAGEIRO',
+      },
+      {
+        id: 'of-flex',
+        flexibilidade_rota: true,
+        departure_time: '07:30',
+        vagas_disponiveis: 2,
+        valor_mensal_ask_kz: 40000,
+        modo_preco: 'POR_PASSAGEIRO',
+      },
+    ]);
+
+    render(
+      <MemoryRouter
+        initialEntries={['/explorar?origem=Talatona&destino=Centro&origem_lat=-8.916&origem_lng=13.234&destino_lat=-8.809&destino_lng=13.234']}
+      >
+        <MarketplaceExplore />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Boleias de Talatona para Centro' })).toBeInTheDocument();
+    expect(screen.getByText('Talatona → Centro')).toBeInTheDocument();
+    expect(screen.queryByTestId('explore-tabs')).not.toBeInTheDocument();
+    expect(await screen.findByText('Talatona')).toBeInTheDocument();
+    expect(screen.queryByText(/Oferta flexível/i)).not.toBeInTheDocument();
+  });
+
+  it('modo filtrado vazio: copy, Criar procura e Ver todas as boleias', async () => {
+    listOfertasDisponiveis.mockResolvedValueOnce([]);
+
+    render(
+      <MemoryRouter
+        initialEntries={['/explorar?origem=Viana&destino=Kilamba&origem_lat=-8.9&origem_lng=13.2&destino_lat=-9.0&destino_lng=13.3']}
+      >
+        <MarketplaceExplore />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId('explore-filtered-empty')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Nenhuma boleia neste caminho' })).toBeInTheDocument();
+    expect(screen.getByText('Cria uma procura e espera quem faz o mesmo caminho.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Criar procura' }));
+    expect(navigate).toHaveBeenCalledWith('/auth?mode=register&role=passenger');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ver todas as boleias' }));
+    expect(navigate).toHaveBeenCalledWith('/explorar');
+  });
+
+  it('Limpar remove filtro; Editar volta à landing com query', async () => {
+    listOfertasDisponiveis.mockResolvedValueOnce([]);
+
+    render(
+      <MemoryRouter initialEntries={['/explorar?origem=A&destino=B&origem_lat=1&origem_lng=2&destino_lat=3&destino_lng=4']}>
+        <Routes>
+          <Route path="/explorar" element={<MarketplaceExplore />} />
+          <Route path="/" element={<div data-testid="landing-stub" />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByTestId('explore-filtered-header');
+    fireEvent.click(screen.getByRole('button', { name: 'Limpar' }));
+    expect(navigate).toHaveBeenCalledWith('/explorar');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Editar' }));
+    expect(navigate).toHaveBeenCalledWith('/?origem=A&destino=B&origem_lat=1&origem_lng=2&destino_lat=3&destino_lng=4');
   });
 });

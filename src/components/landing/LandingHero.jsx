@@ -1,12 +1,25 @@
-import { useNavigate } from 'react-router-dom';
+import { useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '../ui/button';
+import LandingHeroSearchCard from './LandingHeroSearchCard';
+import { parseExploreSearchParams } from '../../utils/exploreSearchParams';
 
 /**
- * Hero da landing — chip, copy, CTAs Explorar + Criar conta, storyboard rota.
+ * Hero da landing — chip, copy, pesquisa OD e CTA Criar conta.
  * @typedef {Readonly<{}>} LandingHeroProps
  */
 export default function LandingHero() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const prefilledSearch = useMemo(() => parseExploreSearchParams(searchParams), [searchParams]);
+
+  const initialOriginCoords = prefilledSearch?.origin_lat != null && prefilledSearch?.origin_lng != null
+    ? { lat: prefilledSearch.origin_lat, lng: prefilledSearch.origin_lng }
+    : null;
+  const initialDestinationCoords = prefilledSearch?.destination_lat != null && prefilledSearch?.destination_lng != null
+    ? { lat: prefilledSearch.destination_lat, lng: prefilledSearch.destination_lng }
+    : null;
 
   return (
     <section
@@ -31,15 +44,7 @@ export default function LandingHero() {
             Em Luanda a paragem enche, o trânsito come o dia, e o preço muda. Reserva um lugar no
             mesmo carro, todos os dias, com o preço do mês em Kz — ou enche os teus lugares vazios.
           </p>
-          <div className="flex flex-wrap gap-3 pt-1">
-            <Button
-              type="button"
-              size="lg"
-              className="rounded-full px-6 font-bold"
-              onClick={() => navigate('/explorar')}
-            >
-              Explorar boleias
-            </Button>
+          <div className="hidden flex-wrap gap-3 pt-1 lg:flex">
             <Button
               type="button"
               variant="outline"
@@ -52,51 +57,27 @@ export default function LandingHero() {
           </div>
         </div>
 
-        <div
-          className="w-full min-w-0 max-w-[480px] rounded-2xl border border-border bg-card p-6 shadow-sm lg:ml-auto"
-          aria-label="Pré-visualização do produto"
-          data-testid="hero-route-storyboard"
-        >
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
-              Lugares do motorista
-            </span>
-            <span className="text-xs font-medium text-muted-foreground">Seg–Sex</span>
+        <div className="flex w-full min-w-0 flex-col gap-4 lg:max-w-[440px]">
+          <LandingHeroSearchCard
+            key={prefilledSearch
+              ? `${prefilledSearch.origem}|${prefilledSearch.destino}|${prefilledSearch.origin_lat}|${prefilledSearch.destination_lat}`
+              : 'empty'}
+            initialOrigem={prefilledSearch?.origem || ''}
+            initialDestino={prefilledSearch?.destino || ''}
+            initialOriginCoords={initialOriginCoords}
+            initialDestinationCoords={initialDestinationCoords}
+          />
+          <div className="flex lg:hidden">
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="w-full rounded-full border-border bg-card px-6 font-bold text-foreground"
+              onClick={() => navigate('/auth?mode=register')}
+            >
+              Criar conta
+            </Button>
           </div>
-
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <div className="flex flex-col items-start gap-2">
-              <span className="size-4 rounded-full bg-primary" aria-hidden="true" />
-              <span className="text-sm font-semibold text-foreground">Talatona</span>
-            </div>
-            <div
-              className="hero-route-line h-0.5 flex-1 rounded-full bg-primary"
-              aria-hidden="true"
-            />
-            <div className="flex flex-col items-end gap-2">
-              <span className="size-4 rounded-full bg-primary" aria-hidden="true" />
-              <span className="text-sm font-semibold text-foreground">Centro</span>
-            </div>
-          </div>
-
-          <div className="mb-4 flex flex-wrap gap-2">
-            <span className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-foreground">
-              Condutor
-            </span>
-            <span className="rounded-full bg-primary/15 px-3 py-1 text-xs font-medium text-foreground">
-              Lugar 1
-            </span>
-            <span className="rounded-full bg-primary/15 px-3 py-1 text-xs font-medium text-foreground">
-              Lugar 2
-            </span>
-            <span className="rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground">
-              Livre
-            </span>
-          </div>
-
-          <p className="text-sm tabular-nums text-muted-foreground">
-            3 vagas · a partir de 25.000 Kz
-          </p>
         </div>
       </div>
     </section>
