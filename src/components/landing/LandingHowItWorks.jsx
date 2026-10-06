@@ -1,4 +1,4 @@
-import { Search, Handshake, PiggyBank } from 'lucide-react';
+import { Search, Handshake, Check } from 'lucide-react';
 
 const STEPS = [
   {
@@ -12,7 +12,7 @@ const STEPS = [
     text: 'Qualquer um envia. Só a outra pessoa aceita ou recusa.',
   },
   {
-    icon: PiggyBank,
+    icon: Check,
     title: 'Preço do mês registado',
     text: 'O preço do mês em Kz fica escrito. Se alguém sair, a quota dos outros não muda.',
   },
