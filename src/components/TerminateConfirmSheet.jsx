@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import OverlayShell from './OverlayShell';
 import SheetDragHandle from './SheetDragHandle';
 import { Button } from './ui/button';
@@ -26,21 +26,6 @@ export default function TerminateConfirmSheet({
   onConfirm,
   onCancel,
 }) {
-  useEffect(() => {
-    if (!isOpen || busy) return undefined;
-
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        onCancel();
-      }
-    };
-
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [isOpen, busy, onCancel]);
-
   if (!isOpen) return null;
 
   return (
