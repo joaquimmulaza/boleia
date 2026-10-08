@@ -44,3 +44,42 @@ export function buildAcordoIdPorOfertaMap(acordos, passengerId) {
 }
 
 export const CTA_VER_ACORDO = 'Ver acordo';
+
+/**
+ * Acordo mínimo para CTA «Ver acordo» logo após accept_proposal (antes do refetch).
+ * @param {{ id: string, oferta_id?: string | null, estado?: string, acordos_passageiros?: Array<{ passenger_id?: string, estado?: string }> }} acordoRpc
+ * @param {string} passengerId
+ * @returns {object | null}
+ */
+export function buildAcordoOptimistaPosAceite(acordoRpc, passengerId) {
+  const ofertaId = acordoRpc?.oferta_id;
+  if (!acordoRpc?.id || !ofertaId || !passengerId) return null;
+
+  const linhas = acordoRpc.acordos_passageiros?.length
+    ? acordoRpc.acordos_passageiros
+    : [{ passenger_id: passengerId, estado: 'reservado' }];
+
+  return {
+    ...acordoRpc,
+    oferta_id: ofertaId,
+    estado: acordoRpc.estado ?? 'activo',
+    acordos_passageiros: linhas,
+  };
+}
+
+/**
+ * Funde listas por oferta_id; fetched ganha quando presente (optimista sobrevive a stale []).
+ * @param {Array<{ id?: string, oferta_id?: string | null }>} prev
+ * @param {Array<{ id?: string, oferta_id?: string | null }>} fetched
+ * @returns {Array}
+ */
+export function mergeAcordosPassageiro(prev, fetched) {
+  const byOferta = new Map();
+  for (const acordo of prev || []) {
+    if (acordo?.oferta_id) byOferta.set(acordo.oferta_id, acordo);
+  }
+  for (const acordo of fetched || []) {
+    if (acordo?.oferta_id) byOferta.set(acordo.oferta_id, acordo);
+  }
+  return [...byOferta.values()];
+}

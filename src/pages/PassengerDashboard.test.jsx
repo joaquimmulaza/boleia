@@ -1758,6 +1758,97 @@ describe('PassengerDashboard — marketplace', () => {
     expect(getAgreementsForPassenger.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
+  it('aceitar contraproposta na mesma instância: Ver acordo com acordos stale no refetch pós-aceite', async () => {
+    const ofertaBrowse = {
+      id: 'of-browse',
+      origin_name: 'Viana Municipality, Angola',
+      destination_name: 'Talatona Municipality, Angola',
+      departure_time: '06:30:00',
+      vagas_disponiveis: 3,
+      valor_mensal_ask_kz: 24000,
+      modo_preco: 'POR_PASSAGEIRO',
+      flexibilidade_rota: false,
+    };
+    const propostaPassageiro = {
+      id: 'prop-pax',
+      estado: 'aberta',
+      created_by: 'pax-1',
+      oferta_id: 'of-browse',
+      procura_id: 'pr-1',
+      modo_preco: 'POR_PASSAGEIRO',
+      valor_mensal_ask_kz: 20000,
+      n_passageiros_propostos: 1,
+    };
+    const contrapropostaMotorista = {
+      id: 'prop-mot-contra',
+      estado: 'aberta',
+      created_by: 'driver-1',
+      oferta_id: 'of-browse',
+      procura_id: 'pr-1',
+      modo_preco: 'POR_PASSAGEIRO',
+      valor_mensal_ask_kz: 22000,
+      n_passageiros_propostos: 1,
+    };
+
+    listProcurasByOwner
+      .mockResolvedValueOnce([{ ...procuraBase, n_candidato: 1 }])
+      .mockResolvedValue([]);
+    listOfertasDisponiveis
+      .mockResolvedValueOnce([ofertaBrowse])
+      .mockResolvedValue([{ ...ofertaBrowse, vagas_disponiveis: 2 }]);
+    listPropostasByProcura.mockResolvedValue([propostaPassageiro, contrapropostaMotorista]);
+    enrichPropostasForReview.mockImplementation(async (lista) =>
+      (lista || []).map((p) => ({
+        proposta: p,
+        titulo: 'Individual',
+        membros: [{ passenger_id: 'pax-1', nome: 'Tu', quota_mensal_kz: p.valor_mensal_ask_kz }],
+        pricing: {
+          valor_mensal_total_kz: p.valor_mensal_ask_kz,
+          valor_mensal_por_passageiro_kz: p.valor_mensal_ask_kz,
+          quotas: [p.valor_mensal_ask_kz],
+          temResto: false,
+        },
+        avisoComposicao: null,
+      })),
+    );
+    getAgreementsForPassenger.mockResolvedValue([]);
+    createAgreementFromProposal.mockResolvedValue({
+      id: 'acordo-pos-contra',
+      oferta_id: 'of-browse',
+      estado: 'activo',
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/passageiro']}>
+        <PassengerDashboard />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+
+    await abrirMinhaProcura();
+    expect(await screen.findByText('Propostas recebidas')).toBeInTheDocument();
+    expect(screen.getByText('Propostas enviadas')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Aceitar proposta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
+
+    await waitFor(() => {
+      expect(createAgreementFromProposal).toHaveBeenCalledWith('prop-mot-contra');
+    });
+    expect(await screen.findByTestId('passenger-feedback')).toHaveTextContent(
+      'Procura fechada — tens acordo activo.',
+    );
+
+    expect(await screen.findByRole('button', { name: 'Ver acordo' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Propor acordo' })).not.toBeInTheDocument();
+    expect(screen.getByText('2 lugares disponíveis')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ver acordo' }));
+    expect(screen.getByTestId('location-probe')).toHaveTextContent(
+      '/acordos?openAcordoId=acordo-pos-contra',
+    );
+  });
+
   it('após aceitar contraproposta do motorista mantém CTA Ver acordo mesmo com browse stale', async () => {
     const ofertaBrowse = {
       id: 'of-browse',

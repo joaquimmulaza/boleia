@@ -39,7 +39,12 @@ import {
   cancelProposta,
 } from '../services/PropostaService';
 import { createAgreementFromProposal, getAgreementsForPassenger } from '../services/AgreementService';
-import { buildAcordoIdPorOfertaMap, CTA_VER_ACORDO } from '../utils/acordoPorOferta';
+import {
+  buildAcordoIdPorOfertaMap,
+  buildAcordoOptimistaPosAceite,
+  mergeAcordosPassageiro,
+  CTA_VER_ACORDO,
+} from '../utils/acordoPorOferta';
 import { notifyMarketplaceHubRefresh } from '../utils/marketplaceHubRefresh';
 import { shouldAvisarProcuraFecha } from '../utils/propostaReview';
 import { CTA_LABEL } from '../utils/opportunityCard';
@@ -228,7 +233,7 @@ const PassengerDashboard = () => {
           if (isStale()) return;
 
           setBrowseOfertas(ofertas);
-          setAcordosPassageiro(acordos || []);
+          setAcordosPassageiro((prev) => mergeAcordosPassageiro(prev, acordos || []));
           setBrowseOfertasComProposta(
             new Set(abertas.map((p) => p.oferta_id).filter(Boolean)),
           );
@@ -865,6 +870,8 @@ const PassengerDashboard = () => {
   const handleAceitarInbox = async (propostaId, memberIds) => {
     setBusyId(propostaId);
     setFeedback({ type: '', text: '' });
+    const reviewAceite = inboxReviews.find((r) => r.proposta.id === propostaId);
+    const ofertaIdAceite = reviewAceite?.proposta?.oferta_id ?? null;
     try {
       let result;
       if (Array.isArray(memberIds) && memberIds.length > 0) {
@@ -874,6 +881,23 @@ const PassengerDashboard = () => {
       }
       const offlineQueued = Boolean(result?.offlineQueued);
       const fechaProcura = !offlineQueued && shouldAvisarProcuraFecha(procura?.estado);
+      if (!offlineQueued && result?.id) {
+        const optimista = buildAcordoOptimistaPosAceite(
+          { ...result, oferta_id: result.oferta_id ?? ofertaIdAceite },
+          user.id,
+        );
+        if (optimista) {
+          setAcordosPassageiro((prev) => mergeAcordosPassageiro(prev, [optimista]));
+        }
+        const ofertaId = result.oferta_id ?? ofertaIdAceite;
+        if (ofertaId) {
+          setBrowseOfertasComProposta((prev) => {
+            const next = new Set(prev);
+            next.delete(ofertaId);
+            return next;
+          });
+        }
+      }
       setFeedback({
         type: 'success',
         text: fechaProcura
