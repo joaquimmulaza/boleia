@@ -300,6 +300,21 @@ describe('PropostaReviewCard', () => {
     expect(screen.queryByRole('button', { name: /Fazer contra-proposta/i })).toBeNull();
   });
 
+  it('mostra aviso de procura fechada na confirmação quando pedido', () => {
+    render(
+      <PropostaReviewCard
+        review={buildReview()}
+        busy={false}
+        avisoProcuraFecha
+        onAceitar={vi.fn()}
+        onRecusar={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Aceitar proposta/i }));
+    expect(screen.getByText('Ao aceitar, a tua procura fica fechada.')).toBeInTheDocument();
+  });
+
   it('chama onAceitar e onRecusar', () => {
     const onAceitar = vi.fn();
     const onRecusar = vi.fn();

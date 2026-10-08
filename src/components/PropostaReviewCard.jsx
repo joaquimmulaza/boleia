@@ -86,6 +86,7 @@ function countMembrosComPickup(membros) {
  *   onContraProposta?: () => void,
  *   precoPublicadoKz?: number | null,
  *   acimaDoTeto?: boolean,
+ *   avisoProcuraFecha?: boolean,
  * }} props
  */
 function PropostaReviewCard({
@@ -99,6 +100,7 @@ function PropostaReviewCard({
   onContraProposta,
   precoPublicadoKz = null,
   acimaDoTeto = false,
+  avisoProcuraFecha = false,
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState(/** @type {string[]} */ ([]));
@@ -397,6 +399,14 @@ function PropostaReviewCard({
                   ? `Vais criar um acordo com ${nProposto} passageiros seleccionados. Esta acção não se pode desfazer.`
                   : 'Vais criar um acordo com estes passageiros. Esta acção não se pode desfazer.'}
               </p>
+              {avisoProcuraFecha ? (
+                <p
+                  className="text-center text-sm font-medium text-slate-700 dark:text-slate-200 text-pretty"
+                  data-testid="aviso-procura-fecha"
+                >
+                  Ao aceitar, a tua procura fica fechada.
+                </p>
+              ) : null}
               <AcordoContratoSnapshot snapshot={contratoSnapshot} variant="compact" />
             </>
           )

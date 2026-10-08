@@ -185,6 +185,12 @@ const PassengerDashboard = () => {
     [acordosPassageiro, user?.id],
   );
 
+  const avisoProcuraFechaAoAceitar = useMemo(() => {
+    if (!procura) return false;
+    const estado = String(procura.estado || '').toLowerCase();
+    return estado === 'activa' || estado === 'em_negociacao';
+  }, [procura]);
+
   const ofertasComPropostaAberta = useMemo(() => {
     const ids = new Set(browseOfertasComProposta);
     for (const review of enviadasReviews) {
@@ -842,7 +848,12 @@ const PassengerDashboard = () => {
       } else {
         await createAgreementFromProposal(propostaId);
       }
-      setFeedback({ type: 'success', text: 'Proposta aceite. Acordo criado.' });
+      setFeedback({
+        type: 'success',
+        text: avisoProcuraFechaAoAceitar
+          ? 'Procura fechada — tens acordo activo.'
+          : 'Proposta aceite. Acordo criado.',
+      });
       await carregar({ silent: true });
       notifyMarketplaceHubRefresh();
     } catch (err) {
@@ -1298,6 +1309,7 @@ const PassengerDashboard = () => {
                   secao="recebidas"
                   busy={busyId === review.proposta.id}
                   precoPublicadoKz={ofertasById[review.proposta.oferta_id]?.valor_mensal_ask_kz ?? null}
+                  avisoProcuraFecha={avisoProcuraFechaAoAceitar}
                   onAceitar={(memberIds) => handleAceitarInbox(review.proposta.id, memberIds)}
                   onRecusar={() => handleRecusarInbox(review.proposta.id)}
                   onContraProposta={
@@ -1755,6 +1767,7 @@ const PassengerDashboard = () => {
                     procura.teto_mensal_kz,
                     modoTetoActivo,
                   )}
+                  avisoProcuraFecha={avisoProcuraFechaAoAceitar}
                   onAceitar={(memberIds) => handleAceitarInbox(review.proposta.id, memberIds)}
                   onRecusar={() => handleRecusarInbox(review.proposta.id)}
                   onContraProposta={
