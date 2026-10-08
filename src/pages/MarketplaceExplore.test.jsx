@@ -337,6 +337,22 @@ describe('MarketplaceExplore', () => {
     expect(decodeURIComponent(authUrl)).toContain('/explorar?origem=Viana&destino=Talatona');
   });
 
+  it('anónimo: Entrar preserva next codificado quando origem tem espaço', async () => {
+    const filteredWithSpace = '/explorar?origem=Kilamba%20Kiaxi&destino=Talatona';
+    listOfertasDisponiveis.mockResolvedValueOnce([]);
+
+    render(
+      <MemoryRouter initialEntries={[filteredWithSpace]}>
+        <MarketplaceExplore />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Entrar' }));
+    const authUrl = navigate.mock.calls[0][0];
+    const next = new URLSearchParams(authUrl.split('?')[1]).get('next');
+    expect(next).toBe(filteredWithSpace);
+  });
+
   it('passageiro autenticado: Criar procura no empty vai para /passageiro', async () => {
     mockUseAuth.mockReturnValue({
       session: { user: { id: 'pax-1' } },
