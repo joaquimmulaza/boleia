@@ -118,8 +118,7 @@ describe('PACOTE ENG #30 — counter-ask preço na proposta', () => {
   });
 
   it.skip('ENG30-1: browse pré-preenche ask e envia valor editado (counter-ask)', async () => {
-    // TODO(bug): browse completo abre OpportunityProposalSheet sem PropostaValorInput —
-    // counter-ask indisponível (regression vs ENG#30 / explorar-proposta-passageiro).
+    // TODO(bug): https://github.com/joaquimmulaza/boleia/issues/216
     render(
       <MemoryRouter>
         <PassengerDashboard />
