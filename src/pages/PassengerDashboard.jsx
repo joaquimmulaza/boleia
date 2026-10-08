@@ -898,6 +898,7 @@ const PassengerDashboard = () => {
     setFeedback({ type: '', text: '' });
     const reviewAceite = inboxReviews.find((r) => r.proposta.id === propostaId);
     const ofertaIdAceite = reviewAceite?.proposta?.oferta_id ?? null;
+    const procuraIdAceite = reviewAceite?.proposta?.procura_id ?? procura?.id ?? null;
     try {
       let result;
       if (Array.isArray(memberIds) && memberIds.length > 0) {
@@ -918,6 +919,17 @@ const PassengerDashboard = () => {
           setAcordosPassageiro((prev) => mergeAcordosPassageiro([optimista], prev || [], user.id));
         }
         const ofertaId = result.oferta_id ?? ofertaIdAceite;
+        if (procuraIdAceite) {
+          setInboxReviews((prev) =>
+            prev.filter((r) => r.proposta.procura_id !== procuraIdAceite),
+          );
+          setEnviadasReviews((prev) =>
+            prev.filter((r) => r.proposta.procura_id !== procuraIdAceite),
+          );
+        } else if (ofertaId) {
+          setInboxReviews((prev) => prev.filter((r) => r.proposta.oferta_id !== ofertaId));
+          setEnviadasReviews((prev) => prev.filter((r) => r.proposta.oferta_id !== ofertaId));
+        }
         if (ofertaId) {
           setBrowseOfertasComProposta((prev) => {
             const next = new Set(prev);
@@ -935,6 +947,30 @@ const PassengerDashboard = () => {
             : 'Proposta aceite. Acordo criado.',
       });
       await carregar({ silent: true });
+      if (!offlineQueued && result?.id) {
+        const ofertaId = result.oferta_id ?? ofertaIdAceite;
+        if (procuraIdAceite) {
+          setInboxReviews((prev) =>
+            prev.filter((r) => r.proposta.procura_id !== procuraIdAceite),
+          );
+          setEnviadasReviews((prev) =>
+            prev.filter((r) => r.proposta.procura_id !== procuraIdAceite),
+          );
+        } else if (ofertaId) {
+          setInboxReviews((prev) => prev.filter((r) => r.proposta.oferta_id !== ofertaId));
+          setEnviadasReviews((prev) => prev.filter((r) => r.proposta.oferta_id !== ofertaId));
+        }
+        if (user?.id) {
+          try {
+            const abertas = await listOpenPropostasByCreator(user.id);
+            setBrowseOfertasComProposta(
+              new Set(abertas.map((p) => p.oferta_id).filter(Boolean)),
+            );
+          } catch (refetchErr) {
+            console.warn('Refetch propostas abertas após aceite:', refetchErr);
+          }
+        }
+      }
       notifyMarketplaceHubRefresh();
     } catch (err) {
       setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
