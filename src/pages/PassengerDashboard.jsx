@@ -839,16 +839,21 @@ const PassengerDashboard = () => {
     setBusyId(propostaId);
     setFeedback({ type: '', text: '' });
     try {
+      let result;
       if (Array.isArray(memberIds) && memberIds.length > 0) {
-        await createAgreementFromProposal(propostaId, { memberIds });
+        result = await createAgreementFromProposal(propostaId, { memberIds });
       } else {
-        await createAgreementFromProposal(propostaId);
+        result = await createAgreementFromProposal(propostaId);
       }
+      const offlineQueued = Boolean(result?.offlineQueued);
+      const fechaProcura = !offlineQueued && shouldAvisarProcuraFecha(procura?.estado);
       setFeedback({
         type: 'success',
-        text: shouldAvisarProcuraFecha(procura?.estado)
+        text: fechaProcura
           ? 'Procura fechada — tens acordo activo.'
-          : 'Proposta aceite. Acordo criado.',
+          : offlineQueued
+            ? 'Aceite guardado. Sincronizamos quando a rede voltar.'
+            : 'Proposta aceite. Acordo criado.',
       });
       await carregar({ silent: true });
       notifyMarketplaceHubRefresh();

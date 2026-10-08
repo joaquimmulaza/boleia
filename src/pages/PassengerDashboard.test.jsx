@@ -1619,6 +1619,56 @@ describe('PassengerDashboard — marketplace', () => {
     );
   });
 
+  it('aceite offline enfileirado não mostra toast de procura fechada', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    listPropostasByProcura.mockResolvedValue([
+      {
+        id: 'prop-b',
+        estado: 'aberta',
+        created_by: 'driver-1',
+        modo_preco: 'TOTAL_ACORDO',
+        valor_mensal_ask_kz: 120000,
+        n_passageiros_propostos: 1,
+      },
+    ]);
+    enrichPropostasForReview.mockImplementation(async (lista) =>
+      (lista || []).map((p) => ({
+        proposta: p,
+        titulo: 'Individual',
+        membros: [{ passenger_id: 'pax-1', nome: 'Tu', quota_mensal_kz: 120000 }],
+        pricing: {
+          valor_mensal_total_kz: 120000,
+          valor_mensal_por_passageiro_kz: 120000,
+          quotas: [120000],
+          temResto: false,
+        },
+        avisoComposicao: null,
+      })),
+    );
+    createAgreementFromProposal.mockResolvedValue({
+      id: 'prop-b',
+      offlineQueued: true,
+      idempotency_key: 'idem-offline',
+    });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    await abrirMinhaProcura();
+    fireEvent.click(await screen.findByRole('button', { name: /Aceitar proposta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
+
+    expect(await screen.findByTestId('passenger-feedback')).toHaveTextContent(
+      'Aceite guardado. Sincronizamos quando a rede voltar.',
+    );
+    expect(screen.getByTestId('passenger-feedback')).not.toHaveTextContent(
+      'Procura fechada — tens acordo activo.',
+    );
+  });
+
   it('após aceitar proposta actualiza inbox e CTA Ver acordo sem reload', async () => {
     const propostaAberta = {
       id: 'prop-b',
