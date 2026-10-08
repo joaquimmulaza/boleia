@@ -367,6 +367,50 @@ describe('DriverDashboard — marketplace', () => {
     expect(await screen.findByText(/Proposta aceite\. Acordo criado/i)).toBeInTheDocument();
   });
 
+  it('após aceitar proposta actualiza lista e vagas sem reload completo', async () => {
+    listPropostasByOferta
+      .mockResolvedValueOnce([propostaAberta])
+      .mockResolvedValue([{ ...propostaAberta, estado: 'aceite' }]);
+    enrichPropostasForReview.mockImplementation(async (lista) => {
+      if (!lista?.length) return [];
+      if (lista[0].estado === 'aceite') {
+        return [{ ...reviewFixture, proposta: lista[0] }];
+      }
+      return [reviewFixture];
+    });
+    listOfertasByDriver
+      .mockResolvedValueOnce([
+        { ...ofertaFixa, vagas_disponiveis: 3 },
+      ])
+      .mockResolvedValue([
+        { ...ofertaFixa, vagas_disponiveis: 1 },
+      ]);
+    createAgreementFromProposal.mockResolvedValue({ id: 'ac-1' });
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Talatona');
+    await abrirDetalheProposta('Ana S.');
+    fireEvent.click(screen.getByRole('button', { name: /Aceitar proposta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
+
+    await waitFor(() => {
+      expect(createAgreementFromProposal).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(screen.queryByTestId('proposta-detail-sheet')).not.toBeInTheDocument();
+    });
+    expect(listPropostasByOferta.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(listOfertasByDriver.mock.calls.length).toBeGreaterThanOrEqual(2);
+
+    await abrirPropostasSheet();
+    expect(screen.queryByRole('button', { name: /Aceitar proposta/i })).not.toBeInTheDocument();
+  });
+
   it('mostra propostas enviadas pelo motorista (sentido B) com Cancelar e não no inbox', async () => {
     const propostaEnviada = {
       ...propostaAberta,

@@ -1573,6 +1573,90 @@ describe('PassengerDashboard — marketplace', () => {
     });
   });
 
+  it('após aceitar proposta actualiza inbox e CTA Ver acordo sem reload', async () => {
+    const propostaAberta = {
+      id: 'prop-b',
+      estado: 'aberta',
+      created_by: 'driver-1',
+      oferta_id: 'of-browse',
+      modo_preco: 'TOTAL_ACORDO',
+      valor_mensal_ask_kz: 120000,
+      n_passageiros_propostos: 1,
+    };
+    const reviewFixture = {
+      proposta: propostaAberta,
+      titulo: 'Individual',
+      membros: [{ passenger_id: 'pax-1', nome: 'Tu', quota_mensal_kz: 120000 }],
+      pricing: {
+        valor_mensal_total_kz: 120000,
+        valor_mensal_por_passageiro_kz: 120000,
+        quotas: [120000],
+        temResto: false,
+      },
+      avisoComposicao: null,
+    };
+
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    listOfertasDisponiveis.mockResolvedValue([
+      {
+        id: 'of-browse',
+        origin_name: 'Viana',
+        destination_name: 'Talatona',
+        departure_time: '06:45:00',
+        vagas_disponiveis: 2,
+        valor_mensal_ask_kz: 120000,
+        modo_preco: 'TOTAL_ACORDO',
+        flexibilidade_rota: false,
+      },
+    ]);
+    listPropostasByProcura
+      .mockResolvedValueOnce([propostaAberta])
+      .mockResolvedValue([{ ...propostaAberta, estado: 'aceite' }]);
+    enrichPropostasForReview.mockImplementation(async (lista) => {
+      if (!lista?.length) return [];
+      if (lista[0].estado === 'aceite') {
+        return [{ ...reviewFixture, proposta: lista[0] }];
+      }
+      return [reviewFixture];
+    });
+    getAgreementsForPassenger
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([
+        {
+          id: 'acordo-pos-aceite',
+          oferta_id: 'of-browse',
+          estado: 'activo',
+          acordos_passageiros: [{ passenger_id: 'pax-1', estado: 'reservado' }],
+        },
+      ]);
+    createAgreementFromProposal.mockResolvedValue({ id: 'acordo-pos-aceite' });
+
+    render(
+      <MemoryRouter initialEntries={['/passageiro']}>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    await abrirMinhaProcura();
+    expect(await screen.findByRole('button', { name: /Aceitar proposta/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Aceitar proposta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
+
+    await waitFor(() => {
+      expect(createAgreementFromProposal).toHaveBeenCalledWith('prop-b');
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /Aceitar proposta/i })).not.toBeInTheDocument();
+    });
+    expect(await screen.findByText('Propostas concluídas')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Explorar' }));
+    expect(await screen.findByRole('button', { name: 'Ver acordo' })).toBeInTheDocument();
+    expect(listPropostasByProcura.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(getAgreementsForPassenger.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
   it('mostra bucket lista de espera com empty state quando sem inscrições', async () => {
     listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
     listWaitlistByProcura.mockResolvedValue([]);

@@ -40,6 +40,7 @@ import {
 } from '../services/PropostaService';
 import { createAgreementFromProposal, getAgreementsForPassenger } from '../services/AgreementService';
 import { buildAcordoIdPorOfertaMap, CTA_VER_ACORDO } from '../utils/acordoPorOferta';
+import { notifyMarketplaceHubRefresh } from '../utils/marketplaceHubRefresh';
 import { CTA_LABEL } from '../utils/opportunityCard';
 import { enqueueWaitlist, filterWaitlistEntriesVisiveis, listWaitlistByProcura } from '../services/WaitlistService';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
@@ -192,12 +193,16 @@ const PassengerDashboard = () => {
     return ids;
   }, [browseOfertasComProposta, enviadasReviews]);
 
-  const carregar = useCallback(async () => {
+  /**
+   * @param {{ silent?: boolean }} [options]
+   */
+  const carregar = useCallback(async (options = {}) => {
+    const { silent = false } = options;
     if (!user?.id) {
-      setLoading(false);
+      if (!silent) setLoading(false);
       return;
     }
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const lista = await listProcurasByOwner(user.id);
       const activa = lista.find((p) => p.estado === 'activa' || p.estado === 'em_negociacao') || null;
@@ -289,7 +294,7 @@ const PassengerDashboard = () => {
       console.error(err);
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [user?.id]);
 
@@ -838,7 +843,8 @@ const PassengerDashboard = () => {
         await createAgreementFromProposal(propostaId);
       }
       setFeedback({ type: 'success', text: 'Proposta aceite. Acordo criado.' });
-      await carregar();
+      await carregar({ silent: true });
+      notifyMarketplaceHubRefresh();
     } catch (err) {
       setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
     } finally {

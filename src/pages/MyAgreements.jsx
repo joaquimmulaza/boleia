@@ -26,6 +26,7 @@ import TerminateConfirmSheet from '../components/TerminateConfirmSheet';
 import { Button } from '../components/ui/button';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
+import { subscribeMarketplaceHubRefresh } from '../utils/marketplaceHubRefresh';
 import { labelRotaOferta } from '../utils/ofertaLabels';
 import { buildAcordoContratoSnapshot } from '../utils/buildAcordoContratoSnapshot';
 import AcordoContratoSnapshot from '../components/AcordoContratoSnapshot';
@@ -354,12 +355,16 @@ const MyAgreements = () => {
     }
   }, []);
 
-  const carregar = useCallback(async () => {
+  /**
+   * @param {{ silent?: boolean }} [options]
+   */
+  const carregar = useCallback(async (options = {}) => {
+    const { silent = false } = options;
     if (!user?.id) {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
       return [];
     }
-    setIsLoading(true);
+    if (!silent) setIsLoading(true);
     try {
       const data =
         tipoPerfil === 'Motorista'
@@ -373,12 +378,18 @@ const MyAgreements = () => {
       setMessage({ type: 'error', text: getFriendlyErrorMessage(err) });
       return [];
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   }, [user?.id, tipoPerfil]);
 
   useEffect(() => {
     carregar();
+  }, [carregar]);
+
+  useEffect(() => {
+    return subscribeMarketplaceHubRefresh(() => {
+      void carregar({ silent: true });
+    });
   }, [carregar]);
 
   useEffect(() => {
