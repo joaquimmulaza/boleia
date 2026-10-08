@@ -151,6 +151,17 @@ function nomePassageiro(pax) {
 }
 
 /**
+ * Nome na UI — motorista vê só primeiro nome; passageiro mantém copy completa.
+ * @param {{ perfis?: { nome_completo?: string }, nome?: string }} pax
+ * @param {{ motorista?: boolean }} [opts]
+ * @returns {string}
+ */
+function nomePassageiroUi(pax, { motorista = false } = {}) {
+  const nome = nomePassageiro(pax);
+  return motorista ? formatPrimeiroNome(nome) : nome;
+}
+
+/**
  * Formata hora HH:MM a partir de time/timestamptz/string.
  * @param {string | null | undefined} raw
  * @returns {string | null}
@@ -952,7 +963,17 @@ const MyAgreements = () => {
             ) : null}
 
             <AcordoContratoSnapshot
-              snapshot={buildAcordoContratoSnapshot(selected)}
+              snapshot={buildAcordoContratoSnapshot(selected, {
+                primeiroNomePassageiro: (() => {
+                  if (!isMotorista || nLinhas !== 1) return undefined;
+                  const pax = linhas.find((p) => {
+                    const e = String(p.estado || '').toLowerCase();
+                    return e === 'activo' || e === 'reservado';
+                  }) || linhas[0];
+                  const raw = nomePassageiro(pax);
+                  return raw === 'Passageiro' ? undefined : raw;
+                })(),
+              })}
               highlightKz={isPassageiro ? quotaDestaque : null}
               className="border-0 bg-transparent dark:bg-transparent p-0"
             />
@@ -1139,7 +1160,7 @@ const MyAgreements = () => {
               </ul>
               <ul className="space-y-2">
                 {linhas.map((p) => {
-                  const nome = nomePassageiro(p);
+                  const nome = nomePassageiroUi(p, { motorista: isMotorista });
                   const highlighted = isPassageiro && p.passenger_id === user?.id;
                   const saiu = String(p.estado || '').toLowerCase() === 'saiu';
                   return (
