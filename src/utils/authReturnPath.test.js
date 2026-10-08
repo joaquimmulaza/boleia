@@ -95,6 +95,21 @@ describe('buildAuthUrlWithNext', () => {
       expect(resolvePostLoginPath(next, 'Passageiro')).toBe(p);
     }
   });
+
+  it('round-trip Viana Estalagem e A&B+Talatona', () => {
+    const paths = [
+      '/explorar?origem=Viana%20Estalagem&destino=Talatona',
+      '/explorar?origem=Viana&destino=A%26B+Talatona',
+    ];
+
+    for (const p of paths) {
+      const url = buildAuthUrlWithNext('/auth', p);
+      const qs = url.split('?')[1] || '';
+      const next = new URLSearchParams(qs).get('next');
+      expect(next).toBe(p);
+      expect(resolvePostLoginPath(next, 'Passageiro')).toBe(p);
+    }
+  });
 });
 
 describe('AUTH_RETURN_STORAGE_KEY', () => {
