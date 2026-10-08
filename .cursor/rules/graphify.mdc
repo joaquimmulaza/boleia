@@ -16,3 +16,9 @@ This repository is indexed by Graphify: a code graph over its call, dependency, 
 
 Fall back to grep or file reads only for what the graph does not model: literal string or comment matches, non-indexed files, or reading a file you have already located. If no Graphify tools are listed, check the MCP server connection.
 <!-- graphify-rules-end -->
+
+## This repo (local Cursor and Cloud Agents)
+
+- The MCP server in `.cursor/mcp.json` is named `graphlore` (reads `graphify-out/`); its tools are the "Graphify tools" mentioned above.
+- If no graphlore tools are listed (e.g. some Cloud Agent sessions), use the CLI instead: `graphify query "<question or symbols>"` before grep/Read.
+- After code edits, run `graphify update .` (or `pnpm graphify:update`) so the graph matches the code for the rest of the session. `graphify-out/` is gitignored; Cloud Agents rebuild it on startup via `.cursor/setup-graphlore.sh`.
