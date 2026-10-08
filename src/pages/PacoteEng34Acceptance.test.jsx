@@ -301,6 +301,8 @@ describe('PACOTE ENG #34 — contra-proposta na proposta recebida', () => {
       </MemoryRouter>,
     );
 
+    await screen.findByTestId('proposal-sheet');
+    fireEvent.click(await screen.findByRole('button', { name: /Ver proposta 1 passageiro/i }));
     fireEvent.click(await screen.findByRole('button', { name: /Fazer contra-proposta/i }));
 
     const valorInput = await screen.findByTestId('proposta-valor-input');

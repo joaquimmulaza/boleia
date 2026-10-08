@@ -177,9 +177,10 @@ describe('PACOTE #19 — gaps visão path crítico', () => {
   });
 
   describe('AC4 — WhatsApp auxiliar (não substitui fluxo in-app)', () => {
-    it('WhatsApp só no fallback colapsável de GrupoProcuraPanel', () => {
+    it('WhatsApp auxiliar no GrupoProcuraPanel; convite telefone colapsável', () => {
       const src = readSrc('components/GrupoProcuraPanel.jsx');
-      expect(src).toMatch(/Fallback: Convidar por telefone/);
+      expect(src).toMatch(/Convidar por telefone/);
+      expect(src).toMatch(/Partilhar via WhatsApp/);
       expect(src).toMatch(/wa\.me/);
       expect(src).toMatch(/telefoneFallbackOpen/);
       expect(src).not.toMatch(/Propor acordo[\s\S]*wa\.me/);
@@ -229,12 +230,12 @@ describe('PACOTE #19 — gaps visão path crítico', () => {
       expect(filterPropostasEnviadas([{ id: 'p1', estado: 'aberta', created_by: 'x' }], '')).toEqual([]);
     });
 
-    it('feed browse passa onPropor ao OfertaMatchCard (ENG#23)', () => {
+    it('feed browse passa onCta ao OpportunityCard (ENG#23)', () => {
       const src = readSrc('pages/PassengerDashboard.jsx');
       const browseBlock = src.match(/browseOfertas\.map\([\s\S]*?\)\)\}/);
       expect(browseBlock).not.toBeNull();
-      expect(browseBlock[0]).toMatch(/variant="browse"/);
-      expect(browseBlock[0]).toMatch(/onPropor/);
+      expect(browseBlock[0]).toMatch(/OpportunityCard/);
+      expect(browseBlock[0]).toMatch(/onCta/);
     });
   });
 });

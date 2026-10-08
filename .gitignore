@@ -80,6 +80,12 @@ stitch_auth.html
 .temp-execution-*.js
 
 # ===========================
+# Supabase CLI (local)
+# ===========================
+supabase/.temp/
+supabase/.branches/
+
+# ===========================
 # Misc
 # ===========================
 *.local
