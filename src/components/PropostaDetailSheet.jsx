@@ -17,6 +17,7 @@ import PropostaReviewCard from './PropostaReviewCard';
  *   onContraProposta?: () => void,
  *   modo?: 'contraparte' | 'criador' | 'historico',
  *   secao?: 'recebidas' | 'enviadas',
+ *   procuraEstado?: string | null,
  * }} props
  */
 function PropostaDetailSheet({
@@ -30,6 +31,7 @@ function PropostaDetailSheet({
   onContraProposta,
   modo = 'contraparte',
   secao = 'recebidas',
+  procuraEstado = null,
 }) {
   return (
     <OverlayShell
@@ -63,6 +65,7 @@ function PropostaDetailSheet({
           onRecusar={onRecusar}
           onCancelar={onCancelar}
           onContraProposta={onContraProposta}
+          procuraEstado={procuraEstado}
         />
       </div>
     </OverlayShell>

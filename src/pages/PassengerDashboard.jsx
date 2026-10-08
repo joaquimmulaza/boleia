@@ -40,6 +40,8 @@ import {
 } from '../services/PropostaService';
 import { createAgreementFromProposal, getAgreementsForPassenger } from '../services/AgreementService';
 import { buildAcordoIdPorOfertaMap, CTA_VER_ACORDO } from '../utils/acordoPorOferta';
+import { notifyMarketplaceHubRefresh } from '../utils/marketplaceHubRefresh';
+import { shouldAvisarProcuraFecha } from '../utils/propostaReview';
 import { CTA_LABEL } from '../utils/opportunityCard';
 import { enqueueWaitlist, filterWaitlistEntriesVisiveis, listWaitlistByProcura } from '../services/WaitlistService';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
@@ -184,6 +186,7 @@ const PassengerDashboard = () => {
     [acordosPassageiro, user?.id],
   );
 
+
   const ofertasComPropostaAberta = useMemo(() => {
     const ids = new Set(browseOfertasComProposta);
     for (const review of enviadasReviews) {
@@ -192,12 +195,16 @@ const PassengerDashboard = () => {
     return ids;
   }, [browseOfertasComProposta, enviadasReviews]);
 
-  const carregar = useCallback(async () => {
+  /**
+   * @param {{ silent?: boolean }} [options]
+   */
+  const carregar = useCallback(async (options = {}) => {
+    const { silent = false } = options;
     if (!user?.id) {
-      setLoading(false);
+      if (!silent) setLoading(false);
       return;
     }
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const lista = await listProcurasByOwner(user.id);
       const activa = lista.find((p) => p.estado === 'activa' || p.estado === 'em_negociacao') || null;
@@ -289,7 +296,7 @@ const PassengerDashboard = () => {
       console.error(err);
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [user?.id]);
 
@@ -832,13 +839,24 @@ const PassengerDashboard = () => {
     setBusyId(propostaId);
     setFeedback({ type: '', text: '' });
     try {
+      let result;
       if (Array.isArray(memberIds) && memberIds.length > 0) {
-        await createAgreementFromProposal(propostaId, { memberIds });
+        result = await createAgreementFromProposal(propostaId, { memberIds });
       } else {
-        await createAgreementFromProposal(propostaId);
+        result = await createAgreementFromProposal(propostaId);
       }
-      setFeedback({ type: 'success', text: 'Proposta aceite. Acordo criado.' });
-      await carregar();
+      const offlineQueued = Boolean(result?.offlineQueued);
+      const fechaProcura = !offlineQueued && shouldAvisarProcuraFecha(procura?.estado);
+      setFeedback({
+        type: 'success',
+        text: fechaProcura
+          ? 'Procura fechada — tens acordo activo.'
+          : offlineQueued
+            ? 'Aceite guardado. Sincronizamos quando a rede voltar.'
+            : 'Proposta aceite. Acordo criado.',
+      });
+      await carregar({ silent: true });
+      notifyMarketplaceHubRefresh();
     } catch (err) {
       setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
     } finally {
@@ -1292,6 +1310,7 @@ const PassengerDashboard = () => {
                   secao="recebidas"
                   busy={busyId === review.proposta.id}
                   precoPublicadoKz={ofertasById[review.proposta.oferta_id]?.valor_mensal_ask_kz ?? null}
+                  procuraEstado={procura?.estado ?? null}
                   onAceitar={(memberIds) => handleAceitarInbox(review.proposta.id, memberIds)}
                   onRecusar={() => handleRecusarInbox(review.proposta.id)}
                   onContraProposta={
@@ -1749,6 +1768,7 @@ const PassengerDashboard = () => {
                     procura.teto_mensal_kz,
                     modoTetoActivo,
                   )}
+                  procuraEstado={procura?.estado ?? null}
                   onAceitar={(memberIds) => handleAceitarInbox(review.proposta.id, memberIds)}
                   onRecusar={() => handleRecusarInbox(review.proposta.id)}
                   onContraProposta={

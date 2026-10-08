@@ -23,6 +23,7 @@ import { findCompatibleProcuras } from '../services/MatchingService';
 import { getGrupoByProcura } from '../services/GrupoService';
 import { getProcura, listProcurasDisponiveis } from '../services/ProcuraService';
 import { buildOfertaMinimaFromProcura, getPropostaDriverGaps } from '../utils/ofertaFromProcura';
+import { notifyMarketplaceHubRefresh } from '../utils/marketplaceHubRefresh';
 import { supabase } from '../lib/supabase';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
@@ -115,6 +116,7 @@ const DriverDashboard = () => {
   const location = useLocation();
   const pendingPropostaDeepLinkRef = useRef(null);
   const propostaDeepLinkHandledRef = useRef(false);
+  const selectedOfertaIdRef = useRef(null);
   const { user } = useAuth();
   const [hasVehicle, setHasVehicle] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -152,12 +154,20 @@ const DriverDashboard = () => {
   /** @type {[null | import('../components/PropostaReviewCard').PropostaReview, Function]} */
   const [selectedReview, setSelectedReview] = useState(null);
 
-  const carregar = useCallback(async () => {
+  useEffect(() => {
+    selectedOfertaIdRef.current = selectedOfertaId;
+  }, [selectedOfertaId]);
+
+  /**
+   * @param {{ silent?: boolean }} [options]
+   */
+  const carregar = useCallback(async (options = {}) => {
+    const { silent = false } = options;
     if (!user?.id) {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
       return;
     }
-    setIsLoading(true);
+    if (!silent) setIsLoading(true);
     try {
       const { data: veiculosData } = await supabase
         .from('veiculos')
@@ -185,7 +195,7 @@ const DriverDashboard = () => {
       console.error(err);
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   }, [user?.id]);
 
@@ -287,17 +297,22 @@ const DriverDashboard = () => {
   }, [sóCompatíveis, todasProcuras, procurasMatch.direct, procurasMatch.waitlist]);
 
   const handleVerPropostas = async (ofertaId, opts = {}) => {
-    setSelectedOfertaId(ofertaId);
-    setHubTab('ofertas');
-    setDetailPanel('propostas');
-    setReviews([]);
-    setEnviadas([]);
-    setTerminadasRecebidas([]);
-    setTerminadasEnviadas([]);
-    setProcurasMatch({ direct: [], waitlist: [], incompatible: [] });
-    setTodasProcuras([]);
-    setLoadingPropostas(true);
-    if (!opts.preserveFeedback) {
+    const { preserveFeedback = false, silent = false } = opts;
+    const requestOfertaId = ofertaId;
+    if (!silent) {
+      setSelectedOfertaId(ofertaId);
+      selectedOfertaIdRef.current = ofertaId;
+      setHubTab('ofertas');
+      setDetailPanel('propostas');
+      setReviews([]);
+      setEnviadas([]);
+      setTerminadasRecebidas([]);
+      setTerminadasEnviadas([]);
+      setProcurasMatch({ direct: [], waitlist: [], incompatible: [] });
+      setTodasProcuras([]);
+      setLoadingPropostas(true);
+    }
+    if (!preserveFeedback && !silent) {
       setFeedback({ type: '', text: '' });
     }
     try {
@@ -312,6 +327,9 @@ const DriverDashboard = () => {
         enrichPropostasForReview(termRecebidas),
         enrichPropostasForReview(termEnviadas),
       ]);
+      if (requestOfertaId !== selectedOfertaIdRef.current) {
+        return;
+      }
       setReviews(enrichedInbox);
       setEnviadas(enrichedEnviadas);
       setTerminadasRecebidas(enrichedTermR);
@@ -464,9 +482,10 @@ const DriverDashboard = () => {
       setSelectedReview(null);
       setFeedback({ type: 'success', text: 'Proposta aceite. Acordo criado.' });
       if (selectedOfertaId) {
-        await handleVerPropostas(selectedOfertaId, { preserveFeedback: true });
+        await handleVerPropostas(selectedOfertaId, { preserveFeedback: true, silent: true });
       }
-      await carregar();
+      await carregar({ silent: true });
+      notifyMarketplaceHubRefresh();
     } catch (err) {
       setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
     } finally {

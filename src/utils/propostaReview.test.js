@@ -3,6 +3,8 @@ import {
   buildPropostaReview,
   buildPreferentialMapPoints,
   loadPropostaReview,
+  resolvePrecoPublicadoVsProposto,
+  shouldAvisarProcuraFecha,
 } from './propostaReview.js';
 import { listMembrosGrupo } from '../services/GrupoService.js';
 import { getPrimeiroNomeProcuraOwner } from '../services/ProcuraService.js';
@@ -353,6 +355,47 @@ describe('buildPreferentialMapPoints', () => {
         },
       ]),
     ).toEqual([]);
+  });
+});
+
+describe('shouldAvisarProcuraFecha', () => {
+  it('activa e em_negociacao pedem aviso', () => {
+    expect(shouldAvisarProcuraFecha('activa')).toBe(true);
+    expect(shouldAvisarProcuraFecha('em_negociacao')).toBe(true);
+    expect(shouldAvisarProcuraFecha('Activa')).toBe(true);
+  });
+
+  it('outros estados não pedem aviso', () => {
+    expect(shouldAvisarProcuraFecha('fechada')).toBe(false);
+    expect(shouldAvisarProcuraFecha(null)).toBe(false);
+    expect(shouldAvisarProcuraFecha(undefined)).toBe(false);
+  });
+});
+
+describe('resolvePrecoPublicadoVsProposto', () => {
+  it('devolve rótulos lado a lado e diferença positiva vs publicado', () => {
+    const cmp = resolvePrecoPublicadoVsProposto(125000, 120000);
+    expect(cmp?.publicadoLabel).toMatch(/120[\s.]?000 Kz/);
+    expect(cmp?.propostoLabel).toMatch(/125[\s.]?000 Kz/);
+    expect(cmp?.diffLabel).toMatch(/\+5[\s.]?000 Kz vs publicado/);
+  });
+
+  it('devolve diferença negativa sem «vs publicado»', () => {
+    const cmp = resolvePrecoPublicadoVsProposto(115000, 120000);
+    expect(cmp?.diffLabel).toMatch(/−5[\s.]?000 Kz/);
+    expect(cmp?.diffLabel).not.toMatch(/vs publicado/);
+    expect(cmp?.publicadoLabel).toMatch(/120[\s.]?000 Kz/);
+    expect(cmp?.propostoLabel).toMatch(/115[\s.]?000 Kz/);
+  });
+
+  it('valores iguais → «Igual ao publicado»', () => {
+    const cmp = resolvePrecoPublicadoVsProposto(40000, 40000);
+    expect(cmp?.diffLabel).toBe('Igual ao publicado');
+  });
+
+  it('retorna null quando falta preço publicado', () => {
+    expect(resolvePrecoPublicadoVsProposto(40000, null)).toBeNull();
+    expect(resolvePrecoPublicadoVsProposto(40000, Number.NaN)).toBeNull();
   });
 });
 

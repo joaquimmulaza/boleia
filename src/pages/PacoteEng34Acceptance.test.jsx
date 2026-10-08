@@ -157,8 +157,9 @@ describe('PACOTE ENG #34 — contra-proposta na proposta recebida', () => {
 
     fireEvent.click(await screen.findByRole('tab', { name: 'A minha procura' }));
     expect(await screen.findByRole('button', { name: /Fazer contra-proposta/i })).toBeInTheDocument();
-    expect(screen.getByText(/Valor proposto:/i)).toBeInTheDocument();
-    expect(screen.getByText(/Preço publicado:/i)).toBeInTheDocument();
+    expect(screen.getByTestId('preco-publicado-vs-proposto')).toBeInTheDocument();
+    expect(screen.getByText(/^Publicado$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^Proposto$/i)).toBeInTheDocument();
   });
 
   it('ENG34-2: passageiro envia contra-proposta com valor editado', async () => {

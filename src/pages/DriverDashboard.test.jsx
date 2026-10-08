@@ -367,6 +367,126 @@ describe('DriverDashboard — marketplace', () => {
     expect(await screen.findByText(/Proposta aceite\. Acordo criado/i)).toBeInTheDocument();
   });
 
+  it('após aceitar proposta actualiza lista e vagas sem reload completo', async () => {
+    listPropostasByOferta
+      .mockResolvedValueOnce([propostaAberta])
+      .mockResolvedValue([{ ...propostaAberta, estado: 'aceite' }]);
+    enrichPropostasForReview.mockImplementation(async (lista) => {
+      if (!lista?.length) return [];
+      if (lista[0].estado === 'aceite') {
+        return [{ ...reviewFixture, proposta: lista[0] }];
+      }
+      return [reviewFixture];
+    });
+    listOfertasByDriver
+      .mockResolvedValueOnce([
+        { ...ofertaFixa, vagas_disponiveis: 3 },
+      ])
+      .mockResolvedValue([
+        { ...ofertaFixa, vagas_disponiveis: 1 },
+      ]);
+    createAgreementFromProposal.mockResolvedValue({ id: 'ac-1' });
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Talatona');
+    await abrirDetalheProposta('Ana S.');
+    fireEvent.click(screen.getByRole('button', { name: /Aceitar proposta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
+
+    await waitFor(() => {
+      expect(createAgreementFromProposal).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(screen.queryByTestId('proposta-detail-sheet')).not.toBeInTheDocument();
+    });
+    expect(listPropostasByOferta.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(listOfertasByDriver.mock.calls.length).toBeGreaterThanOrEqual(2);
+
+    await abrirPropostasSheet();
+    expect(screen.queryByRole('button', { name: /Aceitar proposta/i })).not.toBeInTheDocument();
+  });
+
+  it('descarta refresh obsoleto quando a oferta seleccionada muda a meio do carregamento', async () => {
+    const oferta2 = {
+      ...ofertaFixa,
+      id: 'of-2',
+      origin_name: 'Kilamba',
+      destination_name: 'Baía',
+    };
+    const propostaOf2 = {
+      ...propostaAberta,
+      id: 'prop-2',
+      oferta_id: 'of-2',
+      n_passageiros_propostos: 1,
+      grupo_id: null,
+      created_by: 'pax-2',
+    };
+    const reviewOf2 = {
+      ...reviewFixture,
+      proposta: propostaOf2,
+      titulo: 'Bruno M.',
+      membros: [{
+        passenger_id: 'p2',
+        nome: 'Bruno M.',
+        telefone: '+244900000099',
+        pickup_name: null,
+        quota_mensal_kz: 120000,
+        ordem_insercao: 0,
+      }],
+    };
+
+    /** @type {((value: typeof propostaAberta[]) => void) | null} */
+    let resolveOf1 = null;
+    const of1Deferred = new Promise((resolve) => {
+      resolveOf1 = resolve;
+    });
+
+    listOfertasByDriver.mockResolvedValue([{ ...ofertaFixa }, oferta2]);
+    listPropostasByOferta.mockImplementation((ofertaId) => {
+      if (ofertaId === 'of-1') {
+        return of1Deferred;
+      }
+      if (ofertaId === 'of-2') {
+        return Promise.resolve([propostaOf2]);
+      }
+      return Promise.resolve([]);
+    });
+    enrichPropostasForReview.mockImplementation(async (lista) => {
+      if (!lista?.length) return [];
+      if (lista[0].id === 'prop-2') return [reviewOf2];
+      if (lista[0].id === 'prop-1') return [reviewFixture];
+      return [];
+    });
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Talatona');
+    await screen.findByText('Kilamba');
+
+    const verPropostas = screen.getAllByRole('button', { name: /Ver propostas/i });
+    fireEvent.click(verPropostas[0]);
+    fireEvent.click(verPropostas[1]);
+
+    expect(await screen.findByRole('button', { name: /Ver proposta Bruno M\./i })).toBeInTheDocument();
+
+    resolveOf1?.([propostaAberta]);
+    await waitFor(() => {
+      expect(listPropostasByOferta).toHaveBeenCalledWith('of-1');
+    });
+
+    expect(screen.queryByRole('button', { name: /Ver proposta Ana S\./i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Ver proposta Bruno M\./i })).toBeInTheDocument();
+  });
+
   it('mostra propostas enviadas pelo motorista (sentido B) com Cancelar e não no inbox', async () => {
     const propostaEnviada = {
       ...propostaAberta,

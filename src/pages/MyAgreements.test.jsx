@@ -62,6 +62,7 @@ import {
   listAdendaHistorico,
 } from '../services/AgreementService';
 import { resetOverlayStackForTests } from '../utils/overlayStack';
+import { notifyMarketplaceHubRefresh } from '../utils/marketplaceHubRefresh';
 import { listPending } from '../services/offlineQueue';
 import {
   listPagamentosByAcordo,
@@ -266,6 +267,27 @@ describe('MyAgreements — marketplace 1:N', () => {
     expect(within(snapshot).getByText('João')).toBeInTheDocument();
     expect(within(snapshot).queryByText('Maria')).not.toBeInTheDocument();
     expect(within(snapshot).queryByText('Individual')).not.toBeInTheDocument();
+  });
+
+  it('actualiza lista quando hubRefresh notifica após aceite', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([acordoPassageiro]);
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(getAgreementsForPassenger).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.queryByText(/Grupo · 3 pessoas/i)).not.toBeInTheDocument();
+
+    notifyMarketplaceHubRefresh();
+
+    await waitFor(() => {
+      expect(getAgreementsForPassenger).toHaveBeenCalledTimes(2);
+      expect(screen.getByText(/Grupo · 3 pessoas/i)).toBeInTheDocument();
+    });
   });
 
   it('motorista: detalhe N=1 mostra primeiro nome em Pessoas no acordo', async () => {
