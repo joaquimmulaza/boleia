@@ -59,11 +59,6 @@ ensure_tools() {
   fi
 }
 
-install_cursor_rules() {
-  export PATH="${HOME}/.local/bin:${PATH}"
-  graphify cursor install 2>/dev/null || echo "[setup-graphlore] graphify cursor install ignorado (sem TTY)."
-}
-
 build_graph() {
   export PATH="${HOME}/.local/bin:${PATH}"
 
@@ -91,7 +86,7 @@ build_graph() {
 
 ensure_uv
 ensure_tools
-install_cursor_rules
+# .cursor/rules/graphify.mdc is versioned in git — do not run `graphify cursor install` at startup.
 build_graph
 
 echo "[setup-graphlore] Concluído. graphlore=$(command -v graphlore || echo 'n/a')"
