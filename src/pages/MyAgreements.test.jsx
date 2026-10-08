@@ -53,6 +53,16 @@ vi.mock('../services/RatingService', () => ({
   listMinhasAvaliacoesAcordo: vi.fn().mockResolvedValue([]),
 }));
 
+vi.mock('../lib/supabase', () => ({
+  supabase: {
+    channel: vi.fn(() => ({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn(),
+    })),
+    removeChannel: vi.fn(),
+  },
+}));
+
 import {
   getAgreementsForDriver,
   getAgreementsForPassenger,
@@ -63,6 +73,7 @@ import {
 } from '../services/AgreementService';
 import { resetOverlayStackForTests } from '../utils/overlayStack';
 import { notifyMarketplaceHubRefresh } from '../utils/marketplaceHubRefresh';
+import { ACORDO_DETALHE_POLL_MS } from '../hooks/useAcordoDetalheLiveRefresh';
 import { listPending } from '../services/offlineQueue';
 import {
   listPagamentosByAcordo,
@@ -216,12 +227,18 @@ async function clickAcordoKebabItem(name) {
 
 describe('MyAgreements — marketplace 1:N', () => {
   beforeEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
     mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
     getAgreementsForDriver.mockResolvedValue([acordoMotorista]);
     getAgreementsForPassenger.mockResolvedValue([]);
     listPending.mockResolvedValue([]);
     setupPagamentosDefault();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    resetOverlayStackForTests();
   });
 
   it('lista acordos activos com copy humana', async () => {
@@ -1194,6 +1211,89 @@ describe('MyAgreements — marketplace 1:N', () => {
       });
     });
 
+    it('motorista: detalhe actualiza após confirmação da contraparte via polling (sem visibilitychange)', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      const aguardandoConfirmacao = {
+        ...acordoMotorista,
+        id: 'acordo-1',
+        rescisao_modo: 'consensual',
+        rescisao_solicitada_por: 'driver-1',
+        rescisao_vigencia: 'fim_ciclo',
+      };
+      const aposConfirmacao = {
+        ...aguardandoConfirmacao,
+        estado: 'cancelamento_pendente',
+        rescisao_modo: 'consensual',
+        rescisao_solicitada_por: null,
+        rescisao_effective_on: '2026-11-01',
+      };
+      getAgreementsForDriver
+        .mockResolvedValueOnce([aguardandoConfirmacao])
+        .mockResolvedValue([aguardandoConfirmacao]);
+
+      const view = renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      expect(within(dialog).getByTestId('rescisao-consensual-enviada')).toBeInTheDocument();
+
+      getAgreementsForDriver.mockResolvedValue([aposConfirmacao]);
+
+      await waitFor(
+        () => {
+          expect(getAgreementsForDriver.mock.calls.length).toBeGreaterThanOrEqual(3);
+        },
+        { timeout: ACORDO_DETALHE_POLL_MS + 500 },
+      );
+
+      await waitFor(() => {
+        expect(within(dialog).getByTestId('cancelamento-pendente-banner')).toBeInTheDocument();
+        expect(within(dialog).queryByTestId('rescisao-consensual-enviada')).not.toBeInTheDocument();
+      });
+      expect(document.visibilityState).toBe('visible');
+
+      view.unmount();
+    });
+
+    it('resposta antiga de carregar não fecha o sheet quando lista veio vazia', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      const acordo = {
+        ...acordoMotorista,
+        id: 'acordo-1',
+        estado: 'cancelamento_pendente',
+        rescisao_effective_on: '2026-11-01',
+      };
+
+      let resolveLento;
+      getAgreementsForDriver
+        .mockResolvedValueOnce([acordo])
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              resolveLento = () => resolve([]);
+            }),
+        )
+        .mockResolvedValue([acordo]);
+
+      renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+      await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+      notifyMarketplaceHubRefresh();
+      notifyMarketplaceHubRefresh();
+
+      await waitFor(() => {
+        expect(getAgreementsForDriver.mock.calls.length).toBeGreaterThanOrEqual(3);
+      });
+
+      await act(async () => {
+        resolveLento();
+        await Promise.resolve();
+      });
+
+      expect(screen.getByRole('dialog', { name: /Detalhe do acordo/i })).toBeInTheDocument();
+    });
+
     it('motorista: detalhe reflecte acordo cancelado após refresh do hub (sem remount)', async () => {
       mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
       const aguardandoConfirmacao = {
@@ -1653,6 +1753,25 @@ describe('MyAgreements — ENG#35 preço próximo mês', () => {
     expect(banner).toHaveTextContent(/30 de setembro de 2026/i);
     expect(banner).toHaveTextContent(/vaga permanece ocupada/i);
     expect(banner).toHaveTextContent(/quotas congeladas/i);
+  });
+
+  it('não mostra enum cru cancelamento_pendente no DOM', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        estado: 'cancelamento_pendente',
+        rescisao_effective_on: '2026-11-01',
+      },
+    ]);
+
+    renderPage();
+
+    expect(await screen.findByText('Cancelamento pendente')).toBeInTheDocument();
+    expect(screen.queryByText('cancelamento_pendente')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).queryByText('cancelamento_pendente')).not.toBeInTheDocument();
   });
 
   it('não expõe jargon de produto na UI de acordos', async () => {
