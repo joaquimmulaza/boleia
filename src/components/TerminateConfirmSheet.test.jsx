@@ -65,7 +65,8 @@ describe('TerminateConfirmSheet', () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it('fecha com Escape quando não está busy', () => {
+  // TODO(bug): https://github.com/joaquimmulaza/boleia/issues/217
+  it.fails('fecha com Escape quando não está busy', () => {
     const onCancel = vi.fn();
 
     render(
@@ -80,8 +81,6 @@ describe('TerminateConfirmSheet', () => {
     );
 
     fireEvent.keyDown(document, { key: 'Escape' });
-    // OverlayShell + TerminateConfirmSheet registam Escape (swipe-to-dismiss wave)
-    expect(onCancel).toHaveBeenCalled();
-    expect(onCancel.mock.calls.length).toBeGreaterThanOrEqual(1);
+    expect(onCancel).toHaveBeenCalledTimes(1);
   });
 });
