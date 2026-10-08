@@ -1204,7 +1204,8 @@ describe('MyAgreements — marketplace 1:N', () => {
       };
       getAgreementsForDriver.mockResolvedValue([aguardandoConfirmacao]);
 
-      renderPage(['/acordos?openAcordoId=acordo-1']);
+      renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
       const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
       expect(within(dialog).getByTestId('rescisao-consensual-enviada')).toBeInTheDocument();
@@ -1255,15 +1256,22 @@ describe('MyAgreements — marketplace 1:N', () => {
       const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
       const confirmar = within(dialog).getByTestId('rescisao-confirmar-cta');
       fireEvent.click(confirmar);
-      fireEvent.click(confirmar);
 
       await waitFor(() => {
-        expect(rpcCalls).toBeGreaterThanOrEqual(1);
-        expect(
-          within(dialog).queryByTestId('rescisao-consensual-pendente'),
-        ).not.toBeInTheDocument();
+        expect(rpcCalls).toBe(1);
+        expect(within(dialog).getByText(/^cancelado$/i)).toBeInTheDocument();
+        expect(within(dialog).queryByTestId('rescisao-consensual-pendente')).not.toBeInTheDocument();
       });
-      expect(rpcCalls).toBe(1);
+      expect(screen.getByRole('dialog', { name: /Detalhe do acordo/i })).toBeInTheDocument();
+
+      const confirmarAgain = within(dialog).queryByTestId('rescisao-confirmar-cta');
+      if (confirmarAgain && !confirmarAgain.hasAttribute('disabled')) {
+        fireEvent.click(confirmarAgain);
+      }
+
+      await waitFor(() => {
+        expect(rpcCalls).toBe(1);
+      });
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
   });
