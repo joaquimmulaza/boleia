@@ -1891,6 +1891,7 @@ const PassengerDashboard = () => {
           item={detalheOferta}
           onClose={() => setDetalheOferta(null)}
           ctaLabel={resolveOfertaFeedCta(detalheOferta).label || CTA_LABEL.oferta}
+          ctaDisabled={resolveOfertaFeedCta(detalheOferta).disabled}
           onCta={
             resolveOfertaFeedCta(detalheOferta).disabled
               ? undefined

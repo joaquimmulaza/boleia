@@ -10,6 +10,7 @@ import {
   createProposta,
   listPropostasByProcura,
   listPropostasByOferta,
+  listOpenPropostasByCreator,
   enrichPropostasForReview,
   cancelProposta,
 } from '../services/PropostaService';
@@ -157,6 +158,7 @@ describe('PassengerDashboard — marketplace', () => {
     findCompatibleOfertas.mockResolvedValue({ direct: [], waitlist: [], incompatible: [] });
     listOfertasDisponiveis.mockResolvedValue([]);
     listPropostasByProcura.mockResolvedValue([]);
+    listOpenPropostasByCreator.mockResolvedValue([]);
     enrichPropostasForReview.mockResolvedValue([]);
     getAgreementsForPassenger.mockResolvedValue([]);
   });
@@ -329,6 +331,24 @@ describe('PassengerDashboard — marketplace', () => {
 
     expect(await screen.findByTestId('opportunity-proposal-sheet')).toBeInTheDocument();
     expect(screen.queryByTestId('opportunity-detail-sheet')).not.toBeInTheDocument();
+  });
+
+  it('explorar autenticado: detalhe com proposta enviada mostra CTA desactivado', async () => {
+    listOfertasDisponiveis.mockResolvedValue([ofertaExplorar]);
+    listOpenPropostasByCreator.mockResolvedValue([
+      { id: 'prop-1', oferta_id: 'of-detalhe', estado: 'pendente' },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByTestId('opportunity-open'));
+    const detalhe = screen.getByTestId('opportunity-detail-sheet');
+    const cta = within(detalhe).getByRole('button', { name: 'Proposta enviada' });
+    expect(cta).toBeDisabled();
   });
 
   it('explorar autenticado: o CTA abre a proposta e não o detalhe', async () => {

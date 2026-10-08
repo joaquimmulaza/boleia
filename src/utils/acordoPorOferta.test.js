@@ -47,6 +47,21 @@ describe('buildAcordoIdPorOfertaMap', () => {
     expect(map.size).toBe(0);
   });
 
+  it('inclui acordo em cancelamento_pendente com linha viva', () => {
+    const map = buildAcordoIdPorOfertaMap(
+      [
+        {
+          id: 'acordo-pend',
+          oferta_id: 'oferta-pend',
+          estado: 'cancelamento_pendente',
+          acordos_passageiros: [{ passenger_id: passengerId, estado: 'activo' }],
+        },
+      ],
+      passengerId,
+    );
+    expect(map.get('oferta-pend')).toBe('acordo-pend');
+  });
+
   it('compara estados case-insensitive', () => {
     const map = buildAcordoIdPorOfertaMap(
       [
