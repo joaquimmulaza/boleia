@@ -1856,12 +1856,14 @@ const PassengerDashboard = () => {
           nProposto={1}
           valorKz={propostaOferta.valor_mensal_ask_kz}
           modoPreco={propostaOferta.modo_preco}
+          valorEditavel={Number(propostaOferta.vagas_disponiveis) > 0}
+          disabled={browseBusy}
           erro={propostaErro}
           onClose={() => {
             setPropostaErro('');
             setPropostaOferta(null);
           }}
-          onSubmit={(n) => {
+          onSubmit={(n, valorMensalKz) => {
             if (n > 1) {
               setPropostaErro('Para propor com mais de uma pessoa é necessário um grupo ligado à procura.');
               return;
@@ -1869,7 +1871,7 @@ const PassengerDashboard = () => {
             const oferta = propostaOferta;
             setPropostaErro('');
             setPropostaOferta(null);
-            void submitProporBrowse(oferta, {}, Number(oferta.valor_mensal_ask_kz), n);
+            void submitProporBrowse(oferta, {}, valorMensalKz ?? Number(oferta.valor_mensal_ask_kz), n);
           }}
         />
       ) : null}

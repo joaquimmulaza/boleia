@@ -117,8 +117,7 @@ describe('PACOTE ENG #30 — counter-ask preço na proposta', () => {
     createProposta.mockResolvedValue({ id: 'prop-1', oferta_id: 'of-browse', estado: 'aberta' });
   });
 
-  it.skip('ENG30-1: browse pré-preenche ask e envia valor editado (counter-ask)', async () => {
-    // TODO(bug): https://github.com/joaquimmulaza/boleia/issues/216
+  it('ENG30-1: browse pré-preenche ask e envia valor editado (counter-ask)', async () => {
     render(
       <MemoryRouter>
         <PassengerDashboard />
@@ -160,6 +159,44 @@ describe('PACOTE ENG #30 — counter-ask preço na proposta', () => {
         }),
       );
     });
+  });
+
+  it('ENG30-1b: abrir o sheet browse não cria proposta antes do envio', async () => {
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Propor acordo/i }));
+    await screen.findByLabelText(/valor.*proposta/i);
+
+    expect(createProcura).not.toHaveBeenCalled();
+    expect(createProposta).not.toHaveBeenCalled();
+  });
+
+  it('ENG30-1c: oferta lotada desactiva o CTA e não abre sheet editável', async () => {
+    listOfertasDisponiveis.mockResolvedValue([{ ...OFERTA_BROWSE, vagas_disponiveis: 0 }]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    const card = await screen.findByTestId('opportunity-card');
+    expect(within(card).getByText('Talatona')).toBeInTheDocument();
+    expect(within(card).getByText('Maianga')).toBeInTheDocument();
+    expect(within(card).getByText('Sem lugares disponíveis')).toBeInTheDocument();
+
+    const cta = within(card).getByRole('button', { name: /Propor acordo/i });
+    expect(cta).toBeDisabled();
+
+    fireEvent.click(cta);
+    expect(screen.queryByTestId('opportunity-proposal-sheet')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('proposta-valor-input')).not.toBeInTheDocument();
+    expect(createProcura).not.toHaveBeenCalled();
+    expect(createProposta).not.toHaveBeenCalled();
   });
 
   it('ENG30-3: motorista envia o preço da oferta no sheet, sem o editar', async () => {
