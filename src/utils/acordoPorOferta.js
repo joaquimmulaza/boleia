@@ -19,6 +19,24 @@ function isLinhaPassageiroViva(estado) {
 }
 
 /**
+ * Acordo vivo para o passageiro (cabecalho + linha) — mesma regra do mapa CTA.
+ * @param {{ id?: string, oferta_id?: string | null, estado?: string, acordos_passageiros?: Array<{ passenger_id?: string, estado?: string }> }} acordo
+ * @param {string} passengerId
+ * @returns {boolean}
+ */
+export function isAcordoVivoParaPassageiro(acordo, passengerId) {
+  if (!acordo?.id || !acordo?.oferta_id || !passengerId) return false;
+  if (!isAcordoCabecalhoVivo(acordo.estado)) return false;
+
+  const linha = (acordo.acordos_passageiros || []).find(
+    (p) => p.passenger_id === passengerId,
+  );
+  if (!linha || !isLinhaPassageiroViva(linha.estado)) return false;
+
+  return true;
+}
+
+/**
  * Mapa oferta_id → acordo_id para CTAs «Ver acordo» (uma leitura, sem N+1).
  * @param {Array<{ id: string, oferta_id?: string | null, estado?: string, acordos_passageiros?: Array<{ passenger_id?: string, estado?: string }> }>} acordos
  * @param {string} passengerId
@@ -29,15 +47,10 @@ export function buildAcordoIdPorOfertaMap(acordos, passengerId) {
   if (!passengerId) return map;
 
   for (const acordo of acordos || []) {
-    if (!acordo?.id || !acordo?.oferta_id) continue;
-    if (!isAcordoCabecalhoVivo(acordo.estado)) continue;
-
-    const linha = (acordo.acordos_passageiros || []).find(
-      (p) => p.passenger_id === passengerId,
-    );
-    if (!linha || !isLinhaPassageiroViva(linha.estado)) continue;
-
-    map.set(acordo.oferta_id, acordo.id);
+    if (!isAcordoVivoParaPassageiro(acordo, passengerId)) continue;
+    if (!map.has(acordo.oferta_id)) {
+      map.set(acordo.oferta_id, acordo.id);
+    }
   }
 
   return map;
@@ -74,31 +87,32 @@ export function buildAcordoOptimistaPosAceite(acordoRpc, passengerId, now = Date
 }
 
 /**
- * Fetch substitui a lista; optimistas recentes sobrevivem só se oferta_id ausente no fetch.
+ * Devolve fetch inalterado; acrescenta optimistas recentes sem acordo vivo no fetch.
  * @param {Array<{ id?: string, oferta_id?: string | null, _optimista?: boolean, _optimistaDesde?: number }>} prev
  * @param {Array<{ id?: string, oferta_id?: string | null }>} fetched
+ * @param {string} passengerId
  * @param {number} [now]
  * @returns {Array}
  */
-export function mergeAcordosPassageiro(prev, fetched, now = Date.now()) {
+export function mergeAcordosPassageiro(prev, fetched, passengerId, now = Date.now()) {
   const fetchedList = fetched || [];
-  const fetchedOfertaIds = new Set(
-    fetchedList.map((acordo) => acordo?.oferta_id).filter(Boolean),
-  );
+  const result = [...fetchedList];
 
-  const byOferta = new Map();
+  const ofertasComVivo = new Set();
   for (const acordo of fetchedList) {
-    if (acordo?.oferta_id) byOferta.set(acordo.oferta_id, acordo);
+    if (isAcordoVivoParaPassageiro(acordo, passengerId) && acordo.oferta_id) {
+      ofertasComVivo.add(acordo.oferta_id);
+    }
   }
 
   for (const acordo of prev || []) {
     if (!acordo?._optimista || !acordo?.oferta_id) continue;
-    if (fetchedOfertaIds.has(acordo.oferta_id)) continue;
+    if (ofertasComVivo.has(acordo.oferta_id)) continue;
     const desde = acordo._optimistaDesde ?? 0;
     if (now - desde < ACORDO_OPTIMISTA_TTL_MS) {
-      byOferta.set(acordo.oferta_id, acordo);
+      result.push(acordo);
     }
   }
 
-  return [...byOferta.values()];
+  return result;
 }

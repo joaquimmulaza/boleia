@@ -233,7 +233,7 @@ const PassengerDashboard = () => {
           if (isStale()) return;
 
           setBrowseOfertas(ofertas);
-          setAcordosPassageiro((prev) => mergeAcordosPassageiro(prev, acordos || []));
+          setAcordosPassageiro((prev) => mergeAcordosPassageiro(prev, acordos || [], user.id));
           setBrowseOfertasComProposta(
             new Set(abertas.map((p) => p.oferta_id).filter(Boolean)),
           );
@@ -887,7 +887,7 @@ const PassengerDashboard = () => {
           user.id,
         );
         if (optimista) {
-          setAcordosPassageiro((prev) => mergeAcordosPassageiro(prev, [optimista]));
+          setAcordosPassageiro((prev) => mergeAcordosPassageiro([optimista], prev || [], user.id));
         }
         const ofertaId = result.oferta_id ?? ofertaIdAceite;
         if (ofertaId) {

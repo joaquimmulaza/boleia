@@ -3,6 +3,7 @@ import {
   buildAcordoIdPorOfertaMap,
   buildAcordoOptimistaPosAceite,
   mergeAcordosPassageiro,
+  isAcordoVivoParaPassageiro,
   ACORDO_OPTIMISTA_TTL_MS,
 } from './acordoPorOferta';
 
@@ -67,6 +68,26 @@ describe('buildAcordoIdPorOfertaMap', () => {
     expect(map.get('oferta-pend')).toBe('acordo-pend');
   });
 
+  it('expirado + activo na mesma oferta_id aponta para o vivo em qualquer ordem', () => {
+    const vivo = {
+      id: 'ac-vivo',
+      oferta_id: 'of-1',
+      estado: 'activo',
+      acordos_passageiros: [{ passenger_id: passengerId, estado: 'reservado' }],
+    };
+    const morto = {
+      id: 'ac-morto',
+      oferta_id: 'of-1',
+      estado: 'activo',
+      acordos_passageiros: [{ passenger_id: passengerId, estado: 'expirado' }],
+    };
+
+    expect(buildAcordoIdPorOfertaMap([morto, vivo], passengerId).get('of-1')).toBe('ac-vivo');
+    expect(buildAcordoIdPorOfertaMap([vivo, morto], passengerId).get('of-1')).toBe('ac-vivo');
+    expect(isAcordoVivoParaPassageiro(morto, passengerId)).toBe(false);
+    expect(isAcordoVivoParaPassageiro(vivo, passengerId)).toBe(true);
+  });
+
   it('buildAcordoOptimistaPosAceite inclui linha reservado quando RPC não traz passageiros', () => {
     const now = 1_700_000_000_000;
     const acordo = buildAcordoOptimistaPosAceite(
@@ -95,7 +116,24 @@ describe('buildAcordoIdPorOfertaMap', () => {
         estado: 'activo',
         acordos_passageiros: [{ passenger_id: passengerId, estado: 'activo' }],
       }];
-      expect(mergeAcordosPassageiro(prev, [], now)).toHaveLength(0);
+      expect(mergeAcordosPassageiro(prev, [], passengerId, now)).toHaveLength(0);
+    });
+
+    it('devolve fetch inalterado (inclui acordos mortos)', () => {
+      const mortoA = {
+        id: 'ac-morto-a',
+        oferta_id: 'of-1',
+        estado: 'activo',
+        acordos_passageiros: [{ passenger_id: passengerId, estado: 'expirado' }],
+      };
+      const mortoB = {
+        id: 'ac-morto-b',
+        oferta_id: 'of-2',
+        estado: 'cancelado',
+        acordos_passageiros: [{ passenger_id: passengerId, estado: 'activo' }],
+      };
+      const fetched = [mortoA, mortoB];
+      expect(mergeAcordosPassageiro([], fetched, passengerId, now)).toEqual(fetched);
     });
 
     it('mantém optimista recente quando fetched stale está vazio', () => {
@@ -104,9 +142,44 @@ describe('buildAcordoIdPorOfertaMap', () => {
         passengerId,
         now,
       );
-      const merged = mergeAcordosPassageiro([optimista], [], now);
+      const merged = mergeAcordosPassageiro([optimista], [], passengerId, now);
       expect(merged).toHaveLength(1);
       expect(merged[0].id).toBe('ac-opt');
+    });
+
+    it('optimista recente sobrevive quando fetch só traz acordo morto na mesma oferta', () => {
+      const optimista = buildAcordoOptimistaPosAceite(
+        { id: 'ac-opt', oferta_id: 'of-1' },
+        passengerId,
+        now,
+      );
+      const morto = {
+        id: 'ac-morto',
+        oferta_id: 'of-1',
+        estado: 'activo',
+        acordos_passageiros: [{ passenger_id: passengerId, estado: 'expirado' }],
+      };
+      const merged = mergeAcordosPassageiro([optimista], [morto], passengerId, now);
+      expect(merged).toHaveLength(2);
+      expect(merged.map((a) => a.id)).toEqual(['ac-morto', 'ac-opt']);
+    });
+
+    it('optimista não sobrevive quando fetch traz acordo vivo na mesma oferta', () => {
+      const optimista = buildAcordoOptimistaPosAceite(
+        { id: 'ac-opt', oferta_id: 'of-1' },
+        passengerId,
+        now,
+      );
+      const vivo = {
+        id: 'ac-server',
+        oferta_id: 'of-1',
+        estado: 'activo',
+        acordos_passageiros: [{ passenger_id: passengerId, estado: 'activo' }],
+      };
+      const merged = mergeAcordosPassageiro([optimista], [vivo], passengerId, now);
+      expect(merged).toHaveLength(1);
+      expect(merged[0].id).toBe('ac-server');
+      expect(merged[0]._optimista).toBeUndefined();
     });
 
     it('remove optimista expirada mesmo com fetch vazio', () => {
@@ -115,25 +188,7 @@ describe('buildAcordoIdPorOfertaMap', () => {
         passengerId,
         now - ACORDO_OPTIMISTA_TTL_MS - 1,
       );
-      expect(mergeAcordosPassageiro([optimista], [], now)).toHaveLength(0);
-    });
-
-    it('substitui optimista quando fetched traz a mesma oferta_id', () => {
-      const optimista = buildAcordoOptimistaPosAceite(
-        { id: 'ac-opt', oferta_id: 'of-1' },
-        passengerId,
-        now,
-      );
-      const fetched = [{
-        id: 'ac-server',
-        oferta_id: 'of-1',
-        estado: 'activo',
-        acordos_passageiros: [{ passenger_id: passengerId, estado: 'activo' }],
-      }];
-      const merged = mergeAcordosPassageiro([optimista], fetched, now);
-      expect(merged).toHaveLength(1);
-      expect(merged[0].id).toBe('ac-server');
-      expect(merged[0]._optimista).toBeUndefined();
+      expect(mergeAcordosPassageiro([optimista], [], passengerId, now)).toHaveLength(0);
     });
   });
 

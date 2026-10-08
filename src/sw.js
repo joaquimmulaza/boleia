@@ -3,8 +3,7 @@ import { registerRoute } from 'workbox-routing';
 import { drainQueue, OFFLINE_SYNC_TAG } from './services/offlineQueue';
 import { resolveNotificationRoute } from './utils/notificationRouter';
 import { networkFirstRuntime } from './utils/swNetworkFirst.js';
-
-const RUNTIME_CACHE = 'boleia-runtime-v1';
+import { SW_RUNTIME_CACHE_NAME } from './utils/swRuntimeCache.js';
 
 // Precaching injetado pelo VitePWA
 precacheAndRoute(self.__WB_MANIFEST || []);
@@ -21,7 +20,7 @@ registerRoute(
     const path = url.pathname;
     return path.includes('/acordos') || path.includes('/grupos');
   },
-  ({ request }) => networkFirstRuntime(request, RUNTIME_CACHE),
+  ({ request }) => networkFirstRuntime(request, SW_RUNTIME_CACHE_NAME),
 );
 
 // Permite acionar a atualização imediata quando o utilizador clica em "Atualizar agora"

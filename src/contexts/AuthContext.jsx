@@ -6,6 +6,7 @@ import {
   markPasswordRecoveryPending,
   clearPasswordRecoveryStorage,
 } from '../utils/passwordRecovery';
+import { clearSwRuntimeCache } from '../utils/swRuntimeCache';
 
 const AuthContext = createContext(undefined);
 
@@ -79,6 +80,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let isMounted = true;
+    const lastUserIdRef = { current: null };
 
     supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
       if (!isMounted) return;
@@ -87,6 +89,7 @@ export function AuthProvider({ children }) {
       setUser(initialSession?.user || null);
 
       if (initialSession?.user?.id) {
+        lastUserIdRef.current = initialSession.user.id;
         // Marcar perfil a carregar ANTES de libertar loading da sessão
         // (evita AdminRoute ver session ok + profile null + profileLoading false).
         setProfileLoading(true);
@@ -106,6 +109,8 @@ export function AuthProvider({ children }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, nextSession) => {
+        const nextUserId = nextSession?.user?.id ?? null;
+
         setSession(nextSession);
         setUser(nextSession?.user || null);
 
@@ -117,6 +122,14 @@ export function AuthProvider({ children }) {
         if (event === 'SIGNED_OUT' || !nextSession) {
           clearPasswordRecoveryStorage();
           setPasswordRecoveryPending(false);
+          void clearSwRuntimeCache();
+          lastUserIdRef.current = null;
+        } else if (lastUserIdRef.current && nextUserId && lastUserIdRef.current !== nextUserId) {
+          void clearSwRuntimeCache();
+        }
+
+        if (nextUserId) {
+          lastUserIdRef.current = nextUserId;
         }
 
         // Evita deadlock com getSession: não usar async/await nem chamadas Supabase directas aqui.
