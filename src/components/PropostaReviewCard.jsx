@@ -3,7 +3,11 @@ import { MapPin } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import PreferentialPointsMap from './PreferentialPointsMap';
 import { formatKwanza } from '../utils/formatKwanza';
-import { buildPreferentialMapPoints, resolvePrecoPublicadoVsProposto } from '../utils/propostaReview';
+import {
+  buildPreferentialMapPoints,
+  resolvePrecoPublicadoVsProposto,
+  shouldAvisarProcuraFecha,
+} from '../utils/propostaReview';
 import { chipEstadoProposta } from '../utils/propostaEstado';
 import { buildContratoSnapshotFromProposta } from '../utils/buildAcordoContratoSnapshot';
 import AcordoContratoSnapshot from './AcordoContratoSnapshot';
@@ -86,7 +90,7 @@ function countMembrosComPickup(membros) {
  *   onContraProposta?: () => void,
  *   precoPublicadoKz?: number | null,
  *   acimaDoTeto?: boolean,
- *   avisoProcuraFecha?: boolean,
+ *   procuraEstado?: string | null,
  * }} props
  */
 function PropostaReviewCard({
@@ -100,13 +104,16 @@ function PropostaReviewCard({
   onContraProposta,
   precoPublicadoKz = null,
   acimaDoTeto = false,
-  avisoProcuraFecha = false,
+  procuraEstado = null,
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState(/** @type {string[]} */ ([]));
   const isCriador = modo === 'criador';
   const isHistorico = modo === 'historico';
   const isContraparte = !isCriador && !isHistorico;
+  const avisoProcuraFecha = isContraparte
+    && secao === 'recebidas'
+    && shouldAvisarProcuraFecha(procuraEstado);
   const precoComparacao = isContraparte
     ? resolvePrecoPublicadoVsProposto(review.proposta.valor_mensal_ask_kz, precoPublicadoKz)
     : null;

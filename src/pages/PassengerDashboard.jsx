@@ -41,6 +41,7 @@ import {
 import { createAgreementFromProposal, getAgreementsForPassenger } from '../services/AgreementService';
 import { buildAcordoIdPorOfertaMap, CTA_VER_ACORDO } from '../utils/acordoPorOferta';
 import { notifyMarketplaceHubRefresh } from '../utils/marketplaceHubRefresh';
+import { shouldAvisarProcuraFecha } from '../utils/propostaReview';
 import { CTA_LABEL } from '../utils/opportunityCard';
 import { enqueueWaitlist, filterWaitlistEntriesVisiveis, listWaitlistByProcura } from '../services/WaitlistService';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
@@ -185,11 +186,6 @@ const PassengerDashboard = () => {
     [acordosPassageiro, user?.id],
   );
 
-  const avisoProcuraFechaAoAceitar = useMemo(() => {
-    if (!procura) return false;
-    const estado = String(procura.estado || '').toLowerCase();
-    return estado === 'activa' || estado === 'em_negociacao';
-  }, [procura]);
 
   const ofertasComPropostaAberta = useMemo(() => {
     const ids = new Set(browseOfertasComProposta);
@@ -850,7 +846,7 @@ const PassengerDashboard = () => {
       }
       setFeedback({
         type: 'success',
-        text: avisoProcuraFechaAoAceitar
+        text: shouldAvisarProcuraFecha(procura?.estado)
           ? 'Procura fechada — tens acordo activo.'
           : 'Proposta aceite. Acordo criado.',
       });
@@ -1309,7 +1305,7 @@ const PassengerDashboard = () => {
                   secao="recebidas"
                   busy={busyId === review.proposta.id}
                   precoPublicadoKz={ofertasById[review.proposta.oferta_id]?.valor_mensal_ask_kz ?? null}
-                  avisoProcuraFecha={avisoProcuraFechaAoAceitar}
+                  procuraEstado={procura?.estado ?? null}
                   onAceitar={(memberIds) => handleAceitarInbox(review.proposta.id, memberIds)}
                   onRecusar={() => handleRecusarInbox(review.proposta.id)}
                   onContraProposta={
@@ -1767,7 +1763,7 @@ const PassengerDashboard = () => {
                     procura.teto_mensal_kz,
                     modoTetoActivo,
                   )}
-                  avisoProcuraFecha={avisoProcuraFechaAoAceitar}
+                  procuraEstado={procura?.estado ?? null}
                   onAceitar={(memberIds) => handleAceitarInbox(review.proposta.id, memberIds)}
                   onRecusar={() => handleRecusarInbox(review.proposta.id)}
                   onContraProposta={

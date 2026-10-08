@@ -300,12 +300,12 @@ describe('PropostaReviewCard', () => {
     expect(screen.queryByRole('button', { name: /Fazer contra-proposta/i })).toBeNull();
   });
 
-  it('mostra aviso de procura fechada na confirmação quando pedido', () => {
+  it('mostra aviso de procura fechada na confirmação com procura activa', () => {
     render(
       <PropostaReviewCard
         review={buildReview()}
         busy={false}
-        avisoProcuraFecha
+        procuraEstado="activa"
         onAceitar={vi.fn()}
         onRecusar={vi.fn()}
       />,
@@ -313,6 +313,21 @@ describe('PropostaReviewCard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Aceitar proposta/i }));
     expect(screen.getByText('Ao aceitar, a tua procura fica fechada.')).toBeInTheDocument();
+  });
+
+  it('não mostra aviso de procura fechada sem procura activa', () => {
+    render(
+      <PropostaReviewCard
+        review={buildReview()}
+        busy={false}
+        procuraEstado="fechada"
+        onAceitar={vi.fn()}
+        onRecusar={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Aceitar proposta/i }));
+    expect(screen.queryByTestId('aviso-procura-fecha')).not.toBeInTheDocument();
   });
 
   it('chama onAceitar e onRecusar', () => {

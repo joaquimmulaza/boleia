@@ -115,6 +115,16 @@ function resolveOptionalName(value) {
  * @param {number | string | null | undefined} publicadoKz
  * @returns {{ publicadoLabel: string, propostoLabel: string, diffLabel: string } | null}
  */
+/**
+ * Aceitar proposta com procura activa/em negociação fecha a procura do passageiro.
+ * @param {string | null | undefined} procuraEstado
+ * @returns {boolean}
+ */
+export function shouldAvisarProcuraFecha(procuraEstado) {
+  const estado = String(procuraEstado || '').toLowerCase();
+  return estado === 'activa' || estado === 'em_negociacao';
+}
+
 export function resolvePrecoPublicadoVsProposto(propostoKz, publicadoKz) {
   if (
     propostoKz == null

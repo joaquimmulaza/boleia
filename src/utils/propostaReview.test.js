@@ -4,6 +4,7 @@ import {
   buildPreferentialMapPoints,
   loadPropostaReview,
   resolvePrecoPublicadoVsProposto,
+  shouldAvisarProcuraFecha,
 } from './propostaReview.js';
 import { listMembrosGrupo } from '../services/GrupoService.js';
 import { getPrimeiroNomeProcuraOwner } from '../services/ProcuraService.js';
@@ -354,6 +355,20 @@ describe('buildPreferentialMapPoints', () => {
         },
       ]),
     ).toEqual([]);
+  });
+});
+
+describe('shouldAvisarProcuraFecha', () => {
+  it('activa e em_negociacao pedem aviso', () => {
+    expect(shouldAvisarProcuraFecha('activa')).toBe(true);
+    expect(shouldAvisarProcuraFecha('em_negociacao')).toBe(true);
+    expect(shouldAvisarProcuraFecha('Activa')).toBe(true);
+  });
+
+  it('outros estados não pedem aviso', () => {
+    expect(shouldAvisarProcuraFecha('fechada')).toBe(false);
+    expect(shouldAvisarProcuraFecha(null)).toBe(false);
+    expect(shouldAvisarProcuraFecha(undefined)).toBe(false);
   });
 });
 
