@@ -116,6 +116,7 @@ const DriverDashboard = () => {
   const location = useLocation();
   const pendingPropostaDeepLinkRef = useRef(null);
   const propostaDeepLinkHandledRef = useRef(false);
+  const selectedOfertaIdRef = useRef(null);
   const { user } = useAuth();
   const [hasVehicle, setHasVehicle] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -152,6 +153,10 @@ const DriverDashboard = () => {
   const [ofertaDetailId, setOfertaDetailId] = useState(null);
   /** @type {[null | import('../components/PropostaReviewCard').PropostaReview, Function]} */
   const [selectedReview, setSelectedReview] = useState(null);
+
+  useEffect(() => {
+    selectedOfertaIdRef.current = selectedOfertaId;
+  }, [selectedOfertaId]);
 
   /**
    * @param {{ silent?: boolean }} [options]
@@ -293,8 +298,10 @@ const DriverDashboard = () => {
 
   const handleVerPropostas = async (ofertaId, opts = {}) => {
     const { preserveFeedback = false, silent = false } = opts;
+    const requestOfertaId = ofertaId;
     if (!silent) {
       setSelectedOfertaId(ofertaId);
+      selectedOfertaIdRef.current = ofertaId;
       setHubTab('ofertas');
       setDetailPanel('propostas');
       setReviews([]);
@@ -320,6 +327,9 @@ const DriverDashboard = () => {
         enrichPropostasForReview(termRecebidas),
         enrichPropostasForReview(termEnviadas),
       ]);
+      if (requestOfertaId !== selectedOfertaIdRef.current) {
+        return;
+      }
       setReviews(enrichedInbox);
       setEnviadas(enrichedEnviadas);
       setTerminadasRecebidas(enrichedTermR);
