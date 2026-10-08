@@ -175,7 +175,7 @@ describe('PACOTE ENG #30 — counter-ask preço na proposta', () => {
     expect(createProposta).not.toHaveBeenCalled();
   });
 
-  it('ENG30-1c: oferta lotada mantém preço só leitura no sheet', async () => {
+  it('ENG30-1c: oferta lotada desactiva o CTA e não abre sheet editável', async () => {
     listOfertasDisponiveis.mockResolvedValue([{ ...OFERTA_BROWSE, vagas_disponiveis: 0 }]);
 
     render(
@@ -184,7 +184,19 @@ describe('PACOTE ENG #30 — counter-ask preço na proposta', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.queryByRole('button', { name: /Propor acordo/i })).not.toBeInTheDocument();
+    const card = await screen.findByTestId('opportunity-card');
+    expect(within(card).getByText('Talatona')).toBeInTheDocument();
+    expect(within(card).getByText('Maianga')).toBeInTheDocument();
+    expect(within(card).getByText('Sem lugares disponíveis')).toBeInTheDocument();
+
+    const cta = within(card).getByRole('button', { name: /Propor acordo/i });
+    expect(cta).toBeDisabled();
+
+    fireEvent.click(cta);
+    expect(screen.queryByTestId('opportunity-proposal-sheet')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('proposta-valor-input')).not.toBeInTheDocument();
+    expect(createProcura).not.toHaveBeenCalled();
+    expect(createProposta).not.toHaveBeenCalled();
   });
 
   it('ENG30-3: motorista envia o preço da oferta no sheet, sem o editar', async () => {
