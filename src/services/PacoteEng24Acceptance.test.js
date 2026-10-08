@@ -170,10 +170,13 @@ describe('PACOTE #24 — aceitação motorista feed + enviar proposta', () => {
       expect(filterPropostasEnviadas([proposta], 'driver-1')).toHaveLength(0);
     });
 
-    it('DriverDashboard usa CTA «Enviar proposta» (não «Propor acordo»)', () => {
-      const src = readSrc('src/pages/DriverDashboard.jsx');
-      expect(src).toMatch(/Enviar proposta/);
-      expect(src).not.toMatch(/Propor acordo/);
+    it('DriverDashboard usa OpportunityCard com CTA motorista (não «Propor acordo»)', () => {
+      const dash = readSrc('src/pages/DriverDashboard.jsx');
+      const cardUtils = readSrc('src/utils/opportunityCard.js');
+      expect(dash).toMatch(/OpportunityCard/);
+      expect(dash).toMatch(/onCta=/);
+      expect(dash).not.toMatch(/Propor acordo/);
+      expect(cardUtils).toMatch(/procura: 'Enviar proposta'/);
     });
 
     it('DriverDashboard expõe tab/secção «Procuras e grupos» sem gate de oferta', () => {

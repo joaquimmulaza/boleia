@@ -199,8 +199,8 @@ describe('PACOTE ENG #15 — saída parcial passageiro 1:N', () => {
     it('MyAgreements: motorista vê Encerrar acordo; Sair só eu condicionado a podeSair', () => {
       const src = readFileSync(join(ROOT, '../pages/MyAgreements.jsx'), 'utf8');
       expect(src).toMatch(/podeEncerrar = activo && \(isMotorista \|\| podeSair\)/);
-      expect(src).toMatch(/\{podeSair &&/);
-      expect(src).toMatch(/\{podeEncerrar &&/);
+      expect(src).toMatch(/\{podeSair \?/);
+      expect(src).toMatch(/podeEncerrar=\{podeEncerrar\}/);
       expect(src).toMatch(/Encerrar acordo/);
     });
   });

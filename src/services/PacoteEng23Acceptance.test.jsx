@@ -281,7 +281,7 @@ describe('PACOTE #23 — propor acordo no browse', () => {
         </MemoryRouter>,
       );
 
-      fireEvent.click(await screen.findByTestId('browse-propor-acordo'));
+      fireEvent.click(await screen.findByRole('button', { name: /Propor acordo/i }));
       expect(await screen.findByTestId('propor-browse-sheet')).toBeInTheDocument();
       expect(getPropostaBrowseGaps({ flexibilidade_rota: false, origin_name: 'A', departure_time: '07:00' })).toContain('od');
     });

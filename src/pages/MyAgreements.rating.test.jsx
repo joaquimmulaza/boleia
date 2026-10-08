@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import MyAgreements from './MyAgreements';
@@ -172,7 +172,9 @@ describe('MyAgreements — rating banner ENG#32c', () => {
       expect(screen.getByRole('dialog', { name: /Detalhe do acordo/i })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Encerrar acordo/i }));
+    const dialog = screen.getByRole('dialog', { name: /Detalhe do acordo/i });
+    fireEvent.click(within(dialog).getByRole('button', { name: /Mais acções do acordo/i }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: /Encerrar acordo/i }));
     expect(screen.getByTestId('terminate-modality-picker')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('terminate-picker-sair-so-eu'));
