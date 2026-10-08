@@ -138,6 +138,52 @@ describe('OpportunityProposalSheet', () => {
     expect(screen.queryByText(/×/)).not.toBeInTheDocument();
   });
 
+  it('passageiro com valor editável pré-preenche ask e mostra PropostaValorInput', () => {
+    render(
+      <OpportunityProposalSheet
+        papel="passageiro"
+        alvo="passageiro"
+        item={{
+          ...procura,
+          origin_name: 'Talatona',
+          destination_name: 'Maianga',
+          departure_time: '07:30',
+          vagas_disponiveis: 3,
+          flexibilidade_rota: false,
+        }}
+        nProposto={1}
+        valorKz={45000}
+        modoPreco="POR_PASSAGEIRO"
+        valorEditavel
+        onClose={() => {}}
+        onSubmit={() => {}}
+      />,
+    );
+
+    expect(screen.getByTestId('proposta-valor-input')).toHaveValue(45000);
+    expect(screen.getByText(/Preço publicado: 45[\s.]?000 Kz/i)).toBeInTheDocument();
+    expect(screen.queryByText(/^Preço$/)).not.toBeInTheDocument();
+  });
+
+  it('passageiro sem valor editável mantém preço só leitura', () => {
+    render(
+      <OpportunityProposalSheet
+        papel="passageiro"
+        alvo="passageiro"
+        item={procura}
+        nProposto={1}
+        valorKz={45000}
+        modoPreco="POR_PASSAGEIRO"
+        valorEditavel={false}
+        onClose={() => {}}
+        onSubmit={() => {}}
+      />,
+    );
+
+    expect(screen.queryByTestId('proposta-valor-input')).not.toBeInTheDocument();
+    expect(screen.getByText(/45[\s.]?000 Kz por passageiro/i)).toBeInTheDocument();
+  });
+
   it('o nome na proposta é o texto completo, sem fade nem reticências', () => {
     const nome = 'Grupo da paróquia de Viana, junto ao mercado municipal, com lugar marcado na paragem norte';
     render(
