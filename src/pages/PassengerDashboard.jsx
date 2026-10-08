@@ -118,6 +118,8 @@ const PassengerDashboard = () => {
   const pendingPropostaDeepLinkRef = useRef(null);
   const propostaDeepLinkHandledRef = useRef(false);
   const propostaDeepLinkLoadStartedRef = useRef(false);
+  /** Ignora resultados de carregar() sobrepostos (browse/inbox stale após aceite). */
+  const carregarSeqRef = useRef(0);
   const [loading, setLoading] = useState(true);
   const [procura, setProcura] = useState(null);
   const [grupo, setGrupo] = useState(null);
@@ -200,6 +202,9 @@ const PassengerDashboard = () => {
    */
   const carregar = useCallback(async (options = {}) => {
     const { silent = false } = options;
+    const seq = ++carregarSeqRef.current;
+    const isStale = () => seq !== carregarSeqRef.current;
+
     if (!user?.id) {
       if (!silent) setLoading(false);
       return;
@@ -207,8 +212,11 @@ const PassengerDashboard = () => {
     if (!silent) setLoading(true);
     try {
       const lista = await listProcurasByOwner(user.id);
+      if (isStale()) return;
+
       const activa = lista.find((p) => p.estado === 'activa' || p.estado === 'em_negociacao') || null;
       setProcura(activa);
+
       const browsePromise = (async () => {
         setLoadingBrowse(true);
         try {
@@ -217,20 +225,25 @@ const PassengerDashboard = () => {
             listOpenPropostasByCreator(user.id),
             getAgreementsForPassenger(user.id),
           ]);
+          if (isStale()) return;
+
           setBrowseOfertas(ofertas);
           setAcordosPassageiro(acordos || []);
           setBrowseOfertasComProposta(
             new Set(abertas.map((p) => p.oferta_id).filter(Boolean)),
           );
         } catch (err) {
+          if (isStale()) return;
+
           console.error(err);
           setBrowseOfertas([]);
           setAcordosPassageiro([]);
           setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
         } finally {
-          setLoadingBrowse(false);
+          if (!isStale()) setLoadingBrowse(false);
         }
       })();
+
       if (activa) {
         setLoadingInbox(true);
         try {
@@ -239,11 +252,15 @@ const PassengerDashboard = () => {
             listWaitlistByProcura(activa.id),
             listPropostasByProcura(activa.id),
           ]);
+          if (isStale()) return;
+
           setGrupo(g);
           setWaitlistEntries(enrolled);
           let membrosActivos = 0;
           if (g) {
             const membros = await listMembrosGrupo(g.id);
+            if (isStale()) return;
+
             membrosActivos = membros.length;
             setMembrosCount(membrosActivos);
           } else {
@@ -263,6 +280,8 @@ const PassengerDashboard = () => {
             enrichPropostasForReview(termRecebidas),
             enrichPropostasForReview(termEnviadas),
           ]);
+          if (isStale()) return;
+
           setInboxReviews(enrichedInbox);
           setEnviadasReviews(enrichedEnviadas);
           setTerminadasRecebidas(enrichedTermR);
@@ -271,6 +290,8 @@ const PassengerDashboard = () => {
             ...toProcuraMatchInput(activa),
             n_candidato: nCapacidade,
           });
+          if (isStale()) return;
+
           setMatches({ direct: result.direct, waitlist: result.waitlist });
           const index = {};
           for (const ofe of [...result.direct, ...result.waitlist, ...result.incompatible]) {
@@ -278,9 +299,9 @@ const PassengerDashboard = () => {
           }
           setOfertasById(index);
         } finally {
-          setLoadingInbox(false);
+          if (!isStale()) setLoadingInbox(false);
         }
-      } else {
+      } else if (!isStale()) {
         setGrupo(null);
         setMembrosCount(0);
         setWaitlistEntries([]);
@@ -293,10 +314,12 @@ const PassengerDashboard = () => {
       }
       await browsePromise;
     } catch (err) {
+      if (isStale()) return;
+
       console.error(err);
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
     } finally {
-      if (!silent) setLoading(false);
+      if (!silent && !isStale()) setLoading(false);
     }
   }, [user?.id]);
 
