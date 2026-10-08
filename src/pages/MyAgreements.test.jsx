@@ -53,6 +53,16 @@ vi.mock('../services/RatingService', () => ({
   listMinhasAvaliacoesAcordo: vi.fn().mockResolvedValue([]),
 }));
 
+vi.mock('../lib/supabase', () => ({
+  supabase: {
+    channel: vi.fn(() => ({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn(),
+    })),
+    removeChannel: vi.fn(),
+  },
+}));
+
 import {
   getAgreementsForDriver,
   getAgreementsForPassenger,
@@ -63,6 +73,7 @@ import {
 } from '../services/AgreementService';
 import { resetOverlayStackForTests } from '../utils/overlayStack';
 import { notifyMarketplaceHubRefresh } from '../utils/marketplaceHubRefresh';
+import { ACORDO_DETALHE_POLL_MS } from '../hooks/useAcordoDetalheLiveRefresh';
 import { listPending } from '../services/offlineQueue';
 import {
   listPagamentosByAcordo,
@@ -216,12 +227,18 @@ async function clickAcordoKebabItem(name) {
 
 describe('MyAgreements — marketplace 1:N', () => {
   beforeEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
     mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
     getAgreementsForDriver.mockResolvedValue([acordoMotorista]);
     getAgreementsForPassenger.mockResolvedValue([]);
     listPending.mockResolvedValue([]);
     setupPagamentosDefault();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    resetOverlayStackForTests();
   });
 
   it('lista acordos activos com copy humana', async () => {
@@ -1194,6 +1211,209 @@ describe('MyAgreements — marketplace 1:N', () => {
       });
     });
 
+    it('focus=rescisao: um scroll, remove focus da URL e refresh não repete scroll', async () => {
+      const scrollSpy = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {});
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver.mockResolvedValue([
+        {
+          ...acordoMotorista,
+          rescisao_modo: 'consensual',
+          rescisao_solicitada_por: 'driver-1',
+          rescisao_vigencia: 'fim_ciclo',
+        },
+      ]);
+
+      renderPage(['/acordos?openAcordoId=acordo-1&focus=rescisao']);
+
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      await waitFor(() => {
+        expect(scrollSpy).toHaveBeenCalledTimes(1);
+      });
+      expect(mockNavigate).toHaveBeenCalledWith(
+        expect.objectContaining({ search: '?openAcordoId=acordo-1' }),
+        expect.objectContaining({ replace: true }),
+      );
+
+      const callsBefore = getAgreementsForDriver.mock.calls.length;
+      notifyMarketplaceHubRefresh();
+      notifyMarketplaceHubRefresh();
+      await waitFor(() => {
+        expect(getAgreementsForDriver.mock.calls.length).toBeGreaterThan(callsBefore);
+      });
+      expect(scrollSpy).toHaveBeenCalledTimes(1);
+
+      fireEvent.click(within(dialog).getByTestId('acordo-detalhe-fechar'));
+      fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+      await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      expect(scrollSpy).toHaveBeenCalledTimes(1);
+
+      scrollSpy.mockRestore();
+    });
+
+    it('cancelamento_pendente: sem ticks de polling live refresh', async () => {
+      getAgreementsForDriver.mockResolvedValue([
+        {
+          ...acordoMotorista,
+          estado: 'cancelamento_pendente',
+          rescisao_effective_on: '2026-11-01',
+        },
+      ]);
+
+      renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+      await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+      const baseline = getAgreementsForDriver.mock.calls.length;
+
+      await act(async () => {
+        await new Promise((resolve) => {
+          setTimeout(resolve, ACORDO_DETALHE_POLL_MS + 150);
+        });
+      });
+
+      expect(getAgreementsForDriver.mock.calls.length).toBe(baseline);
+    });
+
+    it('openAcordoId na URL reabre o sheet após remount', async () => {
+      getAgreementsForDriver.mockResolvedValue([acordoMotorista]);
+
+      const first = renderPage(['/acordos?openAcordoId=acordo-1']);
+      await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      first.unmount();
+
+      renderPage(['/acordos?openAcordoId=acordo-1']);
+      await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    });
+
+    it('refresh silencioso sobre load lento não deixa skeleton preso', async () => {
+      let resolveLento;
+      getAgreementsForDriver.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveLento = () => resolve([acordoMotorista]);
+          }),
+      );
+
+      renderPage();
+      expect(document.querySelector('.animate-pulse')).toBeInTheDocument();
+
+      notifyMarketplaceHubRefresh();
+
+      await act(async () => {
+        resolveLento();
+        await Promise.resolve();
+      });
+
+      await waitFor(() => {
+        expect(document.querySelector('.animate-pulse')).not.toBeInTheDocument();
+      });
+      expect(await screen.findByText('Acordos')).toBeInTheDocument();
+    });
+
+    it('ticks de lista não relêem pagamentos se id e estado do acordo iguais', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      const aguardando = {
+        ...acordoMotorista,
+        rescisao_modo: 'consensual',
+        rescisao_solicitada_por: 'driver-1',
+      };
+      getAgreementsForDriver.mockResolvedValue([aguardando]);
+
+      renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+      await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+      await waitFor(() => {
+        expect(listPagamentosByAcordo).toHaveBeenCalled();
+      });
+      const pagamentoCalls = listPagamentosByAcordo.mock.calls.length;
+
+      notifyMarketplaceHubRefresh();
+      await waitFor(() => {
+        expect(getAgreementsForDriver.mock.calls.length).toBeGreaterThan(1);
+      });
+      expect(listPagamentosByAcordo.mock.calls.length).toBe(pagamentoCalls);
+    });
+
+    it('motorista: detalhe actualiza após confirmação da contraparte via polling (sem visibilitychange)', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      const aguardandoConfirmacao = {
+        ...acordoMotorista,
+        id: 'acordo-1',
+        rescisao_modo: 'consensual',
+        rescisao_solicitada_por: 'driver-1',
+        rescisao_vigencia: 'fim_ciclo',
+      };
+      const aposConfirmacao = {
+        ...aguardandoConfirmacao,
+        estado: 'cancelamento_pendente',
+        rescisao_modo: 'consensual',
+        rescisao_solicitada_por: null,
+        rescisao_effective_on: '2026-11-01',
+      };
+      getAgreementsForDriver
+        .mockResolvedValueOnce([aguardandoConfirmacao])
+        .mockResolvedValue([aguardandoConfirmacao]);
+
+      const view = renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      expect(within(dialog).getByTestId('rescisao-consensual-enviada')).toBeInTheDocument();
+
+      getAgreementsForDriver.mockResolvedValue([aposConfirmacao]);
+
+      await waitFor(
+        () => {
+          expect(within(dialog).getByTestId('cancelamento-pendente-banner')).toBeInTheDocument();
+          expect(within(dialog).queryByTestId('rescisao-consensual-enviada')).not.toBeInTheDocument();
+        },
+        { timeout: ACORDO_DETALHE_POLL_MS + 500 },
+      );
+      expect(document.visibilityState).toBe('visible');
+
+      view.unmount();
+    });
+
+    it('resposta antiga de carregar não fecha o sheet quando lista veio vazia', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      const acordo = {
+        ...acordoMotorista,
+        id: 'acordo-1',
+        estado: 'cancelamento_pendente',
+        rescisao_effective_on: '2026-11-01',
+      };
+
+      let resolveLento;
+      getAgreementsForDriver
+        .mockResolvedValueOnce([acordo])
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              resolveLento = () => resolve([]);
+            }),
+        )
+        .mockResolvedValue([acordo]);
+
+      renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+      await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+      notifyMarketplaceHubRefresh();
+      notifyMarketplaceHubRefresh();
+
+      await waitFor(() => {
+        expect(getAgreementsForDriver.mock.calls.length).toBeGreaterThanOrEqual(3);
+      });
+
+      await act(async () => {
+        resolveLento();
+        await Promise.resolve();
+      });
+
+      expect(screen.getByRole('dialog', { name: /Detalhe do acordo/i })).toBeInTheDocument();
+    });
+
     it('motorista: detalhe reflecte acordo cancelado após refresh do hub (sem remount)', async () => {
       mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
       const aguardandoConfirmacao = {
@@ -1653,6 +1873,25 @@ describe('MyAgreements — ENG#35 preço próximo mês', () => {
     expect(banner).toHaveTextContent(/30 de setembro de 2026/i);
     expect(banner).toHaveTextContent(/vaga permanece ocupada/i);
     expect(banner).toHaveTextContent(/quotas congeladas/i);
+  });
+
+  it('não mostra enum cru cancelamento_pendente no DOM', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        estado: 'cancelamento_pendente',
+        rescisao_effective_on: '2026-11-01',
+      },
+    ]);
+
+    renderPage();
+
+    expect(await screen.findByText('Cancelamento pendente')).toBeInTheDocument();
+    expect(screen.queryByText('cancelamento_pendente')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).queryByText('cancelamento_pendente')).not.toBeInTheDocument();
   });
 
   it('não expõe jargon de produto na UI de acordos', async () => {

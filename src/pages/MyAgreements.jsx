@@ -27,6 +27,14 @@ import { Button } from '../components/ui/button';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { subscribeMarketplaceHubRefresh } from '../utils/marketplaceHubRefresh';
+import {
+  labelEstadoAcordo,
+  variantChipEstadoAcordo,
+} from '../utils/acordoEstadoDisplay';
+import {
+  acordoPrecisaLiveRefresh,
+  useAcordoDetalheLiveRefresh,
+} from '../hooks/useAcordoDetalheLiveRefresh';
 import { labelRotaOferta } from '../utils/ofertaLabels';
 import { buildAcordoContratoSnapshot } from '../utils/buildAcordoContratoSnapshot';
 import AcordoContratoSnapshot from '../components/AcordoContratoSnapshot';
@@ -82,6 +90,20 @@ import { formatPrimeiroNome } from '../utils/primeiroNome';
  */
 function isActivo(estado) {
   return isActivoPassageiro(estado);
+}
+
+/**
+ * @param {'activo' | 'pendente' | 'inactivo'} variant
+ * @returns {string}
+ */
+function chipClassEstadoAcordo(variant) {
+  if (variant === 'activo') {
+    return 'bg-emerald-100 text-emerald-800';
+  }
+  if (variant === 'pendente') {
+    return 'bg-amber-100 text-amber-900';
+  }
+  return 'bg-slate-100 text-slate-600';
 }
 
 /**
@@ -273,6 +295,7 @@ const MyAgreements = () => {
   /** Bloqueia re-clique em Confirmar após sucesso local até refetch. */
   const [rescisaoConfirmadaLocal, setRescisaoConfirmadaLocal] = useState(false);
   const terminateInFlightRef = useRef(false);
+  const carregarGenerationRef = useRef(0);
   const [leaveModalOpen, setLeaveModalOpen] = useState(false);
   const [leaveBusy, setLeaveBusy] = useState(false);
   /** @type {[Record<string, true>, React.Dispatch<React.SetStateAction<Record<string, true>>>]} */
@@ -332,17 +355,21 @@ const MyAgreements = () => {
     }
   }, [user?.id, tipoPerfil]);
 
+  const selectedDetalheSyncKey = selected
+    ? `${selected.id}:${String(selected.estado || '').toLowerCase()}`
+    : null;
+
   useEffect(() => {
-    if (selected) {
-      void carregarPagamentoContactos(selected);
-    } else {
+    if (!selectedDetalheSyncKey || !selected) {
       setPagamento(null);
       setPagamentosAcordo([]);
       setContactos(null);
       setAvaliacoesAcordo([]);
       setHistoricoPreco([]);
+      return;
     }
-  }, [selected, carregarPagamentoContactos]);
+    void carregarPagamentoContactos(selected);
+  }, [selectedDetalheSyncKey, selected, carregarPagamentoContactos]);
 
   const closeTerminateFlow = () => {
     setTerminatePickerOpen(false);
@@ -372,8 +399,57 @@ const MyAgreements = () => {
   /**
    * @param {{ silent?: boolean }} [options]
    */
+  const locationSearchRef = useRef(location.search);
+  locationSearchRef.current = location.search;
+
+  const syncOpenAcordoQuery = useCallback(
+    (acordoId) => {
+      const params = new URLSearchParams(locationSearchRef.current);
+      const current = params.get('openAcordoId');
+      if (acordoId) {
+        if (current === acordoId) return;
+        params.set('openAcordoId', acordoId);
+      } else if (current) {
+        params.delete('openAcordoId');
+      } else {
+        return;
+      }
+      params.delete('focus');
+      const search = params.toString();
+      navigate(
+        { pathname: location.pathname, search: search ? `?${search}` : '' },
+        { replace: true, state: location.state },
+      );
+    },
+    [location.pathname, location.state, navigate],
+  );
+
+  const stripFocusFromUrl = useCallback(() => {
+    const params = new URLSearchParams(locationSearchRef.current);
+    if (!params.has('focus')) return;
+    params.delete('focus');
+    const search = params.toString();
+    navigate(
+      { pathname: location.pathname, search: search ? `?${search}` : '' },
+      { replace: true, state: location.state },
+    );
+  }, [location.pathname, location.state, navigate]);
+
+  /** @param {typeof selected} acordo */
+  const selectAcordo = useCallback(
+    (acordo) => {
+      if (!acordo?.id) {
+        focusConsumedKeyRef.current = null;
+      }
+      setSelected(acordo);
+      syncOpenAcordoQuery(acordo?.id ?? null);
+    },
+    [syncOpenAcordoQuery],
+  );
+
   const carregar = useCallback(async (options = {}) => {
     const { silent = false } = options;
+    const generation = ++carregarGenerationRef.current;
     if (!user?.id) {
       if (!silent) setIsLoading(false);
       return [];
@@ -384,6 +460,9 @@ const MyAgreements = () => {
         tipoPerfil === 'Motorista'
           ? await getAgreementsForDriver(user.id)
           : await getAgreementsForPassenger(user.id);
+      if (generation !== carregarGenerationRef.current) {
+        return data || [];
+      }
       const filtered = (data || []).filter((a) => !a.is_hidden_by_user);
       setAcordos(filtered);
       setSelected((prev) => {
@@ -394,11 +473,15 @@ const MyAgreements = () => {
       });
       return filtered;
     } catch (err) {
-      console.error(err);
-      setMessage({ type: 'error', text: getFriendlyErrorMessage(err) });
+      if (generation === carregarGenerationRef.current) {
+        console.error(err);
+        setMessage({ type: 'error', text: getFriendlyErrorMessage(err) });
+      }
       return [];
     } finally {
-      if (!silent) setIsLoading(false);
+      if (generation === carregarGenerationRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [user?.id, tipoPerfil]);
 
@@ -422,6 +505,7 @@ const MyAgreements = () => {
   }, [isOnline, syncPendingLeaves]);
 
   const pendingFocusRef = useRef(/** @type {string | null} */ (null));
+  const focusConsumedKeyRef = useRef(/** @type {string | null} */ (null));
 
   /** @param {string} focus */
   const scrollToAcordoFocus = useCallback((focus) => {
@@ -444,21 +528,62 @@ const MyAgreements = () => {
   }, []);
 
   useEffect(() => {
-    if (isLoading || acordos.length === 0) return;
+    if (isLoading) return;
     const params = new URLSearchParams(location.search);
     const openAcordoId = params.get('openAcordoId') || location.state?.openAcordoId;
     const focus = params.get('focus');
-    if (openAcordoId) {
-      const found = acordos.find((a) => a.id === openAcordoId);
-      if (found) {
-        setSelected(found);
-        if (focus) {
-          pendingFocusRef.current = focus;
-        }
-        navigate(location.pathname, { replace: true, state: {} });
+    if (!openAcordoId) return;
+    const found = acordos.find((a) => a.id === openAcordoId);
+    if (!found) {
+      if (acordos.length > 0) {
+        syncOpenAcordoQuery(null);
       }
+      return;
     }
-  }, [isLoading, acordos, location.search, location.state, navigate, location.pathname]);
+    setSelected((prev) => (prev?.id === found.id ? prev : found));
+    const focusKey = focus ? `${openAcordoId}:${focus}` : null;
+    if (focus && focusConsumedKeyRef.current !== focusKey) {
+      pendingFocusRef.current = focus;
+      focusConsumedKeyRef.current = focusKey;
+      stripFocusFromUrl();
+    }
+    if (location.state?.openAcordoId) {
+      navigate(
+        { pathname: location.pathname, search: location.search },
+        { replace: true, state: {} },
+      );
+    }
+  }, [
+    isLoading,
+    acordos,
+    location.search,
+    location.state,
+    navigate,
+    location.pathname,
+    syncOpenAcordoQuery,
+    stripFocusFromUrl,
+  ]);
+
+  useEffect(() => {
+    if (selected?.id || isLoading) return;
+    const params = new URLSearchParams(locationSearchRef.current);
+    const urlId = params.get('openAcordoId');
+    if (!urlId) return;
+    if (!acordos.some((a) => a.id === urlId)) {
+      syncOpenAcordoQuery(null);
+    }
+  }, [selected?.id, isLoading, acordos, syncOpenAcordoQuery]);
+
+  const carregarSilentStable = useCallback(() => {
+    void carregar({ silent: true });
+  }, [carregar]);
+
+  useAcordoDetalheLiveRefresh({
+    enabled: Boolean(selected && acordoPrecisaLiveRefresh(selected)),
+    userId: user?.id,
+    acordoId: selected?.id,
+    onRefresh: carregarSilentStable,
+  });
 
   useEffect(() => {
     if (!selected || !pendingFocusRef.current) return undefined;
@@ -524,7 +649,7 @@ const MyAgreements = () => {
           type: 'success',
           text: 'Saída guardada. Sincronizamos quando a rede voltar.',
         });
-        setSelected(null);
+        selectAcordo(null);
         await carregar();
         return;
       }
@@ -532,7 +657,7 @@ const MyAgreements = () => {
         type: 'success',
         text: 'Saíste do acordo. A quota do mês mantém-se.',
       });
-      setSelected(null);
+      selectAcordo(null);
       setPendingLeaveIds((prev) => {
         const next = { ...prev };
         delete next[acordoId];
@@ -590,7 +715,7 @@ const MyAgreements = () => {
           type: 'success',
           text: 'Rescisão guardada. Sincronizamos quando a rede voltar.',
         });
-        setSelected(null);
+        selectAcordo(null);
         await carregar();
         return;
       }
@@ -670,13 +795,13 @@ const MyAgreements = () => {
           type: 'success',
           text: 'Recusa guardada. Sincronizamos quando a rede voltar.',
         });
-        setSelected(null);
+        selectAcordo(null);
         await carregar();
         return;
       }
 
       setMessage({ type: 'success', text: 'Pedido de encerramento recusado.' });
-      setSelected(null);
+      selectAcordo(null);
       await carregar();
     } catch (err) {
       setMessage({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
@@ -697,6 +822,8 @@ const MyAgreements = () => {
     const oferta = acordo.ofertas_capacidade;
     const rota = labelRotaOferta(oferta || {});
     const activo = isActivo(acordo.estado);
+    const estadoVariant = variantChipEstadoAcordo(acordo.estado);
+    const estadoLabel = labelEstadoAcordo(acordo.estado);
     const leavePending = Boolean(pendingLeaveIds[acordo.id]);
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
     const minhaReservadaCard = Boolean(minhaLinha && isReservado(minhaLinha.estado));
@@ -717,19 +844,15 @@ const MyAgreements = () => {
       <button
         type="button"
         key={acordo.id}
-        onClick={() => setSelected(acordo)}
+        onClick={() => selectAcordo(acordo)}
         className="w-full text-left bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-2"
       >
         <div className="flex justify-between items-center gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                activo
-                  ? 'bg-emerald-100 text-emerald-800'
-                  : 'bg-slate-100 text-slate-600'
-              }`}
+              className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoAcordo(estadoVariant)}`}
             >
-              {activo ? 'Activo' : acordo.estado}
+              {estadoLabel}
             </span>
             {minhaReservadaCard ? (
               <span
@@ -895,7 +1018,7 @@ const MyAgreements = () => {
     return (
       <OverlayShell
         variant="bottom"
-        onDismiss={() => setSelected(null)}
+        onDismiss={() => selectAcordo(null)}
         panelTestId="acordo-detalhe-sheet"
         panelClassName="bg-white dark:bg-slate-900 shadow-2xl"
       >
@@ -913,7 +1036,7 @@ const MyAgreements = () => {
               variant="ghost"
               className="h-10 px-0 font-bold text-slate-600 dark:text-slate-300"
               data-testid="acordo-detalhe-fechar"
-              onClick={() => setSelected(null)}
+              onClick={() => selectAcordo(null)}
             >
               Fechar
             </Button>
@@ -929,19 +1052,12 @@ const MyAgreements = () => {
             <div className="flex items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
                 <span
-                  className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                    activo
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-slate-100 text-slate-600'
-                  }`}
+                  className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoAcordo(
+                    variantChipEstadoAcordo(selected.estado),
+                  )}`}
                 >
-                  {activo ? 'Activo' : selected.estado}
+                  {labelEstadoAcordo(selected.estado)}
                 </span>
-                {cancelamentoPendente && (
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900">
-                    Cancelamento pendente
-                  </span>
-                )}
                 {minhaReservada ? (
                   <span
                     className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoPassageiro('reservado')}`}
