@@ -121,6 +121,18 @@ function isNoAcordo(estado) {
 }
 
 /**
+ * Linha activa/reservada para snapshot N=1; só linhas[0] se não houver viva.
+ * @param {Array<{ estado?: string }>} linhas
+ * @returns {object | null}
+ */
+function pickLinhaVivaPassageiro(linhas) {
+  const list = linhas || [];
+  const viva = list.find((p) => isNoAcordo(p.estado));
+  if (viva) return viva;
+  return list[0] ?? null;
+}
+
+/**
  * @param {string | null | undefined} estado
  * @returns {string}
  */
@@ -623,13 +635,9 @@ const MyAgreements = () => {
       tipoPerfil === 'Passageiro'
         ? (minhaLinha?.quota_mensal_kz ?? acordo.valor_mensal_por_passageiro_kz)
         : acordo.valor_mensal_por_passageiro_kz;
-    const linhasActivasReservadas = linhas.filter((p) => {
-      const e = String(p.estado || '').toLowerCase();
-      return e === 'activo' || e === 'reservado';
-    });
     const rotuloPessoas = (() => {
       if (nPax === 1 && tipoPerfil === 'Motorista') {
-        const pax = linhasActivasReservadas[0] || linhas[0];
+        const pax = pickLinhaVivaPassageiro(linhas);
         return formatPrimeiroNome(nomePassageiro(pax));
       }
       if (nPax === 1) return 'Individual';
@@ -965,11 +973,8 @@ const MyAgreements = () => {
             <AcordoContratoSnapshot
               snapshot={buildAcordoContratoSnapshot(selected, {
                 primeiroNomePassageiro: (() => {
-                  if (!isMotorista || nLinhas !== 1) return undefined;
-                  const pax = linhas.find((p) => {
-                    const e = String(p.estado || '').toLowerCase();
-                    return e === 'activo' || e === 'reservado';
-                  }) || linhas[0];
+                  if (!isMotorista || selected.n_passageiros_contrato !== 1) return undefined;
+                  const pax = pickLinhaVivaPassageiro(linhas);
                   const raw = nomePassageiro(pax);
                   return raw === 'Passageiro' ? undefined : raw;
                 })(),

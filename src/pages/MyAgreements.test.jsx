@@ -233,6 +233,41 @@ describe('MyAgreements — marketplace 1:N', () => {
     });
   });
 
+  it('motorista: snapshot N=1 prefere passageiro activo/reservado sobre linha saiu', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        n_passageiros_contrato: 1,
+        acordos_passageiros: [
+          {
+            id: 'ap-saiu',
+            passenger_id: 'pax-saiu',
+            estado: 'saiu',
+            quota_mensal_kz: 20000,
+            perfis: { nome_completo: 'Maria Silva' },
+          },
+          {
+            id: 'ap-activo',
+            passenger_id: 'pax-activo',
+            estado: 'activo',
+            quota_mensal_kz: 20000,
+            perfis: { nome_completo: 'João Pedro' },
+          },
+        ],
+      },
+    ]);
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /João/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const snapshot = within(dialog).getByTestId('acordo-contrato-snapshot');
+    expect(within(snapshot).getByText('João')).toBeInTheDocument();
+    expect(within(snapshot).queryByText('Maria')).not.toBeInTheDocument();
+    expect(within(snapshot).queryByText('Individual')).not.toBeInTheDocument();
+  });
+
   it('motorista: detalhe N=1 mostra primeiro nome em Pessoas no acordo', async () => {
     getAgreementsForDriver.mockResolvedValue([
       {
