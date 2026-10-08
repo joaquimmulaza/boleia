@@ -43,6 +43,8 @@ import {
   buildAcordoIdPorOfertaMap,
   buildAcordoOptimistaPosAceite,
   mergeAcordosPassageiro,
+  isOptimistaExpirada,
+  ACORDO_OPTIMISTA_TTL_MS,
   CTA_VER_ACORDO,
 } from '../utils/acordoPorOferta';
 import { notifyMarketplaceHubRefresh } from '../utils/marketplaceHubRefresh';
@@ -193,6 +195,32 @@ const PassengerDashboard = () => {
     [acordosPassageiro, user?.id],
   );
 
+  useEffect(() => {
+    let timeoutId = null;
+    const now = Date.now();
+    let nextExpiry = null;
+
+    for (const acordo of acordosPassageiro) {
+      if (!acordo?._optimista) continue;
+      const expiresAt = (acordo._optimistaDesde ?? 0) + ACORDO_OPTIMISTA_TTL_MS;
+      if (expiresAt > now && (nextExpiry === null || expiresAt < nextExpiry)) {
+        nextExpiry = expiresAt;
+      }
+    }
+
+    if (nextExpiry !== null) {
+      timeoutId = setTimeout(() => {
+        setAcordosPassageiro((prev) =>
+          prev.filter((acordo) => !(acordo?._optimista && isOptimistaExpirada(acordo))),
+        );
+      }, nextExpiry - now);
+    }
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [acordosPassageiro]);
+
 
   const ofertasComPropostaAberta = useMemo(() => {
     const ids = new Set(browseOfertasComProposta);
@@ -241,8 +269,6 @@ const PassengerDashboard = () => {
           if (isStale()) return;
 
           console.error(err);
-          setBrowseOfertas([]);
-          setAcordosPassageiro([]);
           setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
         } finally {
           if (!isStale()) setLoadingBrowse(false);
@@ -885,6 +911,8 @@ const PassengerDashboard = () => {
         const optimista = buildAcordoOptimistaPosAceite(
           { ...result, oferta_id: result.oferta_id ?? ofertaIdAceite },
           user.id,
+          Date.now(),
+          memberIds,
         );
         if (optimista) {
           setAcordosPassageiro((prev) => mergeAcordosPassageiro([optimista], prev || [], user.id));

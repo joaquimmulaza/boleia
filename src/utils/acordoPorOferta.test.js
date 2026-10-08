@@ -1,9 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   buildAcordoIdPorOfertaMap,
   buildAcordoOptimistaPosAceite,
   mergeAcordosPassageiro,
   isAcordoVivoParaPassageiro,
+  isOptimistaExpirada,
   ACORDO_OPTIMISTA_TTL_MS,
 } from './acordoPorOferta';
 
@@ -88,6 +89,26 @@ describe('buildAcordoIdPorOfertaMap', () => {
     expect(isAcordoVivoParaPassageiro(vivo, passengerId)).toBe(true);
   });
 
+  it('ignora optimista expirada no mapa CTA (TTL)', () => {
+    vi.useFakeTimers();
+    const now = 1_700_000_000_000;
+    vi.setSystemTime(now);
+
+    const optimista = buildAcordoOptimistaPosAceite(
+      { id: 'ac-opt', oferta_id: 'of-1' },
+      passengerId,
+      now,
+    );
+    expect(buildAcordoIdPorOfertaMap([optimista], passengerId, now).get('of-1')).toBe('ac-opt');
+
+    const expiredNow = now + ACORDO_OPTIMISTA_TTL_MS;
+    vi.setSystemTime(expiredNow);
+    expect(isOptimistaExpirada(optimista, expiredNow)).toBe(true);
+    expect(buildAcordoIdPorOfertaMap([optimista], passengerId, expiredNow).size).toBe(0);
+
+    vi.useRealTimers();
+  });
+
   it('buildAcordoOptimistaPosAceite inclui linha reservado quando RPC não traz passageiros', () => {
     const now = 1_700_000_000_000;
     const acordo = buildAcordoOptimistaPosAceite(
@@ -103,7 +124,36 @@ describe('buildAcordoIdPorOfertaMap', () => {
       _optimista: true,
       _optimistaDesde: now,
     });
-    expect(buildAcordoIdPorOfertaMap([acordo], passengerId).get('of-1')).toBe('ac-1');
+    expect(buildAcordoIdPorOfertaMap([acordo], passengerId, now).get('of-1')).toBe('ac-1');
+  });
+
+  it('buildAcordoOptimistaPosAceite não sintetiza linha quando dono não está em memberIds', () => {
+    const now = 1_700_000_000_000;
+    expect(
+      buildAcordoOptimistaPosAceite(
+        { id: 'ac-grp', oferta_id: 'of-grp' },
+        'owner-1',
+        now,
+        ['membro-a', 'membro-b'],
+      ),
+    ).toBeNull();
+  });
+
+  it('buildAcordoOptimistaPosAceite usa linhas RPC quando dono não seleccionado mas tem linha', () => {
+    const now = 1_700_000_000_000;
+    const acordo = buildAcordoOptimistaPosAceite(
+      {
+        id: 'ac-grp',
+        oferta_id: 'of-grp',
+        acordos_passageiros: [{ passenger_id: 'owner-1', estado: 'activo' }],
+      },
+      'owner-1',
+      now,
+      ['membro-a'],
+    );
+    expect(acordo?.acordos_passageiros).toEqual([
+      { passenger_id: 'owner-1', estado: 'activo' },
+    ]);
   });
 
   describe('mergeAcordosPassageiro', () => {
