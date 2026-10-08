@@ -117,9 +117,7 @@ describe('PACOTE ENG #30 — counter-ask preço na proposta', () => {
     createProposta.mockResolvedValue({ id: 'prop-1', oferta_id: 'of-browse', estado: 'aberta' });
   });
 
-  it.skip('ENG30-1: browse pré-preenche ask e envia valor editado (counter-ask)', async () => {
-    // TODO(bug): browse completo abre OpportunityProposalSheet sem PropostaValorInput —
-    // counter-ask indisponível (regression vs ENG#30 / explorar-proposta-passageiro).
+  it('ENG30-1: browse pré-preenche ask e envia valor editado (counter-ask)', async () => {
     render(
       <MemoryRouter>
         <PassengerDashboard />
@@ -161,6 +159,32 @@ describe('PACOTE ENG #30 — counter-ask preço na proposta', () => {
         }),
       );
     });
+  });
+
+  it('ENG30-1b: abrir o sheet browse não cria proposta antes do envio', async () => {
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Propor acordo/i }));
+    await screen.findByLabelText(/valor.*proposta/i);
+
+    expect(createProcura).not.toHaveBeenCalled();
+    expect(createProposta).not.toHaveBeenCalled();
+  });
+
+  it('ENG30-1c: oferta lotada mantém preço só leitura no sheet', async () => {
+    listOfertasDisponiveis.mockResolvedValue([{ ...OFERTA_BROWSE, vagas_disponiveis: 0 }]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('button', { name: /Propor acordo/i })).not.toBeInTheDocument();
   });
 
   it('ENG30-3: motorista envia o preço da oferta no sheet, sem o editar', async () => {

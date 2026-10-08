@@ -318,13 +318,12 @@ describe('PassengerDashboard — marketplace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Propor acordo' }));
 
     const sheet = await screen.findByTestId('opportunity-proposal-sheet');
-    const texto = sheet.textContent.replace(/\s/g, ' ');
     expect(sheet).toHaveTextContent('Nova proposta');
     expect(sheet).toHaveTextContent('Viana');
     expect(sheet).toHaveTextContent('Talatona');
-    expect(texto).toContain(`${formatKwanza(10000).replace(/\s/g, ' ')} Kz por passageiro`);
+    expect(within(sheet).getByTestId('proposta-valor-input')).toHaveValue(10000);
     expect(sheet).toHaveTextContent('Total estimado');
-    expect(texto).toContain(`${formatKwanza(10000).replace(/\s/g, ' ')} Kz`);
+    expect(sheet.textContent.replace(/\s/g, ' ')).toMatch(textoKz(10000));
     expect(sheet).not.toHaveTextContent(COPY_N_FIXO);
     const nome = sheet.querySelector('[data-testid="opportunity-place-name"]');
     expect(nome.className).toMatch(/break-words/);
@@ -332,7 +331,7 @@ describe('PassengerDashboard — marketplace', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Mais passageiros' }));
     const depois = sheet.textContent.replace(/\s/g, ' ');
-    expect(depois).toContain(`${formatKwanza(10000).replace(/\s/g, ' ')} Kz por passageiro`);
+    expect(within(sheet).getByTestId('proposta-valor-input')).toHaveValue(10000);
     expect(depois).toMatch(textoKz(20000));
     expect(depois).not.toMatch(textoKz(30000));
     expect(depois).not.toMatch(/×/);
@@ -403,14 +402,12 @@ describe('PassengerDashboard — marketplace', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Propor acordo' }));
     const sheet = await screen.findByTestId('opportunity-proposal-sheet');
-    const texto = sheet.textContent.replace(/\s/g, ' ');
     expect(sheet).toHaveTextContent('Nova proposta');
     expect(sheet).toHaveTextContent('Disponível para acordos');
-    expect(sheet).toHaveTextContent('Total do acordo');
-    expect(texto).toContain(`${formatKwanza(30000).replace(/\s/g, ' ')} Kz`);
+    expect(within(sheet).getByLabelText(/valor total do acordo na proposta/i)).toHaveValue(30000);
     expect(sheet).not.toHaveTextContent('por passageiro');
     expect(sheet).not.toHaveTextContent(COPY_N_FIXO);
-    expect(texto).not.toMatch(/×/);
+    expect(sheet.textContent.replace(/\s/g, ' ')).not.toMatch(/×/);
     expect(screen.queryByRole('button', { name: 'Mais passageiros' })).not.toBeInTheDocument();
     expect(screen.queryByText('Passageiros')).not.toBeInTheDocument();
   });
