@@ -129,6 +129,7 @@ describe('PACOTE ENG #25 — ciclo de vida oferta', () => {
         destination_lat: -8.8,
         destination_lng: 13.23,
         dias_semana: [1, 2, 3, 4, 5],
+        vagas_totais: 3,
       });
 
       expect(supabase.rpc).toHaveBeenCalledWith(
@@ -140,6 +141,7 @@ describe('PACOTE ENG #25 — ciclo de vida oferta', () => {
           p_origin_name: null,
           p_origin_lat: null,
           p_destination_name: null,
+          p_vagas_totais: 3,
         }),
       );
     });

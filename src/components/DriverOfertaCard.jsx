@@ -41,6 +41,7 @@ function OfertaRotaTitulo({ oferta }) {
  *   ofertaBusy: boolean,
  *   editPropostas: object[],
  *   editProcurasById: Record<string, object>,
+ *   veiculoVagasPassageiros?: number | null,
  *   onOpenDetail: () => void,
  *   onVerProcuras: () => void,
  *   onVerPropostas: () => void,
@@ -63,6 +64,7 @@ function DriverOfertaCard({
   ofertaBusy,
   editPropostas,
   editProcurasById,
+  veiculoVagasPassageiros = null,
   onOpenDetail,
   onVerProcuras,
   onVerPropostas,
@@ -147,6 +149,7 @@ function DriverOfertaCard({
             busy={ofertaBusy}
             propostas={editPropostas}
             procurasById={editProcurasById}
+            veiculoVagasPassageiros={veiculoVagasPassageiros}
             onCancel={onCancelEdit}
             onSaved={onSaved}
           />

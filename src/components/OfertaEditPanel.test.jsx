@@ -23,6 +23,7 @@ const ofertaFixa = {
   return_time: null,
   dias_semana: [1, 2, 3, 4, 5],
   vagas_disponiveis: 3,
+  vagas_totais: 3,
 };
 
 describe('OfertaEditPanel', () => {
@@ -64,6 +65,62 @@ describe('OfertaEditPanel', () => {
       );
     });
     expect(onSaved).toHaveBeenCalled();
+  });
+
+  it('stepper de lugares trava nos limites min/max do veículo', async () => {
+    render(
+      <OfertaEditPanel
+        oferta={{ ...ofertaFixa, vagas_totais: 4, vagas_disponiveis: 2 }}
+        veiculoVagasPassageiros={5}
+        onCancel={() => {}}
+        onSaved={() => {}}
+      />,
+    );
+
+    expect(screen.getByText('4')).toBeInTheDocument();
+    expect(screen.getByText(/Mínimo 2 \(ocupados\)/)).toBeInTheDocument();
+
+    const menos = screen.getByRole('button', { name: 'Menos lugares' });
+    const mais = screen.getByRole('button', { name: 'Mais lugares' });
+
+    fireEvent.click(menos);
+    expect(screen.getByText('3')).toBeInTheDocument();
+    fireEvent.click(menos);
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(menos).toBeDisabled();
+
+    fireEvent.click(mais);
+    fireEvent.click(mais);
+    fireEvent.click(mais);
+    const lugaresGroup = screen.getByRole('group', { name: 'Lugares na oferta' });
+    expect(within(lugaresGroup).getByText('5')).toBeInTheDocument();
+    expect(within(lugaresGroup).getByRole('button', { name: 'Mais lugares' })).toBeDisabled();
+  });
+
+  it('envia vagas_totais no payload da RPC', async () => {
+    render(
+      <OfertaEditPanel
+        oferta={{ ...ofertaFixa, vagas_totais: 3, vagas_disponiveis: 1 }}
+        veiculoVagasPassageiros={6}
+        onCancel={() => {}}
+        onSaved={() => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mais lugares' }));
+    fireEvent.click(screen.getByRole('button', { name: /Guardar alterações/i }));
+    fireEvent.click(
+      within(await screen.findByTestId('oferta-edit-snapshot-confirm')).getByRole('button', {
+        name: 'Guardar alterações',
+      }),
+    );
+
+    await waitFor(() => {
+      expect(updateOferta).toHaveBeenCalledWith(
+        'of-1',
+        expect.objectContaining({ vagas_totais: 4 }),
+      );
+    });
   });
 
   it('confirm com contagem quando propostas incompatíveis no contexto', async () => {
