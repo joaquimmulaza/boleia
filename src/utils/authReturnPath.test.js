@@ -29,6 +29,22 @@ describe('resolveSafeReturnPath', () => {
     expect(resolveSafeReturnPath(null)).toBeNull();
     expect(resolveSafeReturnPath('passageiro')).toBeNull();
   });
+
+  it('rejeita barra invertida (browsers normalizam para //)', () => {
+    expect(resolveSafeReturnPath('/\\evil.com')).toBeNull();
+    expect(resolveSafeReturnPath('/\\\\evil.com')).toBeNull();
+    expect(resolveSafeReturnPath('/%5Cevil.com')).toBeNull();
+  });
+
+  it('rejeita tab ou protocol-relative após descodificação', () => {
+    expect(resolveSafeReturnPath('/\t//evil.com')).toBeNull();
+    expect(resolveSafeReturnPath('/%2F%2Fevil.com')).toBeNull();
+  });
+
+  it('rejeita espaços internos e newline', () => {
+    expect(resolveSafeReturnPath('/ /evil.com')).toBeNull();
+    expect(resolveSafeReturnPath('/\nfoo')).toBeNull();
+  });
 });
 
 describe('buildAuthUrlWithNext', () => {
@@ -51,6 +67,7 @@ describe('buildAuthUrlWithNext', () => {
   it('omite next quando o caminho é inseguro', () => {
     const url = buildAuthUrlWithNext('/auth', 'https://evil.example');
     expect(url).toBe('/auth');
+    expect(buildAuthUrlWithNext('/auth', '/\\evil.com')).toBe('/auth');
   });
 });
 

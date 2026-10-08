@@ -2,6 +2,33 @@
 export const AUTH_RETURN_STORAGE_KEY = 'bc_auth_return';
 
 /**
+ * @param {string} path
+ * @returns {boolean}
+ */
+function hasControlChars(path) {
+  for (let i = 0; i < path.length; i += 1) {
+    const code = path.charCodeAt(i);
+    if (code <= 0x1f || code === 0x7f) return true;
+  }
+  return false;
+}
+
+/**
+ * Rejeita caminhos que browsers podem normalizar para URL externa ou protocol-relative.
+ * @param {string} path
+ * @returns {boolean}
+ */
+function isUnsafeAbsolutePath(path) {
+  if (!path.startsWith('/')) return true;
+  if (path.startsWith('//')) return true;
+  if (path.includes('://')) return true;
+  if (path.includes('\\')) return true;
+  if (hasControlChars(path)) return true;
+  if (/\s/.test(path.slice(1))) return true;
+  return false;
+}
+
+/**
  * Valida caminho de retorno pós-login (só rotas internas; evita open redirect).
  * @param {string | null | undefined} raw
  * @returns {string | null}
@@ -9,10 +36,19 @@ export const AUTH_RETURN_STORAGE_KEY = 'bc_auth_return';
 export function resolveSafeReturnPath(raw) {
   if (!raw || typeof raw !== 'string') return null;
   const trimmed = raw.trim();
-  if (!trimmed.startsWith('/')) return null;
-  if (trimmed.startsWith('//')) return null;
-  if (trimmed.includes('://')) return null;
-  return trimmed;
+  if (!trimmed || isUnsafeAbsolutePath(trimmed)) return null;
+
+  let decoded;
+  try {
+    decoded = decodeURIComponent(trimmed);
+  } catch {
+    return null;
+  }
+
+  const decodedTrimmed = decoded.trim();
+  if (!decodedTrimmed || isUnsafeAbsolutePath(decodedTrimmed)) return null;
+
+  return decodedTrimmed;
 }
 
 /**
