@@ -83,6 +83,16 @@ function isActivo(estado) {
 }
 
 /**
+ * Pagamento/contactos RPC só para acordos ainda vigentes ou com rescisão pendente.
+ * @param {string | null | undefined} estado
+ * @returns {boolean}
+ */
+function podeCarregarPagamentoContactos(estado) {
+  const e = String(estado || '').toLowerCase();
+  return e === 'activo' || e === 'cancelamento_pendente';
+}
+
+/**
  * Soft-hold: lugar ocupado mas ainda não confirmado (até em_custodia).
  * @param {string | null | undefined} estado
  * @returns {boolean}
@@ -239,6 +249,18 @@ const MyAgreements = () => {
 
   const carregarPagamentoContactos = useCallback(async (acordo) => {
     if (!acordo?.id || !user?.id) return;
+
+    if (!podeCarregarPagamentoContactos(acordo.estado)) {
+      setPagamento(null);
+      setPagamentosAcordo([]);
+      setContactos(null);
+      setAvaliacoesAcordo([]);
+      setHistoricoPreco([]);
+      setPagamentoLoading(false);
+      setContactosLoading(false);
+      return;
+    }
+
     setPagamentoLoading(true);
     setContactosLoading(true);
     try {
@@ -1067,7 +1089,9 @@ const MyAgreements = () => {
             </div>
           ) : null}
 
-          <AcordoContactosPanel contactos={contactos} loading={contactosLoading} />
+          {podeCarregarPagamentoContactos(selected.estado) ? (
+            <AcordoContactosPanel contactos={contactos} loading={contactosLoading} />
+          ) : null}
 
           <div className="border-t border-slate-100 dark:border-slate-800" role="separator" />
 

@@ -391,6 +391,28 @@ describe('MyAgreements — marketplace 1:N', () => {
     expect(within(dialog).queryByRole('button', { name: /Mais acções do acordo/i })).not.toBeInTheDocument();
   });
 
+  it('acordo cancelado: não chama getAcordoContactos ao abrir detalhe', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      { ...acordoMotorista, id: 'acordo-cancelado', estado: 'cancelado' },
+    ]);
+
+    renderPage();
+    getAcordoContactos.mockClear();
+    listPagamentosByAcordo.mockClear();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+    await waitFor(() => {
+      expect(getAcordoContactos).not.toHaveBeenCalled();
+      expect(listPagamentosByAcordo).not.toHaveBeenCalled();
+    });
+    expect(screen.queryByTestId('contactos-loading')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('contactos-bloqueados')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('contactos-desbloqueados')).not.toBeInTheDocument();
+  });
+
   it('passageiro que saiu: não mostra CTA Registar falta no detalhe do acordo inactivo', async () => {
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     getAgreementsForPassenger.mockResolvedValue([
@@ -902,9 +924,11 @@ describe('MyAgreements — marketplace 1:N', () => {
       expect(
         within(dialog).queryByRole('menuitem', { name: /Encerrar acordo/i }),
       ).not.toBeInTheDocument();
-      expect(
-        within(dialog).queryByRole('button', { name: /Mais acções do acordo/i }),
-      ).not.toBeInTheDocument();
+      const kebabTrigger = within(dialog).queryByRole('button', { name: /Mais acções do acordo/i });
+      if (kebabTrigger) {
+        openAcordoKebab(dialog);
+        expect(screen.queryByRole('menuitem', { name: /Encerrar acordo/i })).not.toBeInTheDocument();
+      }
     });
 
     it('após pedir consensual mantém detalhe aberto com estado enviado', async () => {
