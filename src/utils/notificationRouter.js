@@ -65,6 +65,9 @@ export const notificationRouteMap = {
     if (ADENDA_PENDENTE_ESTADOS.has(adendaEstado)) {
       return acordosDeepLink(metadata, 'adenda');
     }
+    if (String(metadata?.rescisao_modo || '').toLowerCase() === 'consensual') {
+      return acordosDeepLink(metadata, 'rescisao');
+    }
     return acordosDeepLink(metadata, null);
   },
   adenda_pending: (metadata) => acordosDeepLink(metadata, 'adenda'),

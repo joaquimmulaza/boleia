@@ -287,4 +287,20 @@ describe('Marketplace Termination Audit — G15', () => {
     expect(sql).toContain('cancel_agreement_adenda');
     expect(sql).toContain("estado = 'cancelada_iniciador'");
   });
+
+  it('reject_agreement_termination — RPC limpa colunas e notifica requerente', () => {
+    const sql = readMigration('20261008140000_reject_agreement_termination.sql');
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\.reject_agreement_termination/);
+    expect(sql).toContain('rescisao_modo = NULL');
+    expect(sql).toContain('Só a contraparte pode recusar este pedido.');
+    expect(sql).toContain('recusou o pedido de encerramento amigável');
+    expect(sql).toContain("GRANT EXECUTE ON FUNCTION public.reject_agreement_termination");
+  });
+
+  it('handle_acordo_notifications ignora cancelado quando rescisao_modo está preenchido', () => {
+    const sql = readMigration('20261008140100_acordo_notifications_skip_rescisao_rpc.sql');
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\.handle_acordo_notifications/);
+    expect(sql).toContain('NULLIF(btrim(COALESCE(NEW.rescisao_modo');
+    expect(sql).toContain('Um acordo foi cancelado.');
+  });
 });

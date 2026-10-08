@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import MyAgreements from './MyAgreements';
 import { expectNoUserFacingJargon } from '../test/jargonBan';
@@ -26,6 +26,7 @@ vi.mock('../services/AgreementService', () => ({
   getAgreementsForPassenger: vi.fn(),
   leavePassenger: vi.fn(),
   terminateAgreement: vi.fn(),
+  rejectAgreementTermination: vi.fn(),
   listAdendaHistorico: vi.fn().mockResolvedValue([]),
 }));
 
@@ -57,8 +58,10 @@ import {
   getAgreementsForPassenger,
   leavePassenger,
   terminateAgreement,
+  rejectAgreementTermination,
   listAdendaHistorico,
 } from '../services/AgreementService';
+import { resetOverlayStackForTests } from '../utils/overlayStack';
 import { listPending } from '../services/offlineQueue';
 import {
   listPagamentosByAcordo,
@@ -644,7 +647,15 @@ describe('MyAgreements — marketplace 1:N', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Encerrar acordo$/i }));
 
     await waitFor(() => {
-      expect(terminateAgreement).toHaveBeenCalledWith('acordo-pax', { modo: 'aviso_previo' });
+      expect(terminateAgreement).toHaveBeenCalledWith(
+        'acordo-pax',
+        { modo: 'aviso_previo' },
+        expect.objectContaining({
+          idempotencyKey: expect.stringMatching(
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+          ),
+        }),
+      );
     });
     expect(
       await screen.findByText(/Rescisão agendada|mantém-se activo até ao fim do mês/i),
@@ -675,10 +686,15 @@ describe('MyAgreements — marketplace 1:N', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Encerrar acordo$/i }));
 
     await waitFor(() => {
-      expect(terminateAgreement).toHaveBeenCalledWith('acordo-pax', {
-        modo: 'consensual',
-        vigencia: 'imediato',
-      });
+      expect(terminateAgreement).toHaveBeenCalledWith(
+        'acordo-pax',
+        { modo: 'consensual', vigencia: 'imediato' },
+        expect.objectContaining({
+          idempotencyKey: expect.stringMatching(
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+          ),
+        }),
+      );
     });
 
     const feedback = screen.getByTestId('agreements-feedback');
@@ -710,10 +726,15 @@ describe('MyAgreements — marketplace 1:N', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Encerrar acordo$/i }));
 
     await waitFor(() => {
-      expect(terminateAgreement).toHaveBeenCalledWith('acordo-pax', {
-        modo: 'consensual',
-        vigencia: 'fim_ciclo',
-      });
+      expect(terminateAgreement).toHaveBeenCalledWith(
+        'acordo-pax',
+        { modo: 'consensual', vigencia: 'fim_ciclo' },
+        expect.objectContaining({
+          idempotencyKey: expect.stringMatching(
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+          ),
+        }),
+      );
     });
   });
 
@@ -787,6 +808,188 @@ describe('MyAgreements — marketplace 1:N', () => {
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
     expect(within(dialog).queryByRole('button', { name: /Sair só eu/i })).not.toBeInTheDocument();
+  });
+
+  describe('encerramento consensual', () => {
+    afterEach(() => {
+      resetOverlayStackForTests();
+    });
+
+    const acordoComPedidoMotorista = {
+      ...acordoPassageiro,
+      rescisao_modo: 'consensual',
+      rescisao_solicitada_por: 'driver-1',
+      rescisao_vigencia: 'imediato',
+    };
+
+    it('contraparte vê Confirmar e Recusar; confirmar chama terminateAgreement consensual', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+      getAgreementsForPassenger.mockResolvedValue([acordoComPedidoMotorista]);
+      terminateAgreement.mockResolvedValue({
+        id: 'acordo-pax',
+        estado: 'cancelado',
+      });
+
+      renderPage(['/acordos?openAcordoId=acordo-pax&focus=rescisao']);
+
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      expect(within(dialog).getByTestId('rescisao-consensual-pendente')).toBeInTheDocument();
+      expect(within(dialog).getByTestId('rescisao-confirmar-cta')).toHaveTextContent(
+        /Confirmar encerramento/i,
+      );
+
+      fireEvent.click(within(dialog).getByTestId('rescisao-confirmar-cta'));
+
+      await waitFor(() => {
+        expect(terminateAgreement).toHaveBeenCalledTimes(1);
+        expect(terminateAgreement).toHaveBeenCalledWith(
+          'acordo-pax',
+          { modo: 'consensual', vigencia: 'imediato' },
+          expect.objectContaining({
+            idempotencyKey: expect.stringMatching(
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+            ),
+          }),
+        );
+      });
+    });
+
+    it('contraparte recusa pedido consensual via rejectAgreementTermination', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+      getAgreementsForPassenger.mockResolvedValue([acordoComPedidoMotorista]);
+      rejectAgreementTermination.mockResolvedValue({
+        id: 'acordo-pax',
+        estado: 'activo',
+        rescisao_modo: null,
+      });
+
+      renderPage(['/acordos?openAcordoId=acordo-pax']);
+
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      fireEvent.click(within(dialog).getByTestId('rescisao-recusar-cta'));
+
+      await waitFor(() => {
+        expect(rejectAgreementTermination).toHaveBeenCalledTimes(1);
+        expect(rejectAgreementTermination).toHaveBeenCalledWith(
+          'acordo-pax',
+          expect.objectContaining({
+            idempotencyKey: expect.stringMatching(
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+            ),
+          }),
+        );
+      });
+      expect(await screen.findByText(/Pedido de encerramento recusado/i)).toBeInTheDocument();
+    });
+
+    it('requerente vê pedido enviado e não tem Encerrar acordo no kebab', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver.mockResolvedValue([
+        {
+          ...acordoMotorista,
+          rescisao_modo: 'consensual',
+          rescisao_solicitada_por: 'driver-1',
+          rescisao_vigencia: 'fim_ciclo',
+        },
+      ]);
+
+      renderPage(['/acordos?openAcordoId=acordo-1']);
+
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      expect(within(dialog).getByTestId('rescisao-consensual-enviada')).toHaveTextContent(
+        /Pedido enviado, à espera da outra parte/i,
+      );
+      expect(
+        within(dialog).queryByRole('menuitem', { name: /Encerrar acordo/i }),
+      ).not.toBeInTheDocument();
+      expect(
+        within(dialog).queryByRole('button', { name: /Mais acções do acordo/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('após pedir consensual mantém detalhe aberto com estado enviado', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+      const acordoComPedidoEnviado = {
+        ...acordoPassageiro,
+        rescisao_modo: 'consensual',
+        rescisao_solicitada_por: 'pax-viewer',
+        rescisao_vigencia: 'imediato',
+      };
+      getAgreementsForPassenger
+        .mockResolvedValueOnce([acordoPassageiro])
+        .mockResolvedValue([acordoComPedidoEnviado]);
+      terminateAgreement.mockResolvedValue(acordoComPedidoEnviado);
+
+      renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      openAcordoKebab(dialog);
+      await clickAcordoKebabItem(/Encerrar acordo/i);
+
+      const picker = await screen.findByTestId('terminate-modality-picker');
+      fireEvent.click(within(picker).getByRole('button', { name: /Acordo amigável/i }));
+      const vigencia = await screen.findByTestId('terminate-vigencia-picker');
+      fireEvent.click(within(vigencia).getByRole('button', { name: /Agora — ajuste proporcional/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^Encerrar acordo$/i }));
+
+      await waitFor(() => {
+        expect(terminateAgreement).toHaveBeenCalledTimes(1);
+      });
+
+      expect(await screen.findByTestId('rescisao-consensual-enviada')).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: /Detalhe do acordo/i })).toBeInTheDocument();
+    });
+
+    it('Escape no picker de modalidades fecha só o picker e mantém o detalhe', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+      getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+
+      renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      openAcordoKebab(dialog);
+      await clickAcordoKebabItem(/Encerrar acordo/i);
+
+      expect(await screen.findByTestId('terminate-modality-picker')).toBeInTheDocument();
+      fireEvent.keyDown(document, { key: 'Escape' });
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('terminate-modality-picker')).not.toBeInTheDocument();
+      });
+      expect(screen.getByRole('dialog', { name: /Detalhe do acordo/i })).toBeInTheDocument();
+    });
+
+    it('cliques rápidos no Confirmar só disparam um pedido', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+      getAgreementsForPassenger.mockResolvedValue([acordoComPedidoMotorista]);
+
+      let resolveTerminate;
+      terminateAgreement.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveTerminate = resolve;
+          }),
+      );
+
+      renderPage(['/acordos?openAcordoId=acordo-pax']);
+
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      const confirmar = within(dialog).getByTestId('rescisao-confirmar-cta');
+      fireEvent.click(confirmar);
+      fireEvent.click(confirmar);
+
+      await waitFor(() => {
+        expect(terminateAgreement).toHaveBeenCalledTimes(1);
+      });
+      expect(confirmar).toBeDisabled();
+
+      resolveTerminate({ id: 'acordo-pax', estado: 'cancelado' });
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId('rescisao-consensual-pendente'),
+        ).not.toBeInTheDocument();
+      });
+    });
   });
 });
 

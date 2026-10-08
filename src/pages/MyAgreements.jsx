@@ -7,8 +7,10 @@ import {
   getAgreementsForPassenger,
   leavePassenger,
   terminateAgreement,
+  rejectAgreementTermination,
   listAdendaHistorico,
 } from '../services/AgreementService';
+import { resolveIdempotencyKey } from '../utils/callRpcWithOfflineFallback.js';
 import { listPending } from '../services/offlineQueue';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import EmptyState from '../components/EmptyState';
@@ -17,7 +19,6 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 import ConfirmationModal from '../components/ConfirmationModal';
-import ModalPortal from '../components/ModalPortal';
 import OverlayShell from '../components/OverlayShell';
 import SheetDragHandle from '../components/SheetDragHandle';
 import AcordoDetalheKebabMenu from '../components/AcordoDetalheKebabMenu';
@@ -287,7 +288,6 @@ const MyAgreements = () => {
     setTerminateModo('');
     setTerminateJustificativa('');
     setTerminateVigencia('');
-    setTerminateBusy(false);
   };
 
   const syncPendingLeaves = useCallback(async () => {
@@ -351,6 +351,7 @@ const MyAgreements = () => {
       adenda: 'adenda-pendente',
       renovacao: 'renovacao-periodo-panel',
       avaliar: 'acordo-rating-banner',
+      rescisao: 'rescisao-consensual-section',
     };
     const testId = focusTestIds[focus];
     if (!testId) return;
@@ -389,21 +390,6 @@ const MyAgreements = () => {
     scrollToAcordoFocus(focus);
     return undefined;
   }, [selected, scrollToAcordoFocus, pagamentoLoading, pagamento]);
-
-  useEffect(() => {
-    if (!selected) return undefined;
-
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        setSelected(null);
-      }
-    };
-
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [selected]);
 
   const activos = acordos.filter((a) => isActivo(a.estado));
   const outros = acordos.filter((a) => !isActivo(a.estado));
@@ -481,6 +467,8 @@ const MyAgreements = () => {
     const modo = modoOverride || terminateModo;
     if (!modo) return;
 
+    const acordoId = selected.id;
+    const idempotencyKey = resolveIdempotencyKey();
     setTerminateBusy(true);
     try {
       const input = { modo };
@@ -501,7 +489,7 @@ const MyAgreements = () => {
         input.vigencia = vigencia;
       }
 
-      const result = await terminateAgreement(selected.id, input);
+      const result = await terminateAgreement(acordoId, input, { idempotencyKey });
       closeTerminateFlow();
 
       if (result?.offlineQueued) {
@@ -516,8 +504,9 @@ const MyAgreements = () => {
 
       const estado = String(result?.estado || '').toLowerCase();
       const vigenciaFinal = String(result?.rescisao_vigencia || input.vigencia || '').toLowerCase();
+      const pedidoConsensualPendente = modo === 'consensual' && estado === 'activo';
       let text = 'Pedido de rescisão registado.';
-      if (modo === 'consensual' && estado === 'activo') {
+      if (pedidoConsensualPendente) {
         text =
           vigenciaFinal === 'fim_ciclo'
             ? 'Pedido amigável (fim deste mês) enviado. A outra parte precisa de confirmar.'
@@ -533,6 +522,43 @@ const MyAgreements = () => {
       }
 
       setMessage({ type: 'success', text });
+      if (pedidoConsensualPendente && result) {
+        setSelected(result);
+      } else {
+        setSelected(null);
+      }
+      const refreshed = await carregar();
+      if (pedidoConsensualPendente) {
+        const found = refreshed.find((a) => a.id === acordoId);
+        if (found) setSelected(found);
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+    } finally {
+      setTerminateBusy(false);
+    }
+  };
+
+  const handleRejectTermination = async () => {
+    if (!selected || terminateBusy) return;
+
+    const acordoId = selected.id;
+    const idempotencyKey = resolveIdempotencyKey();
+    setTerminateBusy(true);
+    try {
+      const result = await rejectAgreementTermination(acordoId, { idempotencyKey });
+
+      if (result?.offlineQueued) {
+        setMessage({
+          type: 'success',
+          text: 'Recusa guardada. Sincronizamos quando a rede voltar.',
+        });
+        setSelected(null);
+        await carregar();
+        return;
+      }
+
+      setMessage({ type: 'success', text: 'Pedido de encerramento recusado.' });
       setSelected(null);
       await carregar();
     } catch (err) {
@@ -662,7 +688,11 @@ const MyAgreements = () => {
       nConfirmados >= 1 &&
       !minhaReservada &&
       (isMotorista || (isPassageiro && podeSair));
-    const podeEncerrar = activo && (isMotorista || podeSair);
+    const temRescisaoConsensualAberta =
+      activo &&
+      String(selected.rescisao_modo || '').toLowerCase() === 'consensual' &&
+      selected.rescisao_solicitada_por;
+    const podeEncerrar = activo && (isMotorista || podeSair) && !temRescisaoConsensualAberta;
     const passageirosActivosIds = linhas
       .filter((p) => isActivo(p.estado))
       .map((p) => p.passenger_id)
@@ -692,6 +722,10 @@ const MyAgreements = () => {
       String(selected.rescisao_modo || '').toLowerCase() === 'consensual' &&
       selected.rescisao_solicitada_por &&
       selected.rescisao_solicitada_por !== user?.id;
+    const rescisaoConsensualEnviada =
+      activo &&
+      String(selected.rescisao_modo || '').toLowerCase() === 'consensual' &&
+      selected.rescisao_solicitada_por === user?.id;
     const vigenciaConsensualPendente = String(selected.rescisao_vigencia || 'imediato').toLowerCase();
     const cancelamentoPendente =
       String(selected.estado || '').toLowerCase() === 'cancelamento_pendente';
@@ -901,31 +935,71 @@ const MyAgreements = () => {
               </div>
             ) : null}
 
-            {rescisaoConsensualPendente && (
-              <div
-                data-testid="rescisao-consensual-pendente"
-                className="rounded-xl border border-amber-200/90 bg-amber-50/80 p-3 space-y-3"
-              >
-                <p className="text-sm font-bold text-slate-900 dark:text-white text-balance">
-                  Pedido de encerramento amigável
-                </p>
-                <p className="text-sm text-slate-600 dark:text-slate-300 text-pretty">
-                  {vigenciaConsensualPendente === 'fim_ciclo'
-                    ? 'A outra parte quer encerrar no fim deste mês. Confirma se concordas.'
-                    : 'A outra parte quer encerrar agora com ajuste proporcional das quotas. Confirma se concordas.'}
-                </p>
-                <Button
-                  type="button"
-                  className="w-full min-h-12"
-                  disabled={terminateBusy}
-                  onClick={() =>
-                    handleTerminate('consensual', undefined, vigenciaConsensualPendente)
-                  }
-                >
-                  Confirmar encerramento amigável
-                </Button>
+            {rescisaoConsensualEnviada || rescisaoConsensualPendente ? (
+              <div data-testid="rescisao-consensual-section" className="space-y-3">
+                {rescisaoConsensualEnviada ? (
+                  <div
+                    data-testid="rescisao-consensual-enviada"
+                    className="rounded-xl border border-slate-200/90 bg-slate-50/80 dark:bg-slate-800/40 dark:border-slate-700 p-3 space-y-1"
+                  >
+                    <p className="text-sm font-bold text-slate-900 dark:text-white text-balance">
+                      Pedido enviado, à espera da outra parte
+                    </p>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 text-pretty">
+                      {vigenciaConsensualPendente === 'fim_ciclo'
+                        ? 'Pediste encerramento no fim deste mês. A outra parte pode confirmar ou recusar em Acordos.'
+                        : 'Pediste encerramento imediato com ajuste proporcional. A outra parte pode confirmar ou recusar em Acordos.'}
+                    </p>
+                  </div>
+                ) : null}
+
+                {rescisaoConsensualPendente ? (
+                  <div
+                    data-testid="rescisao-consensual-pendente"
+                    className="rounded-xl border border-amber-200/90 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 space-y-3"
+                  >
+                    <p className="text-sm font-bold text-slate-900 dark:text-white text-balance">
+                      Pedido de encerramento amigável
+                    </p>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 text-pretty">
+                      {vigenciaConsensualPendente === 'fim_ciclo'
+                        ? 'A outra parte quer encerrar no fim deste mês. Confirma se concordas.'
+                        : 'A outra parte quer encerrar agora com ajuste proporcional das quotas. Confirma se concordas.'}
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        type="button"
+                        className="w-full min-h-12"
+                        disabled={terminateBusy}
+                        data-testid="rescisao-confirmar-cta"
+                        onClick={() =>
+                          handleTerminate('consensual', undefined, vigenciaConsensualPendente)
+                        }
+                      >
+                        {terminateBusy ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                            A processar…
+                          </>
+                        ) : (
+                          'Confirmar encerramento'
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full min-h-12"
+                        disabled={terminateBusy}
+                        data-testid="rescisao-recusar-cta"
+                        onClick={() => handleRejectTermination()}
+                      >
+                        Recusar
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
-            )}
+            ) : null}
           </section>
 
           {activo && podeRenegociar ? (
@@ -1164,242 +1238,284 @@ const MyAgreements = () => {
 
       {renderDetalhe()}
 
-      {terminatePickerOpen && (
-        <ModalPortal>
-          <div className="fixed inset-0 z-modal flex items-end sm:items-center justify-center bg-black/40 p-4">
+      {terminatePickerOpen ? (
+        <OverlayShell
+          variant="bottom"
+          onDismiss={terminateBusy ? undefined : () => setTerminatePickerOpen(false)}
+          dismissDisabled={terminateBusy}
+          panelTestId="terminate-modality-picker"
+          panelClassName="bg-white dark:bg-slate-900 shadow-2xl"
+        >
+          <SheetDragHandle />
+          <div className="px-5 pb-safe space-y-4">
             <div
               role="dialog"
               aria-modal="true"
               aria-labelledby="terminate-picker-title"
-              data-testid="terminate-modality-picker"
-              className="w-full max-w-md max-h-[90dvh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl p-6 space-y-4 shadow-xl pb-safe"
+              className="space-y-4"
             >
-            <div className="space-y-1">
-              <h3 id="terminate-picker-title" className="text-lg font-bold">
-                Como queres encerrar o acordo?
-              </h3>
-              <p className="text-sm text-slate-500 text-pretty">
-                Escolhe a modalidade de rescisão do acordo completo ou sai só tu mantendo o acordo
-                activo para os restantes.
-              </p>
-            </div>
+              <div className="space-y-1">
+                <h3 id="terminate-picker-title" className="text-lg font-bold">
+                  Como queres encerrar o acordo?
+                </h3>
+                <p className="text-sm text-slate-500 text-pretty">
+                  Escolhe a modalidade de rescisão do acordo completo ou sai só tu mantendo o acordo
+                  activo para os restantes.
+                </p>
+              </div>
 
-            <div className="space-y-2">
-              {podeSairSoloAcordo ? (
+              <div className="space-y-2">
+                {podeSairSoloAcordo ? (
+                  <button
+                    type="button"
+                    className="w-full text-left rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/80 dark:bg-emerald-950/20 p-4 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                    data-testid="terminate-picker-sair-so-eu"
+                    disabled={terminateBusy}
+                    onClick={() => {
+                      setTerminatePickerOpen(false);
+                      handleSairSoEu();
+                    }}
+                  >
+                    <p className="font-bold text-slate-900 dark:text-white text-balance">Sair só eu</p>
+                    <p className="text-sm text-slate-500 mt-1 text-pretty">
+                      Saída individual — o acordo mantém-se para os restantes. Com pagamento confirmado,
+                      podes avaliar antes de sair.
+                    </p>
+                  </button>
+                ) : null}
+
                 <button
                   type="button"
-                  className="w-full text-left rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/80 dark:bg-emerald-950/20 p-4 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-                  data-testid="terminate-picker-sair-so-eu"
+                  className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                  disabled={terminateBusy}
                   onClick={() => {
+                    setTerminateModo('consensual');
                     setTerminatePickerOpen(false);
-                    handleSairSoEu();
+                    setTerminateVigenciaPickerOpen(true);
                   }}
                 >
-                  <p className="font-bold text-slate-900 dark:text-white text-balance">Sair só eu</p>
+                  <p className="font-bold text-slate-900 dark:text-white text-balance">
+                    Acordo amigável
+                  </p>
                   <p className="text-sm text-slate-500 mt-1 text-pretty">
-                    Saída individual — o acordo mantém-se para os restantes. Com pagamento confirmado,
-                    podes avaliar antes de sair.
+                    Pedes o encerramento e a outra parte confirma. Escolhes se termina agora ou no fim
+                    deste mês.
                   </p>
                 </button>
-              ) : null}
 
-              <button
-                type="button"
-                className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                onClick={() => {
-                  setTerminateModo('consensual');
-                  setTerminatePickerOpen(false);
-                  setTerminateVigenciaPickerOpen(true);
-                }}
-              >
-                <p className="font-bold text-slate-900 dark:text-white text-balance">
-                  Acordo amigável
-                </p>
-                <p className="text-sm text-slate-500 mt-1 text-pretty">
-                  Pedes o encerramento e a outra parte confirma. Escolhes se termina agora ou no fim
-                  deste mês.
-                </p>
-              </button>
-
-              <button
-                type="button"
-                className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                onClick={() => {
-                  setTerminateModo('aviso_previo');
-                  setTerminatePickerOpen(false);
-                  setTerminateConfirmOpen(true);
-                }}
-              >
-                <p className="font-bold text-slate-900 dark:text-white">Aviso prévio</p>
-                <p className="text-sm text-slate-500 mt-1 text-pretty">
-                  O acordo mantém-se activo até ao fim deste mês. A partir do próximo mês fica
-                  cancelado.
-                </p>
-              </button>
-
-              <button
-                type="button"
-                className="w-full text-left rounded-xl border border-red-200 dark:border-red-900/50 p-4 hover:bg-red-50/50 dark:hover:bg-red-950/20"
-                onClick={() => {
-                  setTerminateModo('justa_causa');
-                  setTerminatePickerOpen(false);
-                  setTerminateJustaPickerOpen(true);
-                }}
-              >
-                <p className="font-bold text-red-800 dark:text-red-200">Justa causa imediata</p>
-                <p className="text-sm text-slate-500 mt-1 text-pretty">
-                  Só com motivo válido: avaria do veículo, segurança ou faltas excessivas (&gt;50%
-                  do mês).
-                </p>
-              </button>
-            </div>
-
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full"
-              onClick={() => setTerminatePickerOpen(false)}
-            >
-              Voltar
-            </Button>
-            </div>
-          </div>
-        </ModalPortal>
-      )}
-
-      {terminateJustaPickerOpen && (
-        <ModalPortal>
-          <div className="fixed inset-0 z-modal flex items-end sm:items-center justify-center bg-black/40 p-4">
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="justa-causa-title"
-              data-testid="terminate-justa-picker"
-              className="w-full max-w-md max-h-[90dvh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl p-6 space-y-4 shadow-xl pb-safe"
-            >
-            <h3 id="justa-causa-title" className="text-lg font-bold">
-              Motivo da justa causa
-            </h3>
-            <div className="space-y-2">
-              {[
-                { id: 'avaria_veiculo', label: 'Avaria do veículo', hint: 'Impossibilita cumprir o trajeto.' },
-                { id: 'seguranca', label: 'Motivo de segurança', hint: 'Risco grave para passageiros ou motorista.' },
-                { id: 'faltas_excessivas', label: 'Faltas excessivas', hint: 'Mais de metade dos dias úteis deste mês.' },
-              ].map((opt) => (
                 <button
-                  key={opt.id}
                   type="button"
-                  className={`w-full text-left rounded-xl border p-4 ${
-                    terminateJustificativa === opt.id
-                      ? 'border-primary bg-primary/5'
-                      : 'border-slate-200 dark:border-slate-700'
-                  }`}
-                  onClick={() => setTerminateJustificativa(opt.id)}
+                  className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                  disabled={terminateBusy}
+                  onClick={() => {
+                    setTerminateModo('aviso_previo');
+                    setTerminatePickerOpen(false);
+                    setTerminateConfirmOpen(true);
+                  }}
                 >
-                  <p className="font-bold">{opt.label}</p>
-                  <p className="text-sm text-slate-500 mt-1">{opt.hint}</p>
+                  <p className="font-bold text-slate-900 dark:text-white">Aviso prévio</p>
+                  <p className="text-sm text-slate-500 mt-1 text-pretty">
+                    O acordo mantém-se activo até ao fim deste mês. A partir do próximo mês fica
+                    cancelado.
+                  </p>
                 </button>
-              ))}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Button
-                type="button"
-                className="w-full"
-                disabled={!terminateJustificativa || terminateBusy}
-                onClick={() => {
-                  setTerminateJustaPickerOpen(false);
-                  setTerminateConfirmOpen(true);
-                }}
-              >
-                Continuar
-              </Button>
+
+                <button
+                  type="button"
+                  className="w-full text-left rounded-xl border border-red-200 dark:border-red-900/50 p-4 hover:bg-red-50/50 dark:hover:bg-red-950/20"
+                  disabled={terminateBusy}
+                  onClick={() => {
+                    setTerminateModo('justa_causa');
+                    setTerminatePickerOpen(false);
+                    setTerminateJustaPickerOpen(true);
+                  }}
+                >
+                  <p className="font-bold text-red-800 dark:text-red-200">Justa causa imediata</p>
+                  <p className="text-sm text-slate-500 mt-1 text-pretty">
+                    Só com motivo válido: avaria do veículo, segurança ou faltas excessivas (&gt;50%
+                    do mês).
+                  </p>
+                </button>
+              </div>
+
               <Button
                 type="button"
                 variant="ghost"
                 className="w-full"
+                disabled={terminateBusy}
+                onClick={() => setTerminatePickerOpen(false)}
+              >
+                Voltar
+              </Button>
+            </div>
+          </div>
+        </OverlayShell>
+      ) : null}
+
+      {terminateJustaPickerOpen ? (
+        <OverlayShell
+          variant="bottom"
+          onDismiss={
+            terminateBusy
+              ? undefined
+              : () => {
+                setTerminateJustaPickerOpen(false);
+                setTerminateJustificativa('');
+              }
+          }
+          dismissDisabled={terminateBusy}
+          panelTestId="terminate-justa-picker"
+          panelClassName="bg-white dark:bg-slate-900 shadow-2xl"
+        >
+          <SheetDragHandle />
+          <div className="px-5 pb-safe space-y-4">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="justa-causa-title"
+              className="space-y-4"
+            >
+              <h3 id="justa-causa-title" className="text-lg font-bold">
+                Motivo da justa causa
+              </h3>
+              <div className="space-y-2">
+                {[
+                  { id: 'avaria_veiculo', label: 'Avaria do veículo', hint: 'Impossibilita cumprir o trajeto.' },
+                  { id: 'seguranca', label: 'Motivo de segurança', hint: 'Risco grave para passageiros ou motorista.' },
+                  { id: 'faltas_excessivas', label: 'Faltas excessivas', hint: 'Mais de metade dos dias úteis deste mês.' },
+                ].map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    className={`w-full text-left rounded-xl border p-4 ${
+                      terminateJustificativa === opt.id
+                        ? 'border-primary bg-primary/5'
+                        : 'border-slate-200 dark:border-slate-700'
+                    }`}
+                    disabled={terminateBusy}
+                    onClick={() => setTerminateJustificativa(opt.id)}
+                  >
+                    <p className="font-bold">{opt.label}</p>
+                    <p className="text-sm text-slate-500 mt-1">{opt.hint}</p>
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-col gap-2">
+                <Button
+                  type="button"
+                  className="w-full"
+                  disabled={!terminateJustificativa || terminateBusy}
+                  onClick={() => {
+                    setTerminateJustaPickerOpen(false);
+                    setTerminateConfirmOpen(true);
+                  }}
+                >
+                  Continuar
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
+                  disabled={terminateBusy}
+                  onClick={() => {
+                    setTerminateJustaPickerOpen(false);
+                    setTerminatePickerOpen(true);
+                    setTerminateJustificativa('');
+                  }}
+                >
+                  Voltar
+                </Button>
+              </div>
+            </div>
+          </div>
+        </OverlayShell>
+      ) : null}
+
+      {terminateVigenciaPickerOpen ? (
+        <OverlayShell
+          variant="bottom"
+          onDismiss={
+            terminateBusy
+              ? undefined
+              : () => {
+                setTerminateVigenciaPickerOpen(false);
+                setTerminateVigencia('');
+              }
+          }
+          dismissDisabled={terminateBusy}
+          panelTestId="terminate-vigencia-picker"
+          panelClassName="bg-white dark:bg-slate-900 shadow-2xl"
+        >
+          <SheetDragHandle />
+          <div className="px-5 pb-safe space-y-4">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="terminate-vigencia-title"
+              className="space-y-4"
+            >
+              <div className="space-y-1">
+                <h3 id="terminate-vigencia-title" className="text-lg font-bold text-balance">
+                  Quando termina?
+                </h3>
+                <p className="text-sm text-slate-500 text-pretty">
+                  A outra parte tem de confirmar. Escolhe a vigência do encerramento amigável.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                  disabled={terminateBusy}
+                  onClick={() => {
+                    setTerminateVigencia('imediato');
+                    setTerminateVigenciaPickerOpen(false);
+                    setTerminateConfirmOpen(true);
+                  }}
+                >
+                  <p className="font-bold text-slate-900 dark:text-white text-balance">
+                    Agora — ajuste proporcional
+                  </p>
+                  <p className="text-sm text-slate-500 mt-1 text-pretty">
+                    Após confirmação, o acordo encerra já. As quotas deste mês ajustam-se aos dias
+                    úteis já decorridos.
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                  disabled={terminateBusy}
+                  onClick={() => {
+                    setTerminateVigencia('fim_ciclo');
+                    setTerminateVigenciaPickerOpen(false);
+                    setTerminateConfirmOpen(true);
+                  }}
+                >
+                  <p className="font-bold text-slate-900 dark:text-white text-balance">
+                    Fim deste mês
+                  </p>
+                  <p className="text-sm text-slate-500 mt-1 text-pretty">
+                    Após confirmação, o serviço continua até ao último dia deste mês.
+                  </p>
+                </button>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                disabled={terminateBusy}
                 onClick={() => {
-                  setTerminateJustaPickerOpen(false);
+                  setTerminateVigenciaPickerOpen(false);
                   setTerminatePickerOpen(true);
-                  setTerminateJustificativa('');
+                  setTerminateVigencia('');
                 }}
               >
                 Voltar
               </Button>
             </div>
-            </div>
           </div>
-        </ModalPortal>
-      )}
-
-      {terminateVigenciaPickerOpen && (
-        <ModalPortal>
-          <div className="fixed inset-0 z-modal flex items-end sm:items-center justify-center bg-black/40 p-4">
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="terminate-vigencia-title"
-              data-testid="terminate-vigencia-picker"
-              className="w-full max-w-md max-h-[90dvh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl p-6 space-y-4 shadow-xl pb-safe"
-            >
-            <div className="space-y-1">
-              <h3 id="terminate-vigencia-title" className="text-lg font-bold text-balance">
-                Quando termina?
-              </h3>
-              <p className="text-sm text-slate-500 text-pretty">
-                A outra parte tem de confirmar. Escolhe a vigência do encerramento amigável.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <button
-                type="button"
-                className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                onClick={() => {
-                  setTerminateVigencia('imediato');
-                  setTerminateVigenciaPickerOpen(false);
-                  setTerminateConfirmOpen(true);
-                }}
-              >
-                <p className="font-bold text-slate-900 dark:text-white text-balance">
-                  Agora — ajuste proporcional
-                </p>
-                <p className="text-sm text-slate-500 mt-1 text-pretty">
-                  Após confirmação, o acordo encerra já. As quotas deste mês ajustam-se aos dias
-                  úteis já decorridos.
-                </p>
-              </button>
-              <button
-                type="button"
-                className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                onClick={() => {
-                  setTerminateVigencia('fim_ciclo');
-                  setTerminateVigenciaPickerOpen(false);
-                  setTerminateConfirmOpen(true);
-                }}
-              >
-                <p className="font-bold text-slate-900 dark:text-white text-balance">
-                  Fim deste mês
-                </p>
-                <p className="text-sm text-slate-500 mt-1 text-pretty">
-                  Após confirmação, o serviço continua até ao último dia deste mês.
-                </p>
-              </button>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full"
-              onClick={() => {
-                setTerminateVigenciaPickerOpen(false);
-                setTerminatePickerOpen(true);
-                setTerminateVigencia('');
-              }}
-            >
-              Voltar
-            </Button>
-            </div>
-          </div>
-        </ModalPortal>
-      )}
+        </OverlayShell>
+      ) : null}
 
       <TerminateConfirmSheet
         isOpen={terminateConfirmOpen}
