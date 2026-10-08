@@ -204,6 +204,7 @@ export async function getOferta(ofertaId) {
  *   destination_lat?: number | null,
  *   destination_lng?: number | null,
  *   dias_semana?: number[] | null,
+ *   vagas_totais?: number,
  * }} formData
  */
 export async function updateOferta(ofertaId, formData) {
@@ -233,6 +234,11 @@ export async function updateOferta(ofertaId, formData) {
     ? formData.dias_semana.map((d) => Number(d)).filter((d) => Number.isFinite(d))
     : [1, 2, 3, 4, 5];
 
+  const vagasTotais = Number(formData.vagas_totais);
+  if (!Number.isInteger(vagasTotais) || vagasTotais < 1) {
+    throw new Error('Número de lugares inválido.');
+  }
+
   const { data, error } = await supabase.rpc('update_oferta', {
     p_oferta_id: ofertaId,
     p_departure_time: formData.departure_time,
@@ -247,6 +253,7 @@ export async function updateOferta(ofertaId, formData) {
     p_destination_lat: od.destination_lat,
     p_destination_lng: od.destination_lng,
     p_dias_semana: diasSemana,
+    p_vagas_totais: vagasTotais,
   });
 
   if (error) throw error;

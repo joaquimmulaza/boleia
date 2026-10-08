@@ -310,6 +310,7 @@ describe('OfertaService', () => {
         destination_name: 'B',
         destination_lat: -8.8,
         destination_lng: 13.23,
+        vagas_totais: 3,
       });
 
       expect(supabase.rpc).toHaveBeenCalledWith(
@@ -317,6 +318,7 @@ describe('OfertaService', () => {
         expect.objectContaining({
           p_oferta_id: 'of-1',
           p_departure_time: '08:00',
+          p_vagas_totais: 3,
         }),
       );
       expect(result.departure_time).toBe('08:00');
@@ -339,6 +341,7 @@ describe('OfertaService', () => {
         destination_name: 'Miramar',
         destination_lat: -8.8,
         destination_lng: 13.2,
+        vagas_totais: 2,
       });
 
       expect(supabase.rpc).toHaveBeenCalledWith(

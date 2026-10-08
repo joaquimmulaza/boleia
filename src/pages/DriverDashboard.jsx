@@ -136,6 +136,7 @@ const DriverDashboard = () => {
   const [feedback, setFeedback] = useState({ type: '', text: '' });
   const [busyId, setBusyId] = useState(null);
   const [ofertasComAcordoActivo, setOfertasComAcordoActivo] = useState(() => new Set());
+  const [veiculoVagasPassageiros, setVeiculoVagasPassageiros] = useState(null);
   const [editingOfertaId, setEditingOfertaId] = useState(null);
   const [confirmDespublicarId, setConfirmDespublicarId] = useState(null);
   const [ofertaBusy, setOfertaBusy] = useState(false);
@@ -171,10 +172,15 @@ const DriverDashboard = () => {
     try {
       const { data: veiculosData } = await supabase
         .from('veiculos')
-        .select('id')
+        .select('id, vagas_passageiros')
         .eq('id_motorista', user.id);
 
       setHasVehicle(Boolean(veiculosData && veiculosData.length > 0));
+      setVeiculoVagasPassageiros(
+        veiculosData?.[0]?.vagas_passageiros != null
+          ? Number(veiculosData[0].vagas_passageiros)
+          : null,
+      );
 
       const [lista, acordos] = await Promise.all([
         listOfertasByDriver(user.id),
@@ -806,6 +812,7 @@ const DriverDashboard = () => {
               ofertaBusy={ofertaBusy}
               editPropostas={editPropostas}
               editProcurasById={editProcurasById}
+              veiculoVagasPassageiros={veiculoVagasPassageiros}
               temAcordoActivoMsg={canEditOferta(oferta) && !podeDespublicar && temAcordoActivo(oferta.id)}
               onOpenDetail={() => setOfertaDetailId(oferta.id)}
               onVerProcuras={() => handleVerProcuras(oferta, { sóCompatíveis: true })}

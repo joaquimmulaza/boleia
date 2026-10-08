@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import {
   PERFIL_COLUNAS_SELECT,
   getProfile,
+  getVehicle,
   updateProfile,
   findPassageiroByTelefone,
 } from './ProfileService';
@@ -18,13 +19,18 @@ vi.mock('../lib/supabase', () => ({
 }));
 
 describe('ProfileService', () => {
-  let mockEq, mockSelect, mockSingle, mockUpdate, mockInsert;
+  let mockEq, mockSelect, mockSingle, mockMaybeSingle, mockUpdate, mockInsert;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
     mockSingle = vi.fn();
-    mockSelect = vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ single: mockSingle }), single: mockSingle });
+    mockMaybeSingle = vi.fn();
+    mockSelect = vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({ single: mockSingle, maybeSingle: mockMaybeSingle }),
+      single: mockSingle,
+      maybeSingle: mockMaybeSingle,
+    });
     mockEq = vi.fn().mockReturnValue({ single: mockSingle, select: mockSelect });
     mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
     mockInsert = vi.fn().mockReturnValue({ select: mockSelect });
@@ -106,6 +112,16 @@ describe('ProfileService', () => {
 
   it('findPassageiroByTelefone lança erro se telefone inválido', async () => {
     await expect(findPassageiroByTelefone('123')).rejects.toThrow(/telefone/i);
+  });
+
+  it('getVehicle sem veículo devolve null sem erro (maybeSingle)', async () => {
+    mockMaybeSingle.mockResolvedValue({ data: null, error: null });
+
+    const veiculo = await getVehicle('passageiro-1');
+
+    expect(supabase.from).toHaveBeenCalledWith('veiculos');
+    expect(mockMaybeSingle).toHaveBeenCalled();
+    expect(veiculo).toBeNull();
   });
 
   it('findPassageiroByTelefone lança erro se perfil não existir', async () => {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, History, Banknote } from 'lucide-react';
+import { Clock, History, Banknote, Users } from 'lucide-react';
 import AddressInput from './AddressInput';
 import TimeInput from './TimeInput';
 import ConfirmationModal from './ConfirmationModal';
@@ -7,6 +7,7 @@ import { updateOferta } from '../services/OfertaService';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { DIAS_SEMANA, DIAS_UTEIS_DEFAULT } from '../utils/diasSemana';
 import { countPropostasAInvalidarPorOferta } from '../utils/ofertaEditImpact';
+import { computeOfertaVagasLimits } from '../utils/ofertaVagasLimits';
 
 const OD_VAZIO = {
   origin_name: '',
@@ -27,6 +28,7 @@ const OD_VAZIO = {
  *   onSubmitStart?: () => void,
  *   propostas?: object[],
  *   procurasById?: Record<string, object>,
+ *   veiculoVagasPassageiros?: number | null,
  * }} props
  */
 const OfertaEditPanel = ({
@@ -37,7 +39,9 @@ const OfertaEditPanel = ({
   onSubmitStart,
   propostas = [],
   procurasById = {},
+  veiculoVagasPassageiros = null,
 }) => {
+  const vagasLimits = computeOfertaVagasLimits(oferta, veiculoVagasPassageiros);
   const [modoPreco, setModoPreco] = useState(oferta.modo_preco || 'POR_PASSAGEIRO');
   const [ofertaFlexivel, setOfertaFlexivel] = useState(Boolean(oferta.flexibilidade_rota));
   const [diasSemana, setDiasSemana] = useState(
@@ -61,6 +65,7 @@ const OfertaEditPanel = ({
   const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
   const [pendingPayload, setPendingPayload] = useState(null);
   const [confirmImpactN, setConfirmImpactN] = useState(null);
+  const [vagasTotais, setVagasTotais] = useState(vagasLimits.actual);
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -98,6 +103,7 @@ const OfertaEditPanel = ({
       return_time: formData.return_time || null,
       dias_semana: diasSemana,
       flexibilidade_rota: ofertaFlexivel,
+      vagas_totais: vagasTotais,
     };
   };
 
@@ -162,6 +168,17 @@ const OfertaEditPanel = ({
     const valor = parseInt(String(formData.valor_mensal_ask_kz).replace(/\D/g, ''), 10);
     if (!Number.isInteger(valor) || valor < 0) {
       setMessage({ type: 'error', text: 'Indique um valor mensal válido em Kz.' });
+      return;
+    }
+
+    if (vagasTotais < vagasLimits.min || vagasTotais > vagasLimits.max) {
+      setMessage({
+        type: 'error',
+        text:
+          vagasTotais < vagasLimits.min
+            ? `Não podes reduzir abaixo de ${vagasLimits.min} lugares — já tens ${vagasLimits.ocupadas} ocupados por acordos activos.`
+            : `O veículo só tem ${vagasLimits.max} lugares para passageiros.`,
+      });
       return;
     }
 
@@ -329,6 +346,38 @@ const OfertaEditPanel = ({
             </button>
           );
         })}
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold flex items-center gap-1">
+            <Users size={15} aria-hidden="true" /> Lugares na oferta
+          </p>
+          <p className="text-xs text-slate-500 text-pretty">
+            Mínimo {vagasLimits.min} (ocupados) · máximo {vagasLimits.max} (veículo)
+          </p>
+        </div>
+        <div className="flex items-center gap-2.5" role="group" aria-label="Lugares na oferta">
+          <button
+            type="button"
+            disabled={isBusy || vagasTotais <= vagasLimits.min}
+            aria-label="Menos lugares"
+            className="flex size-9 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-lg disabled:opacity-40"
+            onClick={() => setVagasTotais((n) => Math.max(vagasLimits.min, n - 1))}
+          >
+            −
+          </button>
+          <span className="min-w-4 text-center text-base font-semibold tabular-nums">{vagasTotais}</span>
+          <button
+            type="button"
+            disabled={isBusy || vagasTotais >= vagasLimits.max}
+            aria-label="Mais lugares"
+            className="flex size-9 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-lg disabled:opacity-40"
+            onClick={() => setVagasTotais((n) => Math.min(vagasLimits.max, n + 1))}
+          >
+            +
+          </button>
+        </div>
       </div>
 
       <label className="flex flex-col gap-1 text-sm font-semibold">
