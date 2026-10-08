@@ -389,7 +389,8 @@ const MyAgreements = () => {
       setSelected((prev) => {
         if (!prev?.id) return prev;
         const found = filtered.find((a) => a.id === prev.id);
-        return found ?? prev;
+        if (!found) return null;
+        return found;
       });
       return filtered;
     } catch (err) {
@@ -630,17 +631,23 @@ const MyAgreements = () => {
           return merged;
         });
       }
-      const refreshed = await carregar({ silent: true });
-      const found = refreshed.find((a) => a.id === acordoId);
-      if (found) {
-        setSelected(found);
-      } else if (!pedidoConsensualPendente) {
-        setSelected(null);
-      }
+      await carregar({ silent: true });
     } catch (err) {
-      if (isRescisaoSemPermissaoError(err) && (rescisaoConfirmadaLocal || confirmandoConsensualPendente)) {
-        await carregar({ silent: true });
-        return;
+      if (
+        isRescisaoSemPermissaoError(err)
+        && (rescisaoConfirmadaLocal || confirmandoConsensualPendente)
+      ) {
+        const refreshed = await carregar({ silent: true });
+        const found = refreshed.find((a) => a.id === acordoId);
+        const terminalForaLista = !found;
+        const terminalEstado =
+          found
+          && ['cancelado', 'cancelado_justificado'].includes(
+            String(found.estado || '').toLowerCase(),
+          );
+        if (terminalForaLista || terminalEstado) {
+          return;
+        }
       }
       setMessage({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
     } finally {
