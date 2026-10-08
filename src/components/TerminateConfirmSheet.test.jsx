@@ -65,8 +65,7 @@ describe('TerminateConfirmSheet', () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  // TODO(bug): https://github.com/joaquimmulaza/boleia/issues/217
-  it.fails('fecha com Escape quando não está busy', () => {
+  it('fecha com Escape quando não está busy', () => {
     const onCancel = vi.fn();
 
     render(
