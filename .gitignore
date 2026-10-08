@@ -75,6 +75,9 @@ Desktop.ini
 # Ficheiros temporários do Agente
 # ===========================
 stitch_auth.html
+*.orig
+*.rej
+.temp-execution-*.js
 
 # ===========================
 # Misc
