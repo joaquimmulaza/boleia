@@ -152,6 +152,26 @@ export async function listProcurasDisponiveis(options = {}) {
 }
 
 /**
+ * Primeiro nome do dono da procura (para revisão de proposta solo).
+ * @param {string} procuraId
+ * @returns {Promise<string | null>}
+ */
+export async function getPrimeiroNomeProcuraOwner(procuraId) {
+  if (!procuraId) return null;
+
+  const { data, error } = await supabase
+    .from('procuras')
+    .select('owner_id, perfis(nome_completo)')
+    .eq('id', procuraId)
+    .maybeSingle();
+
+  if (error) throw error;
+  const nome = data?.perfis?.nome_completo;
+  if (typeof nome !== 'string' || !nome.trim()) return null;
+  return nome.trim().split(/\s+/)[0] || null;
+}
+
+/**
  * @param {string} ownerId
  */
 export async function listProcurasByOwner(ownerId) {

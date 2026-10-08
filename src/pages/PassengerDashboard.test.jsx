@@ -13,7 +13,7 @@ import {
   enrichPropostasForReview,
   cancelProposta,
 } from '../services/PropostaService';
-import { createAgreementFromProposal } from '../services/AgreementService';
+import { createAgreementFromProposal, getAgreementsForPassenger } from '../services/AgreementService';
 import { getGrupoByProcura, listMembrosGrupo } from '../services/GrupoService';
 import { listWaitlistByProcura } from '../services/WaitlistService';
 import { expectNoUserFacingJargon } from '../test/jargonBan';
@@ -57,6 +57,7 @@ vi.mock('../services/PropostaService', () => ({
 
 vi.mock('../services/AgreementService', () => ({
   createAgreementFromProposal: vi.fn(),
+  getAgreementsForPassenger: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('../services/WaitlistService', async (importOriginal) => {
@@ -110,6 +111,12 @@ function LocationSearchProbe() {
   return <div data-testid="location-search">{search}</div>;
 }
 
+/** Expõe pathname + search para navegação. */
+function LocationProbe() {
+  const { pathname, search } = useLocation();
+  return <div data-testid="location-probe">{`${pathname}${search}`}</div>;
+}
+
 const procuraBase = {
   id: 'pr-1',
   estado: 'activa',
@@ -151,7 +158,63 @@ describe('PassengerDashboard — marketplace', () => {
     listOfertasDisponiveis.mockResolvedValue([]);
     listPropostasByProcura.mockResolvedValue([]);
     enrichPropostasForReview.mockResolvedValue([]);
+    getAgreementsForPassenger.mockResolvedValue([]);
   });
+
+  it('sem procura: «Ver boleias» e «Criar procura» com o mesmo estilo', async () => {
+    listOfertasDisponiveis.mockResolvedValue([]);
+
+    render(
+      <MemoryRouter initialEntries={['/passageiro']}>
+        <PassengerDashboard />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+
+    const verBoleias = await screen.findByRole('button', { name: 'Ver boleias' });
+    const criarProcura = screen.getByRole('button', { name: 'Criar procura' });
+    expect(verBoleias.className).toBe(criarProcura.className);
+
+    fireEvent.click(verBoleias);
+    expect(screen.getByTestId('location-probe')).toHaveTextContent('/explorar');
+  });
+
+  it('com acordo activo na oferta mostra CTA «Ver acordo»', async () => {
+    listOfertasDisponiveis.mockResolvedValue([
+      {
+        id: 'of-browse',
+        origin_name: 'Viana',
+        destination_name: 'Talatona',
+        departure_time: '06:45:00',
+        vagas_disponiveis: 2,
+        valor_mensal_ask_kz: 24000,
+        modo_preco: 'POR_PASSAGEIRO',
+        flexibilidade_rota: false,
+      },
+    ]);
+    getAgreementsForPassenger.mockResolvedValue([
+      {
+        id: 'acordo-99',
+        oferta_id: 'of-browse',
+        estado: 'activo',
+        acordos_passageiros: [{ passenger_id: 'pax-1', estado: 'reservado' }],
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={['/passageiro']}>
+        <PassengerDashboard />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+
+    const verAcordo = await screen.findByRole('button', { name: 'Ver acordo' });
+    expect(screen.queryByRole('button', { name: 'Propor acordo' })).not.toBeInTheDocument();
+
+    fireEvent.click(verAcordo);
+    expect(screen.getByTestId('location-probe')).toHaveTextContent('/acordos?openAcordoId=acordo-99');
+  });
+
   it('sem procura activa mostra feed de ofertas e grupos (sem form obrigatório)', async () => {
     listOfertasDisponiveis.mockResolvedValue([
       {
@@ -178,6 +241,7 @@ describe('PassengerDashboard — marketplace', () => {
     expect(screen.getByText('Miramar')).toBeInTheDocument();
     expect(screen.getByTestId('grupo-descoberta-panel')).toBeInTheDocument();
     expect(screen.getByText('Grupos abertos')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Ver boleias/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Criar procura/i })).toBeInTheDocument();
     expect(screen.queryByText(/Sem procura activa/i)).not.toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /Propor acordo/i })).toBeInTheDocument();

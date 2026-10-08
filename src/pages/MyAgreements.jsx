@@ -73,6 +73,7 @@ import {
   chipClassEstadoPassageiro,
   GLOSSARIO_ESTADOS_LUGAR,
 } from '../utils/acordoPassageiroStatus';
+import { formatPrimeiroNome } from '../utils/primeiroNome';
 
 /**
  * @param {string | null | undefined} estado
@@ -611,6 +612,18 @@ const MyAgreements = () => {
       tipoPerfil === 'Passageiro'
         ? (minhaLinha?.quota_mensal_kz ?? acordo.valor_mensal_por_passageiro_kz)
         : acordo.valor_mensal_por_passageiro_kz;
+    const linhasActivasReservadas = linhas.filter((p) => {
+      const e = String(p.estado || '').toLowerCase();
+      return e === 'activo' || e === 'reservado';
+    });
+    const rotuloPessoas = (() => {
+      if (nPax === 1 && tipoPerfil === 'Motorista') {
+        const pax = linhasActivasReservadas[0] || linhas[0];
+        return formatPrimeiroNome(nomePassageiro(pax));
+      }
+      if (nPax === 1) return 'Individual';
+      return `Grupo · ${nPax} pessoas`;
+    })();
     return (
       <button
         type="button"
@@ -665,7 +678,7 @@ const MyAgreements = () => {
         <div className="flex justify-between items-end gap-2 text-sm text-slate-500">
           <span className="flex items-center gap-1">
             <Users size={14} aria-hidden="true" />
-            {nPax === 1 ? 'Individual' : `Grupo · ${nPax} pessoas`}
+            {rotuloPessoas}
           </span>
           {activo && quotaCard != null ? (
             <strong

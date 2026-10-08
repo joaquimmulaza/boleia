@@ -233,6 +233,29 @@ describe('MyAgreements — marketplace 1:N', () => {
     });
   });
 
+  it('motorista: acordo individual na lista mostra primeiro nome do passageiro', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        n_passageiros_contrato: 1,
+        acordos_passageiros: [
+          {
+            id: 'ap-solo',
+            passenger_id: 'pax-1',
+            estado: 'activo',
+            quota_mensal_kz: 20000,
+            perfis: { nome_completo: 'Ana Costa' },
+          },
+        ],
+      },
+    ]);
+
+    renderPage();
+
+    expect(await screen.findByText('Ana')).toBeInTheDocument();
+    expect(screen.queryByText('Individual')).not.toBeInTheDocument();
+  });
+
   it('acordo com oferta flexível não mostra placeholders Origem/Destino', async () => {
     getAgreementsForDriver.mockResolvedValue([
       {

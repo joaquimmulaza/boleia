@@ -687,7 +687,7 @@ export async function getAgreementsForDriver(driverId) {
   const { data, error } = await supabase
     .from('acordos')
     .select(
-      '*, acordos_passageiros(*), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota), acordos_adendas(*)',
+      '*, acordos_passageiros(*, perfis(nome_completo)), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota), acordos_adendas(*)',
     )
     .eq('driver_id', driverId)
     .order('created_at', { ascending: false });

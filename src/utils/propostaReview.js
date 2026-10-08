@@ -1,5 +1,7 @@
 import { resolveAgreementPricing } from './resolveAgreementPricing.js';
 import { listMembrosGrupo } from '../services/GrupoService.js';
+import { getPrimeiroNomeProcuraOwner } from '../services/ProcuraService.js';
+import { formatPrimeiroNome } from './primeiroNome.js';
 
 /**
  * @typedef {{
@@ -51,10 +53,16 @@ import { listMembrosGrupo } from '../services/GrupoService.js';
  * @param {boolean} comGrupo
  * @returns {string}
  */
-function buildTitulo(n, comGrupo) {
+/**
+ * @param {number} n
+ * @param {boolean} comGrupo
+ * @param {string | null | undefined} nomeSolo
+ */
+function buildTitulo(n, comGrupo, nomeSolo) {
   if (comGrupo) {
     return n === 1 ? 'Grupo · 1 pessoa' : `Grupo · ${n} pessoas`;
   }
+  if (n === 1 && nomeSolo) return nomeSolo;
   return n === 1 ? '1 passageiro' : `${n} passageiros`;
 }
 
@@ -63,11 +71,8 @@ function buildTitulo(n, comGrupo) {
  * @returns {string}
  */
 function resolveNome(membro) {
-  const nome = membro?.perfis?.nome_completo;
-  if (typeof nome === 'string' && nome.trim()) {
-    return nome.trim();
-  }
-  return 'Passageiro';
+  const nome = membro?.perfis?.nome_completo ?? membro?.nome;
+  return formatPrimeiroNome(typeof nome === 'string' ? nome : null);
 }
 
 /**
@@ -116,7 +121,7 @@ function resolveOptionalName(value) {
  * @param {object[]} membrosActivos
  * @returns {PropostaReview}
  */
-export function buildPropostaReview(proposta, membrosActivos = []) {
+export function buildPropostaReview(proposta, membrosActivos = [], nomeSolo = null) {
   const n = proposta.n_passageiros_propostos;
   const ask = Number(proposta.valor_mensal_ask_kz);
   const modo = proposta.modo_preco;
@@ -160,8 +165,10 @@ export function buildPropostaReview(proposta, membrosActivos = []) {
     }
   }
 
+  const tituloNome = nomeSolo && !proposta.grupo_id && n === 1 ? formatPrimeiroNome(nomeSolo) : null;
+
   return {
-    titulo: buildTitulo(n, Boolean(proposta.grupo_id)),
+    titulo: buildTitulo(n, Boolean(proposta.grupo_id), tituloNome),
     membros,
     pricing: {
       ...resolved,
@@ -232,5 +239,30 @@ export async function loadPropostaReview(proposta) {
     const membros = await listMembrosGrupo(proposta.grupo_id);
     return buildPropostaReview(proposta, membros);
   }
-  return buildPropostaReview(proposta, []);
+
+  const primeiroNome = proposta.procura_id
+    ? await getPrimeiroNomeProcuraOwner(proposta.procura_id)
+    : null;
+
+  const review = buildPropostaReview(proposta, [], primeiroNome);
+
+  if (primeiroNome && review.membros.length === 0 && proposta.n_passageiros_propostos === 1) {
+    return {
+      ...review,
+      membros: [{
+        passenger_id: null,
+        nome: formatPrimeiroNome(primeiroNome),
+        telefone: null,
+        pickup_name: null,
+        pickup_lat: null,
+        pickup_lng: null,
+        dropoff_name: null,
+        dropoff_lat: null,
+        dropoff_lng: null,
+        quota_mensal_kz: review.pricing.quotas[0] ?? null,
+      }],
+    };
+  }
+
+  return review;
 }

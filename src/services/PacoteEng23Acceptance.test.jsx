@@ -71,6 +71,7 @@ vi.mock('../services/WaitlistService', () => ({
 
 vi.mock('../services/AgreementService', () => ({
   createAgreementFromProposal: vi.fn(),
+  getAgreementsForPassenger: vi.fn().mockResolvedValue([]),
 }));
 
 const ofertaFixaBrowse = {

@@ -16,10 +16,12 @@ const ctaClass = 'w-full rounded-xl bg-primary px-4 py-3 text-[15px] font-medium
  *   item: object,
  *   onClose: () => void,
  *   onCta?: () => void,
+ *   ctaLabel?: string,
  * }} props
  */
-function OpportunityDetailSheet({ kind, item, onClose, onCta }) {
+function OpportunityDetailSheet({ kind, item, onClose, onCta, ctaLabel }) {
   const card = resolveOpportunityCard({ kind, item });
+  const rotuloCta = ctaLabel || card.cta;
 
   return (
     <OverlayShell
@@ -81,7 +83,7 @@ function OpportunityDetailSheet({ kind, item, onClose, onCta }) {
             disabled={card.ctaDisabled}
             onClick={onCta}
           >
-            {card.cta}
+            {rotuloCta}
           </button>
         ) : null}
       </div>

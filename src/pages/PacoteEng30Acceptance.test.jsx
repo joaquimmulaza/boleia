@@ -79,6 +79,7 @@ vi.mock('../services/WaitlistService', () => ({
 vi.mock('../services/AgreementService', () => ({
   createAgreementFromProposal: vi.fn(),
   getAgreementsForDriver: vi.fn().mockResolvedValue([]),
+  getAgreementsForPassenger: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('../lib/supabase', () => ({
