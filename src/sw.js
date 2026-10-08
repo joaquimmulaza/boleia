@@ -2,6 +2,7 @@ import { precacheAndRoute } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
 import { drainQueue, OFFLINE_SYNC_TAG } from './services/offlineQueue';
 import { resolveNotificationRoute } from './utils/notificationRouter';
+import { networkFirstRuntime } from './utils/swNetworkFirst.js';
 
 const RUNTIME_CACHE = 'boleia-runtime-v1';
 
@@ -9,31 +10,9 @@ const RUNTIME_CACHE = 'boleia-runtime-v1';
 precacheAndRoute(self.__WB_MANIFEST || []);
 
 /**
- * Stale-while-revalidate para GET JSON de listagens PostgREST (acordos / grupos).
- * @param {Request} request
- * @param {Event} event
+ * Network-first para GET JSON de listagens PostgREST (acordos / grupos):
+ * resposta de rede quando online; RUNTIME_CACHE só como fallback offline.
  */
-async function staleWhileRevalidate(request, event) {
-  const cache = await caches.open(RUNTIME_CACHE);
-  const cached = await cache.match(request);
-
-  const networkPromise = fetch(request)
-    .then((response) => {
-      if (response && response.ok) {
-        void cache.put(request, response.clone());
-      }
-      return response;
-    })
-    .catch(() => cached);
-
-  if (cached) {
-    event.waitUntil(networkPromise);
-    return cached;
-  }
-
-  return networkPromise;
-}
-
 registerRoute(
   ({ url, request }) => {
     if (request.method !== 'GET') return false;
@@ -42,7 +21,7 @@ registerRoute(
     const path = url.pathname;
     return path.includes('/acordos') || path.includes('/grupos');
   },
-  ({ event, request }) => staleWhileRevalidate(request, event),
+  ({ request }) => networkFirstRuntime(request, RUNTIME_CACHE),
 );
 
 // Permite acionar a atualização imediata quando o utilizador clica em "Atualizar agora"
