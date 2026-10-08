@@ -7,6 +7,7 @@ export const CTA_LABEL = {
   oferta: 'Propor acordo',
   procura: 'Enviar proposta',
   grupo: 'Enviar proposta',
+  verAcordo: 'Ver acordo',
 };
 
 export const COPY_ERRO_OPORTUNIDADES = 'Não foi possível carregar as oportunidades';

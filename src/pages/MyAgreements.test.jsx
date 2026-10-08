@@ -233,6 +233,58 @@ describe('MyAgreements — marketplace 1:N', () => {
     });
   });
 
+  it('motorista: detalhe N=1 mostra primeiro nome em Pessoas no acordo', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        n_passageiros_contrato: 1,
+        acordos_passageiros: [
+          {
+            id: 'ap-solo',
+            passenger_id: 'pax-1',
+            estado: 'activo',
+            quota_mensal_kz: 20000,
+            perfis: { nome_completo: 'Ana Costa' },
+          },
+        ],
+      },
+    ]);
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Ana/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const snapshot = within(dialog).getByTestId('acordo-contrato-snapshot');
+    expect(within(snapshot).getByText('Ana')).toBeInTheDocument();
+    expect(within(snapshot).queryByText('Individual')).not.toBeInTheDocument();
+    expect(within(dialog).getByTestId('passenger-row-pax-1')).toHaveTextContent('Ana');
+    expect(within(dialog).queryByText('Ana Costa')).not.toBeInTheDocument();
+  });
+
+  it('motorista: acordo individual na lista mostra primeiro nome do passageiro', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        n_passageiros_contrato: 1,
+        acordos_passageiros: [
+          {
+            id: 'ap-solo',
+            passenger_id: 'pax-1',
+            estado: 'activo',
+            quota_mensal_kz: 20000,
+            perfis: { nome_completo: 'Ana Costa' },
+          },
+        ],
+      },
+    ]);
+
+    renderPage();
+
+    expect(await screen.findByText('Ana')).toBeInTheDocument();
+    expect(screen.queryByText('Individual')).not.toBeInTheDocument();
+  });
+
   it('acordo com oferta flexível não mostra placeholders Origem/Destino', async () => {
     getAgreementsForDriver.mockResolvedValue([
       {
@@ -294,9 +346,11 @@ describe('MyAgreements — marketplace 1:N', () => {
     expect(within(snapshot).getByText(/Grupo · 3 pessoas/i)).toBeInTheDocument();
     expect(within(dialog).getByText(/Passageiros · 3/i)).toBeInTheDocument();
 
-    expect(within(dialog).getByText('Ana Costa')).toBeInTheDocument();
-    expect(within(dialog).getByText('João Pedro')).toBeInTheDocument();
-    expect(within(dialog).getByText('Maria Silva')).toBeInTheDocument();
+    expect(within(dialog).getByText('Ana')).toBeInTheDocument();
+    expect(within(dialog).getByText('João')).toBeInTheDocument();
+    expect(within(dialog).getByText('Maria')).toBeInTheDocument();
+    expect(within(dialog).queryByText('Ana Costa')).not.toBeInTheDocument();
+    expect(within(dialog).queryByText('João Pedro')).not.toBeInTheDocument();
 
     expect(within(dialog).getAllByText(/40\.?\s?000 Kz/i).length).toBeGreaterThanOrEqual(3);
     expect(within(dialog).getAllByText(/Confirmad/i).length).toBeGreaterThanOrEqual(2);

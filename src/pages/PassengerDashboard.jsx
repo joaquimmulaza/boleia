@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, Clock, Users, Banknote } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AddressInput from '../components/AddressInput';
@@ -38,7 +38,9 @@ import {
   rejectProposta,
   cancelProposta,
 } from '../services/PropostaService';
-import { createAgreementFromProposal } from '../services/AgreementService';
+import { createAgreementFromProposal, getAgreementsForPassenger } from '../services/AgreementService';
+import { buildAcordoIdPorOfertaMap, CTA_VER_ACORDO } from '../utils/acordoPorOferta';
+import { CTA_LABEL } from '../utils/opportunityCard';
 import { enqueueWaitlist, filterWaitlistEntriesVisiveis, listWaitlistByProcura } from '../services/WaitlistService';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { formatKwanza } from '../utils/formatKwanza';
@@ -109,6 +111,7 @@ function chipEstadoProcura(estado) {
 const PassengerDashboard = () => {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   /** @type {React.MutableRefObject<null | { openOfertaId: string | null, propostaId: string | null }>} */
   const pendingPropostaDeepLinkRef = useRef(null);
   const propostaDeepLinkHandledRef = useRef(false);
@@ -174,6 +177,12 @@ const PassengerDashboard = () => {
   const [contraPropostaSheet, setContraPropostaSheet] = useState(null);
   /** @type {[Set<string>, Function]} ids de propostas recebidas com contra-proposta enviada nesta sessão */
   const [contraPropostaFeitaIds, setContraPropostaFeitaIds] = useState(() => new Set());
+  const [acordosPassageiro, setAcordosPassageiro] = useState([]);
+
+  const acordoPorOferta = useMemo(
+    () => buildAcordoIdPorOfertaMap(acordosPassageiro, user?.id),
+    [acordosPassageiro, user?.id],
+  );
 
   const ofertasComPropostaAberta = useMemo(() => {
     const ids = new Set(browseOfertasComProposta);
@@ -196,17 +205,20 @@ const PassengerDashboard = () => {
       const browsePromise = (async () => {
         setLoadingBrowse(true);
         try {
-          const [ofertas, abertas] = await Promise.all([
+          const [ofertas, abertas, acordos] = await Promise.all([
             listOfertasDisponiveis(),
             listOpenPropostasByCreator(user.id),
+            getAgreementsForPassenger(user.id),
           ]);
           setBrowseOfertas(ofertas);
+          setAcordosPassageiro(acordos || []);
           setBrowseOfertasComProposta(
             new Set(abertas.map((p) => p.oferta_id).filter(Boolean)),
           );
         } catch (err) {
           console.error(err);
           setBrowseOfertas([]);
+          setAcordosPassageiro([]);
           setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
         } finally {
           setLoadingBrowse(false);
@@ -979,6 +991,40 @@ const PassengerDashboard = () => {
     });
   };
 
+  /** @param {object} oferta */
+  const irParaAcordoDaOferta = (oferta) => {
+    const acordoId = acordoPorOferta.get(oferta.id);
+    if (!acordoId) return;
+    navigate(`/acordos?openAcordoId=${encodeURIComponent(acordoId)}`);
+  };
+
+  /**
+   * @param {object} oferta
+   * @returns {{ label?: string, disabled: boolean, onAction: () => void }}
+   */
+  const resolveOfertaFeedCta = (oferta) => {
+    if (acordoPorOferta.has(oferta.id)) {
+      return {
+        label: CTA_VER_ACORDO,
+        disabled: false,
+        onAction: () => irParaAcordoDaOferta(oferta),
+      };
+    }
+    const enviada = ofertasComPropostaAberta.has(oferta.id);
+    if (enviada) {
+      return {
+        label: 'Proposta enviada',
+        disabled: true,
+        onAction: () => {},
+      };
+    }
+    return {
+      label: undefined,
+      disabled: false,
+      onAction: () => proporNoFeed(oferta),
+    };
+  };
+
   const proporNoFeed = (oferta) => {
     if (procura) {
       if (!isOfertaRotaCompativelComProcura(oferta, procura)) {
@@ -1178,13 +1224,22 @@ const PassengerDashboard = () => {
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-lg font-bold text-balance">Ofertas disponíveis</h2>
               {procura ? null : (
-                <button
-                  type="button"
-                  className="text-sm font-bold text-primary shrink-0"
-                  onClick={() => setView('form')}
-                >
-                  Criar procura
-                </button>
+                <div className="flex shrink-0 items-center gap-3">
+                  <button
+                    type="button"
+                    className="text-sm font-bold text-primary"
+                    onClick={() => navigate('/explorar')}
+                  >
+                    Ver boleias
+                  </button>
+                  <button
+                    type="button"
+                    className="text-sm font-bold text-primary"
+                    onClick={() => setView('form')}
+                  >
+                    Criar procura
+                  </button>
+                </div>
               )}
             </div>
             <p className="text-sm text-slate-500 text-pretty">
@@ -1199,18 +1254,16 @@ const PassengerDashboard = () => {
               </p>
             ) : (
               browseOfertas.map((oferta) => {
-                const enviada = ofertasComPropostaAberta.has(oferta.id);
+                const cta = resolveOfertaFeedCta(oferta);
                 return (
                   <OpportunityCard
                     key={oferta.id}
                     kind="oferta"
                     item={oferta}
                     onOpen={() => setDetalheOferta(oferta)}
-                    ctaDisabled={enviada}
-                    ctaLabel={enviada ? 'Proposta enviada' : undefined}
-                    onCta={() => {
-                      if (!enviada) proporNoFeed(oferta);
-                    }}
+                    ctaDisabled={cta.disabled}
+                    ctaLabel={cta.label}
+                    onCta={cta.onAction}
                   />
                 );
               })
@@ -1837,13 +1890,16 @@ const PassengerDashboard = () => {
           kind="oferta"
           item={detalheOferta}
           onClose={() => setDetalheOferta(null)}
+          ctaLabel={resolveOfertaFeedCta(detalheOferta).label || CTA_LABEL.oferta}
+          ctaDisabled={resolveOfertaFeedCta(detalheOferta).disabled}
           onCta={
-            ofertasComPropostaAberta.has(detalheOferta.id)
+            resolveOfertaFeedCta(detalheOferta).disabled
               ? undefined
               : () => {
                   const oferta = detalheOferta;
+                  const cta = resolveOfertaFeedCta(oferta);
                   setDetalheOferta(null);
-                  proporNoFeed(oferta);
+                  cta.onAction();
                 }
           }
         />

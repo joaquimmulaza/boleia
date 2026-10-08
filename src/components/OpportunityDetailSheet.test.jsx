@@ -90,6 +90,21 @@ describe('OpportunityDetailSheet', () => {
     expect(screen.queryByText('Viana')).not.toBeInTheDocument();
   });
 
+  it('mostra CTA desactivado quando ctaDisabled sem onCta', () => {
+    render(
+      <OpportunityDetailSheet
+        kind="oferta"
+        item={ofertaFlexTotal}
+        onClose={() => {}}
+        ctaLabel="Proposta enviada"
+        ctaDisabled
+      />,
+    );
+
+    const btn = screen.getByRole('button', { name: 'Proposta enviada' });
+    expect(btn).toBeDisabled();
+  });
+
   it('o nome no detalhe é o texto completo, sem fade nem reticências', () => {
     const origem = 'Terminal Rodoviário de Viana, junto ao mercado municipal de Luanda, paragem norte';
     render(

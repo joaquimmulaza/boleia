@@ -5,9 +5,14 @@ import {
   loadPropostaReview,
 } from './propostaReview.js';
 import { listMembrosGrupo } from '../services/GrupoService.js';
+import { getPrimeiroNomeProcuraOwner } from '../services/ProcuraService.js';
 
 vi.mock('../services/GrupoService.js', () => ({
   listMembrosGrupo: vi.fn(),
+}));
+
+vi.mock('../services/ProcuraService.js', () => ({
+  getPrimeiroNomeProcuraOwner: vi.fn(),
 }));
 
 const propostaGrupo = {
@@ -65,7 +70,7 @@ describe('buildPropostaReview', () => {
     expect(review.membros).toHaveLength(3);
     expect(review.membros[0]).toEqual({
       passenger_id: 'pax-1',
-      nome: 'Ana Silva',
+      nome: 'Ana',
       telefone: '+244923000001',
       pickup_name: 'Talatona',
       pickup_lat: -8.92,
@@ -149,7 +154,7 @@ describe('buildPropostaReview', () => {
 
     expect(review.requiresMemberSelection).toBe(true);
     expect(review.membros).toHaveLength(3);
-    expect(review.membros.map((m) => m.nome)).toEqual(['Ana Silva', 'Bruno Costa', 'Carla Dias']);
+    expect(review.membros.map((m) => m.nome)).toEqual(['Ana', 'Bruno', 'Carla']);
     expect(review.titulo).toBe('Grupo · 2 pessoas');
     expect(review.avisoComposicao).toMatch(/escolhe|seleciona|exactamente 2/i);
     expect(review.avisoComposicao).not.toMatch(/N_/);
@@ -366,7 +371,29 @@ describe('loadPropostaReview', () => {
     expect(review.membros).toHaveLength(3);
   });
 
-  it('sem grupo_id não chama listMembrosGrupo e devolve revisão vazia', async () => {
+  it('sem grupo_id usa primeiro nome do dono da procura', async () => {
+    getPrimeiroNomeProcuraOwner.mockResolvedValue('Ana');
+
+    const review = await loadPropostaReview({
+      id: 'prop-solo',
+      procura_id: 'proc-1',
+      grupo_id: null,
+      modo_preco: 'POR_PASSAGEIRO',
+      valor_mensal_ask_kz: 40000,
+      n_passageiros_propostos: 1,
+    });
+
+    expect(listMembrosGrupo).not.toHaveBeenCalled();
+    expect(getPrimeiroNomeProcuraOwner).toHaveBeenCalledWith('proc-1');
+    expect(review.titulo).toBe('Ana');
+    expect(review.membros).toHaveLength(1);
+    expect(review.membros[0].nome).toBe('Ana');
+    expect(review.membros[0].telefone).toBeNull();
+  });
+
+  it('sem procura_id mantém título genérico', async () => {
+    getPrimeiroNomeProcuraOwner.mockResolvedValue(null);
+
     const review = await loadPropostaReview({
       id: 'prop-solo',
       grupo_id: null,
@@ -375,7 +402,7 @@ describe('loadPropostaReview', () => {
       n_passageiros_propostos: 1,
     });
 
-    expect(listMembrosGrupo).not.toHaveBeenCalled();
+    expect(getPrimeiroNomeProcuraOwner).not.toHaveBeenCalled();
     expect(review.membros).toEqual([]);
     expect(review.titulo).toBe('1 passageiro');
   });

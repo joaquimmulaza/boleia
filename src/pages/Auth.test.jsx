@@ -300,6 +300,40 @@ describe('Auth Component', () => {
     }, { timeout: 2000 });
   });
 
+  it('após login com next interno, redireciona para o URL pedido', async () => {
+    mockSearch = `?next=${encodeURIComponent('/explorar?origem=Viana&destino=Talatona')}`;
+    supabase.auth.signInWithPassword.mockResolvedValueOnce({
+      data: { user: { user_metadata: { tipo_perfil: 'Passageiro' } } },
+      error: null,
+    });
+
+    render(<Auth />);
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'teste@boleia.co.ao' } });
+    fireEvent.change(screen.getByLabelText(/^Palavra-passe$/i), { target: { value: 'password123' } });
+    fireEvent.click(screen.getByRole('button', { name: /Entrar/i }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/explorar?origem=Viana&destino=Talatona');
+    }, { timeout: 2000 });
+  });
+
+  it('next externo é ignorado e usa hub default', async () => {
+    mockSearch = `?next=${encodeURIComponent('https://evil.example/phish')}`;
+    supabase.auth.signInWithPassword.mockResolvedValueOnce({
+      data: { user: { user_metadata: { tipo_perfil: 'Passageiro' } } },
+      error: null,
+    });
+
+    render(<Auth />);
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'teste@boleia.co.ao' } });
+    fireEvent.change(screen.getByLabelText(/^Palavra-passe$/i), { target: { value: 'password123' } });
+    fireEvent.click(screen.getByRole('button', { name: /Entrar/i }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/passageiro');
+    }, { timeout: 2000 });
+  });
+
   it('após login bem-sucedido como Passageiro, redireciona para a rota principal', async () => {
     supabase.auth.signInWithPassword.mockResolvedValueOnce({
       data: { user: { user_metadata: { tipo_perfil: 'Passageiro' } } },

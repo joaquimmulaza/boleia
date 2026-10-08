@@ -1,4 +1,5 @@
 import { labelModoPreco } from './ofertaLabels';
+import { formatPrimeiroNome } from './primeiroNome';
 
 /**
  * @typedef {object} ContratoSnapshot
@@ -18,10 +19,14 @@ const MODOS_VALIDOS = new Set(['POR_PASSAGEIRO', 'TOTAL_ACORDO']);
 
 /**
  * @param {number | null | undefined} n
+ * @param {string | null | undefined} [primeiroNomePassageiro]
  * @returns {string | null}
  */
-function labelNContrato(n) {
+export function labelNContrato(n, primeiroNomePassageiro) {
   if (!Number.isInteger(n) || n < 1) return null;
+  if (n === 1 && primeiroNomePassageiro) {
+    return formatPrimeiroNome(primeiroNomePassageiro);
+  }
   return n === 1 ? 'Individual' : `Grupo · ${n} pessoas`;
 }
 
@@ -43,9 +48,10 @@ function isKzInt(value) {
  *   valor_mensal_por_passageiro_kz?: number | null,
  *   valor_mensal_total_kz?: number | null,
  * }} acordo
+ * @param {{ primeiroNomePassageiro?: string | null }} [options]
  * @returns {ContratoSnapshot}
  */
-export function buildAcordoContratoSnapshot(acordo) {
+export function buildAcordoContratoSnapshot(acordo, options = {}) {
   /** @type {string[]} */
   const missingFields = [];
 
@@ -84,7 +90,8 @@ export function buildAcordoContratoSnapshot(acordo) {
     complete: true,
     modalidade: labelModoPreco(modoPreco),
     nContrato,
-    nLabel: labelNContrato(nContrato) ?? `Grupo · ${nContrato} pessoas`,
+    nLabel: labelNContrato(nContrato, options.primeiroNomePassageiro)
+      ?? `Grupo · ${nContrato} pessoas`,
     totalMensalKz,
     porPassageiroKz,
     valorReferenciaKz:

@@ -13,6 +13,11 @@ import {
   parseOAuthCallback,
   startOAuthSignIn,
 } from '../utils/oauth';
+import {
+  AUTH_RETURN_STORAGE_KEY,
+  resolvePostLoginPath,
+  resolveSafeReturnPath,
+} from '../utils/authReturnPath';
 
 /**
  * Arranque OAuth, erros de callback e destino depois da sessão.
@@ -95,7 +100,16 @@ export function useSocialAuth({ enabled = true } = {}) {
 
     sessionStorage.removeItem(OAUTH_PENDING_KEY);
     sessionStorage.removeItem(OAUTH_PROVIDER_KEY);
-    const destino = tipoPerfil === 'Motorista' ? '/motorista' : '/passageiro';
+    const storedNext = typeof sessionStorage !== 'undefined'
+      ? sessionStorage.getItem(AUTH_RETURN_STORAGE_KEY)
+      : null;
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem(AUTH_RETURN_STORAGE_KEY);
+    }
+    const destino = resolvePostLoginPath(
+      storedNext || params.get('next'),
+      tipoPerfil,
+    );
     navigate(destino, { replace: true });
   }, [
     enabled,
@@ -119,6 +133,10 @@ export function useSocialAuth({ enabled = true } = {}) {
     setPendingProvider(provider);
     sessionStorage.removeItem(OAUTH_MESSAGE_KEY);
     setActionMessage('');
+    const next = resolveSafeReturnPath(new URLSearchParams(location.search).get('next'));
+    if (next) {
+      sessionStorage.setItem(AUTH_RETURN_STORAGE_KEY, next);
+    }
     const { error } = await startOAuthSignIn(supabase, provider, {
       tipoPerfil: role,
       redirectTo: getOAuthRedirectUrl(),
