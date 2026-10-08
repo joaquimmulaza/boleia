@@ -355,17 +355,21 @@ const MyAgreements = () => {
     }
   }, [user?.id, tipoPerfil]);
 
+  const selectedDetalheSyncKey = selected
+    ? `${selected.id}:${String(selected.estado || '').toLowerCase()}`
+    : null;
+
   useEffect(() => {
-    if (selected) {
-      void carregarPagamentoContactos(selected);
-    } else {
+    if (!selectedDetalheSyncKey || !selected) {
       setPagamento(null);
       setPagamentosAcordo([]);
       setContactos(null);
       setAvaliacoesAcordo([]);
       setHistoricoPreco([]);
+      return;
     }
-  }, [selected, carregarPagamentoContactos]);
+    void carregarPagamentoContactos(selected);
+  }, [selectedDetalheSyncKey, selected, carregarPagamentoContactos]);
 
   const closeTerminateFlow = () => {
     setTerminatePickerOpen(false);
@@ -410,6 +414,7 @@ const MyAgreements = () => {
       } else {
         return;
       }
+      params.delete('focus');
       const search = params.toString();
       navigate(
         { pathname: location.pathname, search: search ? `?${search}` : '' },
@@ -419,12 +424,23 @@ const MyAgreements = () => {
     [location.pathname, location.state, navigate],
   );
 
-  const syncOpenAcordoQueryRef = useRef(syncOpenAcordoQuery);
-  syncOpenAcordoQueryRef.current = syncOpenAcordoQuery;
+  const stripFocusFromUrl = useCallback(() => {
+    const params = new URLSearchParams(locationSearchRef.current);
+    if (!params.has('focus')) return;
+    params.delete('focus');
+    const search = params.toString();
+    navigate(
+      { pathname: location.pathname, search: search ? `?${search}` : '' },
+      { replace: true, state: location.state },
+    );
+  }, [location.pathname, location.state, navigate]);
 
   /** @param {typeof selected} acordo */
   const selectAcordo = useCallback(
     (acordo) => {
+      if (!acordo?.id) {
+        focusConsumedKeyRef.current = null;
+      }
       setSelected(acordo);
       syncOpenAcordoQuery(acordo?.id ?? null);
     },
@@ -452,10 +468,7 @@ const MyAgreements = () => {
       setSelected((prev) => {
         if (!prev?.id) return prev;
         const found = filtered.find((a) => a.id === prev.id);
-        if (!found) {
-          queueMicrotask(() => syncOpenAcordoQueryRef.current(null));
-          return null;
-        }
+        if (!found) return null;
         return found;
       });
       return filtered;
@@ -466,7 +479,7 @@ const MyAgreements = () => {
       }
       return [];
     } finally {
-      if (generation === carregarGenerationRef.current && !silent) {
+      if (generation === carregarGenerationRef.current) {
         setIsLoading(false);
       }
     }
@@ -492,6 +505,7 @@ const MyAgreements = () => {
   }, [isOnline, syncPendingLeaves]);
 
   const pendingFocusRef = useRef(/** @type {string | null} */ (null));
+  const focusConsumedKeyRef = useRef(/** @type {string | null} */ (null));
 
   /** @param {string} focus */
   const scrollToAcordoFocus = useCallback((focus) => {
@@ -520,21 +534,24 @@ const MyAgreements = () => {
     const focus = params.get('focus');
     if (!openAcordoId) return;
     const found = acordos.find((a) => a.id === openAcordoId);
-    if (found) {
-      setSelected((prev) => (prev?.id === found.id ? prev : found));
-      if (focus) {
-        pendingFocusRef.current = focus;
-      }
-      if (location.state?.openAcordoId) {
-        navigate(
-          { pathname: location.pathname, search: location.search },
-          { replace: true, state: {} },
-        );
+    if (!found) {
+      if (acordos.length > 0) {
+        syncOpenAcordoQuery(null);
       }
       return;
     }
-    if (openAcordoId && !found && acordos.length > 0) {
-      syncOpenAcordoQuery(null);
+    setSelected((prev) => (prev?.id === found.id ? prev : found));
+    const focusKey = focus ? `${openAcordoId}:${focus}` : null;
+    if (focus && focusConsumedKeyRef.current !== focusKey) {
+      pendingFocusRef.current = focus;
+      focusConsumedKeyRef.current = focusKey;
+      stripFocusFromUrl();
+    }
+    if (location.state?.openAcordoId) {
+      navigate(
+        { pathname: location.pathname, search: location.search },
+        { replace: true, state: {} },
+      );
     }
   }, [
     isLoading,
@@ -544,7 +561,18 @@ const MyAgreements = () => {
     navigate,
     location.pathname,
     syncOpenAcordoQuery,
+    stripFocusFromUrl,
   ]);
+
+  useEffect(() => {
+    if (selected?.id || isLoading) return;
+    const params = new URLSearchParams(locationSearchRef.current);
+    const urlId = params.get('openAcordoId');
+    if (!urlId) return;
+    if (!acordos.some((a) => a.id === urlId)) {
+      syncOpenAcordoQuery(null);
+    }
+  }, [selected?.id, isLoading, acordos, syncOpenAcordoQuery]);
 
   const carregarSilentStable = useCallback(() => {
     void carregar({ silent: true });

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
 /** Intervalo de polling com sheet aberto (ms). */
@@ -8,13 +8,13 @@ export const ACORDO_DETALHE_POLL_MS =
     : 9000;
 
 /**
+ * Polling só enquanto o acordo está activo e há pedido consensual à espera da contraparte.
  * @param {object | null | undefined} acordo
  * @returns {boolean}
  */
 export function acordoPrecisaLiveRefresh(acordo) {
   if (!acordo?.id) return false;
   const e = String(acordo.estado || '').toLowerCase();
-  if (e === 'cancelamento_pendente') return true;
   if (e !== 'activo') return false;
   const modo = String(acordo.rescisao_modo || '').toLowerCase();
   if (modo !== 'consensual') return false;
@@ -22,26 +22,57 @@ export function acordoPrecisaLiveRefresh(acordo) {
 }
 
 /**
- * Refetch silencioso enquanto o detalhe está aberto (rescisão consensual / cancelamento pendente).
+ * Refetch silencioso enquanto o detalhe está aberto (rescisão consensual pendente).
  * @param {{ enabled: boolean, userId?: string, acordoId?: string, onRefresh: () => void }} opts
  */
 export function useAcordoDetalheLiveRefresh({ enabled, userId, acordoId, onRefresh }) {
+  const onRefreshRef = useRef(onRefresh);
+  useEffect(() => {
+    onRefreshRef.current = onRefresh;
+  }, [onRefresh]);
+
   useEffect(() => {
     if (!enabled || !userId || !acordoId) return undefined;
 
+    const mountId = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    /** @type {ReturnType<typeof setInterval> | null} */
+    let intervalId = null;
+
     const tick = () => {
-      onRefresh();
+      if (document.hidden) return;
+      onRefreshRef.current();
     };
 
-    const onFocus = () => {
+    const startInterval = () => {
+      if (intervalId != null || document.hidden) return;
+      intervalId = window.setInterval(tick, ACORDO_DETALHE_POLL_MS);
+    };
+
+    const stopInterval = () => {
+      if (intervalId != null) {
+        window.clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const onWindowFocus = () => {
       tick();
     };
 
-    window.addEventListener('focus', onFocus);
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        stopInterval();
+      } else {
+        tick();
+        startInterval();
+      }
+    };
 
-    const intervalId = window.setInterval(tick, ACORDO_DETALHE_POLL_MS);
+    startInterval();
+    window.addEventListener('focus', onWindowFocus);
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
-    const channel = supabase.channel(`acordos-live-${userId}-${acordoId}`);
+    const channel = supabase.channel(`acordos-live-${userId}-${acordoId}-${mountId}`);
     channel.on(
       'postgres_changes',
       {
@@ -68,9 +99,10 @@ export function useAcordoDetalheLiveRefresh({ enabled, userId, acordoId, onRefre
     ).subscribe();
 
     return () => {
-      window.removeEventListener('focus', onFocus);
-      window.clearInterval(intervalId);
+      stopInterval();
+      window.removeEventListener('focus', onWindowFocus);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       supabase.removeChannel(channel);
     };
-  }, [enabled, userId, acordoId, onRefresh]);
+  }, [enabled, userId, acordoId]);
 }

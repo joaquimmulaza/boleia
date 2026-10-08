@@ -1211,6 +1211,130 @@ describe('MyAgreements — marketplace 1:N', () => {
       });
     });
 
+    it('focus=rescisao: um scroll, remove focus da URL e refresh não repete scroll', async () => {
+      const scrollSpy = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {});
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver.mockResolvedValue([
+        {
+          ...acordoMotorista,
+          rescisao_modo: 'consensual',
+          rescisao_solicitada_por: 'driver-1',
+          rescisao_vigencia: 'fim_ciclo',
+        },
+      ]);
+
+      renderPage(['/acordos?openAcordoId=acordo-1&focus=rescisao']);
+
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      await waitFor(() => {
+        expect(scrollSpy).toHaveBeenCalledTimes(1);
+      });
+      expect(mockNavigate).toHaveBeenCalledWith(
+        expect.objectContaining({ search: '?openAcordoId=acordo-1' }),
+        expect.objectContaining({ replace: true }),
+      );
+
+      const callsBefore = getAgreementsForDriver.mock.calls.length;
+      notifyMarketplaceHubRefresh();
+      notifyMarketplaceHubRefresh();
+      await waitFor(() => {
+        expect(getAgreementsForDriver.mock.calls.length).toBeGreaterThan(callsBefore);
+      });
+      expect(scrollSpy).toHaveBeenCalledTimes(1);
+
+      fireEvent.click(within(dialog).getByTestId('acordo-detalhe-fechar'));
+      fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+      await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      expect(scrollSpy).toHaveBeenCalledTimes(1);
+
+      scrollSpy.mockRestore();
+    });
+
+    it('cancelamento_pendente: sem ticks de polling live refresh', async () => {
+      getAgreementsForDriver.mockResolvedValue([
+        {
+          ...acordoMotorista,
+          estado: 'cancelamento_pendente',
+          rescisao_effective_on: '2026-11-01',
+        },
+      ]);
+
+      renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+      await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+      const baseline = getAgreementsForDriver.mock.calls.length;
+
+      await act(async () => {
+        await new Promise((resolve) => {
+          setTimeout(resolve, ACORDO_DETALHE_POLL_MS + 150);
+        });
+      });
+
+      expect(getAgreementsForDriver.mock.calls.length).toBe(baseline);
+    });
+
+    it('openAcordoId na URL reabre o sheet após remount', async () => {
+      getAgreementsForDriver.mockResolvedValue([acordoMotorista]);
+
+      const first = renderPage(['/acordos?openAcordoId=acordo-1']);
+      await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      first.unmount();
+
+      renderPage(['/acordos?openAcordoId=acordo-1']);
+      await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    });
+
+    it('refresh silencioso sobre load lento não deixa skeleton preso', async () => {
+      let resolveLento;
+      getAgreementsForDriver.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveLento = () => resolve([acordoMotorista]);
+          }),
+      );
+
+      renderPage();
+      expect(document.querySelector('.animate-pulse')).toBeInTheDocument();
+
+      notifyMarketplaceHubRefresh();
+
+      await act(async () => {
+        resolveLento();
+        await Promise.resolve();
+      });
+
+      await waitFor(() => {
+        expect(document.querySelector('.animate-pulse')).not.toBeInTheDocument();
+      });
+      expect(await screen.findByText('Acordos')).toBeInTheDocument();
+    });
+
+    it('ticks de lista não relêem pagamentos se id e estado do acordo iguais', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      const aguardando = {
+        ...acordoMotorista,
+        rescisao_modo: 'consensual',
+        rescisao_solicitada_por: 'driver-1',
+      };
+      getAgreementsForDriver.mockResolvedValue([aguardando]);
+
+      renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+      await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+      await waitFor(() => {
+        expect(listPagamentosByAcordo).toHaveBeenCalled();
+      });
+      const pagamentoCalls = listPagamentosByAcordo.mock.calls.length;
+
+      notifyMarketplaceHubRefresh();
+      await waitFor(() => {
+        expect(getAgreementsForDriver.mock.calls.length).toBeGreaterThan(1);
+      });
+      expect(listPagamentosByAcordo.mock.calls.length).toBe(pagamentoCalls);
+    });
+
     it('motorista: detalhe actualiza após confirmação da contraparte via polling (sem visibilitychange)', async () => {
       mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
       const aguardandoConfirmacao = {
@@ -1241,15 +1365,11 @@ describe('MyAgreements — marketplace 1:N', () => {
 
       await waitFor(
         () => {
-          expect(getAgreementsForDriver.mock.calls.length).toBeGreaterThanOrEqual(3);
+          expect(within(dialog).getByTestId('cancelamento-pendente-banner')).toBeInTheDocument();
+          expect(within(dialog).queryByTestId('rescisao-consensual-enviada')).not.toBeInTheDocument();
         },
         { timeout: ACORDO_DETALHE_POLL_MS + 500 },
       );
-
-      await waitFor(() => {
-        expect(within(dialog).getByTestId('cancelamento-pendente-banner')).toBeInTheDocument();
-        expect(within(dialog).queryByTestId('rescisao-consensual-enviada')).not.toBeInTheDocument();
-      });
       expect(document.visibilityState).toBe('visible');
 
       view.unmount();

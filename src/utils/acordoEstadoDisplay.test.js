@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   labelEstadoAcordo,
   variantChipEstadoAcordo,
-  isAcordoVigente,
 } from './acordoEstadoDisplay';
 
 describe('labelEstadoAcordo', () => {
@@ -10,6 +9,8 @@ describe('labelEstadoAcordo', () => {
     expect(labelEstadoAcordo('activo')).toBe('Activo');
     expect(labelEstadoAcordo('cancelamento_pendente')).toBe('Cancelamento pendente');
     expect(labelEstadoAcordo('cancelado')).toBe('Cancelado');
+    expect(labelEstadoAcordo('cancelado_justificado')).toBe('Cancelado por justa causa');
+    expect(labelEstadoAcordo('suspenso')).toBe('Suspenso');
   });
 
   it('não devolve snake_case cru', () => {
@@ -20,12 +21,5 @@ describe('labelEstadoAcordo', () => {
 describe('variantChipEstadoAcordo', () => {
   it('cancelamento_pendente usa variante pendente', () => {
     expect(variantChipEstadoAcordo('cancelamento_pendente')).toBe('pendente');
-  });
-});
-
-describe('isAcordoVigente', () => {
-  it('inclui cancelamento_pendente', () => {
-    expect(isAcordoVigente('cancelamento_pendente')).toBe(true);
-    expect(isAcordoVigente('cancelado')).toBe(false);
   });
 });

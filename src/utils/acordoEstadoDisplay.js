@@ -8,6 +8,8 @@ export function labelEstadoAcordo(estado) {
   if (e === 'activo') return 'Activo';
   if (e === 'cancelamento_pendente') return 'Cancelamento pendente';
   if (e === 'cancelado') return 'Cancelado';
+  if (e === 'cancelado_justificado') return 'Cancelado por justa causa';
+  if (e === 'suspenso') return 'Suspenso';
   if (e === 'expirado') return 'Expirado';
   if (!estado) return '—';
   return estado.charAt(0).toUpperCase() + estado.slice(1).replace(/_/g, ' ');
@@ -23,14 +25,4 @@ export function variantChipEstadoAcordo(estado) {
   if (e === 'activo') return 'activo';
   if (e === 'cancelamento_pendente') return 'pendente';
   return 'inactivo';
-}
-
-/**
- * Acordo ainda vigente (activo ou a terminar no fim do ciclo).
- * @param {string | null | undefined} estado
- * @returns {boolean}
- */
-export function isAcordoVigente(estado) {
-  const e = String(estado || '').toLowerCase();
-  return e === 'activo' || e === 'cancelamento_pendente';
 }
