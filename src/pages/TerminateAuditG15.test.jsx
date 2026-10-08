@@ -297,10 +297,37 @@ describe('Marketplace Termination Audit — G15', () => {
     expect(sql).toContain("GRANT EXECUTE ON FUNCTION public.reject_agreement_termination");
   });
 
-  it('handle_acordo_notifications ignora cancelado quando rescisao_modo está preenchido', () => {
+  it('handle_acordo_notifications — skip genérico só com flag transaction-local', () => {
     const sql = readMigration('20261008140100_acordo_notifications_skip_rescisao_rpc.sql');
     expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\.handle_acordo_notifications/);
-    expect(sql).toContain('NULLIF(btrim(COALESCE(NEW.rescisao_modo');
+    expect(sql).toContain(
+      "current_setting('boleia.skip_acordo_cancel_notif', true) IS DISTINCT FROM 'on'",
+    );
+    expect(sql).not.toContain('NEW.rescisao_modo');
     expect(sql).toContain('Um acordo foi cancelado.');
+  });
+
+  it('terminate_agreement consensual imediato — set_config antes do UPDATE cancelado', () => {
+    const sql = readMigration('20261008140100_acordo_notifications_skip_rescisao_rpc.sql');
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\.terminate_agreement/);
+    const setConfigIdx = sql.indexOf("set_config('boleia.skip_acordo_cancel_notif', 'on', true)");
+    const canceladoIdx = sql.indexOf("estado = 'cancelado',\n        rescisao_modo = 'consensual'");
+    expect(setConfigIdx).toBeGreaterThan(-1);
+    expect(canceladoIdx).toBeGreaterThan(setConfigIdx);
+    expect(sql.split("set_config('boleia.skip_acordo_cancel_notif'").length).toBe(2);
+  });
+
+  it('apply_due_agreement_terminations — sem flag; trigger genérico continua', () => {
+    const applySql = readMigration('20260906123609_s22_rpc_grants_hardening.sql');
+    const applyBlock = applySql.slice(
+      applySql.indexOf('CREATE OR REPLACE FUNCTION public.apply_due_agreement_terminations'),
+      applySql.indexOf('REVOKE ALL ON FUNCTION public.renegotiate_agreement_pricing'),
+    );
+    expect(applyBlock).not.toContain('skip_acordo_cancel_notif');
+    expect(applyBlock).toContain("estado = 'cancelado'");
+
+    const notifSql = readMigration('20261008140100_acordo_notifications_skip_rescisao_rpc.sql');
+    expect(notifSql).not.toContain('NEW.rescisao_modo');
+    expect(notifSql).toContain('O teu acordo de boleia foi cancelado.');
   });
 });
