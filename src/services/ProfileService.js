@@ -80,11 +80,9 @@ export const getVehicle = async (userId) => {
     .from('veiculos')
     .select('*')
     .eq('id_motorista', userId)
-    .single();
+    .maybeSingle();
 
-  if (error && error.code !== 'PGRST116') { // Ignore row not found
-      throw error;
-  }
+  if (error) throw error;
   return data;
 };
 

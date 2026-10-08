@@ -16,6 +16,7 @@ function readMigration(filename) {
 
 const VAGAS_SQL = '20261008142000_smoke_3a_oferta_vagas_stepper.sql';
 const IS_TEST_SQL = '20261008142100_smoke_3a_is_test_flag.sql';
+const IS_TEST_RLS_SQL = '20261008142200_smoke_3a_is_test_rls_qa_participant.sql';
 
 const JOAQUIM_OFERTAS = [
   '9da0ba16-32a6-403e-a7f6-0f34fe8eb768',
@@ -46,9 +47,31 @@ describe('Smoke #3a — item 10 (is_test)', () => {
     expect(sql).toMatch(/@boleiacerta\.test/);
     expect(sql).toMatch(/trg_ofertas_marketplace_is_test/);
     expect(sql).toMatch(/trg_procuras_marketplace_is_test/);
-    expect(sql).toMatch(/NOT is_test OR driver_id = auth\.uid\(\)/);
-    expect(sql).toMatch(/NOT is_test OR owner_id = auth\.uid\(\)/);
     expect(sql).toMatch(/AND NOT is_test/);
+  });
+
+  it('RLS autenticados: viewer_is_qa, dono e participantes (acordos/propostas)', () => {
+    const sql = readMigration(IS_TEST_RLS_SQL);
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\.viewer_is_qa\(\)/);
+    expect(sql).toMatch(/STABLE[\s\S]*SECURITY DEFINER/);
+    expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.viewer_is_qa\(\) FROM PUBLIC/);
+    expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.viewer_is_qa\(\) FROM anon/);
+    expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION public\.viewer_is_qa\(\) TO authenticated/);
+    expect(sql).toMatch(/NOT is_test[\s\S]*OR \(SELECT public\.viewer_is_qa\(\)\)/);
+    expect(sql).toMatch(/OR driver_id = auth\.uid\(\)/);
+    expect(sql).toMatch(/OR owner_id = auth\.uid\(\)/);
+    expect(sql).toMatch(/acordos_passageiros/);
+    expect(sql).toMatch(/FROM public\.propostas pr/);
+    expect(sql).toMatch(/membros_grupo/);
+  });
+
+  it('browse/matching usa SELECT directo — filtro is_test via RLS (sem RPC browse)', () => {
+    const rls = readMigration(IS_TEST_RLS_SQL);
+    expect(rls).toMatch(/ofertas_select_autenticados/);
+    expect(rls).toMatch(/procuras_select_autenticados/);
+    const base = readMigration(IS_TEST_SQL);
+    expect(base).toMatch(/ofertas_select_anon_browse[\s\S]*AND NOT is_test/);
+    expect(base).not.toMatch(/CREATE OR REPLACE FUNCTION public\.list_ofertas/);
   });
 
   it('backfill 18 ofertas de teste e garante ofertas do Joaquim com is_test false', () => {

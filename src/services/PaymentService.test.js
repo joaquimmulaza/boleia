@@ -103,6 +103,19 @@ describe('PaymentService', () => {
     expect(result).toEqual(payload);
   });
 
+  it('getAcordoContactos devolve bloqueado sem throw quando RPC P0001 (acordo cancelado)', async () => {
+    supabase.rpc.mockResolvedValue({
+      data: null,
+      error: {
+        code: 'P0001',
+        message: 'Sem permissão para ver contactos deste acordo.',
+      },
+    });
+    const result = await getAcordoContactos('acordo-cancelado');
+    expect(result.bloqueado).toBe(true);
+    expect(result.motivo).toMatch(/Sem permissão/);
+  });
+
   it('listPagamentosPendentesValidacao filtra comprovativo_enviado', async () => {
     supabase.from.mockReturnValue({
       select: vi.fn().mockReturnValue({

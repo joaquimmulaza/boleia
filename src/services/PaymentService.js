@@ -241,7 +241,16 @@ export async function getAcordoContactos(acordoId) {
     p_acordo_id: acordoId,
   });
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === 'P0001') {
+      return {
+        bloqueado: true,
+        motivo: error.message || 'Sem permissão para ver contactos deste acordo.',
+        passageiros: [],
+      };
+    }
+    throw error;
+  }
   return data || { bloqueado: true, passageiros: [] };
 }
 
