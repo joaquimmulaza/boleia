@@ -5,9 +5,10 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import MarketplaceExplore from './MarketplaceExplore';
 
 const navigate = vi.fn();
+const mockUseAuth = vi.fn(() => ({ session: null, loading: false, tipoPerfil: null }));
 
 vi.mock('../contexts/AuthContext', () => ({
-  useAuth: () => ({ session: null, loading: false, tipoPerfil: null }),
+  useAuth: () => mockUseAuth(),
 }));
 
 vi.mock('react-router-dom', async () => {
@@ -35,9 +36,12 @@ vi.mock('../components/ThemeToggle', () => ({
 import { listOfertasDisponiveis } from '../services/OfertaService';
 import { listProcurasDisponiveis } from '../services/ProcuraService';
 
+const FILTERED_EXPLORE = '/explorar?origem=Viana&destino=Talatona&origem_lat=-8.9&origem_lng=13.2&destino_lat=-9.0&destino_lng=13.3';
+
 describe('MarketplaceExplore', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseAuth.mockReturnValue({ session: null, loading: false, tipoPerfil: null });
     listOfertasDisponiveis.mockResolvedValue([
       {
         id: 'of-1',
@@ -93,7 +97,9 @@ describe('MarketplaceExplore', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
     expect(screen.queryByTestId('opportunity-detail-sheet')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Propor acordo' }));
-    expect(navigate).toHaveBeenCalledWith('/auth?mode=register&role=passenger');
+    expect(navigate).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/auth\?.*mode=register.*role=passenger.*next=/),
+    );
     expect(screen.queryByTestId('opportunity-detail-sheet')).not.toBeInTheDocument();
   });
 
@@ -124,7 +130,9 @@ describe('MarketplaceExplore', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Propor acordo' }));
-    expect(navigate).toHaveBeenCalledWith('/auth?mode=register&role=passenger');
+    expect(navigate).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/auth\?.*mode=register.*role=passenger.*next=/),
+    );
   });
 
   it('tab Procuras lista procuras e CTA Enviar proposta', async () => {
@@ -148,7 +156,9 @@ describe('MarketplaceExplore', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Enviar proposta' }));
-    expect(navigate).toHaveBeenCalledWith('/auth?mode=register&role=driver');
+    expect(navigate).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/auth\?.*mode=register.*role=driver.*next=/),
+    );
   });
 
   it('omitte ofertas canceladas ou expiradas e mostra erro com nova tentativa', async () => {
@@ -270,10 +280,98 @@ describe('MarketplaceExplore', () => {
     expect(screen.getByText('Cria uma procura e espera quem faz o mesmo caminho.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Criar procura' }));
-    expect(navigate).toHaveBeenCalledWith('/auth?mode=register&role=passenger');
+    expect(navigate).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/auth\?.*mode=register.*role=passenger.*next=/),
+    );
 
     fireEvent.click(screen.getByRole('button', { name: 'Ver todas as boleias' }));
     expect(navigate).toHaveBeenCalledWith('/explorar');
+  });
+
+  it('passageiro autenticado mantém /explorar filtrado com chip e empty state', async () => {
+    mockUseAuth.mockReturnValue({
+      session: { user: { id: 'pax-1' } },
+      loading: false,
+      tipoPerfil: 'Passageiro',
+    });
+    listOfertasDisponiveis.mockResolvedValueOnce([]);
+
+    render(
+      <MemoryRouter initialEntries={[FILTERED_EXPLORE]}>
+        <Routes>
+          <Route path="/explorar" element={<MarketplaceExplore />} />
+          <Route path="/passageiro" element={<div data-testid="passageiro-stub" />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', {
+      level: 1,
+      name: 'Boleias de Viana para Talatona',
+    })).toBeInTheDocument();
+    expect(screen.getByText('Viana → Talatona')).toBeInTheDocument();
+    expect(await screen.findByTestId('explore-filtered-empty')).toBeInTheDocument();
+    expect(screen.queryByTestId('passageiro-stub')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Início' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Entrar' })).not.toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(listOfertasDisponiveis).toHaveBeenCalled();
+    });
+  });
+
+  it('anónimo: Entrar inclui next com o URL filtrado', async () => {
+    listOfertasDisponiveis.mockResolvedValueOnce([]);
+
+    render(
+      <MemoryRouter initialEntries={[FILTERED_EXPLORE]}>
+        <MarketplaceExplore />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Entrar' }));
+    expect(navigate).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/auth\?.*next=/),
+    );
+    const authUrl = navigate.mock.calls[0][0];
+    expect(decodeURIComponent(authUrl)).toContain('/explorar?origem=Viana&destino=Talatona');
+  });
+
+  it('passageiro autenticado: Criar procura no empty vai para /passageiro', async () => {
+    mockUseAuth.mockReturnValue({
+      session: { user: { id: 'pax-1' } },
+      loading: false,
+      tipoPerfil: 'Passageiro',
+    });
+    listOfertasDisponiveis.mockResolvedValueOnce([]);
+
+    render(
+      <MemoryRouter initialEntries={[FILTERED_EXPLORE]}>
+        <MarketplaceExplore />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Criar procura' }));
+    expect(navigate).toHaveBeenCalledWith('/passageiro');
+  });
+
+  it('motorista autenticado continua a ir para /motorista', async () => {
+    mockUseAuth.mockReturnValue({
+      session: { user: { id: 'mot-1' } },
+      loading: false,
+      tipoPerfil: 'Motorista',
+    });
+
+    render(
+      <MemoryRouter initialEntries={[FILTERED_EXPLORE]}>
+        <Routes>
+          <Route path="/explorar" element={<MarketplaceExplore />} />
+          <Route path="/motorista" element={<div data-testid="motorista-stub" />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId('motorista-stub')).toBeInTheDocument();
   });
 
   it('Limpar remove filtro; Editar volta à landing com query', async () => {

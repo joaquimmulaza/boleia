@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { listOfertasDisponiveis } from '../services/OfertaService';
 import { listProcurasDisponiveis } from '../services/ProcuraService';
@@ -15,6 +15,7 @@ import {
   hasExploreSearchLabels,
   parseExploreSearchParams,
 } from '../utils/exploreSearchParams';
+import { buildAuthUrlWithNext } from '../utils/authReturnPath';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import OpportunityCard from '../components/OpportunityCard';
 import OpportunityDetailSheet from '../components/OpportunityDetailSheet';
@@ -24,12 +25,13 @@ import BrandLockup from '../components/BrandLockup';
 import ThemeToggle from '../components/ThemeToggle';
 
 /**
- * Marketplace público — browse ofertas e procuras sem conta.
- * CTAs de acção redireccionam para /auth. Sessão activa → hub do perfil.
+ * Marketplace — browse ofertas e procuras; anónimo ou passageiro autenticado.
+ * Deep links filtrados (`?origem=&destino=`) sobrevivem com sessão.
  * @typedef {Readonly<{}>} MarketplaceExploreProps
  */
 export default function MarketplaceExplore() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { session, loading: authLoading, tipoPerfil } = useAuth();
   const [tab, setTab] = useState('ofertas');
@@ -44,6 +46,8 @@ export default function MarketplaceExplore() {
     [searchParams],
   );
   const isFiltered = hasExploreSearchLabels(routeSearch);
+  const authReturnPath = `${location.pathname}${location.search}`;
+  const isPassageiroAutenticado = Boolean(session && tipoPerfil === 'Passageiro');
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -64,9 +68,8 @@ export default function MarketplaceExplore() {
   }, []);
 
   useEffect(() => {
-    if (session) return;
     void carregar();
-  }, [carregar, session]);
+  }, [carregar]);
 
   if (authLoading) {
     return (
@@ -76,14 +79,31 @@ export default function MarketplaceExplore() {
     );
   }
 
-  if (session) {
-    if (tipoPerfil === 'Motorista') return <Navigate to="/motorista" replace />;
-    return <Navigate to="/passageiro" replace />;
+  if (session && tipoPerfil === 'Motorista') {
+    return <Navigate to="/motorista" replace />;
   }
 
   const goAuth = (role) => {
-    const q = role ? `?mode=register&role=${role}` : '';
-    navigate(`/auth${q}`);
+    const base = role
+      ? `/auth?mode=register&role=${role}`
+      : '/auth';
+    navigate(buildAuthUrlWithNext(base, authReturnPath));
+  };
+
+  const goCriarProcura = () => {
+    if (isPassageiroAutenticado) {
+      navigate('/passageiro');
+      return;
+    }
+    goAuth('passenger');
+  };
+
+  const goProporPassageiro = () => {
+    if (isPassageiroAutenticado) {
+      navigate('/passageiro');
+      return;
+    }
+    goAuth('passenger');
   };
 
   const ofertasVivas = ofertas.filter((oferta) => isLiveOpportunity('oferta', oferta));
@@ -112,13 +132,22 @@ export default function MarketplaceExplore() {
           </button>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <button
-              type="button"
-              onClick={() => navigate('/auth')}
-              className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"
-            >
-              Entrar
-            </button>
+            {isPassageiroAutenticado ? (
+              <a
+                href="/passageiro"
+                className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"
+              >
+                Início
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={() => goAuth()}
+                className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"
+              >
+                Entrar
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -131,9 +160,13 @@ export default function MarketplaceExplore() {
           />
         ) : (
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold text-balance">Explorar marketplace</h1>
+            <h1 className="text-2xl font-bold text-balance">
+              {isPassageiroAutenticado ? 'Explorar' : 'Explorar marketplace'}
+            </h1>
             <p className="text-sm text-slate-500 text-pretty">
-              Vê ofertas e procuras sem criares conta. Para propor ou publicar, entra ou regista-te.
+              {isPassageiroAutenticado
+                ? 'Explora ofertas e propõe acordo directamente — ou cria procura para filtrar matches.'
+                : 'Vê ofertas e procuras sem criares conta. Para propor ou publicar, entra ou regista-te.'}
             </p>
           </div>
         )}
@@ -197,7 +230,7 @@ export default function MarketplaceExplore() {
         {!loading && (isFiltered || tab === 'ofertas') ? (
           <section className="space-y-3" data-testid="explore-ofertas-feed">
             {ofertasVisiveis.length === 0 && isFiltered ? (
-              <ExploreFilteredEmpty />
+              <ExploreFilteredEmpty onCriarProcura={goCriarProcura} />
             ) : null}
             {ofertasVisiveis.length === 0 && !isFiltered ? (
               <p className="text-sm text-slate-500">Ainda não há ofertas publicadas.</p>
@@ -208,7 +241,7 @@ export default function MarketplaceExplore() {
                   kind="oferta"
                   item={oferta}
                   onOpen={() => setDetalhe({ kind: 'oferta', item: oferta })}
-                  onCta={() => goAuth('passenger')}
+                  onCta={goProporPassageiro}
                 />
               </div>
             ))}
@@ -240,7 +273,13 @@ export default function MarketplaceExplore() {
           kind={detalhe.kind}
           item={detalhe.item}
           onClose={() => setDetalhe(null)}
-          onCta={() => goAuth(detalhe.kind === 'oferta' ? 'passenger' : 'driver')}
+          onCta={() => {
+            if (detalhe.kind === 'oferta') {
+              goProporPassageiro();
+            } else {
+              goAuth('driver');
+            }
+          }}
         />
       ) : null}
     </div>

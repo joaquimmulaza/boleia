@@ -2,9 +2,9 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 
 /**
- * @typedef {Readonly<{}>} ExploreFilteredEmptyProps
+ * @param {{ onCriarProcura?: () => void }} props
  */
-export default function ExploreFilteredEmpty() {
+export default function ExploreFilteredEmpty({ onCriarProcura }) {
   const navigate = useNavigate();
 
   return (
@@ -19,7 +19,7 @@ export default function ExploreFilteredEmpty() {
       <Button
         type="button"
         className="rounded-full px-6 font-bold"
-        onClick={() => navigate('/auth?mode=register&role=passenger')}
+        onClick={onCriarProcura || (() => navigate('/auth?mode=register&role=passenger'))}
       >
         Criar procura
       </Button>

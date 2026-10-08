@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { validateTelefone, validatePassword, MIN_PASSWORD_LENGTH } from '../utils/validation';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { getEmailConfirmRedirectUrl, getPasswordRecoveryRedirectUrl } from '../utils/appOrigin';
+import { resolvePostLoginPath } from '../utils/authReturnPath';
 import { useAuth } from '../contexts/AuthContext';
 
 /**
@@ -98,7 +99,7 @@ export const useAuthForm = () => {
         : 'register';
 
   const navigateToHub = (role) => {
-    const destino = role === 'Motorista' ? '/motorista' : '/passageiro';
+    const destino = resolvePostLoginPath(queryParams.get('next'), role);
     setTimeout(() => navigate(destino), 1000);
   };
 
