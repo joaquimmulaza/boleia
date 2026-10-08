@@ -77,6 +77,12 @@ Desktop.ini
 stitch_auth.html
 
 # ===========================
+# Supabase CLI (local)
+# ===========================
+supabase/.temp/
+supabase/.branches/
+
+# ===========================
 # Misc
 # ===========================
 *.local
