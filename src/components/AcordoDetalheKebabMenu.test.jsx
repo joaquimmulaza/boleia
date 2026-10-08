@@ -64,7 +64,7 @@ describe('AcordoDetalheKebabMenu', () => {
     expect(onEncerrar).toHaveBeenCalledTimes(1);
   });
 
-  it('fecha o menu com Escape', () => {
+  it('fecha o menu com Escape e devolve foco ao botão', () => {
     render(
       <AcordoDetalheKebabMenu
         podeRegistarFaltas
@@ -74,9 +74,27 @@ describe('AcordoDetalheKebabMenu', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Mais acções do acordo/i }));
+    const trigger = screen.getByRole('button', { name: /Mais acções do acordo/i });
+    fireEvent.click(trigger);
     expect(screen.getByRole('menu')).toBeInTheDocument();
     fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('fecha com segundo toque no botão', () => {
+    render(
+      <AcordoDetalheKebabMenu
+        podeRegistarFaltas
+        podeEncerrar
+        onRegistarFalta={vi.fn()}
+        onEncerrar={vi.fn()}
+      />,
+    );
+
+    const trigger = screen.getByRole('button', { name: /Mais acções do acordo/i });
+    fireEvent.click(trigger);
+    fireEvent.click(trigger);
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 });

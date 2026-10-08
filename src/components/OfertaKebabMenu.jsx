@@ -1,5 +1,6 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React from 'react';
 import { MoreHorizontal } from 'lucide-react';
+import { useKebabMenu } from '../hooks/useKebabMenu';
 
 /**
  * Kebab motorista oferta — só Editar / Despublicar (Figma B3 / KebabCard).
@@ -18,36 +19,24 @@ function OfertaKebabMenu({
   onDespublicar,
   disabled = false,
 }) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef(/** @type {HTMLDivElement | null} */ (null));
-  const menuId = useId();
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const handlePointer = (e) => {
-      if (rootRef.current && !rootRef.current.contains(e.target)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('pointerdown', handlePointer);
-    return () => document.removeEventListener('pointerdown', handlePointer);
-  }, [open]);
+  const { open, close, toggle, rootRef, triggerRef, triggerAria, menuProps } = useKebabMenu();
 
   if (!canEdit && !canDespublicar) return null;
+
+  const fecharE = (action) => {
+    close();
+    action();
+  };
 
   return (
     <div ref={rootRef} className="relative shrink-0">
       <button
         type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={menuId}
+        ref={triggerRef}
+        {...triggerAria}
+        onClick={toggle}
         aria-label="Mais acções"
         disabled={disabled}
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen((v) => !v);
-        }}
         className="rounded-lg p-1.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
       >
         <MoreHorizontal size={20} aria-hidden="true" />
@@ -55,8 +44,7 @@ function OfertaKebabMenu({
 
       {open ? (
         <div
-          id={menuId}
-          role="menu"
+          {...menuProps}
           className="absolute right-0 top-full z-10 mt-1 min-w-[11rem] overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
           onClick={(e) => e.stopPropagation()}
         >
@@ -65,10 +53,7 @@ function OfertaKebabMenu({
               type="button"
               role="menuitem"
               className="w-full px-4 py-2.5 text-left text-sm font-medium text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800"
-              onClick={() => {
-                setOpen(false);
-                onEditar();
-              }}
+              onClick={() => fecharE(onEditar)}
             >
               Editar oferta
             </button>
@@ -80,10 +65,7 @@ function OfertaKebabMenu({
                 type="button"
                 role="menuitem"
                 className="w-full px-4 py-2.5 text-left text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30"
-                onClick={() => {
-                  setOpen(false);
-                  onDespublicar();
-                }}
+                onClick={() => fecharE(onDespublicar)}
               >
                 Despublicar oferta
               </button>

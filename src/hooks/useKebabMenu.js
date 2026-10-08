@@ -1,0 +1,93 @@
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { popOverlay, pushOverlay } from '../utils/overlayStack';
+
+/**
+ * Comportamento partilhado dos menus «Mais acções».
+ * @returns {{
+ *   open: boolean,
+ *   close: () => void,
+ *   toggle: (event?: React.SyntheticEvent) => void,
+ *   rootRef: React.RefObject<HTMLDivElement | null>,
+ *   triggerRef: React.RefObject<HTMLButtonElement | null>,
+ *   menuId: string,
+ *   triggerAria: {
+ *     'aria-haspopup': 'menu',
+ *     'aria-expanded': boolean,
+ *     'aria-controls': string,
+ *   },
+ *   menuProps: {
+ *     id: string,
+ *     role: 'menu',
+ *   },
+ * }}
+ */
+export function useKebabMenu() {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(/** @type {HTMLDivElement | null} */ (null));
+  const triggerRef = useRef(/** @type {HTMLButtonElement | null} */ (null));
+  const wasOpenRef = useRef(false);
+  const menuId = useId();
+  const overlayId = useId();
+
+  const close = useCallback(() => {
+    setOpen(false);
+  }, []);
+
+  const toggle = useCallback((event) => {
+    event?.stopPropagation?.();
+    setOpen((prev) => !prev);
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      popOverlay(overlayId);
+      if (wasOpenRef.current) {
+        triggerRef.current?.focus();
+      }
+      wasOpenRef.current = false;
+      return undefined;
+    }
+
+    wasOpenRef.current = true;
+    pushOverlay(overlayId, close);
+
+    const onPointerDown = (event) => {
+      if (rootRef.current && !rootRef.current.contains(event.target)) {
+        close();
+      }
+    };
+
+    const onKeyDown = (event) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+    };
+
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown, true);
+      popOverlay(overlayId);
+    };
+  }, [open, close, overlayId]);
+
+  return {
+    open,
+    close,
+    toggle,
+    rootRef,
+    triggerRef,
+    menuId,
+    triggerAria: {
+      'aria-haspopup': 'menu',
+      'aria-expanded': open,
+      'aria-controls': menuId,
+    },
+    menuProps: {
+      id: menuId,
+      role: 'menu',
+    },
+  };
+}

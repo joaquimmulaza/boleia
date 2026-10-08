@@ -35,4 +35,16 @@ describe('OfertaKebabMenu', () => {
     );
     expect(container.firstChild).toBeNull();
   });
+
+  it('fecha com segundo toque e devolve foco ao botão', () => {
+    render(
+      <OfertaKebabMenu canEdit canDespublicar onEditar={vi.fn()} onDespublicar={vi.fn()} />,
+    );
+    const trigger = screen.getByRole('button', { name: /Mais acções/i });
+    fireEvent.click(trigger);
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    fireEvent.click(trigger);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(trigger);
+  });
 });
