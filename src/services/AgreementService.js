@@ -71,10 +71,6 @@ async function applyDueTerminationsBestEffort(acordoId = null) {
 }
 
 /**
- * Encerra acordos sem renovação explícita quando o ciclo expira (lazy). Best-effort.
- * @param {string | null} [acordoId]
- */
-/**
  * Expira reservas soft-hold vencidas (lazy TTL B1). Best-effort.
  * @param {string | null} [acordoId]
  * @returns {Promise<number>} linhas expiradas
@@ -95,6 +91,10 @@ export async function applyDueReservaExpiry(acordoId = null) {
   }
 }
 
+/**
+ * Encerra acordos sem renovação explícita quando o ciclo expira (lazy). Best-effort.
+ * @param {string | null} [acordoId]
+ */
 async function applyDueNonRenewalsBestEffort(acordoId = null) {
   try {
     const res = await supabase.rpc('apply_due_agreement_non_renewals', {
@@ -436,6 +436,49 @@ export async function rejectAgreementAdenda(adendaId, options = {}) {
  * @param {{ idempotencyKey?: string, forceQueue?: boolean }} [options]
  * @returns {Promise<object>}
  */
+/**
+ * Contraparte recusa pedido consensual de rescisão (limpa colunas rescisao_*).
+ * Em falha de rede, enfileira a RPC com idempotency_key.
+ *
+ * @param {string} acordoId
+ * @param {{ idempotencyKey?: string, forceQueue?: boolean }} [options]
+ * @returns {Promise<object>}
+ */
+export async function rejectAgreementTermination(acordoId, options = {}) {
+  if (!acordoId) {
+    throw new Error('ID do acordo é obrigatório.');
+  }
+
+  const idempotencyKey = resolveIdempotencyKey(options.idempotencyKey);
+  const rpcArgs = {
+    p_acordo_id: acordoId,
+    p_idempotency_key: idempotencyKey,
+  };
+
+  return callRpcWithOfflineFallback({
+    rpc: 'reject_agreement_termination',
+    rpcArgs,
+    options: { ...options, idempotencyKey },
+    sessionErrorMessage: 'Sessão necessária para guardar a recusa offline.',
+    rpcErrorMessage: 'Falha ao recusar o pedido de encerramento.',
+    offlineResult: (key) => ({
+      id: acordoId,
+      offlineQueued: true,
+      idempotency_key: key,
+    }),
+    afterRpcSuccess: async (acordoIdOut) => {
+      const id = acordoIdOut ?? acordoId;
+      const { data, error } = await supabase
+        .from('acordos')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
 export async function terminateAgreement(acordoId, input, options = {}) {
   if (!acordoId) {
     throw new Error('ID do acordo é obrigatório.');

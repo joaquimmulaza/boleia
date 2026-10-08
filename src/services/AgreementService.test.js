@@ -6,6 +6,7 @@ import {
   acceptAgreementAdenda,
   rejectAgreementAdenda,
   terminateAgreement,
+  rejectAgreementTermination,
   getAgreementsForDriver,
   getAgreementsForPassenger,
 } from './AgreementService.js';
@@ -633,6 +634,39 @@ describe('AgreementService', () => {
 
     it('exige id da adenda', async () => {
       await expect(rejectAgreementAdenda('')).rejects.toThrow(/adenda/i);
+    });
+  });
+
+  describe('rejectAgreementTermination', () => {
+    it('chama RPC reject_agreement_termination com idempotency_key', async () => {
+      supabase.rpc.mockResolvedValue({ data: 'acordo-1', error: null });
+      supabase.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: { id: 'acordo-1', estado: 'activo', rescisao_modo: null },
+              error: null,
+            }),
+          }),
+        }),
+      });
+
+      const result = await rejectAgreementTermination('acordo-1');
+
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        'reject_agreement_termination',
+        expect.objectContaining({
+          p_acordo_id: 'acordo-1',
+          p_idempotency_key: expect.stringMatching(
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+          ),
+        }),
+      );
+      expect(result.rescisao_modo).toBeNull();
+    });
+
+    it('exige acordoId', async () => {
+      await expect(rejectAgreementTermination('')).rejects.toThrow(/acordo/i);
     });
   });
 

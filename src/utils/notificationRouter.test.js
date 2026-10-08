@@ -47,6 +47,16 @@ describe('notificationRouter', () => {
         }),
       ).toBe('/acordos?openAcordoId=a-1&focus=adenda');
     });
+
+    it('agreement_update consensual abre detalhe com focus rescisao', () => {
+      expect(
+        notificationRouteMap.agreement_update({
+          acordo_id: 'a-1',
+          rescisao_modo: 'consensual',
+          rescisao_vigencia: 'imediato',
+        }),
+      ).toBe('/acordos?openAcordoId=a-1&focus=rescisao');
+    });
   });
 
   describe('propostaHubDeepLink (ENG#33)', () => {
