@@ -219,6 +219,17 @@ function buildTerminateCounterpartyLabel({ contactos, tipoPerfil, linhas }) {
  * }} ctx
  * @returns {React.ReactNode}
  */
+/**
+ * @param {unknown} err
+ * @returns {boolean}
+ */
+function isRescisaoSemPermissaoError(err) {
+  const msg = String(
+    (err && typeof err === 'object' && 'message' in err && err.message) || err || '',
+  );
+  return /sem permissão para rescindir este acordo/i.test(msg);
+}
+
 function buildTerminateConfirmBody({ contactos, rota, tipoPerfil, linhas, modoMessage }) {
   const counterparty = buildTerminateCounterpartyLabel({ contactos, tipoPerfil, linhas });
   const odSuffix =
@@ -259,6 +270,9 @@ const MyAgreements = () => {
   /** @type {['imediato' | 'fim_ciclo' | '', React.Dispatch<React.SetStateAction<'imediato' | 'fim_ciclo' | ''>>]} */
   const [terminateVigencia, setTerminateVigencia] = useState('');
   const [terminateBusy, setTerminateBusy] = useState(false);
+  /** Bloqueia re-clique em Confirmar após sucesso local até refetch. */
+  const [rescisaoConfirmadaLocal, setRescisaoConfirmadaLocal] = useState(false);
+  const terminateInFlightRef = useRef(false);
   const [leaveModalOpen, setLeaveModalOpen] = useState(false);
   const [leaveBusy, setLeaveBusy] = useState(false);
   /** @type {[Record<string, true>, React.Dispatch<React.SetStateAction<Record<string, true>>>]} */
@@ -372,6 +386,12 @@ const MyAgreements = () => {
           : await getAgreementsForPassenger(user.id);
       const filtered = (data || []).filter((a) => !a.is_hidden_by_user);
       setAcordos(filtered);
+      setSelected((prev) => {
+        if (!prev?.id) return prev;
+        const found = filtered.find((a) => a.id === prev.id);
+        if (!found) return null;
+        return found;
+      });
       return filtered;
     } catch (err) {
       console.error(err);
@@ -451,6 +471,10 @@ const MyAgreements = () => {
     return undefined;
   }, [selected, scrollToAcordoFocus, pagamentoLoading, pagamento]);
 
+  useEffect(() => {
+    setRescisaoConfirmadaLocal(false);
+  }, [selected?.id]);
+
   const activos = acordos.filter((a) => isActivo(a.estado));
   const outros = acordos.filter((a) => !isActivo(a.estado));
 
@@ -523,12 +547,21 @@ const MyAgreements = () => {
   };
 
   const handleTerminate = async (modoOverride, justificativaOverride, vigenciaOverride) => {
-    if (!selected || terminateBusy) return;
+    if (!selected || terminateBusy || terminateInFlightRef.current || rescisaoConfirmadaLocal) {
+      return;
+    }
     const modo = modoOverride || terminateModo;
     if (!modo) return;
 
     const acordoId = selected.id;
     const idempotencyKey = resolveIdempotencyKey();
+    const confirmandoConsensualPendente =
+      modo === 'consensual'
+      && String(selected.rescisao_modo || '').toLowerCase() === 'consensual'
+      && selected.rescisao_solicitada_por
+      && selected.rescisao_solicitada_por !== user?.id;
+
+    terminateInFlightRef.current = true;
     setTerminateBusy(true);
     try {
       const input = { modo };
@@ -582,17 +615,43 @@ const MyAgreements = () => {
       }
 
       setMessage({ type: 'success', text });
-      if (!pedidoConsensualPendente) {
-        setSelected(null);
+      if (confirmandoConsensualPendente) {
+        setRescisaoConfirmadaLocal(true);
       }
-      const refreshed = await carregar();
-      if (pedidoConsensualPendente) {
-        const found = refreshed.find((a) => a.id === acordoId);
-        if (found) setSelected(found);
+      if (result && typeof result === 'object') {
+        setSelected((prev) => {
+          if (prev?.id !== acordoId) return prev;
+          const merged = { ...prev, ...result };
+          const e = String(merged.estado || '').toLowerCase();
+          if (e === 'cancelado' || e === 'cancelado_justificado') {
+            merged.rescisao_modo = result.rescisao_modo ?? null;
+            merged.rescisao_solicitada_por = result.rescisao_solicitada_por ?? null;
+            merged.rescisao_vigencia = result.rescisao_vigencia ?? null;
+          }
+          return merged;
+        });
       }
+      await carregar({ silent: true });
     } catch (err) {
+      if (
+        isRescisaoSemPermissaoError(err)
+        && (rescisaoConfirmadaLocal || confirmandoConsensualPendente)
+      ) {
+        const refreshed = await carregar({ silent: true });
+        const found = refreshed.find((a) => a.id === acordoId);
+        const terminalForaLista = !found;
+        const terminalEstado =
+          found
+          && ['cancelado', 'cancelado_justificado'].includes(
+            String(found.estado || '').toLowerCase(),
+          );
+        if (terminalForaLista || terminalEstado) {
+          return;
+        }
+      }
       setMessage({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
     } finally {
+      terminateInFlightRef.current = false;
       setTerminateBusy(false);
     }
   };
@@ -1043,7 +1102,7 @@ const MyAgreements = () => {
                       <Button
                         type="button"
                         className="w-full min-h-12"
-                        disabled={terminateBusy}
+                        disabled={terminateBusy || rescisaoConfirmadaLocal}
                         data-testid="rescisao-confirmar-cta"
                         onClick={() =>
                           handleTerminate('consensual', undefined, vigenciaConsensualPendente)
