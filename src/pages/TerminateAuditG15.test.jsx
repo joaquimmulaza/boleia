@@ -288,12 +288,17 @@ describe('Marketplace Termination Audit — G15', () => {
     expect(sql).toContain("estado = 'cancelada_iniciador'");
   });
 
-  it('reject_agreement_termination — RPC limpa colunas e notifica requerente', () => {
+  it('reject_agreement_termination — contraparte alinhada a terminate_agreement', () => {
     const sql = readMigration('20261008140000_reject_agreement_termination.sql');
     expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\.reject_agreement_termination/);
     expect(sql).toContain('rescisao_modo = NULL');
     expect(sql).toContain('Só a contraparte pode recusar este pedido.');
+    expect(sql).toContain('v_solicitante_is_driver');
+    expect(sql).toContain("lower(ap.estado) IN ('activo', 'reservado')");
+    expect(sql).toContain('(v_solicitante_is_driver AND v_is_pax)');
+    expect(sql).toContain('(NOT v_solicitante_is_driver AND v_is_driver)');
     expect(sql).toContain('recusou o pedido de encerramento amigável');
+    expect(sql).toContain('foi recusado.');
     expect(sql).toContain("GRANT EXECUTE ON FUNCTION public.reject_agreement_termination");
   });
 
@@ -314,7 +319,7 @@ describe('Marketplace Termination Audit — G15', () => {
     const canceladoIdx = sql.indexOf("estado = 'cancelado',\n        rescisao_modo = 'consensual'");
     expect(setConfigIdx).toBeGreaterThan(-1);
     expect(canceladoIdx).toBeGreaterThan(setConfigIdx);
-    expect(sql.split("set_config('boleia.skip_acordo_cancel_notif'").length).toBe(2);
+    expect(sql).toContain("set_config('boleia.skip_acordo_cancel_notif', 'off', true)");
   });
 
   it('apply_due_agreement_terminations — sem flag; trigger genérico continua', () => {

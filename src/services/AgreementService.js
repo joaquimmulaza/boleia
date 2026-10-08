@@ -71,10 +71,6 @@ async function applyDueTerminationsBestEffort(acordoId = null) {
 }
 
 /**
- * Encerra acordos sem renovação explícita quando o ciclo expira (lazy). Best-effort.
- * @param {string | null} [acordoId]
- */
-/**
  * Expira reservas soft-hold vencidas (lazy TTL B1). Best-effort.
  * @param {string | null} [acordoId]
  * @returns {Promise<number>} linhas expiradas
@@ -95,6 +91,10 @@ export async function applyDueReservaExpiry(acordoId = null) {
   }
 }
 
+/**
+ * Encerra acordos sem renovação explícita quando o ciclo expira (lazy). Best-effort.
+ * @param {string | null} [acordoId]
+ */
 async function applyDueNonRenewalsBestEffort(acordoId = null) {
   try {
     const res = await supabase.rpc('apply_due_agreement_non_renewals', {

@@ -294,6 +294,8 @@ BEGIN
         cancelado_em = now()
       WHERE id = p_acordo_id;
 
+      PERFORM set_config('boleia.skip_acordo_cancel_notif', 'off', true);
+
       PERFORM public.recount_oferta_vagas(v_acordo.oferta_id);
 
       BEGIN

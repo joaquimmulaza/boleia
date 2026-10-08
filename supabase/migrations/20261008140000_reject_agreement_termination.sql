@@ -15,6 +15,7 @@ DECLARE
   v_is_driver boolean;
   v_is_pax boolean;
   v_solicitante uuid;
+  v_solicitante_is_driver boolean;
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'Não autenticado.';
@@ -66,10 +67,15 @@ BEGIN
     FROM public.acordos_passageiros ap
     WHERE ap.acordo_id = p_acordo_id
       AND ap.passenger_id = v_uid
-      AND lower(ap.estado) = 'activo'
+      AND lower(ap.estado) IN ('activo', 'reservado')
   ) INTO v_is_pax;
 
-  IF NOT v_is_driver AND NOT v_is_pax THEN
+  v_solicitante_is_driver := (v_solicitante = v_acordo.driver_id);
+
+  IF NOT (
+    (v_solicitante_is_driver AND v_is_pax)
+    OR (NOT v_solicitante_is_driver AND v_is_driver)
+  ) THEN
     RAISE EXCEPTION 'Sem permissão para recusar este pedido.';
   END IF;
 
@@ -84,15 +90,28 @@ BEGIN
 
   BEGIN
     INSERT INTO public.notificacoes (user_id, mensagem, tipo, metadata)
-    VALUES (
-      v_solicitante,
-      'A contraparte recusou o pedido de encerramento amigável.',
+    SELECT
+      t.user_id,
+      CASE
+        WHEN t.user_id = v_solicitante THEN
+          'A contraparte recusou o pedido de encerramento amigável.'
+        ELSE
+          'O pedido de encerramento amigável deste acordo foi recusado.'
+      END,
       'warning',
       jsonb_build_object(
         'type', 'agreement_update',
         'acordo_id', p_acordo_id
       )
-    );
+    FROM (
+      SELECT v_acordo.driver_id AS user_id
+      UNION
+      SELECT ap.passenger_id
+      FROM public.acordos_passageiros ap
+      WHERE ap.acordo_id = p_acordo_id
+        AND lower(ap.estado) IN ('activo', 'reservado')
+    ) t
+    WHERE t.user_id IS DISTINCT FROM v_uid;
   EXCEPTION
     WHEN OTHERS THEN
       RAISE WARNING 'Falha ao notificar recusa consensual do acordo %: %',

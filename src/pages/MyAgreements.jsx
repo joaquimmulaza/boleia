@@ -83,11 +83,11 @@ function isActivo(estado) {
 }
 
 /**
- * Pagamento/contactos RPC só para acordos ainda vigentes ou com rescisão pendente.
+ * RPC get_acordo_contactos só para acordos vigentes ou com rescisão pendente.
  * @param {string | null | undefined} estado
  * @returns {boolean}
  */
-function podeCarregarPagamentoContactos(estado) {
+function podeCarregarContactos(estado) {
   const e = String(estado || '').toLowerCase();
   return e === 'activo' || e === 'cancelamento_pendente';
 }
@@ -250,19 +250,9 @@ const MyAgreements = () => {
   const carregarPagamentoContactos = useCallback(async (acordo) => {
     if (!acordo?.id || !user?.id) return;
 
-    if (!podeCarregarPagamentoContactos(acordo.estado)) {
-      setPagamento(null);
-      setPagamentosAcordo([]);
-      setContactos(null);
-      setAvaliacoesAcordo([]);
-      setHistoricoPreco([]);
-      setPagamentoLoading(false);
-      setContactosLoading(false);
-      return;
-    }
-
+    const podeContactos = podeCarregarContactos(acordo.estado);
     setPagamentoLoading(true);
-    setContactosLoading(true);
+    setContactosLoading(podeContactos);
     try {
       const pagamentos = await listPagamentosByAcordo(acordo.id);
       setPagamentosAcordo(pagamentos);
@@ -276,8 +266,21 @@ const MyAgreements = () => {
       } else {
         setPagamento(null);
       }
-      const payload = await getAcordoContactos(acordo.id);
-      setContactos(payload);
+
+      if (podeContactos) {
+        try {
+          const payload = await getAcordoContactos(acordo.id);
+          setContactos(payload);
+        } catch (err) {
+          setContactos(null);
+          if (err?.code !== 'P0001') {
+            console.error('Erro ao carregar contactos:', err);
+          }
+        }
+      } else {
+        setContactos(null);
+      }
+
       const avs = await listMinhasAvaliacoesAcordo(acordo.id);
       setAvaliacoesAcordo(avs || []);
       const historico = await listAdendaHistorico(acordo.id);
@@ -544,9 +547,7 @@ const MyAgreements = () => {
       }
 
       setMessage({ type: 'success', text });
-      if (pedidoConsensualPendente && result) {
-        setSelected(result);
-      } else {
+      if (!pedidoConsensualPendente) {
         setSelected(null);
       }
       const refreshed = await carregar();
@@ -1089,7 +1090,7 @@ const MyAgreements = () => {
             </div>
           ) : null}
 
-          {podeCarregarPagamentoContactos(selected.estado) ? (
+          {podeCarregarContactos(selected.estado) ? (
             <AcordoContactosPanel contactos={contactos} loading={contactosLoading} />
           ) : null}
 

@@ -391,7 +391,7 @@ describe('MyAgreements — marketplace 1:N', () => {
     expect(within(dialog).queryByRole('button', { name: /Mais acções do acordo/i })).not.toBeInTheDocument();
   });
 
-  it('acordo cancelado: não chama getAcordoContactos ao abrir detalhe', async () => {
+  it('acordo cancelado: não chama getAcordoContactos mas carrega pagamentos', async () => {
     getAgreementsForDriver.mockResolvedValue([
       { ...acordoMotorista, id: 'acordo-cancelado', estado: 'cancelado' },
     ]);
@@ -405,12 +405,56 @@ describe('MyAgreements — marketplace 1:N', () => {
     await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
 
     await waitFor(() => {
+      expect(listPagamentosByAcordo).toHaveBeenCalledWith('acordo-cancelado');
       expect(getAcordoContactos).not.toHaveBeenCalled();
-      expect(listPagamentosByAcordo).not.toHaveBeenCalled();
     });
     expect(screen.queryByTestId('contactos-loading')).not.toBeInTheDocument();
     expect(screen.queryByTestId('contactos-bloqueados')).not.toBeInTheDocument();
     expect(screen.queryByTestId('contactos-desbloqueados')).not.toBeInTheDocument();
+  });
+
+  it('acordo cancelado com passageiro saiu liquidado: motorista vê banner de avaliação', async () => {
+    const settledAt = new Date(Date.now() - 2 * 86400000).toISOString();
+
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        id: 'acordo-cancelado',
+        estado: 'cancelado',
+        acordos_passageiros: [
+          {
+            id: 'ap-1',
+            passenger_id: 'pax-1',
+            estado: 'saiu',
+            quota_mensal_kz: 40000,
+            perfis: { nome_completo: 'Ana Costa' },
+          },
+        ],
+      },
+    ]);
+    listPagamentosByAcordo.mockResolvedValue([
+      {
+        id: 'pag-1',
+        acordo_passageiro_id: 'ap-1',
+        passenger_id: 'pax-1',
+        estado: 'liquidado',
+        validado_em: settledAt,
+        liquidado_em: settledAt,
+        mes_referencia: '2026-09-01',
+      },
+    ]);
+
+    renderPage();
+    getAcordoContactos.mockClear();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+    await waitFor(() => {
+      expect(listPagamentosByAcordo).toHaveBeenCalled();
+      expect(getAcordoContactos).not.toHaveBeenCalled();
+    });
+    expect(await within(dialog).findByTestId('acordo-rating-mot-banner')).toBeInTheDocument();
   });
 
   it('passageiro que saiu: não mostra CTA Registar falta no detalhe do acordo inactivo', async () => {
