@@ -23,6 +23,12 @@ vi.mock('../lib/supabase', () => ({
   }
 }));
 
+const mockClearSwRuntimeCache = vi.fn(() => Promise.resolve());
+
+vi.mock('../utils/swRuntimeCache', () => ({
+  clearSwRuntimeCache: (...args) => mockClearSwRuntimeCache(...args),
+}));
+
 const TestComponent = () => {
   const { user, loading, tipoPerfil, profile, passwordRecoveryPending, clearPasswordRecovery } = useAuth();
   
@@ -46,6 +52,7 @@ const TestComponent = () => {
 describe('AuthContext', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockClearSwRuntimeCache.mockClear();
     sessionStorage.clear();
     mockSingle.mockImplementation(() => Promise.resolve({
       data: { id: 'user-123', tipo_perfil: 'Motorista', onboarding_completed: false },
@@ -269,6 +276,80 @@ describe('AuthContext', () => {
       expect(screen.getByTestId('recovery')).toHaveTextContent('pending');
     });
     expect(sessionStorage.getItem('bc_password_recovery')).toBe('1');
+  });
+
+  it('SIGNED_OUT limpa cache runtime do service worker', async () => {
+    const mockSession = {
+      user: { id: 'user-123', user_metadata: { tipo_perfil: 'Passageiro' } },
+    };
+    supabase.auth.getSession.mockResolvedValue({ data: { session: mockSession }, error: null });
+
+    let authChangeListener;
+    supabase.auth.onAuthStateChange.mockImplementation((callback) => {
+      authChangeListener = callback;
+      return { data: { subscription: { unsubscribe: vi.fn() } } };
+    });
+
+    render(
+      <AuthProvider>
+        <TestComponent />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('user')).toHaveTextContent('user-123');
+    });
+
+    await act(async () => {
+      authChangeListener('SIGNED_OUT', null);
+    });
+
+    await waitFor(() => {
+      expect(mockClearSwRuntimeCache).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.getByTestId('user')).toHaveTextContent('no-user');
+  });
+
+  it('troca de user id limpa cache runtime do service worker', async () => {
+    const sessionA = {
+      user: { id: 'user-a', user_metadata: { tipo_perfil: 'Passageiro' } },
+    };
+    supabase.auth.getSession.mockResolvedValue({ data: { session: sessionA }, error: null });
+
+    let authChangeListener;
+    supabase.auth.onAuthStateChange.mockImplementation((callback) => {
+      authChangeListener = callback;
+      return { data: { subscription: { unsubscribe: vi.fn() } } };
+    });
+
+    render(
+      <AuthProvider>
+        <TestComponent />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('user')).toHaveTextContent('user-a');
+    });
+
+    mockClearSwRuntimeCache.mockClear();
+
+    const sessionB = {
+      user: { id: 'user-b', user_metadata: { tipo_perfil: 'Motorista' } },
+    };
+    mockSingle.mockResolvedValueOnce({
+      data: { id: 'user-b', tipo_perfil: 'Motorista', onboarding_completed: false },
+      error: null,
+    });
+
+    await act(async () => {
+      authChangeListener('SIGNED_IN', sessionB);
+    });
+
+    await waitFor(() => {
+      expect(mockClearSwRuntimeCache).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.getByTestId('user')).toHaveTextContent('user-b');
   });
 
   it('clearPasswordRecovery limpa estado e sessionStorage', async () => {

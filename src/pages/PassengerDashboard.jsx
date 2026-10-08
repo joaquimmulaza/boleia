@@ -39,7 +39,14 @@ import {
   cancelProposta,
 } from '../services/PropostaService';
 import { createAgreementFromProposal, getAgreementsForPassenger } from '../services/AgreementService';
-import { buildAcordoIdPorOfertaMap, CTA_VER_ACORDO } from '../utils/acordoPorOferta';
+import {
+  buildAcordoIdPorOfertaMap,
+  buildAcordoOptimistaPosAceite,
+  mergeAcordosPassageiro,
+  isOptimistaExpirada,
+  ACORDO_OPTIMISTA_TTL_MS,
+  CTA_VER_ACORDO,
+} from '../utils/acordoPorOferta';
 import { notifyMarketplaceHubRefresh } from '../utils/marketplaceHubRefresh';
 import { shouldAvisarProcuraFecha } from '../utils/propostaReview';
 import { CTA_LABEL } from '../utils/opportunityCard';
@@ -188,6 +195,32 @@ const PassengerDashboard = () => {
     [acordosPassageiro, user?.id],
   );
 
+  useEffect(() => {
+    let timeoutId = null;
+    const now = Date.now();
+    let nextExpiry = null;
+
+    for (const acordo of acordosPassageiro) {
+      if (!acordo?._optimista) continue;
+      const expiresAt = (acordo._optimistaDesde ?? 0) + ACORDO_OPTIMISTA_TTL_MS;
+      if (expiresAt > now && (nextExpiry === null || expiresAt < nextExpiry)) {
+        nextExpiry = expiresAt;
+      }
+    }
+
+    if (nextExpiry !== null) {
+      timeoutId = setTimeout(() => {
+        setAcordosPassageiro((prev) =>
+          prev.filter((acordo) => !(acordo?._optimista && isOptimistaExpirada(acordo))),
+        );
+      }, nextExpiry - now);
+    }
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [acordosPassageiro]);
+
 
   const ofertasComPropostaAberta = useMemo(() => {
     const ids = new Set(browseOfertasComProposta);
@@ -228,7 +261,7 @@ const PassengerDashboard = () => {
           if (isStale()) return;
 
           setBrowseOfertas(ofertas);
-          setAcordosPassageiro(acordos || []);
+          setAcordosPassageiro((prev) => mergeAcordosPassageiro(prev, acordos || [], user.id));
           setBrowseOfertasComProposta(
             new Set(abertas.map((p) => p.oferta_id).filter(Boolean)),
           );
@@ -236,8 +269,6 @@ const PassengerDashboard = () => {
           if (isStale()) return;
 
           console.error(err);
-          setBrowseOfertas([]);
-          setAcordosPassageiro([]);
           setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
         } finally {
           if (!isStale()) setLoadingBrowse(false);
@@ -865,6 +896,8 @@ const PassengerDashboard = () => {
   const handleAceitarInbox = async (propostaId, memberIds) => {
     setBusyId(propostaId);
     setFeedback({ type: '', text: '' });
+    const reviewAceite = inboxReviews.find((r) => r.proposta.id === propostaId);
+    const ofertaIdAceite = reviewAceite?.proposta?.oferta_id ?? null;
     try {
       let result;
       if (Array.isArray(memberIds) && memberIds.length > 0) {
@@ -874,6 +907,25 @@ const PassengerDashboard = () => {
       }
       const offlineQueued = Boolean(result?.offlineQueued);
       const fechaProcura = !offlineQueued && shouldAvisarProcuraFecha(procura?.estado);
+      if (!offlineQueued && result?.id) {
+        const optimista = buildAcordoOptimistaPosAceite(
+          { ...result, oferta_id: result.oferta_id ?? ofertaIdAceite },
+          user.id,
+          Date.now(),
+          memberIds,
+        );
+        if (optimista) {
+          setAcordosPassageiro((prev) => mergeAcordosPassageiro([optimista], prev || [], user.id));
+        }
+        const ofertaId = result.oferta_id ?? ofertaIdAceite;
+        if (ofertaId) {
+          setBrowseOfertasComProposta((prev) => {
+            const next = new Set(prev);
+            next.delete(ofertaId);
+            return next;
+          });
+        }
+      }
       setFeedback({
         type: 'success',
         text: fechaProcura
