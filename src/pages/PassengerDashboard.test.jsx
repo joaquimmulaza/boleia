@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { StrictMode } from 'react';
 import { render, screen, waitFor, fireEvent, within, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -1883,6 +1883,39 @@ describe('PassengerDashboard — marketplace', () => {
     expect(screen.getByTestId('location-probe')).toHaveTextContent(
       '/acordos?openAcordoId=acordo-pos-contra',
     );
+  });
+
+  it('mount não-silent pendente: refresh subsequente liberta loading sem spinner preso', async () => {
+    /** @type {((value: unknown[]) => void) | null} */
+    let resolveMountPending = null;
+    const mountPendingGate = new Promise((resolve) => {
+      resolveMountPending = resolve;
+    });
+
+    listProcurasByOwner.mockImplementation(async () => {
+      if (listProcurasByOwner.mock.calls.length === 1) return mountPendingGate;
+      return [];
+    });
+    listOfertasDisponiveis.mockResolvedValue([]);
+
+    render(
+      <StrictMode>
+        <MemoryRouter initialEntries={['/passageiro']}>
+          <PassengerDashboard />
+        </MemoryRouter>
+      </StrictMode>,
+    );
+
+    expect(document.querySelector('.animate-pulse')).toBeInTheDocument();
+
+    await screen.findByText('Ofertas disponíveis');
+
+    await act(async () => {
+      resolveMountPending?.([]);
+    });
+
+    expect(screen.getByText('Ofertas disponíveis')).toBeInTheDocument();
+    expect(document.querySelector('.animate-pulse')).not.toBeInTheDocument();
   });
 
   it('mostra bucket lista de espera com empty state quando sem inscrições', async () => {

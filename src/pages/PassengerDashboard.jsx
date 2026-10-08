@@ -206,7 +206,7 @@ const PassengerDashboard = () => {
     const isStale = () => seq !== carregarSeqRef.current;
 
     if (!user?.id) {
-      if (!silent) setLoading(false);
+      if (!isStale()) setLoading(false);
       return;
     }
     if (!silent) setLoading(true);
@@ -319,7 +319,11 @@ const PassengerDashboard = () => {
       console.error(err);
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(err) });
     } finally {
-      if (!silent && !isStale()) setLoading(false);
+      if (!isStale()) {
+        setLoading(false);
+        setLoadingInbox(false);
+        setLoadingBrowse(false);
+      }
     }
   }, [user?.id]);
 
