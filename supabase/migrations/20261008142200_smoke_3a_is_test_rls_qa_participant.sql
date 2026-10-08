@@ -1,4 +1,4 @@
--- Smoke #3a — item 10 hotfix: QA vê marketplace teste; participantes mantêm acesso em joins.
+-- Smoke #3a — item 10 hotfix: QA vê marketplace teste; participantes sem recursão RLS (42P17).
 
 CREATE OR REPLACE FUNCTION public.viewer_is_qa()
 RETURNS boolean
@@ -7,14 +7,83 @@ STABLE
 SECURITY DEFINER
 SET search_path TO 'public'
 AS $$
-  SELECT public.is_qa_test_owner_email(
-    (SELECT u.email FROM auth.users u WHERE u.id = auth.uid())
+  SELECT EXISTS (
+    SELECT 1 FROM public.qa_accounts q
+    WHERE q.user_id = auth.uid()
   );
 $$;
 
 REVOKE ALL ON FUNCTION public.viewer_is_qa() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.viewer_is_qa() FROM anon;
 GRANT EXECUTE ON FUNCTION public.viewer_is_qa() TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.viewer_is_oferta_participant(p_oferta_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.acordos a
+    WHERE a.oferta_id = p_oferta_id
+      AND (
+        a.driver_id = auth.uid()
+        OR EXISTS (
+          SELECT 1
+          FROM public.acordos_passageiros ap
+          WHERE ap.acordo_id = a.id
+            AND ap.passenger_id = auth.uid()
+        )
+      )
+  )
+  OR EXISTS (
+    SELECT 1
+    FROM public.propostas pr
+    WHERE pr.oferta_id = p_oferta_id
+      AND (
+        pr.created_by = auth.uid()
+        OR EXISTS (
+          SELECT 1
+          FROM public.procuras pc
+          WHERE pc.id = pr.procura_id
+            AND pc.owner_id = auth.uid()
+        )
+      )
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.viewer_is_procura_participant(p_procura_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.propostas pr
+    INNER JOIN public.ofertas_capacidade o ON o.id = pr.oferta_id
+    WHERE pr.procura_id = p_procura_id
+      AND (pr.created_by = auth.uid() OR o.driver_id = auth.uid())
+  )
+  OR EXISTS (
+    SELECT 1
+    FROM public.grupos g
+    INNER JOIN public.membros_grupo mg ON mg.grupo_id = g.id
+    WHERE g.procura_id = p_procura_id
+      AND mg.passenger_id = auth.uid()
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.viewer_is_oferta_participant(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.viewer_is_oferta_participant(uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.viewer_is_oferta_participant(uuid) TO authenticated;
+
+REVOKE ALL ON FUNCTION public.viewer_is_procura_participant(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.viewer_is_procura_participant(uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.viewer_is_procura_participant(uuid) TO authenticated;
 
 DROP POLICY IF EXISTS ofertas_select_autenticados ON public.ofertas_capacidade;
 CREATE POLICY ofertas_select_autenticados ON public.ofertas_capacidade
@@ -23,20 +92,7 @@ CREATE POLICY ofertas_select_autenticados ON public.ofertas_capacidade
     NOT is_test
     OR driver_id = auth.uid()
     OR (SELECT public.viewer_is_qa())
-    OR EXISTS (
-      SELECT 1
-      FROM public.acordos a
-      LEFT JOIN public.acordos_passageiros ap ON ap.acordo_id = a.id
-      WHERE a.oferta_id = ofertas_capacidade.id
-        AND (a.driver_id = auth.uid() OR ap.passenger_id = auth.uid())
-    )
-    OR EXISTS (
-      SELECT 1
-      FROM public.propostas pr
-      LEFT JOIN public.procuras pc ON pc.id = pr.procura_id
-      WHERE pr.oferta_id = ofertas_capacidade.id
-        AND (pr.created_by = auth.uid() OR pc.owner_id = auth.uid())
-    )
+    OR (is_test AND public.viewer_is_oferta_participant(id))
   );
 
 DROP POLICY IF EXISTS procuras_select_autenticados ON public.procuras;
@@ -46,18 +102,5 @@ CREATE POLICY procuras_select_autenticados ON public.procuras
     NOT is_test
     OR owner_id = auth.uid()
     OR (SELECT public.viewer_is_qa())
-    OR EXISTS (
-      SELECT 1
-      FROM public.propostas pr
-      LEFT JOIN public.ofertas_capacidade o ON o.id = pr.oferta_id
-      WHERE pr.procura_id = procuras.id
-        AND (pr.created_by = auth.uid() OR o.driver_id = auth.uid())
-    )
-    OR EXISTS (
-      SELECT 1
-      FROM public.grupos g
-      JOIN public.membros_grupo mg ON mg.grupo_id = g.id
-      WHERE g.procura_id = procuras.id
-        AND mg.passenger_id = auth.uid()
-    )
+    OR (is_test AND public.viewer_is_procura_participant(id))
   );
