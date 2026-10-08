@@ -3,7 +3,7 @@ import { MapPin } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import PreferentialPointsMap from './PreferentialPointsMap';
 import { formatKwanza } from '../utils/formatKwanza';
-import { buildPreferentialMapPoints } from '../utils/propostaReview';
+import { buildPreferentialMapPoints, resolvePrecoPublicadoVsProposto } from '../utils/propostaReview';
 import { chipEstadoProposta } from '../utils/propostaEstado';
 import { buildContratoSnapshotFromProposta } from '../utils/buildAcordoContratoSnapshot';
 import AcordoContratoSnapshot from './AcordoContratoSnapshot';
@@ -105,7 +105,9 @@ function PropostaReviewCard({
   const isCriador = modo === 'criador';
   const isHistorico = modo === 'historico';
   const isContraparte = !isCriador && !isHistorico;
-  const valorPropostoKz = Number(review.proposta.valor_mensal_ask_kz);
+  const precoComparacao = isContraparte
+    ? resolvePrecoPublicadoVsProposto(review.proposta.valor_mensal_ask_kz, precoPublicadoKz)
+    : null;
   const estadoChip = chipEstadoProposta(review.proposta.estado, {
     secao: isCriador ? 'enviadas' : secao,
   });
@@ -302,15 +304,36 @@ function PropostaReviewCard({
             exacto.
           </p>
         ) : null}
-        {isContraparte && Number.isFinite(valorPropostoKz) ? (
-          <p className="text-xs text-slate-500 text-pretty pt-1" data-testid="valor-proposto-label">
-            Valor proposto: {formatKwanza(valorPropostoKz)} Kz
-          </p>
-        ) : null}
-        {isContraparte && precoPublicadoKz != null && Number.isFinite(Number(precoPublicadoKz)) ? (
-          <p className="text-xs text-slate-500 text-pretty" data-testid="preco-publicado-label">
-            Preço publicado: {formatKwanza(Number(precoPublicadoKz))} Kz
-          </p>
+        {precoComparacao ? (
+          <div
+            className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800/60"
+            data-testid="preco-publicado-vs-proposto"
+          >
+            <div className="grid grid-cols-2 gap-3">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                  Publicado
+                </p>
+                <p className="text-sm font-semibold tabular-nums text-slate-800 dark:text-slate-100">
+                  {precoComparacao.publicadoLabel}
+                </p>
+              </div>
+              <div className="min-w-0 text-right">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                  Proposto
+                </p>
+                <p className="text-sm font-semibold tabular-nums text-slate-800 dark:text-slate-100">
+                  {precoComparacao.propostoLabel}
+                </p>
+              </div>
+            </div>
+            <p
+              className="mt-2 text-xs font-medium text-slate-700 dark:text-slate-200 text-pretty"
+              data-testid="preco-diff-label"
+            >
+              {precoComparacao.diffLabel}
+            </p>
+          </div>
         ) : null}
       </div>
 

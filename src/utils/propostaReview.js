@@ -2,6 +2,7 @@ import { resolveAgreementPricing } from './resolveAgreementPricing.js';
 import { listMembrosGrupo } from '../services/GrupoService.js';
 import { getPrimeiroNomeProcuraOwner } from '../services/ProcuraService.js';
 import { formatPrimeiroNome } from './primeiroNome.js';
+import { formatKwanza } from './formatKwanza.js';
 
 /**
  * @typedef {{
@@ -105,6 +106,47 @@ function resolveOptionalName(value) {
   }
   const trimmed = value.trim();
   return trimmed || null;
+}
+
+/**
+ * Compara valor proposto com preço publicado (mesma unidade: ask mensal).
+ *
+ * @param {number | string | null | undefined} propostoKz
+ * @param {number | string | null | undefined} publicadoKz
+ * @returns {{ publicadoLabel: string, propostoLabel: string, diffLabel: string } | null}
+ */
+export function resolvePrecoPublicadoVsProposto(propostoKz, publicadoKz) {
+  if (
+    propostoKz == null
+    || propostoKz === ''
+    || publicadoKz == null
+    || publicadoKz === ''
+  ) {
+    return null;
+  }
+
+  const proposto = Number(propostoKz);
+  const publicado = Number(publicadoKz);
+  if (!Number.isFinite(proposto) || !Number.isFinite(publicado)) {
+    return null;
+  }
+
+  const diff = proposto - publicado;
+  /** @type {string} */
+  let diffLabel;
+  if (diff === 0) {
+    diffLabel = 'Igual ao publicado';
+  } else if (diff > 0) {
+    diffLabel = `+${formatKwanza(diff)} Kz vs publicado`;
+  } else {
+    diffLabel = `−${formatKwanza(Math.abs(diff))} Kz`;
+  }
+
+  return {
+    publicadoLabel: `${formatKwanza(publicado)} Kz`,
+    propostoLabel: `${formatKwanza(proposto)} Kz`,
+    diffLabel,
+  };
 }
 
 /**

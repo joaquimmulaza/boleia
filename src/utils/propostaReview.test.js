@@ -3,6 +3,7 @@ import {
   buildPropostaReview,
   buildPreferentialMapPoints,
   loadPropostaReview,
+  resolvePrecoPublicadoVsProposto,
 } from './propostaReview.js';
 import { listMembrosGrupo } from '../services/GrupoService.js';
 import { getPrimeiroNomeProcuraOwner } from '../services/ProcuraService.js';
@@ -353,6 +354,33 @@ describe('buildPreferentialMapPoints', () => {
         },
       ]),
     ).toEqual([]);
+  });
+});
+
+describe('resolvePrecoPublicadoVsProposto', () => {
+  it('devolve rótulos lado a lado e diferença positiva vs publicado', () => {
+    const cmp = resolvePrecoPublicadoVsProposto(125000, 120000);
+    expect(cmp?.publicadoLabel).toMatch(/120[\s.]?000 Kz/);
+    expect(cmp?.propostoLabel).toMatch(/125[\s.]?000 Kz/);
+    expect(cmp?.diffLabel).toMatch(/\+5[\s.]?000 Kz vs publicado/);
+  });
+
+  it('devolve diferença negativa sem «vs publicado»', () => {
+    const cmp = resolvePrecoPublicadoVsProposto(115000, 120000);
+    expect(cmp?.diffLabel).toMatch(/−5[\s.]?000 Kz/);
+    expect(cmp?.diffLabel).not.toMatch(/vs publicado/);
+    expect(cmp?.publicadoLabel).toMatch(/120[\s.]?000 Kz/);
+    expect(cmp?.propostoLabel).toMatch(/115[\s.]?000 Kz/);
+  });
+
+  it('valores iguais → «Igual ao publicado»', () => {
+    const cmp = resolvePrecoPublicadoVsProposto(40000, 40000);
+    expect(cmp?.diffLabel).toBe('Igual ao publicado');
+  });
+
+  it('retorna null quando falta preço publicado', () => {
+    expect(resolvePrecoPublicadoVsProposto(40000, null)).toBeNull();
+    expect(resolvePrecoPublicadoVsProposto(40000, Number.NaN)).toBeNull();
   });
 });
 

@@ -224,19 +224,43 @@ describe('PropostaReviewCard', () => {
     expect(screen.queryByText(/N_proposto|POR_PASSAGEIRO|N_actual/)).toBeNull();
   });
 
-  it('modo contraparte mostra valor proposto e preço publicado quando fornecidos', () => {
+  it('modo contraparte mostra publicado vs proposto lado a lado com diferença neutra', () => {
     render(
       <PropostaReviewCard
-        review={buildReview()}
+        review={buildReview({
+          proposta: {
+            ...buildReview().proposta,
+            valor_mensal_ask_kz: 122000,
+          },
+        })}
         busy={false}
-        precoPublicadoKz={45000}
+        precoPublicadoKz={120000}
         onAceitar={vi.fn()}
         onRecusar={vi.fn()}
       />,
     );
 
-    expect(screen.getByTestId('valor-proposto-label')).toHaveTextContent(/120[\s.]?000/);
-    expect(screen.getByTestId('preco-publicado-label')).toHaveTextContent(/45[\s.]?000/);
+    const bloco = screen.getByTestId('preco-publicado-vs-proposto');
+    expect(bloco).toHaveTextContent(/Publicado/i);
+    expect(bloco).toHaveTextContent(/Proposto/i);
+    expect(bloco).toHaveTextContent(/120[\s.]?000/);
+    expect(bloco).toHaveTextContent(/122[\s.]?000/);
+    expect(screen.getByTestId('preco-diff-label')).toHaveTextContent(/\+2[\s.]?000 Kz vs publicado/i);
+    expect(screen.getByTestId('preco-diff-label').className).not.toMatch(/text-green|text-red|text-emerald|text-rose/i);
+  });
+
+  it('mostra «Igual ao publicado» quando valores coincidem', () => {
+    render(
+      <PropostaReviewCard
+        review={buildReview()}
+        busy={false}
+        precoPublicadoKz={120000}
+        onAceitar={vi.fn()}
+        onRecusar={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('preco-diff-label')).toHaveTextContent('Igual ao publicado');
   });
 
   it('mostra CTA Fazer contra-proposta e chama onContraProposta', () => {
