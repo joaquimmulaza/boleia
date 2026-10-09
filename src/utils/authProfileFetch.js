@@ -20,3 +20,25 @@ export function isAnonOrAuthPrivilegeError(error) {
 export function isLiveAuthSession(session) {
   return Boolean(session?.access_token && session?.user?.id);
 }
+
+/**
+ * Chave estável para limitar refresh-retry (user + token actual).
+ * @param {import('@supabase/supabase-js').Session} session
+ * @returns {string}
+ */
+export function profileFetchSessionKey(session) {
+  return `${session.user.id}:${session.access_token}`;
+}
+
+/**
+ * @param {import('@supabase/supabase-js').Session | null | undefined} session
+ * @param {number} [skewSec] segundos antes de `expires_at` para considerar «perto de expirar»
+ * @returns {boolean}
+ */
+export function isAccessTokenExpiredOrNearExpiry(session, skewSec = 90) {
+  if (!session?.access_token) return false;
+  const exp = session.expires_at;
+  if (typeof exp !== 'number') return true;
+  const nowSec = Math.floor(Date.now() / 1000);
+  return exp <= nowSec + skewSec;
+}

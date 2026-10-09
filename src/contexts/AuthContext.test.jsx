@@ -3,16 +3,27 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import React from 'react';
 
 import { AuthProvider, useAuth } from './AuthContext';
-import { PERFIL_COLUNAS_SELECT } from '../utils/perfisGrants.js';
+import { PERFIL_COLUNAS_AUTH_CONTEXT_SELECT } from '../utils/perfisGrants.js';
 import { supabase } from '../lib/supabase';
 
-/** @param {string} userId @param {Record<string, unknown>} [userMetadata] */
-function liveSession(userId, userMetadata = {}) {
+/**
+ * @param {string} userId
+ * @param {Record<string, unknown>} [userMetadata]
+ * @param {{ expiresAtSec?: number, accessToken?: string }} [opts]
+ */
+function liveSession(userId, userMetadata = {}, opts = {}) {
+  const nowSec = Math.floor(Date.now() / 1000);
   return {
-    access_token: 'test-access-token',
+    access_token: opts.accessToken ?? 'test-access-token',
+    expires_at: opts.expiresAtSec ?? nowSec + 3600,
     user: { id: userId, user_metadata: userMetadata },
   };
 }
+
+const PRIVILEGE_PERFIS_ERROR = {
+  code: '42501',
+  message: 'permission denied for table perfis',
+};
 
 const mockSingle = vi.fn();
 const mockEq = vi.fn(() => ({ single: mockSingle }));
@@ -63,6 +74,11 @@ describe('AuthContext', () => {
     vi.clearAllMocks();
     mockClearSwRuntimeCache.mockClear();
     sessionStorage.clear();
+    supabase.auth.refreshSession.mockResolvedValue({ data: { session: null }, error: null });
+    supabase.auth.getSession.mockReset();
+    supabase.rpc.mockReset();
+    supabase.rpc.mockResolvedValue({ data: { telefone: null, iban: null }, error: null });
+    mockSingle.mockReset();
     mockSingle.mockImplementation(() => Promise.resolve({
       data: { id: 'user-123', tipo_perfil: 'Motorista', onboarding_completed: false },
       error: null,
@@ -122,8 +138,8 @@ describe('AuthContext', () => {
     expect(screen.getByTestId('user')).toHaveTextContent('user-123');
     expect(screen.getByTestId('tipoPerfil')).toHaveTextContent('Motorista');
     expect(supabase.from).toHaveBeenCalledWith('perfis');
-    expect(mockSelect).toHaveBeenCalledWith(PERFIL_COLUNAS_SELECT);
-    expect(PERFIL_COLUNAS_SELECT).toMatch(/\biban_titular\b/);
+    expect(mockSelect).toHaveBeenCalledWith(PERFIL_COLUNAS_AUTH_CONTEXT_SELECT);
+    expect(PERFIL_COLUNAS_AUTH_CONTEXT_SELECT).toMatch(/\biban_titular\b/);
     expect(screen.getByTestId('admin')).toHaveTextContent('nao-admin');
   });
 
@@ -250,26 +266,131 @@ describe('AuthContext', () => {
       expect(screen.getByTestId('recovery')).toHaveTextContent('idle');
     });
 
-    const mockSession = {
-      user: {
-        id: 'user-recovery',
-        user_metadata: { tipo_perfil: 'Passageiro' },
-      },
-    };
+    const mockSession = liveSession('user-recovery', { tipo_perfil: 'Passageiro' });
 
-    mockSingle.mockResolvedValueOnce({
-      data: { id: 'user-recovery', tipo_perfil: 'Passageiro', onboarding_completed: true },
-      error: null,
-    });
+    mockSingle.mockImplementation(() =>
+      Promise.resolve({
+        data: { id: 'user-recovery', tipo_perfil: 'Passageiro', onboarding_completed: true },
+        error: null,
+      }),
+    );
+    supabase.auth.getSession.mockResolvedValue({ data: { session: mockSession }, error: null });
 
     await act(async () => {
-      await authChangeListener('PASSWORD_RECOVERY', mockSession);
+      authChangeListener('PASSWORD_RECOVERY', mockSession);
+      await new Promise((r) => setTimeout(r, 0));
     });
 
     await waitFor(() => {
       expect(screen.getByTestId('recovery')).toHaveTextContent('pending');
     });
     expect(sessionStorage.getItem('bc_password_recovery')).toBe('1');
+  });
+
+  it('42501 com token válido não chama refreshSession mas avisa com sessão viva', async () => {
+    mockSingle.mockImplementation(() =>
+      Promise.resolve({ data: null, error: PRIVILEGE_PERFIS_ERROR }),
+    );
+    supabase.rpc.mockResolvedValue({ data: { telefone: null, iban: null }, error: null });
+    const mockSession = liveSession('user-123', { tipo_perfil: 'motorista' });
+    supabase.auth.getSession.mockResolvedValue({ data: { session: mockSession }, error: null });
+    supabase.auth.onAuthStateChange.mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    });
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    render(
+      <AuthProvider>
+        <TestComponent />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('onboarding')).toHaveTextContent('pending');
+      expect(warnSpy).toHaveBeenCalledWith(
+        '[AuthContext] Erro ao carregar perfil:',
+        PRIVILEGE_PERFIS_ERROR,
+      );
+    });
+
+    expect(supabase.auth.refreshSession).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it('42501 persistente com token expirado chama refreshSession no máximo uma vez', async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const expiredSession = liveSession('user-loop', {}, { expiresAtSec: nowSec - 60 });
+    mockSingle.mockImplementation(() =>
+      Promise.resolve({ data: null, error: PRIVILEGE_PERFIS_ERROR }),
+    );
+    supabase.auth.getSession.mockImplementation(() =>
+      Promise.resolve({ data: { session: expiredSession }, error: null }),
+    );
+
+    let authChangeListener;
+    supabase.auth.onAuthStateChange.mockImplementation((callback) => {
+      authChangeListener = callback;
+      return { data: { subscription: { unsubscribe: vi.fn() } } };
+    });
+
+    const refreshedSession = liveSession(
+      'user-loop',
+      {},
+      { expiresAtSec: nowSec + 3600, accessToken: 'refreshed-access-token' },
+    );
+
+    supabase.auth.refreshSession.mockImplementation(async () => {
+      authChangeListener('TOKEN_REFRESHED', refreshedSession);
+      return { data: { session: refreshedSession }, error: null };
+    });
+
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    render(
+      <AuthProvider>
+        <TestComponent />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(supabase.auth.refreshSession).toHaveBeenCalledTimes(1);
+    });
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 25));
+    });
+
+    expect(supabase.auth.refreshSession).toHaveBeenCalledTimes(1);
+    const perfisFromCalls = supabase.from.mock.calls.filter((call) => call[0] === 'perfis').length;
+    expect(perfisFromCalls).toBeLessThanOrEqual(2);
+  });
+
+  it('não repete load após refreshSession com user.id diferente', async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const expiredSession = liveSession('user-a', {}, { expiresAtSec: nowSec - 1 });
+    mockSingle.mockResolvedValue({ data: null, error: PRIVILEGE_PERFIS_ERROR });
+    supabase.auth.getSession.mockResolvedValue({ data: { session: expiredSession }, error: null });
+    supabase.auth.refreshSession.mockResolvedValue({
+      data: { session: liveSession('user-b', {}, { expiresAtSec: nowSec + 3600 }) },
+      error: null,
+    });
+    supabase.auth.onAuthStateChange.mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    });
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    render(
+      <AuthProvider>
+        <TestComponent />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(supabase.auth.refreshSession).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mockSingle).toHaveBeenCalledTimes(1);
   });
 
   it('não consulta perfis sem sessão viva (user id sem access_token)', async () => {

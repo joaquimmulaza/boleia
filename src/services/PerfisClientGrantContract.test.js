@@ -5,36 +5,71 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PERFIL_COLUNAS_GRANT_SELECT, PERFIL_COLUNAS_SELECT } from '../utils/perfisGrants.js';
+import {
+  PERFIL_COLUNAS_AUTH_CONTEXT,
+  PERFIL_COLUNAS_GRANT_SELECT,
+  PERFIL_COLUNAS_SELECT,
+} from '../utils/perfisGrants.js';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const SRC = join(ROOT, '..');
-const MIGRATION = join(
-  SRC,
-  '../supabase/migrations/20261004073111_perfis_colunas_sensiveis_select.sql',
-);
+const MIGRATIONS_DIR = join(SRC, '../supabase/migrations');
 
-function readMigrationGrantColumns() {
-  const sql = readFileSync(MIGRATION, 'utf8');
-  const block = sql.match(/GRANT SELECT \([\s\S]*?\) ON TABLE public\.perfis/)?.[0] ?? '';
-  const cols = [...block.matchAll(/\b([a-z_]+)\b/g)]
-    .map((m) => m[1])
-    .filter((c) => !['GRANT', 'SELECT', 'ON', 'TABLE', 'public', 'perfis', 'TO', 'authenticated'].includes(c));
-  return cols.sort();
+const GRANT_KEYWORDS = new Set([
+  'GRANT',
+  'SELECT',
+  'ON',
+  'TABLE',
+  'public',
+  'perfis',
+  'TO',
+  'authenticated',
+  'anon',
+  'service_role',
+]);
+
+/**
+ * Colunas do último GRANT SELECT (…) ON TABLE public.perfis nas migrações (ordem lexicográfica).
+ * @returns {string[]}
+ */
+function readLatestPerfisSelectGrantColumns() {
+  const files = readdirSync(MIGRATIONS_DIR)
+    .filter((f) => f.endsWith('.sql'))
+    .sort();
+  /** @type {string[]} */
+  let latest = [];
+  for (const file of files) {
+    const sql = readFileSync(join(MIGRATIONS_DIR, file), 'utf8');
+    const matches = [
+      ...sql.matchAll(/GRANT SELECT\s*\(\s*([\s\S]*?)\s*\)\s*ON TABLE public\.perfis/gi),
+    ];
+    for (const match of matches) {
+      const cols = [...match[1].matchAll(/\b([a-z_]+)\b/g)]
+        .map((m) => m[1])
+        .filter((c) => !GRANT_KEYWORDS.has(c));
+      if (cols.length > 0) {
+        latest = cols;
+      }
+    }
+  }
+  return [...latest].sort();
 }
 
 describe('perfis — contrato grants vs cliente', () => {
-  it('PERFIL_COLUNAS_SELECT alinha com migração 20261004073111', () => {
-    const fromMigration = readMigrationGrantColumns();
+  it('PERFIL_COLUNAS_SELECT alinha com o último GRANT SELECT em migrações perfis', () => {
+    const fromMigration = readLatestPerfisSelectGrantColumns();
+    expect(fromMigration.length).toBeGreaterThan(0);
     const fromClient = [...PERFIL_COLUNAS_GRANT_SELECT].sort();
     expect(fromClient).toEqual(fromMigration);
     expect(PERFIL_COLUNAS_SELECT.split(',').map((s) => s.trim()).sort()).toEqual(fromMigration);
   });
 
-  it('AuthContext importa PERFIL_COLUNAS_SELECT (select grantado completo)', () => {
+  it('AuthContext usa PERFIL_COLUNAS_AUTH_CONTEXT ⊆ grants', () => {
     const authCtx = readFileSync(join(SRC, 'contexts/AuthContext.jsx'), 'utf8');
-    expect(authCtx).toMatch(/PERFIL_COLUNAS_SELECT/);
-    expect(authCtx).not.toMatch(/PERFIL_COLUNAS_SELECT_SESSAO/);
+    expect(authCtx).toMatch(/PERFIL_COLUNAS_AUTH_CONTEXT_SELECT/);
+    for (const col of PERFIL_COLUNAS_AUTH_CONTEXT) {
+      expect(PERFIL_COLUNAS_GRANT_SELECT).toContain(col);
+    }
   });
 
   it('src: .from(perfis).select só usa PERFIL_COLUNAS_SELECT ou constante derivada', () => {
