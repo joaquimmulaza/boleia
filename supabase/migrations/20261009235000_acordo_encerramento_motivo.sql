@@ -121,6 +121,9 @@ BEGIN
 
   v_ultimo_passageiro_saiu := (v_vivos_restantes = 0);
 
+  -- Último passageiro: supressão via tabela interna + txid (cliente não forja — ver cabeçalho).
+  -- Self-leave: motorista recebe só o card dedicado; passageiro a sair não recebe «O teu acordo…».
+  -- Motorista remove último: passageiro recebe cancelamento normal; motorista não recebe trigger genérico.
   IF v_ultimo_passageiro_saiu THEN
     IF v_uid IS DISTINCT FROM v_acordo.driver_id THEN
       INSERT INTO public._acordo_cancel_notif_suppress (
@@ -139,12 +142,14 @@ BEGIN
 
   PERFORM public._maybe_fechar_acordo_sem_lugares_vivos(p_acordo_id);
 
-  UPDATE public.acordos
-  SET encerramento_motivo = 'sem_lugares_vivos'
-  WHERE id = p_acordo_id
-    AND lower(estado) = 'cancelado'
-    AND rescisao_modo IS NULL
-    AND encerramento_motivo IS NULL;
+  IF v_ultimo_passageiro_saiu THEN
+    UPDATE public.acordos
+    SET encerramento_motivo = 'sem_lugares_vivos'
+    WHERE id = p_acordo_id
+      AND lower(estado) = 'cancelado'
+      AND rescisao_modo IS NULL
+      AND encerramento_motivo IS NULL;
+  END IF;
 
   PERFORM public.recount_oferta_vagas(v_acordo.oferta_id);
 
@@ -246,4 +251,10 @@ WHERE a.oferta_id = o.id
     FROM public.acordos_passageiros ap
     WHERE ap.acordo_id = a.id
       AND lower(ap.estado) NOT IN ('saiu', 'expirado')
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM public.acordos_passageiros ap_saiu
+    WHERE ap_saiu.acordo_id = a.id
+      AND lower(ap_saiu.estado) = 'saiu'
   );

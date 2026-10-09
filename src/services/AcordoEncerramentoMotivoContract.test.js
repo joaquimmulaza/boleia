@@ -43,9 +43,8 @@ describe('Acordo encerramento_motivo — contrato', () => {
     expect(base).toContain('_acordo_cancel_notif_suppress');
     expect(next).toContain("encerramento_motivo = 'sem_lugares_vivos'");
     expect(next).toContain('AND rescisao_modo IS NULL');
-    expect(next).toMatch(
-      /PERFORM public\._maybe_fechar_acordo_sem_lugares_vivos[\s\S]*UPDATE public\.acordos[\s\S]*recount_oferta_vagas/,
-    );
+    expect(next).toMatch(/IF v_ultimo_passageiro_saiu THEN[\s\S]*encerramento_motivo = 'sem_lugares_vivos'/);
+    expect(next).toMatch(/Último passageiro: supressão via tabela interna \+ txid/);
   });
 
   it('GRANT/REVOKE leave_passenger alinhados (authenticated, sem anon)', () => {

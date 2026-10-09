@@ -34,12 +34,43 @@ export function labelEstadoAcordo(estado, encerramentoMotivo, rescisaoModo) {
 
 /**
  * Variante visual do chip de estado do acordo.
- * @param {string | null | undefined} estado
- * @returns {'activo' | 'pendente' | 'inactivo'}
+ * @param {string | { estado?: string | null, encerramento_motivo?: EncerramentoMotivoAcordo | null, rescisao_modo?: string | null } | null | undefined} estado
+ * @param {EncerramentoMotivoAcordo | null | undefined} [encerramentoMotivo]
+ * @param {string | null | undefined} [rescisaoModo]
+ * @returns {'activo' | 'pendente' | 'encerrado' | 'inactivo'}
  */
-export function variantChipEstadoAcordo(estado) {
-  const e = String(estado || '').toLowerCase();
+export function variantChipEstadoAcordo(estado, encerramentoMotivo, rescisaoModo) {
+  let e;
+  let motivo = encerramentoMotivo;
+  let rescisao = rescisaoModo;
+  if (estado && typeof estado === 'object') {
+    motivo = estado.encerramento_motivo ?? motivo;
+    rescisao = estado.rescisao_modo ?? rescisao;
+    e = String(estado.estado || '').toLowerCase();
+  } else {
+    e = String(estado || '').toLowerCase();
+  }
+  const temRescisao = Boolean(rescisao && String(rescisao).trim());
   if (e === 'activo') return 'activo';
   if (e === 'cancelamento_pendente') return 'pendente';
+  if (e === 'cancelado' && motivo === 'sem_lugares_vivos' && !temRescisao) return 'encerrado';
   return 'inactivo';
+}
+
+/**
+ * Classes Tailwind do chip de estado do acordo.
+ * @param {'activo' | 'pendente' | 'encerrado' | 'inactivo'} variant
+ * @returns {string}
+ */
+export function chipClassEstadoAcordoVariant(variant) {
+  if (variant === 'activo') {
+    return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200';
+  }
+  if (variant === 'pendente') {
+    return 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100';
+  }
+  if (variant === 'encerrado') {
+    return 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200';
+  }
+  return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
 }

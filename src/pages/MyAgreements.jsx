@@ -36,6 +36,7 @@ import {
 import {
   labelEstadoAcordo,
   variantChipEstadoAcordo,
+  chipClassEstadoAcordoVariant,
 } from '../utils/acordoEstadoDisplay';
 import {
   acordoPrecisaLiveRefresh,
@@ -143,20 +144,6 @@ function passageiroMostraPainelPagamento(minhaLinha, pagamento, obrigacao) {
   if (pgEst === 'pendente_pagamento' || pgEst === 'comprovativo_enviado') return true;
   const valor = Number(obrigacao?.valor_em_divida ?? obrigacao?.valor);
   return Number.isFinite(valor) && valor > 0;
-}
-
-/**
- * @param {'activo' | 'pendente' | 'inactivo'} variant
- * @returns {string}
- */
-function chipClassEstadoAcordo(variant) {
-  if (variant === 'activo') {
-    return 'bg-emerald-100 text-emerald-800';
-  }
-  if (variant === 'pendente') {
-    return 'bg-amber-100 text-amber-900';
-  }
-  return 'bg-slate-100 text-slate-600';
 }
 
 /**
@@ -1061,7 +1048,7 @@ const MyAgreements = () => {
     const oferta = acordo.ofertas_capacidade;
     const rota = labelRotaOferta(oferta || {});
     const activo = isActivo(acordo.estado);
-    const estadoVariant = variantChipEstadoAcordo(acordo.estado);
+    const estadoVariant = variantChipEstadoAcordo(acordo);
     const estadoLabel = labelEstadoAcordo(acordo);
     const leavePending = Boolean(pendingLeaveIds[acordo.id]);
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
@@ -1100,7 +1087,7 @@ const MyAgreements = () => {
         <div className="flex justify-between items-center gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoAcordo(estadoVariant)}`}
+              className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoAcordoVariant(estadoVariant)}`}
             >
               {estadoLabel}
             </span>

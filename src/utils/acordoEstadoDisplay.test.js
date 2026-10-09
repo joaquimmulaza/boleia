@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   labelEstadoAcordo,
   variantChipEstadoAcordo,
+  chipClassEstadoAcordoVariant,
 } from './acordoEstadoDisplay';
 
 describe('labelEstadoAcordo', () => {
@@ -42,5 +43,18 @@ describe('labelEstadoAcordo', () => {
 describe('variantChipEstadoAcordo', () => {
   it('cancelamento_pendente usa variante pendente', () => {
     expect(variantChipEstadoAcordo('cancelamento_pendente')).toBe('pendente');
+  });
+
+  it('encerrado distingue de cancelado inactivo', () => {
+    expect(
+      variantChipEstadoAcordo({
+        estado: 'cancelado',
+        encerramento_motivo: 'sem_lugares_vivos',
+      }),
+    ).toBe('encerrado');
+    expect(variantChipEstadoAcordo('cancelado')).toBe('inactivo');
+    expect(chipClassEstadoAcordoVariant('encerrado')).not.toBe(
+      chipClassEstadoAcordoVariant('inactivo'),
+    );
   });
 });
