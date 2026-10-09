@@ -20,8 +20,8 @@ import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 import ConfirmationModal from '../components/ConfirmationModal';
 import OverlayShell from '../components/OverlayShell';
+import AcordoDetalheSheetHeader from '../components/AcordoDetalheSheetHeader';
 import SheetDragHandle from '../components/SheetDragHandle';
-import AcordoDetalheKebabMenu from '../components/AcordoDetalheKebabMenu';
 import TerminateConfirmSheet from '../components/TerminateConfirmSheet';
 import { Button } from '../components/ui/button';
 import { formatKwanza } from '../utils/formatKwanza';
@@ -1047,62 +1047,29 @@ const MyAgreements = () => {
         panelTestId="acordo-detalhe-sheet"
         panelClassName="bg-white dark:bg-slate-900 shadow-2xl"
       >
-        <SheetDragHandle />
-
         <div
           role="dialog"
           aria-modal="true"
           aria-labelledby="acordo-detail-title"
-          className="px-5 pb-safe space-y-4"
+          className="min-h-0"
         >
-          <div className="flex items-center justify-between gap-3">
-            <Button
-              type="button"
-              variant="ghost"
-              className="h-10 px-0 font-bold text-slate-600 dark:text-slate-300"
-              data-testid="acordo-detalhe-fechar"
-              onClick={() => selectAcordo(null)}
-            >
-              Fechar
-            </Button>
-            <AcordoDetalheKebabMenu
-              podeRegistarFaltas={podeRegistarFaltas}
-              podeEncerrar={podeEncerrar}
-              onRegistarFalta={() => navigate(`/faltas/${selected.id}`)}
-              onEncerrar={() => setTerminatePickerOpen(true)}
-            />
-          </div>
+          <AcordoDetalheSheetHeader
+            acordoId={selected.id}
+            estadoAcordo={selected.estado}
+            minhaReservada={minhaReservada}
+            leavePending={leavePending}
+            onClose={() => selectAcordo(null)}
+            podeRegistarFaltas={podeRegistarFaltas}
+            podeEncerrar={podeEncerrar}
+            onRegistarFalta={() => navigate(`/faltas/${selected.id}`)}
+            onEncerrar={() => setTerminatePickerOpen(true)}
+          />
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoAcordo(
-                    variantChipEstadoAcordo(selected.estado),
-                  )}`}
-                >
-                  {labelEstadoAcordo(selected.estado)}
-                </span>
-                {minhaReservada ? (
-                  <span
-                    className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoPassageiro('reservado')}`}
-                    data-testid={`acordo-lugar-chip-${selected.id}`}
-                  >
-                    {labelChipEstadoPassageiro('reservado')}
-                  </span>
-                ) : null}
-                {leavePending && (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900">
-                    <Loader2 size={12} className="animate-spin shrink-0" aria-hidden="true" />
-                    Saída Pendente (A sincronizar...)
-                  </span>
-                )}
-              </div>
-            </div>
-            <h2 id="acordo-detail-title" className="text-lg font-bold text-balance">
-              Detalhe do acordo
-            </h2>
-            <p className="font-semibold text-slate-900 dark:text-white text-balance">
+          <div
+            data-testid="acordo-detalhe-sheet-body"
+            className="px-5 pb-safe space-y-4"
+          >
+            <p className="font-semibold text-slate-900 dark:text-white text-balance pt-2">
               {rota.origem} → {rota.destino}
             </p>
             {minhaExpirada ? (
@@ -1137,7 +1104,6 @@ const MyAgreements = () => {
                 </Button>
               </div>
             ) : null}
-          </div>
 
           {ratingPromptPax ? (
             <AcordoRatingBanner
@@ -1209,7 +1175,10 @@ const MyAgreements = () => {
             ) : null}
 
             {rescisaoConsensualEnviada || rescisaoConsensualPendente ? (
-              <div data-testid="rescisao-consensual-section" className="space-y-3">
+              <div
+                data-testid="rescisao-consensual-section"
+                className="space-y-3 scroll-mt-acordo-detalhe"
+              >
                 {rescisaoConsensualEnviada ? (
                   <div
                     data-testid="rescisao-consensual-enviada"
@@ -1289,7 +1258,7 @@ const MyAgreements = () => {
 
           {(podeRenovar || renovacaoRenovado || renovacaoRecusada) && (
             <section
-              className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 p-4 space-y-3"
+              className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 p-4 space-y-3 scroll-mt-acordo-detalhe"
               data-testid="renovacao-periodo-panel"
             >
               <div className="space-y-1">
@@ -1332,7 +1301,7 @@ const MyAgreements = () => {
           )}
 
           {isPassageiro && activo ? (
-            <div data-testid="acordo-pagamento-section">
+            <div data-testid="acordo-pagamento-section" className="scroll-mt-acordo-detalhe">
               <AcordoPagamentoPanel
                 pagamento={pagamentoLoading ? null : pagamento}
                 onUpdated={() => carregarPagamentoContactos(selected)}
@@ -1469,6 +1438,7 @@ const MyAgreements = () => {
               Sair só eu
             </Button>
           ) : null}
+          </div>
         </div>
       </OverlayShell>
     );

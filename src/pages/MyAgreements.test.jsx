@@ -2037,3 +2037,42 @@ describe('MyAgreements — PACOTE ENG #14 renovação período', () => {
     expect(within(dialog).getByText(/Período seguinte renovado/i)).toBeInTheDocument();
   });
 });
+
+describe('MyAgreements — cabeçalho fixo do sheet Detalhe do acordo', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    setupPagamentosDefault(true);
+    listAdendaHistorico.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    resetOverlayStackForTests();
+  });
+
+  it('cabeçalho sticky fora do corpo scrollável; Fechar e puxador permanecem no header', async () => {
+    renderPage(['/acordos?openAcordoId=acordo-pax&focus=rescisao']);
+
+    await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+    const header = screen.getByTestId('acordo-detalhe-sheet-header');
+    const body = screen.getByTestId('acordo-detalhe-sheet-body');
+
+    expect(header.className).toMatch(/\bsticky\b/);
+    expect(body).not.toContainElement(header);
+    expect(within(header).getByTestId('sheet-drag-handle')).toBeInTheDocument();
+    expect(within(header).getByTestId('acordo-detalhe-fechar')).toHaveAccessibleName(/Fechar/i);
+    expect(within(header).getByRole('heading', { name: /Detalhe do acordo/i })).toBeInTheDocument();
+    expect(within(header).getByText(/^activo$/i)).toBeInTheDocument();
+  });
+
+  it('secções de focus têm scroll-margin para não ficarem debaixo do cabeçalho', async () => {
+    renderPage(['/acordos?openAcordoId=acordo-pax&focus=pagamento']);
+
+    await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+    const pagamento = screen.getByTestId('acordo-pagamento-section');
+    expect(pagamento.className).toMatch(/\bscroll-mt-acordo-detalhe\b/);
+  });
+});
