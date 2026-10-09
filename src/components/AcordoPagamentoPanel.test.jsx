@@ -15,6 +15,29 @@ describe('AcordoPagamentoPanel', () => {
     vi.mocked(getPlatformIban).mockReturnValue('AO06004000000000000000000');
   });
 
+  it('mostra linha proporcional v1.4 quando obrigacao vem da RPC', () => {
+    render(
+      <AcordoPagamentoPanel
+        pagamento={{
+          id: 'pag-1',
+          valor_kz: 15636,
+          estado: 'pendente_pagamento',
+        }}
+        obrigacao={{
+          dias: 8,
+          dias_mes: 22,
+          mes: '2026-10-01',
+          proporcional: 15636,
+          pago: 0,
+          valor: 15636,
+          prazo: '2026-10-12T12:00:00.000Z',
+        }}
+      />,
+    );
+    expect(screen.getByTestId('linha-proporcional-pagamento')).toBeInTheDocument();
+    expect(screen.getByTestId('linha-prazo-pagamento')).toBeInTheDocument();
+  });
+
   it('mostra valor do acordo e IBAN da plataforma', () => {
     render(
       <AcordoPagamentoPanel
@@ -64,6 +87,20 @@ describe('AcordoPagamentoPanel', () => {
 
     expect(screen.getByTestId('comprovativo-preview')).toHaveTextContent('recibo-setembro.pdf');
     expect(screen.getByRole('button', { name: /Substituir comprovativo/i })).toBeInTheDocument();
+  });
+
+  it('estado anulado — chip Cancelado no painel', () => {
+    render(
+      <AcordoPagamentoPanel
+        pagamento={{
+          id: 'pag-3',
+          valor_kz: 0,
+          estado: 'anulado',
+        }}
+      />,
+    );
+    expect(screen.getByText('Cancelado')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Enviar comprovativo/i })).not.toBeInTheDocument();
   });
 
   it('não mostra upload quando pagamento já em custódia', () => {

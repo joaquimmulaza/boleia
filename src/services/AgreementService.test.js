@@ -781,7 +781,7 @@ describe('AgreementService', () => {
       });
       const result = await getAgreementsForPassenger('pax-1');
       expect(result[0].id).toBe('a1');
-      expect(inMock).toHaveBeenCalledWith('estado', ['activo', 'reservado', 'expirado']);
+      expect(inMock).toHaveBeenCalledWith('estado', ['activo', 'reservado', 'expirado', 'saiu']);
       expect(supabase.rpc).toHaveBeenCalledWith('apply_due_agreement_terminations', {
         p_acordo_id: null,
       });

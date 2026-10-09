@@ -200,9 +200,10 @@ describe('PACOTE #19 — gaps visão path crítico', () => {
   });
 
   describe('AC5 — Valores do acordo/snapshot (nunca defaults plataforma)', () => {
-    it('AcordoPagamentoPanel usa pagamento.valor_kz', () => {
+    it('AcordoPagamentoPanel usa valor da RPC/obrigação ou pagamento.valor_kz (sem defaults)', () => {
       const src = readSrc('components/AcordoPagamentoPanel.jsx');
-      expect(src).toMatch(/formatKwanza\(pagamento\.valor_kz\)/);
+      expect(src).toMatch(/formatKwanza\(valorExibir\)/);
+      expect(src).toMatch(/pagamento\.valor_kz/);
       expect(src).not.toMatch(/35000|43000|valor_default/);
     });
 

@@ -6,6 +6,7 @@ vi.mock('../services/PaymentService', () => ({
   listPagamentosPendentesValidacao: vi.fn(),
   listPagamentosEmCustodia: vi.fn(),
   listRepassesMotorista: vi.fn(),
+  listPagamentosResolucaoAdmin: vi.fn(),
   adminValidatePayment: vi.fn(),
   adminLiquidatePayment: vi.fn(),
   adminLiquidatePeriod: vi.fn(),
@@ -17,6 +18,7 @@ import {
   listPagamentosPendentesValidacao,
   listPagamentosEmCustodia,
   listRepassesMotorista,
+  listPagamentosResolucaoAdmin,
   adminValidatePayment,
   adminLiquidatePayment,
   adminLiquidatePeriod,
@@ -29,6 +31,7 @@ describe('AdminPagamentos', () => {
     vi.clearAllMocks();
     listPagamentosEmCustodia.mockResolvedValue([]);
     listRepassesMotorista.mockResolvedValue([]);
+    listPagamentosResolucaoAdmin.mockResolvedValue([]);
     getMesReferenciaAtual.mockReturnValue('2026-09-01');
   });
 
