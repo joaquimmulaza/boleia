@@ -7,6 +7,7 @@ import {
   isOfertaFlexivel,
   labelOfertaRota,
   cancelOferta,
+  reactivateOferta,
   createOferta,
 } from '../services/OfertaService';
 import { getAgreementsForDriver } from '../services/AgreementService';
@@ -36,6 +37,7 @@ import { filterPropostasParaInbox, filterPropostasEnviadas, filterPropostasTermi
 import { formatIdaRegresso, formatTime24h } from '../utils/formatTime';
 import { labelOfertaPicker } from '../utils/ofertaLabels';
 import { canEditOferta, canDespublicarOferta } from '../utils/canEditOferta';
+import { canReactivarOferta } from '../utils/canReactivarOferta';
 import ConfirmationModal from '../components/ConfirmationModal';
 import OverlayShell from '../components/OverlayShell';
 import DriverOfertaCard from '../components/DriverOfertaCard';
@@ -645,6 +647,22 @@ const DriverDashboard = () => {
     }
   };
 
+  const handleReactivar = async (ofertaId) => {
+    setOfertaBusy(true);
+    setFeedback({ type: '', text: '' });
+    try {
+      await reactivateOferta(ofertaId);
+      setOfertaDetailId(null);
+      setFeedback({ type: 'success', text: 'Oferta reactivada.' });
+      notifyMarketplaceHubRefresh();
+      await carregar();
+    } catch (err) {
+      setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+    } finally {
+      setOfertaBusy(false);
+    }
+  };
+
   const handleDespublicar = async (ofertaId) => {
     setOfertaBusy(true);
     setFeedback({ type: '', text: '' });
@@ -798,6 +816,7 @@ const DriverDashboard = () => {
           const podeDespublicar = canDespublicarOferta(oferta, {
             temAcordoActivo: temAcordoActivo(oferta.id),
           });
+          const podeReactivar = canReactivarOferta(oferta);
           return (
             <DriverOfertaCard
               key={oferta.id}
@@ -808,6 +827,7 @@ const DriverDashboard = () => {
               modoLabel={labelModo(oferta.modo_preco)}
               canEdit={canEditOferta(oferta)}
               canDespublicar={podeDespublicar}
+              canReactivar={podeReactivar}
               editing={editingOfertaId === oferta.id}
               ofertaBusy={ofertaBusy}
               editPropostas={editPropostas}
@@ -819,6 +839,7 @@ const DriverDashboard = () => {
               onVerPropostas={() => handleVerPropostas(oferta.id)}
               onEditar={() => handleStartEditOferta(oferta.id)}
               onDespublicar={() => setConfirmDespublicarId(oferta.id)}
+              onReactivar={() => handleReactivar(oferta.id)}
               onCancelEdit={() => {
                 setEditingOfertaId(null);
                 setEditPropostas([]);
@@ -1044,6 +1065,9 @@ const DriverDashboard = () => {
           chipClassName={estadoChip(ofertaDetalhe.estado).className}
           tipoRota={labelTipoRota(ofertaDetalhe)}
           modoLabel={labelModo(ofertaDetalhe.modo_preco)}
+          canReactivar={canReactivarOferta(ofertaDetalhe)}
+          reactivarBusy={ofertaBusy}
+          onReactivar={() => handleReactivar(ofertaDetalhe.id)}
           onClose={() => setOfertaDetailId(null)}
           onVerProcuras={() => {
             setOfertaDetailId(null);

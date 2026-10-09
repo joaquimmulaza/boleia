@@ -282,3 +282,26 @@ export async function cancelOferta(ofertaId) {
   if (error) throw error;
   return data;
 }
+
+/**
+ * Reactiva oferta despublicada pelo motorista (RPC reactivate_oferta).
+ * @param {string} ofertaId
+ */
+export async function reactivateOferta(ofertaId) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('Não autenticado.');
+  }
+  if (!ofertaId) {
+    throw new Error('ID da oferta é obrigatório.');
+  }
+
+  const { data, error } = await supabase.rpc('reactivate_oferta', {
+    p_oferta_id: ofertaId,
+  });
+
+  if (error) throw error;
+  return data;
+}

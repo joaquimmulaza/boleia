@@ -36,6 +36,23 @@ describe('OfertaKebabMenu', () => {
     expect(container.firstChild).toBeNull();
   });
 
+  it('mostra Reactivar quando canReactivar', () => {
+    const onReactivar = vi.fn();
+    render(
+      <OfertaKebabMenu
+        canEdit={false}
+        canDespublicar={false}
+        canReactivar
+        onEditar={vi.fn()}
+        onDespublicar={vi.fn()}
+        onReactivar={onReactivar}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Mais acções/i }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /^Reactivar$/i }));
+    expect(onReactivar).toHaveBeenCalledTimes(1);
+  });
+
   it('fecha com segundo toque e devolve foco ao botão', () => {
     render(
       <OfertaKebabMenu canEdit canDespublicar onEditar={vi.fn()} onDespublicar={vi.fn()} />,
