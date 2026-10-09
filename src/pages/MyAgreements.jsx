@@ -911,6 +911,33 @@ const MyAgreements = () => {
       const result = await terminateAgreement(acordoId, input, { idempotencyKey });
       closeTerminateFlow();
 
+      if (result?.terminate_status === 'ja_encerrado') {
+        setMessage({
+          type: 'success',
+          text: 'Este acordo já estava encerrado.',
+        });
+        if (confirmandoConsensualPendente) {
+          setRescisaoConfirmadaLocal(true);
+        }
+        await carregar({ silent: true });
+        notifyMarketplaceHubRefresh();
+        return;
+      }
+
+      if (
+        result?.terminate_status === 'confirmado_idempotente'
+        && confirmandoConsensualPendente
+      ) {
+        setMessage({
+          type: 'success',
+          text: linhaJaConfirmadoRescisaoConsensual(selected?.rescisao_confirmada_em) || 'Já confirmado.',
+        });
+        setRescisaoConfirmadaLocal(true);
+        await carregar({ silent: true });
+        notifyMarketplaceHubRefresh();
+        return;
+      }
+
       if (result?.offlineQueued) {
         setMessage({
           type: 'success',

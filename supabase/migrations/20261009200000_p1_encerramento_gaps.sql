@@ -1,5 +1,6 @@
 -- P1 encerramento: idempotência 2.ª confirmação consensual + notificação motorista em leave_passenger
--- Depende de #249 (20261009190000_leave_passenger_reservado_saiu): merge #249 antes de #250.
+-- leave_passenger: corpo de 20261009190000 + notificação (só se auth.uid() não for o motorista).
+-- terminate_agreement: RETURNS jsonb { acordo_id, status } — status ja_encerrado | confirmado_idempotente | ok
 
 CREATE OR REPLACE FUNCTION public.leave_passenger(
   p_acordo_id uuid,
@@ -109,7 +110,7 @@ BEGIN
   FROM public.acordos
   WHERE id = p_acordo_id;
 
-  IF v_target IS DISTINCT FROM v_acordo.driver_id
+  IF v_uid IS DISTINCT FROM v_acordo.driver_id
      AND v_estado_acordo = 'activo' THEN
     BEGIN
       INSERT INTO public.notificacoes (user_id, mensagem, tipo, metadata)
@@ -136,6 +137,8 @@ BEGIN
 END;
 $function$;
 
+DROP FUNCTION IF EXISTS public.terminate_agreement(uuid, text, text, uuid, text);
+
 CREATE OR REPLACE FUNCTION public.terminate_agreement(
   p_acordo_id uuid,
   p_modo text,
@@ -143,7 +146,7 @@ CREATE OR REPLACE FUNCTION public.terminate_agreement(
   p_idempotency_key uuid DEFAULT NULL,
   p_vigencia text DEFAULT 'imediato'
 )
-RETURNS uuid
+RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO 'public'
@@ -177,7 +180,7 @@ BEGIN
     IF EXISTS (
       SELECT 1 FROM public.rpc_idempotency WHERE idempotency_key = p_idempotency_key
     ) THEN
-      RETURN p_acordo_id;
+      RETURN jsonb_build_object('acordo_id', p_acordo_id, 'status', 'ok');
     END IF;
   END IF;
 
@@ -219,7 +222,7 @@ BEGIN
       VALUES (p_idempotency_key, 'terminate_agreement', p_acordo_id, v_uid)
       ON CONFLICT (idempotency_key) DO NOTHING;
     END IF;
-    RETURN p_acordo_id;
+    RETURN jsonb_build_object('acordo_id', p_acordo_id, 'status', 'confirmado_idempotente');
   END IF;
 
   v_is_driver := (v_uid = v_acordo.driver_id);
@@ -262,13 +265,14 @@ BEGIN
     IF lower(COALESCE(v_acordo.rescisao_modo, '')) = 'consensual'
        AND v_acordo.rescisao_solicitada_por IS NOT NULL
        AND v_acordo.rescisao_solicitada_por IS DISTINCT FROM v_uid
-       AND lower(v_acordo.estado) <> 'activo' THEN
+       AND lower(v_acordo.estado) <> 'activo'
+       AND v_acordo.rescisao_confirmada_em IS NULL THEN
       IF p_idempotency_key IS NOT NULL THEN
         INSERT INTO public.rpc_idempotency (idempotency_key, rpc_name, subject_id, user_id)
         VALUES (p_idempotency_key, 'terminate_agreement', p_acordo_id, v_uid)
         ON CONFLICT (idempotency_key) DO NOTHING;
       END IF;
-      RETURN p_acordo_id;
+      RETURN jsonb_build_object('acordo_id', p_acordo_id, 'status', 'ja_encerrado');
     END IF;
 
     IF lower(v_acordo.estado) <> 'activo' THEN
@@ -352,7 +356,7 @@ BEGIN
         ON CONFLICT (idempotency_key) DO NOTHING;
       END IF;
 
-      RETURN p_acordo_id;
+      RETURN jsonb_build_object('acordo_id', p_acordo_id, 'status', 'ok');
     END IF;
 
     v_vigencia := lower(COALESCE(
@@ -516,7 +520,7 @@ BEGIN
     ON CONFLICT (idempotency_key) DO NOTHING;
   END IF;
 
-  RETURN p_acordo_id;
+  RETURN jsonb_build_object('acordo_id', p_acordo_id, 'status', 'ok');
 END;
 $function$;
 

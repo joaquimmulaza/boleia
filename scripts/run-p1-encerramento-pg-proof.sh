@@ -9,9 +9,9 @@ ROLES_FIRST="${ROOT}/supabase/tests/bootstrap_roles_first.sql"
 BOOTSTRAP_SQL="${ROOT}/supabase/tests/bootstrap_local_supabase.sql"
 LOCALFIX_PL="${ROOT}/supabase/tests/localfix_migration_sql.pl"
 MIG_P1="20261009200000_p1_encerramento_gaps.sql"
-FIXTURE_249="${ROOT}/supabase/tests/fixtures/20261009190000_leave_passenger_reservado_saiu.sql"
-MIG_249="20261009190000_leave_passenger_reservado_saiu.sql"
 PROOF_RESERVADO="${ROOT}/supabase/tests/p1_leave_passenger_reservado_saiu_pg_proof.sql"
+PROOF_JA_ENCERRADO="${ROOT}/supabase/tests/p1_terminate_ja_encerrado_pg_proof.sql"
+PROOF_DRIVER_NO_NOTIF="${ROOT}/supabase/tests/p1_leave_driver_caller_no_notif_pg_proof.sql"
 SKIP_MIG_P1="${SKIP_MIG_P1:-0}"
 
 if ! command -v psql >/dev/null 2>&1; then
@@ -43,14 +43,6 @@ apply_migrations_to_db() {
     if [[ "${SKIP_MIG_P1}" == "1" && "${base}" == "${MIG_P1}" ]]; then
       echo "       skip ${base} (SKIP_MIG_P1=1)"
       continue
-    fi
-    if [[ "${base}" == "${MIG_P1}" && -f "${FIXTURE_249}" && ! -f "${ROOT}/supabase/migrations/${MIG_249}" ]]; then
-      echo "       -> (fixture PR #249) ${MIG_249}"
-      if ! "${psql[@]}" -f "${FIXTURE_249}" >/tmp/mig_"${db_name}"_"${MIG_249}".log 2>&1; then
-        echo "FALHOU: fixture ${MIG_249}" >&2
-        tail -30 /tmp/mig_"${db_name}"_"${MIG_249}".log >&2
-        return 4
-      fi
     fi
     mig_src="$f"
     if [[ "${base}" == "20260329161035_remote_schema.sql" ]]; then
@@ -94,5 +86,11 @@ sudo -u postgres psql -v ON_ERROR_STOP=1 -d "${DB}" -f "${PROOF_LEAVE}"
 
 echo "==> Prova leave_passenger reservado → saiu (regressão #249)"
 sudo -u postgres psql -v ON_ERROR_STOP=1 -d "${DB}" -f "${PROOF_RESERVADO}"
+
+echo "==> Prova terminate ja_encerrado (sem confirmação prévia)"
+sudo -u postgres psql -v ON_ERROR_STOP=1 -d "${DB}" -f "${PROOF_JA_ENCERRADO}"
+
+echo "==> Prova leave_passenger sem notif quando caller é motorista"
+sudo -u postgres psql -v ON_ERROR_STOP=1 -d "${DB}" -f "${PROOF_DRIVER_NO_NOTIF}"
 
 echo "==> OK P1 encerramento PG proofs"

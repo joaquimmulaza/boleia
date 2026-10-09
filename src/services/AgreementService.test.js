@@ -671,8 +671,32 @@ describe('AgreementService', () => {
   });
 
   describe('terminateAgreement', () => {
+    it('propaga terminate_status ja_encerrado do RPC jsonb', async () => {
+      supabase.rpc.mockResolvedValue({
+        data: { acordo_id: 'acordo-1', status: 'ja_encerrado' },
+        error: null,
+      });
+      supabase.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: { id: 'acordo-1', estado: 'cancelado' },
+              error: null,
+            }),
+          }),
+        }),
+      });
+
+      const result = await terminateAgreement('acordo-1', { modo: 'consensual' });
+      expect(result.terminate_status).toBe('ja_encerrado');
+      expect(result.estado).toBe('cancelado');
+    });
+
     it('chama RPC terminate_agreement com modo aviso_previo', async () => {
-      supabase.rpc.mockResolvedValue({ data: 'acordo-1', error: null });
+      supabase.rpc.mockResolvedValue({
+        data: { acordo_id: 'acordo-1', status: 'ok' },
+        error: null,
+      });
       supabase.from.mockReturnValue({
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
@@ -697,10 +721,14 @@ describe('AgreementService', () => {
         }),
       );
       expect(result.estado).toBe('cancelamento_pendente');
+      expect(result.terminate_status).toBe('ok');
     });
 
     it('envia justificativa para justa_causa', async () => {
-      supabase.rpc.mockResolvedValue({ data: 'acordo-1', error: null });
+      supabase.rpc.mockResolvedValue({
+        data: { acordo_id: 'acordo-1', status: 'ok' },
+        error: null,
+      });
       supabase.from.mockReturnValue({
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
