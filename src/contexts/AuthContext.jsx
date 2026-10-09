@@ -5,17 +5,18 @@ import {
   isAnonOrAuthPrivilegeError,
   isLiveAuthSession,
   isAccessTokenExpiredOrNearExpiry,
-  profileFetchSessionKey,
 } from '../utils/authProfileFetch.js';
+import {
+  refreshSessionOnceIfAllowed,
+  resetAuthSessionRefreshState,
+} from '../utils/authSessionRefresh.js';
+import { PROFILE_LOAD_TIMEOUT_MS } from '../utils/profileLoadTimeout.js';
 import {
   readPasswordRecoveryPending,
   markPasswordRecoveryPending,
   clearPasswordRecoveryStorage,
 } from '../utils/passwordRecovery';
 import { clearSwRuntimeCache } from '../utils/swRuntimeCache';
-
-/** Cooldown mínimo entre `refreshSession` por utilizador (evita loop 401/TOKEN_REFRESHED). */
-const AUTH_REFRESH_COOLDOWN_MS = 60_000;
 
 const AuthContext = createContext(undefined);
 
@@ -39,16 +40,14 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   /** true enquanto há sessão e o perfil ainda não foi resolvido (sucesso ou falha). */
   const [profileLoading, setProfileLoading] = useState(false);
+  const [profileLoadTimedOut, setProfileLoadTimedOut] = useState(false);
   const [passwordRecoveryPending, setPasswordRecoveryPending] = useState(() =>
     readPasswordRecoveryPending()
   );
 
-  /** Máx. um refresh-retry por par user.id + access_token. */
-  const profileRefreshAttemptedRef = useRef(/** @type {Set<string>} */ (new Set()));
-  /** Timestamp do último refreshSession por user.id. */
-  const authRetryAtRef = useRef(/** @type {Record<string, number>} */ ({}));
   /** Invalida conclusões de `fetchProfile` mais antigas (troca de user / fetch concorrente). */
   const fetchSeqRef = useRef(0);
+  const profileLoadTimeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null));
 
   const clearPasswordRecovery = useCallback(() => {
     clearPasswordRecoveryStorage();
@@ -66,17 +65,31 @@ export function AuthProvider({ children }) {
       }
     };
 
-    const { data: { session: liveSession }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !isLiveAuthSession(liveSession)) {
+    const { data: { session: initialSession }, error: sessionError } =
+      await supabase.auth.getSession();
+    if (sessionError || !isLiveAuthSession(initialSession)) {
       if (isCurrentFetch()) {
         setProfile(null);
         setProfileLoading(false);
+        setProfileLoadTimedOut(false);
       }
       return null;
     }
 
+    let didRefresh = false;
+    let liveSession = initialSession;
+    if (isAccessTokenExpiredOrNearExpiry(liveSession)) {
+      const refreshed = await refreshSessionOnceIfAllowed(supabase, liveSession);
+      didRefresh = Boolean(refreshed);
+      if (refreshed) {
+        liveSession = refreshed;
+      }
+    }
+
     const userId = liveSession.user.id;
-    const sessionKey = profileFetchSessionKey(liveSession);
+    if (isCurrentFetch()) {
+      setProfileLoadTimedOut(false);
+    }
     setLoadingIfCurrent(true);
 
     const loadProfile = async () => {
@@ -103,23 +116,15 @@ export function AuthProvider({ children }) {
       const privilegeError =
         isAnonOrAuthPrivilegeError(perfisError) || isAnonOrAuthPrivilegeError(contactoError);
 
-      const lastRetryAt = authRetryAtRef.current[userId] ?? 0;
-      const cooldownElapsed = Date.now() - lastRetryAt >= AUTH_REFRESH_COOLDOWN_MS;
-
-      if (
-        privilegeError
-        && cooldownElapsed
-        && !profileRefreshAttemptedRef.current.has(sessionKey)
-        && isAccessTokenExpiredOrNearExpiry(liveSession)
-      ) {
-        profileRefreshAttemptedRef.current.add(sessionKey);
-        authRetryAtRef.current[userId] = Date.now();
-        const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
-        if (
-          !refreshError
-          && isLiveAuthSession(refreshed?.session)
-          && refreshed.session.user.id === userId
-        ) {
+      if (privilegeError) {
+        if (!didRefresh) {
+          const { data: { session: beforeRefresh } } = await supabase.auth.getSession();
+          const refreshed = isLiveAuthSession(beforeRefresh)
+            ? await refreshSessionOnceIfAllowed(supabase, beforeRefresh)
+            : null;
+          didRefresh = Boolean(refreshed);
+        }
+        if (didRefresh) {
           ({ perfisResult, contactoResult } = await loadProfile());
           perfisError = perfisResult.error;
           contactoError = contactoResult.error;
@@ -168,6 +173,50 @@ export function AuthProvider({ children }) {
     return fetchProfile();
   }, [user, fetchProfile]);
 
+  const retryProfileLoad = useCallback(async () => {
+    setProfileLoadTimedOut(false);
+    const { data: { session: current } } = await supabase.auth.getSession();
+    if (!isLiveAuthSession(current)) {
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setProfileLoading(false);
+      return null;
+    }
+    return fetchProfile();
+  }, [fetchProfile]);
+
+  useEffect(() => {
+    if (profileLoadTimeoutRef.current) {
+      clearTimeout(profileLoadTimeoutRef.current);
+      profileLoadTimeoutRef.current = null;
+    }
+
+    if (!session || !profileLoading || profileLoadTimedOut) {
+      return undefined;
+    }
+
+    profileLoadTimeoutRef.current = setTimeout(async () => {
+      profileLoadTimeoutRef.current = null;
+      fetchSeqRef.current += 1;
+      setProfileLoading(false);
+      setProfileLoadTimedOut(true);
+      const { data: { session: current } } = await supabase.auth.getSession();
+      if (!isLiveAuthSession(current)) {
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+      }
+    }, PROFILE_LOAD_TIMEOUT_MS);
+
+    return () => {
+      if (profileLoadTimeoutRef.current) {
+        clearTimeout(profileLoadTimeoutRef.current);
+        profileLoadTimeoutRef.current = null;
+      }
+    };
+  }, [session, profileLoading, profileLoadTimedOut]);
+
   useEffect(() => {
     let isMounted = true;
     const lastUserIdRef = { current: null };
@@ -212,8 +261,8 @@ export function AuthProvider({ children }) {
           setPasswordRecoveryPending(false);
           void clearSwRuntimeCache();
           lastUserIdRef.current = null;
-          profileRefreshAttemptedRef.current.clear();
-          authRetryAtRef.current = {};
+          resetAuthSessionRefreshState();
+          setProfileLoadTimedOut(false);
           fetchSeqRef.current += 1;
         } else if (lastUserIdRef.current && nextUserId && lastUserIdRef.current !== nextUserId) {
           fetchSeqRef.current += 1;
@@ -256,6 +305,8 @@ export function AuthProvider({ children }) {
     profile,
     loading,
     profileLoading,
+    profileLoadTimedOut,
+    retryProfileLoad,
     tipoPerfil,
     refreshProfile,
     passwordRecoveryPending,

@@ -4,6 +4,7 @@ import React from 'react';
 import { AuthProvider, useAuth } from './AuthContext';
 import { PERFIL_COLUNAS_AUTH_CONTEXT_SELECT } from '../utils/perfisGrants.js';
 import { supabase } from '../lib/supabase';
+import { resetAuthSessionRefreshState } from '../utils/authSessionRefresh.js';
 
 /**
  * @param {string} userId
@@ -52,6 +53,7 @@ const TestProfile = () => {
 
 describe('AuthContext fetchProfile — retry e concorrência', () => {
   beforeEach(() => {
+    resetAuthSessionRefreshState();
     vi.clearAllMocks();
     mockSingle.mockReset();
     mockSelect.mockReset();
@@ -67,14 +69,18 @@ describe('AuthContext fetchProfile — retry e concorrência', () => {
   });
 
   it('retry com refresh bem-sucedido carrega perfil na segunda carga', async () => {
-    const session = liveSession('user-retry');
     const refreshed = liveSession('user-retry', {
       accessToken: 'refreshed-token',
       expiresAtSec: Math.floor(Date.now() / 1000) + 3600,
     });
 
-    supabase.auth.getSession.mockResolvedValue({ data: { session }, error: null });
-    supabase.auth.refreshSession.mockResolvedValue({ data: { session: refreshed }, error: null });
+    supabase.auth.getSession.mockImplementation(async () => ({
+      data: { session: refreshed },
+      error: null,
+    }));
+    supabase.auth.refreshSession.mockImplementation(async () => {
+      return { data: { session: refreshed }, error: null };
+    });
 
     mockSingle
       .mockResolvedValueOnce({

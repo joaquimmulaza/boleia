@@ -287,7 +287,7 @@ describe('AuthContext', () => {
     expect(sessionStorage.getItem('bc_password_recovery')).toBe('1');
   });
 
-  it('42501 com token válido não chama refreshSession mas avisa com sessão viva', async () => {
+  it('42501 com token válido tenta refreshSession uma vez e avisa se persistir', async () => {
     mockSingle.mockImplementation(() =>
       Promise.resolve({ data: null, error: PRIVILEGE_PERFIS_ERROR }),
     );
@@ -314,7 +314,7 @@ describe('AuthContext', () => {
       );
     });
 
-    expect(supabase.auth.refreshSession).not.toHaveBeenCalled();
+    expect(supabase.auth.refreshSession).toHaveBeenCalledTimes(1);
     warnSpy.mockRestore();
   });
 

@@ -4,6 +4,7 @@ import {
   callRpcWithOfflineFallback,
   resolveIdempotencyKey,
 } from '../utils/callRpcWithOfflineFallback.js';
+import { withLiveSessionAuthCall } from '../utils/liveSession.js';
 
 /**
  * Listagens MyAgreements: `acordos.*` inclui encerramento_motivo (TABLE SELECT authenticated).
@@ -72,9 +73,11 @@ function withPendingAdenda(acordo) {
  */
 async function applyDueAdendasBestEffort(acordoId = null) {
   try {
-    const res = await supabase.rpc('apply_due_agreement_adendas', {
-      p_acordo_id: acordoId,
-    });
+    const res = await withLiveSessionAuthCall(supabase, () =>
+      supabase.rpc('apply_due_agreement_adendas', {
+        p_acordo_id: acordoId,
+      }),
+    );
     if (res?.error) {
       console.warn('Falha ao aplicar adendas devidas:', res.error.message);
     }
@@ -89,9 +92,11 @@ async function applyDueAdendasBestEffort(acordoId = null) {
  */
 async function applyDueTerminationsBestEffort(acordoId = null) {
   try {
-    const res = await supabase.rpc('apply_due_agreement_terminations', {
-      p_acordo_id: acordoId,
-    });
+    const res = await withLiveSessionAuthCall(supabase, () =>
+      supabase.rpc('apply_due_agreement_terminations', {
+        p_acordo_id: acordoId,
+      }),
+    );
     if (res?.error) {
       console.warn('Falha ao aplicar rescisões devidas:', res.error.message);
     }
@@ -107,9 +112,11 @@ async function applyDueTerminationsBestEffort(acordoId = null) {
  */
 export async function applyDueReservaExpiry(acordoId = null) {
   try {
-    const res = await supabase.rpc('apply_due_reserva_expiry', {
-      p_acordo_id: acordoId,
-    });
+    const res = await withLiveSessionAuthCall(supabase, () =>
+      supabase.rpc('apply_due_reserva_expiry', {
+        p_acordo_id: acordoId,
+      }),
+    );
     if (res?.error) {
       console.warn('Falha ao expirar reservas vencidas:', res.error.message);
       return 0;
@@ -127,9 +134,11 @@ export async function applyDueReservaExpiry(acordoId = null) {
  */
 async function applyDueNonRenewalsBestEffort(acordoId = null) {
   try {
-    const res = await supabase.rpc('apply_due_agreement_non_renewals', {
-      p_acordo_id: acordoId,
-    });
+    const res = await withLiveSessionAuthCall(supabase, () =>
+      supabase.rpc('apply_due_agreement_non_renewals', {
+        p_acordo_id: acordoId,
+      }),
+    );
     if (res?.error) {
       console.warn('Falha ao aplicar não-renovações devidas:', res.error.message);
     }
@@ -719,13 +728,15 @@ export async function getAgreementsForDriver(driverId) {
   await applyDueNonRenewalsBestEffort(null);
   await applyDueReservaExpiry(null);
 
-  const { data, error } = await supabase
-    .from('acordos')
-    .select(
-      '*, acordos_passageiros(*, perfis(nome_completo)), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota), acordos_adendas(*)',
-    )
-    .eq('driver_id', driverId)
-    .order('created_at', { ascending: false });
+  const { data, error } = await withLiveSessionAuthCall(supabase, () =>
+    supabase
+      .from('acordos')
+      .select(
+        '*, acordos_passageiros(*, perfis(nome_completo)), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota), acordos_adendas(*)',
+      )
+      .eq('driver_id', driverId)
+      .order('created_at', { ascending: false }),
+  );
 
   if (error) throw error;
   return (data || []).map(withPendingAdenda);
@@ -740,13 +751,15 @@ export async function getAgreementsForPassenger(passengerId) {
   await applyDueNonRenewalsBestEffort(null);
   await applyDueReservaExpiry(null);
 
-  const { data, error } = await supabase
-    .from('acordos_passageiros')
-    .select(
-      'id, acordo_id, passenger_id, estado, quota_mensal_kz, acordos(*, acordos_passageiros(*), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota), acordos_adendas(*))',
-    )
-    .eq('passenger_id', passengerId)
-    .in('estado', ['activo', 'reservado', 'expirado', 'saiu']);
+  const { data, error } = await withLiveSessionAuthCall(supabase, () =>
+    supabase
+      .from('acordos_passageiros')
+      .select(
+        'id, acordo_id, passenger_id, estado, quota_mensal_kz, acordos(*, acordos_passageiros(*), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota), acordos_adendas(*))',
+      )
+      .eq('passenger_id', passengerId)
+      .in('estado', ['activo', 'reservado', 'expirado', 'saiu']),
+  );
 
   if (error) throw error;
   return (data || [])

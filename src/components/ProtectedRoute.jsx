@@ -1,7 +1,9 @@
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { buildAuthUrlWithNext } from '../utils/authReturnPath';
 import { useAuth } from '../contexts/AuthContext';
 import { needsProfileSetup } from '../utils/oauth';
+import ProfileLoadGate from './ProfileLoadGate';
 
 /**
  * ProtectedRoute – Auth Guard com suporte a RBAC.
@@ -11,19 +13,25 @@ import { needsProfileSetup } from '../utils/oauth';
  *     Se omitido, qualquer utilizador autenticado pode aceder.
  */
 const ProtectedRoute = ({ allowedRole }) => {
-  const { session, loading, profileLoading, profile, tipoPerfil, passwordRecoveryPending } = useAuth();
+  const location = useLocation();
+  const {
+    session,
+    loading,
+    profileLoading,
+    profileLoadTimedOut,
+    profile,
+    tipoPerfil,
+    passwordRecoveryPending,
+  } = useAuth();
 
-  if (loading || (session && profileLoading)) {
-    return (
-      <div className="flex h-dvh items-center justify-center text-gray-500">
-        {loading ? 'A verificar sessão...' : 'A carregar perfil...'}
-      </div>
-    );
+  if (loading || (session && profileLoading) || profileLoadTimedOut) {
+    return <ProfileLoadGate />;
   }
 
-  // 1. Sem sessão → redireciona para login
+  // 1. Sem sessão → redireciona para login (preserva destino, ex. openAcordoId)
   if (!session) {
-    return <Navigate to="/auth" replace />;
+    const returnPath = `${location.pathname}${location.search}`;
+    return <Navigate to={buildAuthUrlWithNext('/auth', returnPath)} replace />;
   }
 
   // 1b. Sessão de recovery → obrigar a definir nova palavra-passe
