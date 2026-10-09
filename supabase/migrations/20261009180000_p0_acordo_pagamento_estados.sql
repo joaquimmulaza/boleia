@@ -462,7 +462,10 @@ RETURNS TABLE (
   pago integer,
   valor integer,
   valor_em_divida integer,
-  prazo timestamptz
+  prazo timestamptz,
+  valor_comprovativo integer,
+  excesso_kz integer,
+  requer_resolucao_admin boolean
 )
 LANGUAGE plpgsql
 STABLE
@@ -490,7 +493,9 @@ BEGIN
       pg.id AS pagamento_id,
       pg.passenger_id,
       COALESCE(p.nome_completo, 'Passageiro') AS passenger_nome,
-      pg.estado
+      pg.estado,
+      pg.valor_kz,
+      pg.requer_resolucao_admin
     FROM public.pagamentos_acordo pg
     JOIN public.acordos_passageiros ap ON ap.id = pg.acordo_passageiro_id
     LEFT JOIN public.perfis p ON p.id = pg.passenger_id
@@ -517,6 +522,18 @@ BEGIN
     valor_em_divida := COALESCE((v_snap->>'valor_em_divida')::integer, (v_snap->>'valor')::integer, 0);
     valor := valor_em_divida;
     prazo := (v_snap->>'prazo')::timestamptz;
+    valor_comprovativo := CASE
+      WHEN lower(r.estado) = 'comprovativo_enviado' THEN COALESCE(r.valor_kz, 0)
+      ELSE NULL
+    END;
+    requer_resolucao_admin := COALESCE(r.requer_resolucao_admin, false);
+    excesso_kz := CASE
+      WHEN COALESCE(r.requer_resolucao_admin, false) THEN GREATEST(
+        0,
+        COALESCE((v_snap->>'pago')::integer, 0) - COALESCE((v_snap->>'proporcional')::integer, 0)
+      )
+      ELSE NULL
+    END;
     RETURN NEXT;
   END LOOP;
 END;

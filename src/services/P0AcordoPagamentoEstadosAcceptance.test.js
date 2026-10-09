@@ -65,6 +65,8 @@ describe('P0 acordo pagamento estados — migração obrigatória', () => {
     expect(sql).toMatch(/'quota', v_quota/);
     expect(sql).toMatch(/get_obrigacao_pagamento_passageiro/);
     expect(sql).toMatch(/list_pagamentos_pendentes_motorista_acordo/);
+    expect(sql).toMatch(/valor_comprovativo integer/);
+    expect(sql).toMatch(/valor_comprovativo := CASE/);
     expect(sql).toMatch(/list_pagamentos_resolucao_admin/);
   });
 

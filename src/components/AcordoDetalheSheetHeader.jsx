@@ -40,6 +40,7 @@ function chipClassEstadoAcordo(variant) {
  *   podeEncerrar: boolean,
  *   onRegistarFalta: () => void,
  *   onEncerrar: () => void,
+ *   titulo?: string,
  * }} props
  */
 export default function AcordoDetalheSheetHeader({
@@ -54,6 +55,7 @@ export default function AcordoDetalheSheetHeader({
   podeEncerrar,
   onRegistarFalta,
   onEncerrar,
+  titulo = 'Detalhe do acordo',
 }) {
   return (
     <header
@@ -113,7 +115,7 @@ export default function AcordoDetalheSheetHeader({
           </div>
         </div>
         <h2 id="acordo-detail-title" className="text-lg font-bold text-balance">
-          Detalhe do acordo
+          {titulo}
         </h2>
       </div>
     </header>

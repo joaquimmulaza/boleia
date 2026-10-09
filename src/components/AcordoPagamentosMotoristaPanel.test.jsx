@@ -27,6 +27,51 @@ describe('AcordoPagamentosMotoristaPanel — v1.6', () => {
     expect(screen.getByTestId('motorista-pagamentos-titulo')).toHaveTextContent('Pagamentos');
   });
 
+  it('S4 linha comprovativo em validação com valor_comprovativo da RPC', () => {
+    render(
+      <AcordoPagamentosMotoristaPanel
+        acordoTerminado
+        rows={[
+          {
+            pagamento_id: 'pg-2',
+            passenger_id: 'pax-2',
+            passenger_nome: 'João',
+            estado: 'comprovativo_enviado',
+            valor: 0,
+            valor_em_divida: 0,
+            valor_comprovativo: 55000,
+            requer_resolucao_admin: false,
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByTestId('motorista-pagamento-comprovativo-pax-2')).toHaveTextContent(
+      /comprovativo de 55[\s\u00a0]?000 Kz em validação/,
+    );
+    expect(screen.getByText('Em validação')).toBeInTheDocument();
+  });
+
+  it('S6b linha diferença em análise', () => {
+    render(
+      <AcordoPagamentosMotoristaPanel
+        acordoTerminado
+        rows={[
+          {
+            pagamento_id: 'pg-3',
+            passenger_id: 'pax-3',
+            passenger_nome: 'Ana',
+            estado: 'em_custodia',
+            requer_resolucao_admin: true,
+            excesso_kz: 2227,
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByTestId('motorista-pagamento-excesso-pax-3')).toHaveTextContent(
+      /diferença de 2[\s\u00a0]?227 Kz/,
+    );
+  });
+
   it('acordo terminado com várias secções: Pagamentos deste acordo', () => {
     render(
       <AcordoPagamentosMotoristaPanel

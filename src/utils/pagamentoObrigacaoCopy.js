@@ -117,17 +117,32 @@ export function linhaProporcionalPagamento(obrigacao) {
  * @param {string | null | undefined} prazoIso
  * @returns {string | null}
  */
-export function linhaPrazoPagamento(prazoIso) {
+/**
+ * Data legível para prazo (sem hora — Figma «até {data}»).
+ * @param {string | null | undefined} prazoIso
+ * @returns {string | null}
+ */
+export function formatDataPrazoPagamento(prazoIso) {
   if (!prazoIso) return null;
   const d = new Date(prazoIso);
   if (Number.isNaN(d.getTime())) return null;
-  return `Prazo: ${d.toLocaleString('pt-PT', {
+  return d.toLocaleDateString('pt-PT', {
     day: '2-digit',
     month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
+    year: 'numeric',
     timeZone: 'Africa/Luanda',
-  })}`;
+  });
+}
+
+/**
+ * Prazo de pagamento / reserva — texto fixo «até {data}» (sem countdown).
+ * @param {string | null | undefined} prazoIso
+ * @returns {string | null}
+ */
+export function linhaPrazoPagamento(prazoIso) {
+  const data = formatDataPrazoPagamento(prazoIso);
+  if (!data) return null;
+  return `até ${data}`;
 }
 
 /**

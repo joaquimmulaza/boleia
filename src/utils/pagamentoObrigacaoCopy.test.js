@@ -32,10 +32,11 @@ describe('pagamentoObrigacaoCopy — v1.4 / v1.5', () => {
     expect(line).not.toMatch(/43[\s\u00a0]?000/);
   });
 
-  it('linhaPrazoPagamento devolve texto legível ou null', () => {
+  it('linhaPrazoPagamento devolve «até {data}» ou null', () => {
     expect(linhaPrazoPagamento(null)).toBeNull();
     const txt = linhaPrazoPagamento('2026-10-12T15:00:00.000Z');
-    expect(txt).toMatch(/^Prazo:/);
+    expect(txt).toMatch(/^até /);
+    expect(txt).not.toMatch(/Prazo:/);
   });
 
   it('tituloHistoricoPagamento inclui mês', () => {
