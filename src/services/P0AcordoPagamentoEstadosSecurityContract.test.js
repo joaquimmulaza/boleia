@@ -19,6 +19,8 @@ export const P0_INTERNAL_HELPER_FUNCTIONS = [
   'ajustar_obrigacao_pagamento_mes(uuid, date, boolean)',
   '_maybe_fechar_acordo_sem_lugares_vivos(uuid)',
   '_p0_finalize_lugares_rescisao_imediata(uuid, date)',
+  '_p0_lazy_apply_due_global_caller()',
+  '_p0_acordo_in_lazy_apply_due_scope(uuid)',
   '_p0_assert_lazy_apply_due_scope(uuid)',
   'build_ui_obrigacao_snapshot(uuid)',
   'trg_acordos_passageiros_create_pagamento()',
@@ -147,6 +149,12 @@ describe('P0 pagamento estados — contrato segurança (migração 180000)', () 
     expect(calls).toBeGreaterThanOrEqual(3);
   });
 
+  it('B2: NULL autenticado filtra via _p0_acordo_in_lazy_apply_due_scope (não 42501 global)', () => {
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\._p0_acordo_in_lazy_apply_due_scope/);
+    expect(sql).toMatch(/_p0_acordo_in_lazy_apply_due_scope\(ap\.acordo_id\)/);
+    expect(sql).toMatch(/IF p_acordo_id IS NULL THEN[\s\S]*IF v_uid IS NULL THEN[\s\S]*RETURN;/);
+  });
+
   it('prova PG cobre helpers e apply_due mass/foreign (42501)', () => {
     const proof = readFileSync(PG_PROOF, 'utf8');
     expect(proof).toMatch(/FAIL-on-old: authenticated EXECUTE build_ui_obrigacao_snapshot/);
@@ -162,9 +170,9 @@ describe('P0 pagamento estados — contrato segurança (migração 180000)', () 
     ]) {
       expect(proof, `runtime negado → ${fn}`).toMatch(new RegExp(fn));
     }
+    expect(proof).toMatch(/FAIL B2: acordo B bloqueado/);
     expect(proof).toMatch(/apply_due_reserva_expiry\(NULL\)/);
-    expect(proof).toMatch(/apply_due_agreement_terminations\(NULL\)/);
-    expect(proof).toMatch(/apply_due_agreement_non_renewals\(NULL\)/);
+    expect(proof).toMatch(/service_role NULL/);
     expect(proof).toMatch(/apply_due_reserva_expiry\(foreign\)/);
     expect(proof).toMatch(/apply_due_agreement_terminations\(foreign\)/);
     expect(proof).toMatch(/apply_due_agreement_non_renewals\(foreign\)/);

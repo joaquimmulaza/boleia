@@ -788,6 +788,28 @@ describe('AgreementService', () => {
       expect(supabase.rpc).toHaveBeenCalledWith('apply_due_reserva_expiry', {
         p_acordo_id: null,
       });
+      expect(supabase.rpc).toHaveBeenCalledWith('apply_due_agreement_non_renewals', {
+        p_acordo_id: null,
+      });
+    });
+
+    it('lazy apply_due com null: cliente não trata 42501 como caminho esperado', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      supabase.rpc.mockResolvedValue({ data: 0, error: null });
+      supabase.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+        }),
+      });
+      await getAgreementsForDriver('driver-1');
+      const denied = warnSpy.mock.calls.some(
+        (args) => String(args[0] || '').includes('42501')
+          || String(args[1]?.code || args[1]?.message || '').includes('42501'),
+      );
+      expect(denied).toBe(false);
+      warnSpy.mockRestore();
     });
   });
 });

@@ -614,7 +614,50 @@ BEGIN
 END;
 $function$;
 
--- === Escopo lazy apply_due_* (B2: mass run só service_role / admin) ===
+-- === Escopo lazy apply_due_* (B2) ===
+-- NULL + service_role/admin → todos os acordos.
+-- NULL + authenticated → só acordos onde auth.uid() é motorista ou passageiro (filtro nas RPCs).
+-- UUID concreto + authenticated → membership obrigatória (senão 42501).
+
+CREATE OR REPLACE FUNCTION public._p0_lazy_apply_due_global_caller()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+  SELECT nullif(current_setting('request.jwt.claim.role', true), '') = 'service_role'
+    OR public.is_platform_admin();
+$$;
+
+CREATE OR REPLACE FUNCTION public._p0_acordo_in_lazy_apply_due_scope(p_acordo uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+  SELECT
+    public._p0_lazy_apply_due_global_caller()
+    OR (
+      auth.uid() IS NOT NULL
+      AND EXISTS (
+        SELECT 1
+        FROM public.acordos a
+        WHERE a.id = p_acordo
+          AND (
+            a.driver_id = auth.uid()
+            OR EXISTS (
+              SELECT 1
+              FROM public.acordos_passageiros ap
+              WHERE ap.acordo_id = a.id
+                AND ap.passenger_id = auth.uid()
+            )
+          )
+      )
+    );
+$$;
+
 CREATE OR REPLACE FUNCTION public._p0_assert_lazy_apply_due_scope(p_acordo_id uuid)
 RETURNS void
 LANGUAGE plpgsql
@@ -623,15 +666,17 @@ SET search_path TO 'public'
 AS $function$
 DECLARE
   v_uid uuid := auth.uid();
-  v_role text := nullif(current_setting('request.jwt.claim.role', true), '');
 BEGIN
-  IF v_role = 'service_role' OR public.is_platform_admin() THEN
+  IF public._p0_lazy_apply_due_global_caller() THEN
     RETURN;
   END IF;
 
   IF p_acordo_id IS NULL THEN
-    RAISE EXCEPTION 'Sem permissão.'
-      USING ERRCODE = '42501';
+    IF v_uid IS NULL THEN
+      RAISE EXCEPTION 'Sem permissão.'
+        USING ERRCODE = '42501';
+    END IF;
+    RETURN;
   END IF;
 
   IF v_uid IS NULL THEN
@@ -639,20 +684,7 @@ BEGIN
       USING ERRCODE = '42501';
   END IF;
 
-  IF EXISTS (
-    SELECT 1
-    FROM public.acordos a
-    WHERE a.id = p_acordo_id
-      AND (
-        a.driver_id = v_uid
-        OR EXISTS (
-          SELECT 1
-          FROM public.acordos_passageiros ap
-          WHERE ap.acordo_id = a.id
-            AND ap.passenger_id = v_uid
-        )
-      )
-  ) THEN
+  IF public._p0_acordo_in_lazy_apply_due_scope(p_acordo_id) THEN
     RETURN;
   END IF;
 
@@ -683,7 +715,10 @@ BEGIN
     WHERE lower(ap.estado) = 'reservado'
       AND ap.reservado_expira_em IS NOT NULL
       AND ap.reservado_expira_em <= now()
-      AND (p_acordo_id IS NULL OR ap.acordo_id = p_acordo_id)
+      AND (
+        (p_acordo_id IS NOT NULL AND ap.acordo_id = p_acordo_id)
+        OR (p_acordo_id IS NULL AND public._p0_acordo_in_lazy_apply_due_scope(ap.acordo_id))
+      )
       AND lower(a.estado) IN ('activo', 'cancelamento_pendente', 'cancelado', 'cancelado_justificado')
       AND NOT EXISTS (
         SELECT 1
@@ -736,7 +771,10 @@ BEGIN
     JOIN public.acordos a ON a.id = ap.acordo_id
     WHERE lower(ap.estado) = 'reservado'
       AND lower(a.estado) IN ('cancelado', 'cancelado_justificado')
-      AND (p_acordo_id IS NULL OR ap.acordo_id = p_acordo_id)
+      AND (
+        (p_acordo_id IS NOT NULL AND ap.acordo_id = p_acordo_id)
+        OR (p_acordo_id IS NULL AND public._p0_acordo_in_lazy_apply_due_scope(ap.acordo_id))
+      )
     FOR UPDATE OF ap
   LOOP
     PERFORM public._expirar_lugar_reservado_sem_divida(
@@ -777,7 +815,10 @@ BEGIN
     WHERE lower(estado) = 'cancelamento_pendente'
       AND rescisao_effective_on IS NOT NULL
       AND rescisao_effective_on <= v_today
-      AND (p_acordo_id IS NULL OR id = p_acordo_id)
+      AND (
+        (p_acordo_id IS NOT NULL AND id = p_acordo_id)
+        OR (p_acordo_id IS NULL AND public._p0_acordo_in_lazy_apply_due_scope(id))
+      )
     ORDER BY rescisao_effective_on ASC, created_at ASC
     FOR UPDATE
   LOOP
@@ -1462,7 +1503,10 @@ BEGIN
     SELECT a.*
     FROM public.acordos a
     WHERE lower(a.estado) = 'activo'
-      AND (p_acordo_id IS NULL OR a.id = p_acordo_id)
+      AND (
+        (p_acordo_id IS NOT NULL AND a.id = p_acordo_id)
+        OR (p_acordo_id IS NULL AND public._p0_acordo_in_lazy_apply_due_scope(a.id))
+      )
       AND lower(COALESCE(a.renovacao_estado, '')) IS DISTINCT FROM 'renovado'
       AND lower(COALESCE(a.renovacao_estado, '')) IS DISTINCT FROM 'nao_renovar'
     ORDER BY a.created_at ASC
@@ -1528,7 +1572,10 @@ BEGIN
       AND lower(COALESCE(a.renovacao_estado, '')) = 'renovado'
       AND a.renovacao_proximo_mes IS NOT NULL
       AND a.renovacao_proximo_mes <= v_mes_atual
-      AND (p_acordo_id IS NULL OR a.id = p_acordo_id)
+      AND (
+        (p_acordo_id IS NOT NULL AND a.id = p_acordo_id)
+        OR (p_acordo_id IS NULL AND public._p0_acordo_in_lazy_apply_due_scope(a.id))
+      )
     FOR UPDATE
   LOOP
     UPDATE public.acordos
@@ -1570,6 +1617,14 @@ GRANT EXECUTE ON FUNCTION public._maybe_fechar_acordo_sem_lugares_vivos(uuid) TO
 REVOKE ALL ON FUNCTION public._p0_finalize_lugares_rescisao_imediata(uuid, date) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public._p0_finalize_lugares_rescisao_imediata(uuid, date) FROM anon, authenticated;
 GRANT EXECUTE ON FUNCTION public._p0_finalize_lugares_rescisao_imediata(uuid, date) TO service_role;
+
+REVOKE ALL ON FUNCTION public._p0_lazy_apply_due_global_caller() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public._p0_lazy_apply_due_global_caller() FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._p0_lazy_apply_due_global_caller() TO service_role;
+
+REVOKE ALL ON FUNCTION public._p0_acordo_in_lazy_apply_due_scope(uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public._p0_acordo_in_lazy_apply_due_scope(uuid) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._p0_acordo_in_lazy_apply_due_scope(uuid) TO service_role;
 
 REVOKE ALL ON FUNCTION public._p0_assert_lazy_apply_due_scope(uuid) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public._p0_assert_lazy_apply_due_scope(uuid) FROM anon, authenticated;
