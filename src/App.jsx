@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import Auth from './pages/Auth';
@@ -34,10 +34,8 @@ import OfflineBanner from './components/OfflineBanner';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { usePasswordRecoveryRouteRedirect } from './hooks/usePasswordRecoveryRouteRedirect';
 import { needsProfileSetup } from './utils/oauth';
-
-const DevAppRoutes = import.meta.env.DEV
-  ? lazy(() => import('./dev/DevAppRoutes.jsx'))
-  : null;
+import DevPerfilCaptureShell from './pages/DevPerfilCapture.jsx';
+import DevPerfilPushPreview from './pages/DevPerfilPushPreview.jsx';
 
 const RootRoute = () => {
   const { session, loading, profileLoading, profile, tipoPerfil, passwordRecoveryPending } = useAuth();
@@ -73,18 +71,22 @@ function AppShell() {
     || isDevPublicRoute;
 
   const routes = (
-    <Routes>
-      {/* Rotas públicas */}
-      <Route path="/" element={<RootRoute />} />
-      <Route path="/auth" element={<Auth />} />
-      <Route path="/explorar" element={<MarketplaceExplore />} />
-      <Route path="/privacidade" element={<PublicLegalPage page="privacidade" />} />
-      <Route path="/eliminacao-de-dados" element={<PublicLegalPage page="eliminacao" />} />
-      {import.meta.env.DEV && DevAppRoutes ? (
-        <Suspense fallback={null}>
-          <DevAppRoutes />
-        </Suspense>
-      ) : null}
+    <Suspense fallback={null}>
+      <Routes>
+        {/* Rotas públicas */}
+        <Route path="/" element={<RootRoute />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/explorar" element={<MarketplaceExplore />} />
+        <Route path="/privacidade" element={<PublicLegalPage page="privacidade" />} />
+        <Route path="/eliminacao-de-dados" element={<PublicLegalPage page="eliminacao" />} />
+        {import.meta.env.DEV ? (
+          <>
+            <Route path="/__dev/perfil-push" element={<DevPerfilPushPreview />} />
+            <Route path="/__dev/perfil" element={<DevPerfilCaptureShell />}>
+              <Route index element={<Profile />} />
+            </Route>
+          </>
+        ) : null}
 
       {/* Rotas protegidas envolvidas pelo Layout global (com BottomBar) */}
       <Route element={<Layout />}>
@@ -125,9 +127,10 @@ function AppShell() {
         </Route>
       </Route>
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 
   if (isPublicRoute) {
