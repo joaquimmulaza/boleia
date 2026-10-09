@@ -29,7 +29,10 @@ import TerminateConfirmSheet from '../components/TerminateConfirmSheet';
 import { Button } from '../components/ui/button';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
-import { subscribeMarketplaceHubRefresh } from '../utils/marketplaceHubRefresh';
+import {
+  notifyMarketplaceHubRefresh,
+  subscribeMarketplaceHubRefresh,
+} from '../utils/marketplaceHubRefresh';
 import {
   labelEstadoAcordo,
   variantChipEstadoAcordo,
@@ -295,6 +298,14 @@ function isRescisaoSemPermissaoError(err) {
     (err && typeof err === 'object' && 'message' in err && err.message) || err || '',
   );
   return /sem permissão para rescindir este acordo/i.test(msg);
+}
+
+/** Segunda confirmação consensual após encerramento (RPC idempotente / estado já terminal). */
+function isRescisaoConfirmacaoJaEfectuadaError(err) {
+  const msg = String(
+    (err && typeof err === 'object' && 'message' in err && err.message) || err || '',
+  );
+  return /este acordo já não está activo/i.test(msg);
 }
 
 function buildTerminateConfirmBody({ contactos, rota, tipoPerfil, linhas, modoMessage }) {
@@ -851,6 +862,7 @@ const MyAgreements = () => {
         return next;
       });
       await carregar();
+      notifyMarketplaceHubRefresh();
     } catch (err) {
       setMessage({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
     } finally {
@@ -898,6 +910,33 @@ const MyAgreements = () => {
 
       const result = await terminateAgreement(acordoId, input, { idempotencyKey });
       closeTerminateFlow();
+
+      if (result?.terminate_status === 'ja_encerrado') {
+        setMessage({
+          type: 'success',
+          text: 'Este acordo já estava encerrado.',
+        });
+        if (confirmandoConsensualPendente) {
+          setRescisaoConfirmadaLocal(true);
+        }
+        await carregar({ silent: true });
+        notifyMarketplaceHubRefresh();
+        return;
+      }
+
+      if (
+        result?.terminate_status === 'confirmado_idempotente'
+        && confirmandoConsensualPendente
+      ) {
+        setMessage({
+          type: 'success',
+          text: linhaJaConfirmadoRescisaoConsensual(selected?.rescisao_confirmada_em) || 'Já confirmado.',
+        });
+        setRescisaoConfirmadaLocal(true);
+        await carregar({ silent: true });
+        notifyMarketplaceHubRefresh();
+        return;
+      }
 
       if (result?.offlineQueued) {
         setMessage({
@@ -947,9 +986,10 @@ const MyAgreements = () => {
         });
       }
       await carregar({ silent: true });
+      notifyMarketplaceHubRefresh();
     } catch (err) {
       if (
-        isRescisaoSemPermissaoError(err)
+        (isRescisaoSemPermissaoError(err) || isRescisaoConfirmacaoJaEfectuadaError(err))
         && (rescisaoConfirmadaLocal || confirmandoConsensualPendente)
       ) {
         const refreshed = await carregar({ silent: true });
@@ -968,6 +1008,7 @@ const MyAgreements = () => {
             text: linhaJa || 'Já confirmado.',
           });
           setRescisaoConfirmadaLocal(true);
+          notifyMarketplaceHubRefresh();
           return;
         }
       }

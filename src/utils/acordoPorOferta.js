@@ -126,16 +126,27 @@ export function mergeAcordosPassageiro(prev, fetched, passengerId, now = Date.no
   const fetchedList = fetched || [];
   const result = [...fetchedList];
 
+  /** Acordos vivos no fetch (mesmo id substitui optimista). */
+  const idsComVivo = new Set();
+  /** Ofertas com acordo vivo no fetch (substitui optimista na mesma oferta). */
   const ofertasComVivo = new Set();
+  /** Ids presentes no fetch cujo cabeçalho+linha já não estão vivos (encerramento desse acordo). */
+  const idsTerminadosNoFetch = new Set();
   for (const acordo of fetchedList) {
-    if (isAcordoVivoParaPassageiro(acordo, passengerId, now) && acordo.oferta_id) {
-      ofertasComVivo.add(acordo.oferta_id);
+    if (!acordo?.id) continue;
+    if (isAcordoVivoParaPassageiro(acordo, passengerId, now)) {
+      idsComVivo.add(acordo.id);
+      if (acordo.oferta_id) ofertasComVivo.add(acordo.oferta_id);
+    } else {
+      idsTerminadosNoFetch.add(acordo.id);
     }
   }
 
   for (const acordo of prev || []) {
-    if (!acordo?._optimista || !acordo?.oferta_id) continue;
-    if (ofertasComVivo.has(acordo.oferta_id)) continue;
+    if (!acordo?._optimista || !acordo?.id) continue;
+    if (idsComVivo.has(acordo.id)) continue;
+    if (idsTerminadosNoFetch.has(acordo.id)) continue;
+    if (acordo.oferta_id && ofertasComVivo.has(acordo.oferta_id)) continue;
     const desde = acordo._optimistaDesde ?? 0;
     if (now - desde < ACORDO_OPTIMISTA_TTL_MS) {
       result.push(acordo);

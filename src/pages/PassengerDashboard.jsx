@@ -47,7 +47,10 @@ import {
   ACORDO_OPTIMISTA_TTL_MS,
   CTA_VER_ACORDO,
 } from '../utils/acordoPorOferta';
-import { notifyMarketplaceHubRefresh } from '../utils/marketplaceHubRefresh';
+import {
+  notifyMarketplaceHubRefresh,
+  subscribeMarketplaceHubRefresh,
+} from '../utils/marketplaceHubRefresh';
 import { shouldAvisarProcuraFecha } from '../utils/propostaReview';
 import { CTA_LABEL } from '../utils/opportunityCard';
 import { enqueueWaitlist, filterWaitlistEntriesVisiveis, listWaitlistByProcura } from '../services/WaitlistService';
@@ -521,6 +524,20 @@ const PassengerDashboard = () => {
   useEffect(() => {
     carregar();
   }, [carregar]);
+
+  useEffect(() => {
+    if (!user?.id) return undefined;
+    return subscribeMarketplaceHubRefresh(() => {
+      void (async () => {
+        try {
+          const acordos = await getAgreementsForPassenger(user.id);
+          setAcordosPassageiro((prev) => mergeAcordosPassageiro(prev, acordos || [], user.id));
+        } catch (err) {
+          console.error('Erro ao refrescar acordos do hub:', err);
+        }
+      })();
+    });
+  }, [user?.id]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);

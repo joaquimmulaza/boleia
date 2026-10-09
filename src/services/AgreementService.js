@@ -4,6 +4,30 @@ import {
   callRpcWithOfflineFallback,
   resolveIdempotencyKey,
 } from '../utils/callRpcWithOfflineFallback.js';
+
+/**
+ * @param {unknown} rpcOut
+ * @param {string} fallbackAcordoId
+ * @returns {{ acordoId: string, status: string }}
+ */
+export function parseTerminateAgreementRpcResult(rpcOut, fallbackAcordoId) {
+  if (
+    rpcOut
+    && typeof rpcOut === 'object'
+    && !Array.isArray(rpcOut)
+    && 'acordo_id' in rpcOut
+  ) {
+    const row = /** @type {{ acordo_id?: string, status?: string }} */ (rpcOut);
+    return {
+      acordoId: String(row.acordo_id || fallbackAcordoId),
+      status: String(row.status || 'ok'),
+    };
+  }
+  return {
+    acordoId: String(rpcOut ?? fallbackAcordoId),
+    status: 'ok',
+  };
+}
 import { isNetworkFailure } from './offlineQueue.js';
 
 /**
@@ -523,15 +547,15 @@ export async function terminateAgreement(acordoId, input, options = {}) {
       offlineQueued: true,
       idempotency_key: key,
     }),
-    afterRpcSuccess: async (acordoIdOut) => {
-      const id = acordoIdOut ?? acordoId;
+    afterRpcSuccess: async (rpcOut) => {
+      const { acordoId: id, status } = parseTerminateAgreementRpcResult(rpcOut, acordoId);
       const { data, error } = await supabase
         .from('acordos')
         .select('*')
         .eq('id', id)
         .single();
       if (error) throw error;
-      return data;
+      return { ...data, terminate_status: status };
     },
   });
 }
