@@ -81,7 +81,8 @@ export function indexMotivosPagamentoPorAcordo(porAcordoId) {
       if (!pid) return;
       map[pid] = {
         anulacao_motivo: row.anulacao_motivo ?? null,
-        estado: row.pagamento_estado ?? row.estado ?? null,
+        // Só a linha própria (ou motorista) traz pagamento_estado; chips de outros usam só motivo anulado.
+        estado: row.pagamento_estado ?? null,
       };
     });
     out[acordoId] = map;

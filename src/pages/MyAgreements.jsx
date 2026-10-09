@@ -606,9 +606,9 @@ const MyAgreements = () => {
         } else if (generation === carregarGenerationRef.current) {
           setChipContextPorAcordo({});
         }
-      } catch (chipErr) {
+      } catch {
         if (generation === carregarGenerationRef.current) {
-          console.error('Erro ao carregar motivos de lugar:', chipErr);
+          setChipContextPorAcordo({});
         }
       }
       setSelected((prev) => {

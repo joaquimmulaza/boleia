@@ -29,6 +29,19 @@ describe('pagamentoMotivoLugar — chips por acordo', () => {
     expect(merged?.anulacao_motivo).toBe(ANULACAO_MOTIVO.SAISTE_ANTES_ACTIVACAO);
   });
 
+  it('indexMotivosPagamentoPorAcordo não copia pagamento_estado alheio para estado do chip', () => {
+    const index = groupAnulacaoMotivoRowsByAcordo([
+      {
+        acordo_id: 'acordo-a',
+        passenger_id: 'pax-b',
+        anulacao_motivo: 'Saíste antes da activação do lugar',
+        pagamento_estado: null,
+      },
+    ]);
+    expect(index['acordo-a']['pax-b'].estado).toBeNull();
+    expect(index['acordo-a']['pax-b'].anulacao_motivo).toBe('Saíste antes da activação do lugar');
+  });
+
   it('resolvePagamentoChipContexto prioriza chipFromList (motorista)', () => {
     const ctx = resolvePagamentoChipContexto(
       { passenger_id: '283be1da' },
