@@ -41,6 +41,8 @@ export function AuthProvider({ children }) {
   /** true enquanto há sessão e o perfil ainda não foi resolvido (sucesso ou falha). */
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileLoadTimedOut, setProfileLoadTimedOut] = useState(false);
+  /** true após `SIGNED_OUT` com sessão activa — banner em `/auth` via ProtectedRoute. */
+  const [sessionEndedForAuthRedirect, setSessionEndedForAuthRedirect] = useState(false);
   const [passwordRecoveryPending, setPasswordRecoveryPending] = useState(() =>
     readPasswordRecoveryPending()
   );
@@ -234,7 +236,14 @@ export function AuthProvider({ children }) {
           setPasswordRecoveryPending(true);
         }
 
+        if (event === 'SIGNED_IN') {
+          setSessionEndedForAuthRedirect(false);
+        }
+
         if (event === 'SIGNED_OUT' || !nextSession) {
+          if (event === 'SIGNED_OUT' && lastUserIdRef.current) {
+            setSessionEndedForAuthRedirect(true);
+          }
           clearPasswordRecoveryStorage();
           setPasswordRecoveryPending(false);
           void clearSwRuntimeCache();
@@ -284,6 +293,7 @@ export function AuthProvider({ children }) {
     loading,
     profileLoading,
     profileLoadTimedOut,
+    sessionEndedForAuthRedirect,
     retryProfileLoad,
     tipoPerfil,
     refreshProfile,

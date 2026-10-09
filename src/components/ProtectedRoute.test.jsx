@@ -45,6 +45,41 @@ describe('ProtectedRoute', () => {
     });
   });
 
+  it('após SIGNED_OUT redirecciona para /auth com sessionEnded=1 e openAcordoId', async () => {
+    const acordoId = '3f42eca2-03c9-8153-b9ea-c6e621e03656';
+
+    function AuthProbe() {
+      const location = useLocation();
+      return (
+        <div>
+          Auth {location.pathname}{location.search}
+        </div>
+      );
+    }
+
+    useAuth.mockReturnValue({
+      session: null,
+      loading: false,
+      sessionEndedForAuthRedirect: true,
+    });
+
+    render(
+      <MemoryRouter initialEntries={[`/acordos?openAcordoId=${acordoId}`]}>
+        <Routes>
+          <Route path="/auth" element={<AuthProbe />} />
+          <Route path="/acordos" element={<ProtectedRoute />}>
+            <Route index element={<div>Acordos</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(new RegExp(`/auth\\?openAcordoId=${acordoId}`))).toBeInTheDocument();
+      expect(screen.getByText(/sessionEnded=1/)).toBeInTheDocument();
+    });
+  });
+
   it('deve redirecionar para /motorista quando um Motorista tenta aceder a uma rota de Passageiro', async () => {
     useAuth.mockReturnValue({
       session: { user: { id: '123' } },

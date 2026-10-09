@@ -145,6 +145,7 @@ describe('authSessionRefresh — caminho único #255', () => {
     expect(result).toEqual({ data: 'ok', error: null });
   });
 
+  /** Regressão d23f966f — B2: 42501 + JWT válido não refresca. */
   it('42501 com token válido (não expirado) não chama refreshSession', async () => {
     const now = Math.floor(Date.now() / 1000);
     const fresh = makeSession(now + 3600, 'tok-fresh-valid');

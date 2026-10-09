@@ -25,6 +25,7 @@ const ProtectedRoute = ({ allowedRole }) => {
     profile,
     tipoPerfil,
     passwordRecoveryPending,
+    sessionEndedForAuthRedirect,
   } = useAuth();
 
   if (loading || (session && profileLoading) || profileLoadTimedOut) {
@@ -34,7 +35,15 @@ const ProtectedRoute = ({ allowedRole }) => {
   // 1. Sem sessão → login com openAcordoId validado (UUID), nunca path completo
   if (!session) {
     const openAcordoId = parseOpenAcordoIdFromSearch(location.search);
-    return <Navigate to={buildAuthUrlWithOpenAcordo({ openAcordoId })} replace />;
+    return (
+      <Navigate
+        to={buildAuthUrlWithOpenAcordo({
+          openAcordoId,
+          sessionEnded: sessionEndedForAuthRedirect,
+        })}
+        replace
+      />
+    );
   }
 
   // 1b. Sessão de recovery → obrigar a definir nova palavra-passe

@@ -48,7 +48,8 @@ function RetryButton() {
   );
 }
 
-describe('AuthContext retryProfileLoad — deep link', () => {
+/** Regressão d23f966f — B1: ordem profileLoading antes de profileLoadTimedOut. */
+describe('AuthContext retryProfileLoad — deep link (B1 d23f966f)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     resetAuthSessionRefreshState();

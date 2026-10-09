@@ -56,8 +56,7 @@ export function buildAuthUrlWithOpenAcordo({ openAcordoId, sessionEnded = false 
  */
 export function resolvePostLoginPathWithOpenAcordo(nextRaw, openAcordoIdRaw, tipoPerfil) {
   if (openAcordoIdRaw != null && String(openAcordoIdRaw).trim() !== '') {
-    const id = sanitizeOpenAcordoId(openAcordoIdRaw);
-    return id ? `/acordos?openAcordoId=${encodeURIComponent(id)}` : '/acordos';
+    return buildAcordosPathForOpenAcordo(openAcordoIdRaw);
   }
   return resolvePostLoginPath(nextRaw, tipoPerfil);
 }
