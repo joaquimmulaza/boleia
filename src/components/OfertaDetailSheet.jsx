@@ -53,7 +53,7 @@ function OfertaDetailSheet({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-1.5 text-sm font-semibold"
+            className="rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-1.5 text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
           >
             Fechar
           </button>
@@ -96,7 +96,7 @@ function OfertaDetailSheet({
               type="button"
               onClick={onReactivar}
               disabled={reactivarBusy}
-              className="w-full min-h-11 rounded-xl bg-primary text-white text-sm font-bold flex items-center justify-center gap-1 disabled:opacity-60"
+              className="w-full min-h-11 rounded-xl bg-primary text-white text-sm font-bold flex items-center justify-center gap-1 disabled:opacity-60 hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
             >
               Reactivar
             </button>
@@ -105,14 +105,14 @@ function OfertaDetailSheet({
               <button
                 type="button"
                 onClick={onVerProcuras}
-                className="w-full min-h-11 text-sm font-bold text-primary flex items-center justify-center gap-1"
+                className="w-full min-h-11 text-sm font-bold text-primary flex items-center justify-center gap-1 rounded-xl hover:bg-primary/5 dark:hover:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
               >
                 Procuras compatíveis <ChevronRight size={16} aria-hidden="true" />
               </button>
               <button
                 type="button"
                 onClick={onVerPropostas}
-                className="w-full min-h-11 rounded-xl bg-primary/10 text-primary text-sm font-bold flex items-center justify-center gap-1"
+                className="w-full min-h-11 rounded-xl bg-primary/10 text-primary text-sm font-bold flex items-center justify-center gap-1 hover:bg-primary/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
               >
                 Ver propostas <ChevronRight size={16} aria-hidden="true" />
               </button>
