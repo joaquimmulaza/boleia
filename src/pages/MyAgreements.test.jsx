@@ -74,6 +74,7 @@ import {
 import { resetOverlayStackForTests } from '../utils/overlayStack';
 import { notifyMarketplaceHubRefresh } from '../utils/marketplaceHubRefresh';
 import { ACORDO_DETALHE_POLL_MS } from '../hooks/useAcordoDetalheLiveRefresh';
+import { copyCancelamentoPendente } from '../utils/rescisaoDisplay';
 import { listPending } from '../services/offlineQueue';
 import {
   listPagamentosByAcordo,
@@ -1373,6 +1374,67 @@ describe('MyAgreements — marketplace 1:N', () => {
       expect(document.visibilityState).toBe('visible');
 
       view.unmount();
+    });
+
+    it('motorista: feedback «à espera da contraparte» actualiza na lista após confirmação', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      const aposPedido = {
+        ...acordoMotorista,
+        id: 'acordo-1',
+        rescisao_modo: 'consensual',
+        rescisao_solicitada_por: 'driver-1',
+        rescisao_vigencia: 'fim_ciclo',
+      };
+      const aposConfirmacao = {
+        ...aposPedido,
+        estado: 'cancelamento_pendente',
+        rescisao_solicitada_por: null,
+        rescisao_effective_on: '2026-11-01',
+      };
+      getAgreementsForDriver
+        .mockResolvedValueOnce([acordoMotorista])
+        .mockResolvedValueOnce([aposPedido])
+        .mockResolvedValue([aposPedido]);
+      terminateAgreement.mockResolvedValue({
+        id: 'acordo-1',
+        estado: 'activo',
+        rescisao_modo: 'consensual',
+        rescisao_solicitada_por: 'driver-1',
+        rescisao_vigencia: 'fim_ciclo',
+      });
+
+      renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      openAcordoKebab(dialog);
+      await clickAcordoKebabItem(/Encerrar acordo/i);
+
+      const picker = await screen.findByTestId('terminate-modality-picker');
+      fireEvent.click(within(picker).getByRole('button', { name: /Acordo amigável/i }));
+      const vigencia = await screen.findByTestId('terminate-vigencia-picker');
+      fireEvent.click(within(vigencia).getByRole('button', { name: /Fim deste mês/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^Encerrar acordo$/i }));
+
+      await waitFor(() => {
+        expect(terminateAgreement).toHaveBeenCalledTimes(1);
+      });
+
+      const feedback = await screen.findByTestId('agreements-feedback');
+      expect(feedback).toHaveTextContent(/A outra parte precisa de confirmar/i);
+
+      getAgreementsForDriver.mockResolvedValue([aposConfirmacao]);
+
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('agreements-feedback')).not.toHaveTextContent(
+            /A outra parte precisa de confirmar/i,
+          );
+        },
+        { timeout: ACORDO_DETALHE_POLL_MS + 500 },
+      );
+
+      const copy = copyCancelamentoPendente('2026-11-01');
+      expect(screen.getByTestId('agreements-feedback')).toHaveTextContent(copy.corpo);
     });
 
     it('resposta antiga de carregar não fecha o sheet quando lista veio vazia', async () => {

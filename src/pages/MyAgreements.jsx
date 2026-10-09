@@ -490,6 +490,22 @@ const MyAgreements = () => {
   }, [carregar]);
 
   useEffect(() => {
+    if (message.type !== 'success' || !message.text) return undefined;
+    if (!/A outra parte precisa de confirmar/i.test(message.text)) return undefined;
+    const confirmado = acordos.find(
+      (a) => String(a.estado || '').toLowerCase() === 'cancelamento_pendente',
+    );
+    if (!confirmado) return undefined;
+    const copy = copyCancelamentoPendente(confirmado.rescisao_effective_on);
+    const text =
+      copy?.corpo
+      ?? (copyCancelamentoPendente(null)?.corpo
+        || 'Encerramento confirmado — termina em breve.');
+    setMessage((prev) => (prev.text === message.text ? { type: 'success', text } : prev));
+    return undefined;
+  }, [acordos, message.type, message.text]);
+
+  useEffect(() => {
     return subscribeMarketplaceHubRefresh(() => {
       void carregar({ silent: true });
     });
