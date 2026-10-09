@@ -110,7 +110,10 @@ GRANT INSERT (
   vagas_passageiros
 ) ON TABLE public.veiculos TO authenticated;
 
+-- id_motorista: upsert VehicleSetup.jsx (onConflict id_motorista) envia todas as colunas no DO UPDATE;
+-- RLS veiculos_update_proprio_motorista (20260329161035) WITH CHECK (auth.uid() = id_motorista).
 GRANT UPDATE (
+  id_motorista,
   marca_modelo,
   matricula,
   capacidade_total,
@@ -163,6 +166,27 @@ GRANT UPDATE (
 ) ON TABLE public.membros_grupo TO authenticated;
 
 GRANT SELECT ON TABLE public.membros_grupo TO authenticated;
+
+-- INSERT: só estados iniciais usados pelo cliente (GrupoService addMembro activo, pedirEntrada pendente).
+-- Reabrir usa UPDATE → pendente, não afectado.
+CREATE OR REPLACE FUNCTION public.trg_membros_grupo_insert_estado_guard()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path TO public
+AS $$
+BEGIN
+  IF lower(COALESCE(NEW.estado, '')) NOT IN ('activo', 'pendente') THEN
+    RAISE EXCEPTION 'Estado inicial inválido para membro de grupo.';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_membros_grupo_insert_estado_guard ON public.membros_grupo;
+CREATE TRIGGER trg_membros_grupo_insert_estado_guard
+  BEFORE INSERT ON public.membros_grupo
+  FOR EACH ROW
+  EXECUTE FUNCTION public.trg_membros_grupo_insert_estado_guard();
 
 CREATE OR REPLACE FUNCTION public.trg_membros_grupo_passenger_update_guard()
 RETURNS trigger

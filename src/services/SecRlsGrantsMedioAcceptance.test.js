@@ -75,16 +75,18 @@ describe('fix(sec) — RLS/grants médios (contrato migração)', () => {
     expect(sql).toMatch(/trg_lista_espera_force_estado_activa/);
   });
 
-  it('membros_grupo: grants de colunas + trigger passageiro + policy pickup', () => {
+  it('membros_grupo: grants de colunas + triggers INSERT/UPDATE + policy pickup', () => {
     const sql = readMigration(SEC_MIGRATION);
     expect(sql).toMatch(/GRANT UPDATE \([\s\S]*?estado[\s\S]*?\) ON TABLE public\.membros_grupo/);
+    expect(sql).toMatch(/trg_membros_grupo_insert_estado_guard/);
     expect(sql).toMatch(/trg_membros_grupo_passenger_update_guard/);
     expect(sql).toMatch(/membros_update_self_pickup/);
   });
 
   it('veiculos, grupos, push_subscriptions: column grants / revoke UPDATE', () => {
     const sql = readMigration(SEC_MIGRATION);
-    expect(sql).toMatch(/GRANT UPDATE \(\s*marca_modelo/);
+    expect(sql).toMatch(/GRANT UPDATE \(\s*id_motorista/);
+    expect(sql).toMatch(/GRANT UPDATE \(\s*id_motorista[\s\S]*?marca_modelo/);
     expect(sql).toMatch(/GRANT UPDATE \(nome, n_maximo\) ON TABLE public\.grupos/);
     expect(sql).toMatch(/GRANT INSERT \(procura_id, nome, n_maximo\) ON TABLE public\.grupos/);
     expect(sql).toMatch(/REVOKE INSERT, UPDATE ON TABLE public\.push_subscriptions/);

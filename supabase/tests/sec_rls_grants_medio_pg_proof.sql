@@ -201,6 +201,12 @@ DROP POLICY IF EXISTS comprovativos_select_own_or_admin ON storage.objects;
 CREATE POLICY comprovativos_select_own_or_admin ON storage.objects
   FOR SELECT TO authenticated USING (bucket_id = 'comprovativos-pagamento');
 
+ALTER TABLE public.grupos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS grupos_delete_owner ON public.grupos;
+CREATE POLICY grupos_delete_owner ON public.grupos
+  FOR DELETE TO authenticated
+  USING (auth.uid() = (SELECT owner_id FROM public.procuras p WHERE p.id = procura_id));
+
 \i supabase/migrations/20261009150000_sec_rls_grants_medio.sql
 
 DO $$
@@ -257,8 +263,26 @@ BEGIN
     RAISE EXCEPTION 'FAIL: falta GRANT INSERT em push_subscriptions.subscription';
   END IF;
 
-  IF has_column_privilege('authenticated', 'public.veiculos', 'id_motorista', 'UPDATE') THEN
-    RAISE EXCEPTION 'FAIL: authenticated ainda tem UPDATE em veiculos.id_motorista';
+  IF NOT has_column_privilege('authenticated', 'public.veiculos', 'id_motorista', 'UPDATE') THEN
+    RAISE EXCEPTION 'FAIL: falta GRANT UPDATE em veiculos.id_motorista (upsert VehicleSetup)';
+  END IF;
+
+  IF NOT has_column_privilege('authenticated', 'public.veiculos', 'marca_modelo', 'UPDATE') THEN
+    RAISE EXCEPTION 'FAIL: falta GRANT UPDATE em veiculos.marca_modelo';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'grupos' AND policyname = 'grupos_delete_owner'
+  ) THEN
+    RAISE EXCEPTION 'FAIL: policy grupos_delete_owner em falta (DELETE só dono da procura)';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger
+    WHERE tgname = 'trg_membros_grupo_insert_estado_guard'
+  ) THEN
+    RAISE EXCEPTION 'FAIL: trigger trg_membros_grupo_insert_estado_guard em falta';
   END IF;
 
   IF has_table_privilege('authenticated', 'public.push_subscriptions', 'UPDATE') THEN
