@@ -22,6 +22,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import OverlayShell from '../components/OverlayShell';
 import AcordoDetalheSheetHeader from '../components/AcordoDetalheSheetHeader';
 import SheetDragHandle from '../components/SheetDragHandle';
+import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
 import TerminateConfirmSheet from '../components/TerminateConfirmSheet';
 import { Button } from '../components/ui/button';
 import { formatKwanza } from '../utils/formatKwanza';
@@ -284,6 +285,10 @@ const MyAgreements = () => {
   const [acordos, setAcordos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selected, setSelected] = useState(null);
+  const [acordoSheetHeaderScrolled, setAcordoSheetHeaderScrolled] = useState(false);
+  const acordoSheetDialogRef = useRef(/** @type {HTMLDivElement | null} */ (null));
+  const acordoSheetFecharRef = useRef(/** @type {HTMLButtonElement | null} */ (null));
+  const acordoSheetReturnFocusRef = useRef(/** @type {HTMLElement | null} */ (null));
   const [terminatePickerOpen, setTerminatePickerOpen] = useState(false);
   const [terminateConfirmOpen, setTerminateConfirmOpen] = useState(false);
   const [terminateJustaPickerOpen, setTerminateJustaPickerOpen] = useState(false);
@@ -443,12 +448,43 @@ const MyAgreements = () => {
     (acordo) => {
       if (!acordo?.id) {
         focusConsumedKeyRef.current = null;
+        const returnTo = acordoSheetReturnFocusRef.current;
+        acordoSheetReturnFocusRef.current = null;
+        setAcordoSheetHeaderScrolled(false);
+        setSelected(null);
+        syncOpenAcordoQuery(null);
+        if (returnTo instanceof HTMLElement) {
+          requestAnimationFrame(() => returnTo.focus());
+        }
+        return;
       }
       setSelected(acordo);
-      syncOpenAcordoQuery(acordo?.id ?? null);
+      syncOpenAcordoQuery(acordo.id);
     },
     [syncOpenAcordoQuery],
   );
+
+  useDialogFocusTrap({
+    containerRef: acordoSheetDialogRef,
+    initialFocusRef: acordoSheetFecharRef,
+    active: Boolean(selected),
+  });
+
+  useEffect(() => {
+    if (!selected?.id) return undefined;
+    const panel = document.querySelector('[data-testid="acordo-detalhe-sheet"]');
+    if (!(panel instanceof HTMLElement)) return undefined;
+
+    const onScroll = () => {
+      setAcordoSheetHeaderScrolled(panel.scrollTop > 0);
+    };
+    onScroll();
+    panel.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      panel.removeEventListener('scroll', onScroll);
+      setAcordoSheetHeaderScrolled(false);
+    };
+  }, [selected?.id]);
 
   const carregar = useCallback(async (options = {}) => {
     const { silent = false } = options;
@@ -560,6 +596,12 @@ const MyAgreements = () => {
       return;
     }
     setSelected((prev) => (prev?.id === found.id ? prev : found));
+    if (!acordoSheetReturnFocusRef.current) {
+      const card = document.querySelector(`[data-acordo-card-id="${openAcordoId}"]`);
+      if (card instanceof HTMLElement) {
+        acordoSheetReturnFocusRef.current = card;
+      }
+    }
     const focusKey = focus ? `${openAcordoId}:${focus}` : null;
     if (focus && focusConsumedKeyRef.current !== focusKey) {
       pendingFocusRef.current = focus;
@@ -869,7 +911,11 @@ const MyAgreements = () => {
       <button
         type="button"
         key={acordo.id}
-        onClick={() => selectAcordo(acordo)}
+        data-acordo-card-id={acordo.id}
+        onClick={(event) => {
+          acordoSheetReturnFocusRef.current = event.currentTarget;
+          selectAcordo(acordo);
+        }}
         className="w-full text-left bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm space-y-2"
       >
         <div className="flex justify-between items-center gap-2">
@@ -1048,6 +1094,7 @@ const MyAgreements = () => {
         panelClassName="bg-white dark:bg-slate-900 shadow-2xl"
       >
         <div
+          ref={acordoSheetDialogRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby="acordo-detail-title"
@@ -1058,6 +1105,8 @@ const MyAgreements = () => {
             estadoAcordo={selected.estado}
             minhaReservada={minhaReservada}
             leavePending={leavePending}
+            isBodyScrolled={acordoSheetHeaderScrolled}
+            fecharRef={acordoSheetFecharRef}
             onClose={() => selectAcordo(null)}
             podeRegistarFaltas={podeRegistarFaltas}
             podeEncerrar={podeEncerrar}

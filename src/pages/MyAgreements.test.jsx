@@ -2075,4 +2075,92 @@ describe('MyAgreements — cabeçalho fixo do sheet Detalhe do acordo', () => {
     const pagamento = screen.getByTestId('acordo-pagamento-section');
     expect(pagamento.className).toMatch(/\bscroll-mt-acordo-detalhe\b/);
   });
+
+  it('ao abrir, o foco vai para o botão Fechar', async () => {
+    renderPage();
+
+    const trigger = await screen.findByRole('button', { name: /Talatona/i });
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const fechar = within(dialog).getByTestId('acordo-detalhe-fechar');
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(fechar);
+    });
+  });
+
+  it('Tab no último focável do sheet volta ao Fechar; Shift+Tab no Fechar vai ao último', async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const fechar = within(dialog).getByTestId('acordo-detalhe-fechar');
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(fechar);
+    });
+
+    const { getFocusableElements } = await import('../utils/focusTrap');
+    const focusables = getFocusableElements(dialog);
+    expect(focusables.length).toBeGreaterThan(1);
+
+    const last = focusables[focusables.length - 1];
+    last.focus();
+    fireEvent.keyDown(document, { key: 'Tab', code: 'Tab', keyCode: 9 });
+    expect(document.activeElement).toBe(fechar);
+
+    fechar.focus();
+    fireEvent.keyDown(document, { key: 'Tab', code: 'Tab', keyCode: 9, shiftKey: true });
+    expect(document.activeElement).toBe(last);
+  });
+
+  it('Tab não escapa para a shell por trás do sheet', async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const fechar = within(dialog).getByTestId('acordo-detalhe-fechar');
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(fechar);
+    });
+
+    fireEvent.keyDown(document, { key: 'Tab', code: 'Tab', keyCode: 9 });
+    expect(dialog).toContainElement(document.activeElement);
+  });
+
+  it('Fechar devolve o foco ao cartão que abriu o sheet', async () => {
+    renderPage();
+
+    const trigger = await screen.findByRole('button', { name: /Talatona/i });
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    fireEvent.click(within(dialog).getByTestId('acordo-detalhe-fechar'));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: /Detalhe do acordo/i })).not.toBeInTheDocument();
+    });
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('cabeçalho marca data-scrolled quando o corpo do sheet faz scroll', async () => {
+    renderPage(['/acordos?openAcordoId=acordo-pax']);
+
+    await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const header = screen.getByTestId('acordo-detalhe-sheet-header');
+    const panel = screen.getByTestId('acordo-detalhe-sheet');
+
+    expect(header).toHaveAttribute('data-scrolled', 'false');
+
+    Object.defineProperty(panel, 'scrollTop', { value: 24, writable: true, configurable: true });
+    fireEvent.scroll(panel);
+
+    await waitFor(() => {
+      expect(header).toHaveAttribute('data-scrolled', 'true');
+    });
+  });
 });

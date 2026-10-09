@@ -7,6 +7,10 @@ import {
   labelEstadoAcordo,
   variantChipEstadoAcordo,
 } from '../utils/acordoEstadoDisplay';
+import {
+  labelChipEstadoPassageiro,
+  chipClassEstadoPassageiro,
+} from '../utils/acordoPassageiroStatus';
 
 /**
  * @param {'activo' | 'pendente' | 'inactivo'} variant
@@ -21,10 +25,6 @@ function chipClassEstadoAcordo(variant) {
   }
   return 'bg-slate-100 text-slate-600';
 }
-import {
-  labelChipEstadoPassageiro,
-  chipClassEstadoPassageiro,
-} from '../utils/acordoPassageiroStatus';
 
 /**
  * Cabeçalho fixo (sticky) do sheet «Detalhe do acordo» — puxador, Fechar, estado e título.
@@ -33,6 +33,8 @@ import {
  *   estadoAcordo: string | null | undefined,
  *   minhaReservada?: boolean,
  *   leavePending?: boolean,
+ *   isBodyScrolled?: boolean,
+ *   fecharRef?: import('react').RefObject<HTMLButtonElement | null>,
  *   onClose: () => void,
  *   podeRegistarFaltas: boolean,
  *   podeEncerrar: boolean,
@@ -45,6 +47,8 @@ export default function AcordoDetalheSheetHeader({
   estadoAcordo,
   minhaReservada = false,
   leavePending = false,
+  isBodyScrolled = false,
+  fecharRef,
   onClose,
   podeRegistarFaltas,
   podeEncerrar,
@@ -54,12 +58,18 @@ export default function AcordoDetalheSheetHeader({
   return (
     <header
       data-testid="acordo-detalhe-sheet-header"
-      className="sticky top-0 z-10 bg-white dark:bg-slate-900 px-5 pt-0 pb-3 border-b border-slate-100/90 dark:border-slate-800"
+      data-scrolled={isBodyScrolled ? 'true' : 'false'}
+      className={`sticky top-0 z-10 bg-white dark:bg-slate-900 px-5 pt-0 pb-3 border-b ${
+        isBodyScrolled
+          ? 'border-slate-200/90 shadow-[0_4px_12px_-8px_rgba(15,23,42,0.35)] dark:border-slate-700 dark:shadow-[0_4px_12px_-8px_rgba(0,0,0,0.5)]'
+          : 'border-slate-100/90 dark:border-slate-800'
+      }`}
     >
       <SheetDragHandle />
 
       <div className="flex items-center justify-between gap-3">
         <Button
+          ref={fecharRef}
           type="button"
           variant="ghost"
           className="h-10 px-0 font-bold text-slate-600 dark:text-slate-300"
