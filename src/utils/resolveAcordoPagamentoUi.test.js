@@ -73,6 +73,15 @@ describe('resolveAcordoPagamentoUi — P0 Figma', () => {
     expect(ui.variant).toBe('S1');
   });
 
+  it('6686de8 — expirado sem pagamento carregado cai em S1 (motivo ausente)', () => {
+    const ui = resolveAcordoPagamentoUiPassageiro({
+      minhaLinha: { estado: 'expirado' },
+      pagamento: null,
+      obrigacao: { valor_em_divida: 0 },
+    });
+    expect(ui.variant).toBe('S1');
+  });
+
   it('S3 saída antes da activação com lugar expirado e pagamento anulado (não S1)', () => {
     const ui = resolveAcordoPagamentoUiPassageiro({
       minhaLinha: { estado: 'expirado' },

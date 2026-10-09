@@ -3,13 +3,27 @@ import {
   ANULACAO_MOTIVOS_EXPIRACAO_RESERVA,
 } from '../constants/anulacaoMotivos.js';
 
+/** Motivos de saída voluntária / rescisão antes da activação → chip «Saiu» e UI S3. */
+export const ANULACAO_MOTIVOS_SAIDA_VOLUNTARIA = Object.freeze([
+  ANULACAO_MOTIVO.SAISTE_ANTES_ACTIVACAO,
+  ANULACAO_MOTIVO.ACORDO_TERMINADO_ANTES_ACTIVACAO,
+]);
+
+/**
+ * @param {{ anulacao_motivo?: string | null } | null | undefined} pagamento
+ * @returns {boolean}
+ */
+export function isAnulacaoMotivoSaidaVoluntaria(pagamento) {
+  const motivo = String(pagamento?.anulacao_motivo ?? '').trim();
+  return ANULACAO_MOTIVOS_SAIDA_VOLUNTARIA.includes(motivo);
+}
+
 /**
  * @param {{ anulacao_motivo?: string | null } | null | undefined} pagamento
  * @returns {boolean}
  */
 export function isAnulacaoPorSaidaAntesActivacao(pagamento) {
-  const motivo = String(pagamento?.anulacao_motivo ?? '').trim();
-  return motivo === ANULACAO_MOTIVO.SAISTE_ANTES_ACTIVACAO;
+  return isAnulacaoMotivoSaidaVoluntaria(pagamento);
 }
 
 /**

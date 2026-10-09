@@ -48,6 +48,7 @@ vi.mock('../services/PaymentService', async (importOriginal) => {
     getPagamentoForPassageiro: vi.fn(),
     getAcordoContactos: vi.fn(),
     getObrigacaoPagamentoPassageiro: vi.fn(),
+    listAnulacaoMotivoLugarAcordos: vi.fn().mockResolvedValue([]),
   };
 });
 
@@ -84,6 +85,7 @@ import {
   getAcordoContactos,
   getMesReferenciaAtual,
   getObrigacaoPagamentoPassageiro,
+  listAnulacaoMotivoLugarAcordos,
 } from '../services/PaymentService';
 
 /** @param {boolean} [emCustodia] */
@@ -696,6 +698,14 @@ describe('MyAgreements — marketplace 1:N', () => {
 
     it('motorista: chips «Saiu» e «Expirado» na lista de passageiros', async () => {
       mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      listAnulacaoMotivoLugarAcordos.mockResolvedValue([
+        {
+          acordo_id: 'acordo-1',
+          passenger_id: 'pax-exp',
+          anulacao_motivo: 'Prazo de reserva expirado',
+          pagamento_estado: 'anulado',
+        },
+      ]);
       getAgreementsForDriver.mockResolvedValue([
         {
           ...acordoMotorista,

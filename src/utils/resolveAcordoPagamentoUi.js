@@ -79,9 +79,29 @@ export function resolveAcordoPagamentoUiPassageiro(ctx) {
   }
 
   if (lugar === 'expirado' && valorDivida <= 0) {
+    const ttlReserva = isAnulacaoReservaExpiradaPorPagamento(pagamento);
+    if (!pagamento || ttlReserva) {
+      return {
+        variant: 'S1',
+        sheetTitle: 'A tua reserva expirou',
+        mostrarCartaoEstado: true,
+        ocultarPainelPagamento: true,
+        ocultarBannerExpiradoLegado: true,
+      };
+    }
     return {
-      variant: 'S1',
-      sheetTitle: 'A tua reserva expirou',
+      variant: 'S3',
+      sheetTitle: 'Não tens nada a pagar',
+      mostrarCartaoEstado: true,
+      ocultarPainelPagamento: true,
+      ocultarBannerExpiradoLegado: true,
+    };
+  }
+
+  if (lugar === 'saiu' && valorDivida <= 0 && pgEst === PAYMENT_STATES.ANULADO) {
+    return {
+      variant: 'S3',
+      sheetTitle: 'Não tens nada a pagar',
       mostrarCartaoEstado: true,
       ocultarPainelPagamento: true,
       ocultarBannerExpiradoLegado: true,

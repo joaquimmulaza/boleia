@@ -61,6 +61,21 @@ export async function listPagamentosByAcordo(acordoId) {
 }
 
 /**
+ * Motivos de anulação do mês corrente por lugar (chips Saiu vs Expirado) — RPC estreita.
+ * @param {string[]} acordoIds
+ * @returns {Promise<Array<{ acordo_id: string, acordo_passageiro_id: string, passenger_id: string, pagamento_estado: string | null, anulacao_motivo: string | null }>>}
+ */
+export async function listAnulacaoMotivoLugarAcordos(acordoIds) {
+  const ids = (acordoIds || []).filter(Boolean);
+  if (ids.length === 0) return [];
+  const { data, error } = await supabase.rpc('list_anulacao_motivo_lugar_acordos', {
+    p_acordo_ids: ids,
+  });
+  if (error) throw error;
+  return data || [];
+}
+
+/**
  * Admin: fila de comprovativos à espera de validação.
  * @returns {Promise<object[]>}
  */

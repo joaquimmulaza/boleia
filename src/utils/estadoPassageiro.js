@@ -3,7 +3,7 @@
  * @typedef {'activo' | 'reservado' | 'saiu' | 'expirado' | string} EstadoPassageiroDb
  */
 
-import { isAnulacaoPorSaidaAntesActivacao } from './pagamentoAnulacaoMotivo.js';
+import { isAnulacaoMotivoSaidaVoluntaria } from './pagamentoAnulacaoMotivo.js';
 
 /**
  * @param {string | null | undefined} estado
@@ -22,7 +22,7 @@ export function normalizeEstadoPassageiroKey(estado) {
  */
 export function estadoPassageiroParaChip(estado, pagamento) {
   const e = normalizeEstadoPassageiroKey(estado);
-  if (e === 'expirado' && isAnulacaoPorSaidaAntesActivacao(pagamento)) {
+  if (e === 'expirado' && isAnulacaoMotivoSaidaVoluntaria(pagamento)) {
     return 'saiu';
   }
   return e;
