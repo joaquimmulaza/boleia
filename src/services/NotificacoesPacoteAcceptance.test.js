@@ -10,6 +10,7 @@ import { resolveNotificationRoute } from '../utils/notificationRouter.js';
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS = join(ROOT, '../../supabase/migrations');
 const MIGRATION_FILE = '20261009210000_notificacoes_pacote.sql';
+const MIGRATION_LAST_PAX = '20261009220000_last_passenger_leave_driver_notif.sql';
 const MIG_P1 = '20261009200000_p1_encerramento_gaps.sql';
 
 /** @param {string} filename */
@@ -89,6 +90,39 @@ describe('Pacote notificações — migração SQL', () => {
       true,
     );
     expect(existsSync(join(ROOT, '../../scripts/run-notificacoes-pacote-pg-proof.sh'))).toBe(true);
+  });
+});
+
+describe('Pacote notificações — último passageiro (PM)', () => {
+  it('migração 20261009220000 existe', () => {
+    expect(existsSync(join(MIGRATIONS, MIGRATION_LAST_PAX))).toBe(true);
+  });
+
+  it('leave_passenger activa skip do trigger antes de fechar acordo sem lugares vivos', () => {
+    const sql = readMigration(MIGRATION_LAST_PAX);
+    const body = extractLeavePassengerBody(MIGRATION_LAST_PAX);
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\.leave_passenger/);
+    expect(body).toContain("set_config('boleia.skip_acordo_cancel_notif', 'on', true)");
+    const skipOn = body.indexOf("set_config('boleia.skip_acordo_cancel_notif', 'on', true)");
+    const maybeFechar = body.indexOf('PERFORM public._maybe_fechar_acordo_sem_lugares_vivos');
+    expect(skipOn).toBeGreaterThan(-1);
+    expect(maybeFechar).toBeGreaterThan(skipOn);
+    expect(sql).toContain('A tua oferta continua publicada.');
+    expect(sql).toContain('saiu e o acordo foi encerrado.');
+    expect(sql).toContain('O último passageiro saiu e o acordo foi encerrado.');
+  });
+
+  it('último passageiro — notificação sem link (sem CTA); parcial mantém link', () => {
+    const pacote = extractLeavePassengerBody(MIGRATION_LAST_PAX);
+    expect(pacote).toMatch(/v_ultimo_passageiro_saiu/);
+    expect(pacote).toMatch(/INSERT INTO public\.notificacoes \(user_id, mensagem, tipo, metadata\)/);
+    expect(pacote).toContain('Ficou um lugar livre.');
+  });
+
+  it('documenta reutilização de boleia.skip_acordo_cancel_notif (trigger handle_acordo_notifications)', () => {
+    const sql = readMigration(MIGRATION_LAST_PAX);
+    expect(sql).toMatch(/handle_acordo_notifications|skip_acordo_cancel_notif/i);
+    expect(sql).not.toContain('Um acordo foi cancelado.');
   });
 });
 
