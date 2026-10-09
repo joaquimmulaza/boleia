@@ -56,16 +56,8 @@ export function buildAuthUrlWithOpenAcordo({ openAcordoId, sessionEnded = false 
  */
 export function resolvePostLoginPathWithOpenAcordo(nextRaw, openAcordoIdRaw, tipoPerfil) {
   if (openAcordoIdRaw != null && String(openAcordoIdRaw).trim() !== '') {
-    return buildAcordosPathForOpenAcordo(openAcordoIdRaw);
+    const id = sanitizeOpenAcordoId(openAcordoIdRaw);
+    return id ? `/acordos?openAcordoId=${encodeURIComponent(id)}` : '/acordos';
   }
   return resolvePostLoginPath(nextRaw, tipoPerfil);
-}
-
-/**
- * @param {string | null | undefined} openAcordoIdRaw
- * @returns {string}
- */
-export function buildAcordosPathForOpenAcordo(openAcordoIdRaw) {
-  const id = sanitizeOpenAcordoId(openAcordoIdRaw);
-  return id ? `/acordos?openAcordoId=${encodeURIComponent(id)}` : '/acordos';
 }

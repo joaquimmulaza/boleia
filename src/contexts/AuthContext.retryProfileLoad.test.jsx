@@ -48,8 +48,8 @@ function RetryButton() {
   );
 }
 
-/** Regressão d23f966f — B1: ordem profileLoading antes de profileLoadTimedOut. */
-describe('AuthContext retryProfileLoad — deep link (B1 d23f966f)', () => {
+/** Regressão B1 — ordem profileLoading antes de profileLoadTimedOut (falha em 92604faf). */
+describe('AuthContext retryProfileLoad — deep link (B1)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     resetAuthSessionRefreshState();
@@ -121,6 +121,93 @@ describe('AuthContext retryProfileLoad — deep link (B1 d23f966f)', () => {
       `/motorista?openAcordoId=${ACORDO_ID}`,
     );
     expect(screen.queryByText('Hub Passageiro')).not.toBeInTheDocument();
+
+    await act(async () => {
+      resolveRetryGetSession?.({ data: { session }, error: null });
+      await Promise.resolve();
+    });
+  });
+
+  it('92604faf: fetch falha, timeout, «Tentar outra vez» preserva openAcordoId (sem redirect)', async () => {
+    const session = {
+      access_token: 'tok',
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+      user: {
+        id: 'mot-metadata-pax',
+        user_metadata: { tipo_perfil: 'Passageiro' },
+      },
+    };
+
+    supabase.auth.getSession.mockResolvedValue({ data: { session }, error: null });
+
+    let resolvePerfisFail;
+    const perfisFailPromise = new Promise((resolve) => {
+      resolvePerfisFail = resolve;
+    });
+
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: () => perfisFailPromise,
+        }),
+      }),
+    });
+    supabase.rpc.mockReturnValue(new Promise(() => {}));
+
+    render(
+      <MemoryRouter initialEntries={[`/motorista?openAcordoId=${ACORDO_ID}`]}>
+        <AuthProvider>
+          <LocationProbe />
+          <Routes>
+            <Route path="/passageiro" element={<LocationProbe />} />
+            <Route path="/auth" element={<div>Auth</div>} />
+            <Route path="/motorista" element={<ProtectedRoute allowedRole="Motorista" />}>
+              <Route index element={<RetryButton />} />
+            </Route>
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(PROFILE_LOAD_TIMEOUT_MS + 50);
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      resolvePerfisFail?.({
+        data: null,
+        error: { code: '42501', message: 'permission denied for table perfis' },
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(screen.getByRole('button', { name: /tentar outra vez/i })).toBeInTheDocument();
+
+    let resolveRetryGetSession;
+    supabase.auth.getSession.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveRetryGetSession = resolve;
+        }),
+    );
+
+    await act(async () => {
+      screen.getByRole('button', { name: /tentar outra vez/i }).click();
+      await Promise.resolve();
+    });
+
+    expect(screen.getByTestId('loc').textContent).toMatch(
+      new RegExp(`^/motorista\\?openAcordoId=${ACORDO_ID}`),
+    );
+    expect(screen.getByTestId('loc').textContent).not.toBe('/passageiro');
+    expect(screen.queryByText('Auth')).not.toBeInTheDocument();
 
     await act(async () => {
       resolveRetryGetSession?.({ data: { session }, error: null });

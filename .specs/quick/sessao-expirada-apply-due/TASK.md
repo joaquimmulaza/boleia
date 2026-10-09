@@ -12,4 +12,4 @@ JWT expirado após idle: pedidos anon (401/42501) em perfis, acordos e RPCs lazy
 6. Set de tentativas com cap + reset em sign-out / token novo.
 7. Limpar sessão morta: `signOut({ scope: 'local' })`.
 8. `SIGNED_OUT` → `sessionEndedForAuthRedirect` → ProtectedRoute `/auth?sessionEnded=1`.
-9. Pós-login acordo: `resolvePostLoginPathWithOpenAcordo` → `buildAcordosPathForOpenAcordo`.
+9. Pós-login acordo: `resolvePostLoginPathWithOpenAcordo` reconstrói `/acordos?openAcordoId=`.
