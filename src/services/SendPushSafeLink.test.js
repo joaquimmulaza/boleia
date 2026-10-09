@@ -14,7 +14,7 @@ describe('send-push — safe notification URL (B2)', () => {
       join(ROOT, '../../supabase/functions/send-push/index.ts'),
       'utf8',
     );
-    expect(src).toContain('resolvePushNotificationUrl');
+    expect(src).toContain('resolvePushDataUrl');
     expect(src).toContain('../_shared/safeNotificationLink.ts');
     expect(src).not.toMatch(/url:\s*link\s*\|\|/);
   });

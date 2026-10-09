@@ -124,6 +124,14 @@ describe('Pacote notificações — último passageiro (PM)', () => {
     expect(sql).toMatch(/created_at DESC/);
   });
 
+  it('B5: terminate_agreement restaura ja_encerrado (corpo prod 200000 + B4)', () => {
+    const sql = readMigration(MIGRATION_B4);
+    expect(sql).toMatch(/status', 'ja_encerrado'/);
+    expect(sql).toMatch(/status', 'confirmado_idempotente'/);
+    expect(sql).toContain('_acordo_cancel_notif_suppress');
+    expect(sql).not.toMatch(/skip_acordo_cancel_notif/);
+  });
+
   it('script prova PG B4 incluída no pacote leave', () => {
     const proof = readFileSync(
       join(ROOT, '../../supabase/tests/notif_pacote_leave_passenger_pg_proof.sql'),

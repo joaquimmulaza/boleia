@@ -444,6 +444,19 @@ BEGIN
       || 'o acordo mantém-se activo até ao fim deste mês.';
 
   ELSIF v_modo = 'consensual' THEN
+    IF lower(COALESCE(v_acordo.rescisao_modo, '')) = 'consensual'
+       AND v_acordo.rescisao_solicitada_por IS NOT NULL
+       AND v_acordo.rescisao_solicitada_por IS DISTINCT FROM v_uid
+       AND lower(v_acordo.estado) <> 'activo'
+       AND v_acordo.rescisao_confirmada_em IS NULL THEN
+      IF p_idempotency_key IS NOT NULL THEN
+        INSERT INTO public.rpc_idempotency (idempotency_key, rpc_name, subject_id, user_id)
+        VALUES (p_idempotency_key, 'terminate_agreement', p_acordo_id, v_uid)
+        ON CONFLICT (idempotency_key) DO NOTHING;
+      END IF;
+      RETURN jsonb_build_object('acordo_id', p_acordo_id, 'status', 'ja_encerrado');
+    END IF;
+
     IF lower(v_acordo.estado) <> 'activo' THEN
       RAISE EXCEPTION 'Este acordo já não está activo.';
     END IF;

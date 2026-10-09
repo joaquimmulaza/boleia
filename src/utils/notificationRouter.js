@@ -13,7 +13,7 @@
  * PACOTE ENG #16 — pagamento, adenda, renovação, liquidação → /acordos?openAcordoId&focus
  */
 
-import { isSafeInternalNotificationPath } from './safeNotificationLink.js';
+import { isSafeInternalNotificationPath, sanitizeNotificationLink } from './safeNotificationLink.js';
 
 /** Estados de adenda que exigem foco na secção «Alteração de preço». */
 const ADENDA_PENDENTE_ESTADOS = new Set([
@@ -111,7 +111,7 @@ export const resolveNotificationRoute = (notif) => {
   // dado que a Edge Function os injeta como fallbacks hardcoded.
   if (notif?.link && notif.link !== '/dashboard' && notif.link !== '/') {
     if (isSafeInternalNotificationPath(notif.link)) {
-      return notif.link.trim();
+      return sanitizeNotificationLink(notif.link);
     }
   }
 
