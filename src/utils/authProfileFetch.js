@@ -3,6 +3,34 @@
  * @param {{ code?: string, message?: string, status?: number, statusCode?: number } | null | undefined} error
  * @returns {boolean}
  */
+/**
+ * Erro de JWT inválido/expirado (não confundir com 42501 RLS em perfis).
+ * @param {{ code?: string, message?: string, status?: number, statusCode?: number } | null | undefined} error
+ * @returns {boolean}
+ */
+export function isJwtSessionError(error) {
+  if (!error) return false;
+  const code = String(error.code || '');
+  if (code === '42501') return false;
+  if (code === 'PGRST301') return true;
+  const msg = String(error.message || '').toLowerCase();
+  if (msg.includes('jwt expired') || msg.includes('jwt')) return true;
+  const status = error.status ?? error.statusCode;
+  if (status === 401 && code && code !== '42501') return true;
+  return false;
+}
+
+/**
+ * @param {unknown} error
+ * @param {import('@supabase/supabase-js').Session | null | undefined} session
+ * @returns {boolean}
+ */
+export function shouldRefreshSessionForAuthError(error, session) {
+  if (!hasAuthSessionShape(session)) return false;
+  if (isJwtSessionError(error)) return true;
+  return isAccessTokenExpiredOrNearExpiry(session);
+}
+
 export function isAnonOrAuthPrivilegeError(error) {
   if (!error) return false;
   const status = error.status ?? error.statusCode;

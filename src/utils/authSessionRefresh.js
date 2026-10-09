@@ -6,6 +6,7 @@ import {
   isLiveAuthSession,
   isAccessTokenExpiredOrNearExpiry,
   isAnonOrAuthPrivilegeError,
+  shouldRefreshSessionForAuthError,
   profileFetchSessionKey,
   hasAuthSessionShape,
 } from './authProfileFetch.js';
@@ -100,6 +101,10 @@ export async function withLiveSessionAuthCall(client, run) {
   let didRefresh = false;
 
   const { data: { session: initial } } = await getSession();
+  const initialSessionKey = hasAuthSessionShape(initial)
+    ? profileFetchSessionKey(initial)
+    : null;
+
   if (
     hasAuthSessionShape(initial)
     && isAccessTokenExpiredOrNearExpiry(initial)
@@ -116,14 +121,19 @@ export async function withLiveSessionAuthCall(client, run) {
     return result;
   }
 
-  if (!didRefresh) {
-    const { data: { session: current } } = await getSession();
-    if (
-      isLiveAuthSession(current)
-      && isAccessTokenExpiredOrNearExpiry(current)
-    ) {
-      didRefresh = Boolean(await refreshSessionOnceIfAllowed(client, current));
-    }
+  const { data: { session: current } } = await getSession();
+
+  if (
+    initialSessionKey
+    && hasAuthSessionShape(current)
+    && profileFetchSessionKey(current) !== initialSessionKey
+    && isLiveAuthSession(current)
+  ) {
+    return run();
+  }
+
+  if (!didRefresh && shouldRefreshSessionForAuthError(error, current ?? initial)) {
+    didRefresh = Boolean(await refreshSessionOnceIfAllowed(client, current ?? initial));
   }
 
   if (didRefresh) {

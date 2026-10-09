@@ -219,6 +219,72 @@ describe('authSessionRefresh — caminho único #255', () => {
     vi.spyOn(Date, 'now').mockRestore();
   });
 
+  it('em cooldown repete run sem refresh se o token já foi renovado noutra chamada', async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const expired = makeSession(now - 120, 'tok-shared-old');
+    const fresh = makeSession(now + 3600, 'tok-shared-new');
+
+    let sessionState = expired;
+    const client = {
+      auth: {
+        getSession: vi.fn().mockImplementation(async () => ({
+          data: { session: sessionState },
+          error: null,
+        })),
+        refreshSession: vi.fn().mockImplementation(async () => {
+          sessionState = fresh;
+          return { data: { session: fresh }, error: null };
+        }),
+      },
+    };
+
+    const runA = vi
+      .fn()
+      .mockResolvedValueOnce({ data: null, error: { code: '42501' } })
+      .mockResolvedValueOnce({ data: 'a', error: null });
+    const runB = vi
+      .fn()
+      .mockResolvedValueOnce({ data: null, error: { code: '42501' } })
+      .mockResolvedValueOnce({ data: 'b', error: null });
+
+    const [resultA, resultB] = await Promise.all([
+      withLiveSessionAuthCall(client, runA),
+      withLiveSessionAuthCall(client, runB),
+    ]);
+
+    expect(client.auth.refreshSession).toHaveBeenCalledTimes(1);
+    expect(runA).toHaveBeenCalledTimes(2);
+    expect(runB).toHaveBeenCalledTimes(2);
+    expect(resultA).toEqual({ data: 'a', error: null });
+    expect(resultB).toEqual({ data: 'b', error: null });
+  });
+
+  it('PGRST301 com token válido tenta refresh uma vez', async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const fresh = makeSession(now + 3600, 'tok-jwt');
+
+    const client = {
+      auth: {
+        getSession: vi.fn().mockResolvedValue({ data: { session: fresh }, error: null }),
+        refreshSession: vi.fn().mockResolvedValue({
+          data: { session: makeSession(now + 7200, 'tok-jwt-new') },
+          error: null,
+        }),
+      },
+    };
+
+    const run = vi
+      .fn()
+      .mockResolvedValueOnce({ data: null, error: { code: 'PGRST301' } })
+      .mockResolvedValueOnce({ data: 'ok', error: null });
+
+    const result = await withLiveSessionAuthCall(client, run);
+
+    expect(client.auth.refreshSession).toHaveBeenCalledTimes(1);
+    expect(run).toHaveBeenCalledTimes(2);
+    expect(result).toEqual({ data: 'ok', error: null });
+  });
+
   it('refresh falha: não repete refresh (≤1 refreshSession)', async () => {
     const now = Math.floor(Date.now() / 1000);
     const expired = makeSession(now - 60);

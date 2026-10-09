@@ -107,6 +107,39 @@ describe('ProfileLoadGate', () => {
     expect(screen.getByTestId('loc')).toHaveTextContent('/auth?sessionEnded=1');
   });
 
+  it('«Tentar outra vez» não redirecciona — mantém pathname e query', () => {
+    useAuth.mockReturnValue({
+      session: { user: { id: 'u1' } },
+      loading: false,
+      profileLoading: false,
+      profileLoadTimedOut: true,
+      retryProfileLoad,
+    });
+
+    render(
+      <MemoryRouter initialEntries={[`/acordos?openAcordoId=${VALID_ACORDO_ID}`]}>
+        <Routes>
+          <Route
+            path="/acordos"
+            element={
+              <>
+                <ProfileLoadGate />
+                <LocationProbe />
+              </>
+            }
+          />
+          <Route path="/passageiro" element={<LocationProbe />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    screen.getByRole('button', { name: /tentar outra vez/i }).click();
+    expect(retryProfileLoad).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('loc')).toHaveTextContent(
+      `/acordos?openAcordoId=${VALID_ACORDO_ID}`,
+    );
+  });
+
   it('retry chama retryProfileLoad', () => {
     useAuth.mockReturnValue({
       session: { user: { id: 'u1' } },
