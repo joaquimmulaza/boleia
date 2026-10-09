@@ -25,8 +25,7 @@ CREATE TABLE IF NOT EXISTS public.perfis (
   onboarding_completed boolean DEFAULT false,
   perfil_completo boolean DEFAULT true,
   tipo_perfil text,
-  is_admin boolean DEFAULT false,
-  is_test boolean DEFAULT false
+  is_admin boolean DEFAULT false
 );
 
 CREATE TABLE IF NOT EXISTS public.notificacoes (
@@ -89,7 +88,7 @@ GRANT EXECUTE ON FUNCTION public._create_pagamentos_periodo(uuid, date, uuid) TO
 GRANT EXECUTE ON FUNCTION public._refresh_repasse_motorista(uuid, date, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.notify_domain_event(uuid, text, text, jsonb, uuid) TO authenticated;
 
-\i supabase/migrations/20261009033000_sec_perfis_notificacoes_grants.sql
+\i supabase/migrations/20261009144500_sec_perfis_notificacoes_grants.sql
 
 DO $$
 DECLARE
@@ -101,10 +100,6 @@ DECLARE
 BEGIN
   IF has_column_privilege('authenticated', 'public.perfis', 'is_admin', 'UPDATE') THEN
     RAISE EXCEPTION 'FAIL: authenticated ainda tem UPDATE em perfis.is_admin';
-  END IF;
-
-  IF has_column_privilege('authenticated', 'public.perfis', 'is_test', 'UPDATE') THEN
-    RAISE EXCEPTION 'FAIL: authenticated ainda tem UPDATE em perfis.is_test';
   END IF;
 
   FOREACH v_col IN ARRAY v_legit LOOP

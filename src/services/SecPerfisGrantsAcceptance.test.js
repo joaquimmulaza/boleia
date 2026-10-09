@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS = join(ROOT, '../../supabase/migrations');
-const SEC_MIGRATION = '20261009033000_sec_perfis_notificacoes_grants.sql';
+const SEC_MIGRATION = '20261009144500_sec_perfis_notificacoes_grants.sql';
 
 /** @param {string} filename */
 function readMigration(filename) {
