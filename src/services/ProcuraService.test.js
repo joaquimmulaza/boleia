@@ -69,6 +69,7 @@ describe('ProcuraService', () => {
         dias_semana: [1, 2, 3, 4, 5],
       }),
     ]);
+    expect(mockInsert.mock.calls[0][0][0]).not.toHaveProperty('estado');
     expect(result.n_candidato).toBe(1);
   });
 

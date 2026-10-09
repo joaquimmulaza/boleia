@@ -44,7 +44,6 @@ export async function createProcura(formData) {
     dias_semana: Array.isArray(formData.dias_semana) && formData.dias_semana.length > 0
       ? formData.dias_semana.map((d) => Number(d)).filter((d) => Number.isFinite(d))
       : [1, 2, 3, 4, 5],
-    estado: 'activa',
   };
 
   const { data, error } = await supabase

@@ -67,6 +67,11 @@ describe('PaymentService', () => {
     await uploadComprovativo('pag-1', file);
 
     expect(supabase.storage.from).toHaveBeenCalledWith('comprovativos-pagamento');
+    expect(supabase.storage.from.mock.results[0].value.upload).toHaveBeenCalledWith(
+      expect.stringMatching(/^pax-1\/pag-1\//),
+      file,
+      expect.objectContaining({ upsert: true }),
+    );
     expect(supabase.rpc).toHaveBeenCalledWith(
       'submit_payment_proof',
       expect.objectContaining({ p_pagamento_id: 'pag-1' }),
