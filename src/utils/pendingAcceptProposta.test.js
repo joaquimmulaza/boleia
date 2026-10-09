@@ -16,9 +16,10 @@ describe('pendingAcceptProposta', () => {
     expect([...ids]).toEqual(['prop-1']);
   });
 
-  it('isErroAceiteOfertaInvalida detecta vagas e contraparte', () => {
+  it('isErroAceiteOfertaInvalida detecta mensagens RPC de oferta inválida', () => {
     expect(isErroAceiteOfertaInvalida(new Error('Sem vagas'))).toBe(true);
-    expect(isErroAceiteOfertaInvalida(new Error('Só a contraparte pode aceitar'))).toBe(true);
+    expect(isErroAceiteOfertaInvalida(new Error('Proposta não está aberta.'))).toBe(true);
+    expect(isErroAceiteOfertaInvalida(new Error('Só a contraparte pode aceitar'))).toBe(false);
     expect(isErroAceiteOfertaInvalida(new Error('Timeout interno'))).toBe(false);
   });
 

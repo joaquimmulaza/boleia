@@ -35,15 +35,15 @@ export const COPY_ERRO_ACEITE_GENERICO = 'Não foi possível aceitar. Tenta outr
  * @param {unknown} err
  * @returns {boolean}
  */
+const ERRO_ACEITE_OFERTA_MUDOU =
+  /Proposta não está aberta|Proposta não encontrada|Oferta não encontrada|Vagas insuficientes|Capacidade inconsistente|Sem vagas|já não está aberta|proposta invalida|invalidada/i;
+
 export function isErroAceiteOfertaInvalida(err) {
   const msg = err instanceof Error ? err.message : String(err || '');
   if (!msg.trim()) return false;
   if (/sessão necessária/i.test(msg)) return false;
-  return (
-    /proposta|oferta|vagas|capacidade|contraparte|invalid|já não|estado|aceitar|rejeitar|aberta|inactiv/i.test(
-      msg,
-    )
-  );
+  if (/Só a contraparte pode aceitar/i.test(msg)) return false;
+  return ERRO_ACEITE_OFERTA_MUDOU.test(msg);
 }
 
 /**

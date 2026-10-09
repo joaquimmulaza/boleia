@@ -1960,6 +1960,201 @@ describe('PassengerDashboard — marketplace', () => {
     Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
   });
 
+  it('sync online: drain da rede com 4xx não mostra toast de sucesso', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    listPropostasByProcura.mockResolvedValue([
+      {
+        id: 'prop-b',
+        estado: 'aberta',
+        created_by: 'driver-1',
+        oferta_id: 'of-browse',
+        procura_id: 'pr-1',
+        modo_preco: 'TOTAL_ACORDO',
+        valor_mensal_ask_kz: 120000,
+        n_passageiros_propostos: 1,
+      },
+    ]);
+    enrichPropostasForReview.mockImplementation(async (lista) =>
+      (lista || []).map((p) => ({
+        proposta: p,
+        titulo: 'Individual',
+        membros: [{ passenger_id: 'pax-1', nome: 'Tu', quota_mensal_kz: 120000 }],
+        pricing: {
+          valor_mensal_total_kz: 120000,
+          valor_mensal_por_passageiro_kz: 120000,
+          quotas: [120000],
+          temResto: false,
+        },
+        avisoComposicao: null,
+      })),
+    );
+    let acceptStillQueuedOnline = true;
+    listPendingMock.mockImplementation(async () => {
+      if (!acceptStillQueuedOnline) return [];
+      return [{ rpc: 'accept_proposal', args: { p_proposta_id: 'prop-b' } }];
+    });
+    drainQueueMock.mockImplementation(async () => {
+      acceptStillQueuedOnline = false;
+      return {
+        processed: 1,
+        remaining: 0,
+        conflicts: [
+          {
+            item: { rpc: 'accept_proposal', args: { p_proposta_id: 'prop-b' } },
+            status: 409,
+            errorText: 'proposta invalida',
+          },
+        ],
+        successes: [],
+      };
+    });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    await abrirMinhaProcura();
+    expect(await screen.findByTestId('proposta-estado-chip')).toHaveTextContent('A enviar…');
+
+    await act(async () => {
+      Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+      window.dispatchEvent(new Event('online'));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('passenger-feedback')).toHaveTextContent(
+        'Não foi possível aceitar — a oferta mudou.',
+      );
+    });
+    expect(screen.getByTestId('passenger-feedback')).not.toHaveTextContent(
+      'Procura fechada — tens acordo activo.',
+    );
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+  });
+
+  it('summary vazio após drain não mostra toast de sucesso', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    listPropostasByProcura.mockResolvedValue([
+      {
+        id: 'prop-b',
+        estado: 'aberta',
+        created_by: 'driver-1',
+        procura_id: 'pr-1',
+        modo_preco: 'TOTAL_ACORDO',
+        valor_mensal_ask_kz: 120000,
+        n_passageiros_propostos: 1,
+      },
+    ]);
+    enrichPropostasForReview.mockImplementation(async (lista) =>
+      (lista || []).map((p) => ({
+        proposta: p,
+        titulo: 'Individual',
+        membros: [{ passenger_id: 'pax-1', nome: 'Tu', quota_mensal_kz: 120000 }],
+        pricing: {
+          valor_mensal_total_kz: 120000,
+          valor_mensal_por_passageiro_kz: 120000,
+          quotas: [120000],
+          temResto: false,
+        },
+        avisoComposicao: null,
+      })),
+    );
+    let acceptStillQueuedEmpty = true;
+    listPendingMock.mockImplementation(async () => {
+      if (!acceptStillQueuedEmpty) return [];
+      return [{ rpc: 'accept_proposal', args: { p_proposta_id: 'prop-b' } }];
+    });
+    drainQueueMock.mockImplementation(async () => {
+      acceptStillQueuedEmpty = false;
+      return { processed: 0, remaining: 0, conflicts: [], successes: [] };
+    });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    await abrirMinhaProcura();
+    expect(await screen.findByTestId('proposta-estado-chip')).toHaveTextContent('A enviar…');
+
+    await act(async () => {
+      Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+      window.dispatchEvent(new Event('online'));
+    });
+
+    await waitFor(() => {
+      expect(drainQueueMock).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(screen.queryByText('A enviar…')).not.toBeInTheDocument();
+    });
+    expect(screen.queryByText('Procura fechada — tens acordo activo.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Proposta aceite. Acordo criado.')).not.toBeInTheDocument();
+  });
+
+  it('visibilitychange com drain vazio não mostra toast de sucesso', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    listPropostasByProcura.mockResolvedValue([
+      {
+        id: 'prop-b',
+        estado: 'aberta',
+        created_by: 'driver-1',
+        procura_id: 'pr-1',
+        modo_preco: 'TOTAL_ACORDO',
+        valor_mensal_ask_kz: 120000,
+        n_passageiros_propostos: 1,
+      },
+    ]);
+    enrichPropostasForReview.mockImplementation(async (lista) =>
+      (lista || []).map((p) => ({
+        proposta: p,
+        titulo: 'Individual',
+        membros: [{ passenger_id: 'pax-1', nome: 'Tu', quota_mensal_kz: 120000 }],
+        pricing: {
+          valor_mensal_total_kz: 120000,
+          valor_mensal_por_passageiro_kz: 120000,
+          quotas: [120000],
+          temResto: false,
+        },
+        avisoComposicao: null,
+      })),
+    );
+    let acceptStillQueuedVis = true;
+    listPendingMock.mockImplementation(async () => {
+      if (!acceptStillQueuedVis) return [];
+      return [{ rpc: 'accept_proposal', args: { p_proposta_id: 'prop-b' } }];
+    });
+    drainQueueMock.mockImplementation(async () => {
+      acceptStillQueuedVis = false;
+      return { processed: 0, remaining: 0, conflicts: [], successes: [] };
+    });
+
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    await abrirMinhaProcura();
+    expect(await screen.findByTestId('proposta-estado-chip')).toHaveTextContent('A enviar…');
+
+    await act(async () => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    await waitFor(() => {
+      expect(drainQueueMock).toHaveBeenCalled();
+    });
+    expect(screen.queryByText('Procura fechada — tens acordo activo.')).not.toBeInTheDocument();
+  });
+
   it('recusa do servidor ao aceitar mantém procura aberta e mostra copy de erro', async () => {
     listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
     listPropostasByProcura.mockResolvedValue([

@@ -74,7 +74,8 @@ import { labelRotaProcura } from '../utils/ofertaLabels';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { FEEDBACK_PROPOSTA_ENVIADA_MOTORISTA } from '../utils/propostaFeedback';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
-import { drainQueue, listPending } from '../services/offlineQueue';
+import { listPending } from '../services/offlineQueue';
+import { OFFLINE_QUEUE_DRAINED } from '../utils/offlineQueueDrain';
 import {
   collectPendingAcceptPropostaIds,
   COPY_ERRO_ACEITE_OFERTA_MUDOU,
@@ -225,13 +226,11 @@ const PassengerDashboard = () => {
   const [pendingAcceptPropostaIds, setPendingAcceptPropostaIds] = useState(
     () => new Set(),
   );
-  const pendingAcceptPropostaIdsRef = useRef(pendingAcceptPropostaIds);
   const inboxReviewsRef = useRef(inboxReviews);
   const procuraRef = useRef(procura);
-  pendingAcceptPropostaIdsRef.current = pendingAcceptPropostaIds;
   inboxReviewsRef.current = inboxReviews;
   procuraRef.current = procura;
-  const { isOnline } = useNetworkStatus();
+  useNetworkStatus();
   /** @type {[null | { oferta: object, gaps: Array<'time' | 'od'>, source: 'browse' | 'hub', form: object }, Function]} */
   const [proporSheet, setProporSheet] = useState(null);
   const [propostaOferta, setPropostaOferta] = useState(null);
@@ -452,23 +451,18 @@ const PassengerDashboard = () => {
 
   const processOfflineSyncSummary = useCallback(
     async (summary) => {
-      const before = new Set(pendingAcceptPropostaIdsRef.current);
-      /** @type {Set<string>} */
-      const conflictIds = new Set();
-      for (const conflict of summary?.conflicts || []) {
+      const conflicts = summary?.conflicts || [];
+      const successes = summary?.successes || [];
+
+      for (const conflict of conflicts) {
         if (conflict?.item?.rpc !== 'accept_proposal') continue;
-        const pid = propostaIdFromAcceptQueueItem(conflict.item);
-        if (pid) conflictIds.add(pid);
         setFeedback({ type: 'error', text: COPY_ERRO_ACEITE_OFERTA_MUDOU });
       }
 
-      await syncPendingAcceptProposals();
-      await carregarRef.current({ silent: true });
-      await syncPendingAcceptProposals();
-
-      const after = pendingAcceptPropostaIdsRef.current;
-      for (const pid of before) {
-        if (after.has(pid) || conflictIds.has(pid)) continue;
+      for (const success of successes) {
+        if (success?.item?.rpc !== 'accept_proposal') continue;
+        const pid = propostaIdFromAcceptQueueItem(success.item);
+        if (!pid) continue;
         const review = inboxReviewsRef.current.find((r) => r.proposta.id === pid);
         if (review) {
           aplicarClearUiPosAceiteServidor({
@@ -487,6 +481,10 @@ const PassengerDashboard = () => {
             : 'Proposta aceite. Acordo criado.',
         });
       }
+
+      await syncPendingAcceptProposals();
+      await carregarRef.current({ silent: true });
+      await syncPendingAcceptProposals();
       notifyMarketplaceHubRefresh();
     },
     [syncPendingAcceptProposals],
@@ -496,25 +494,13 @@ const PassengerDashboard = () => {
     void syncPendingAcceptProposals();
   }, [syncPendingAcceptProposals]);
 
-  const prevOnlineRef = useRef(isOnline);
   useEffect(() => {
-    const cameOnline = isOnline && !prevOnlineRef.current;
-    prevOnlineRef.current = isOnline;
-    if (!cameOnline) return;
-    void drainQueue()
-      .then((summary) => processOfflineSyncSummary(summary))
-      .catch(() => {});
-  }, [isOnline, processOfflineSyncSummary]);
-
-  useEffect(() => {
-    const onVisibilityChange = () => {
-      if (document.visibilityState !== 'visible') return;
-      void drainQueue()
-        .then((summary) => processOfflineSyncSummary(summary))
-        .catch(() => {});
+    /** @param {CustomEvent<{ summary?: object }>} event */
+    const onQueueDrained = (event) => {
+      void processOfflineSyncSummary(event.detail?.summary || {});
     };
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener(OFFLINE_QUEUE_DRAINED, onQueueDrained);
+    return () => window.removeEventListener(OFFLINE_QUEUE_DRAINED, onQueueDrained);
   }, [processOfflineSyncSummary]);
 
   useEffect(() => {
