@@ -41,7 +41,7 @@
 
 ### Pré-requisitos
 
-- [Node.js](https://nodejs.org/) 22 (alinhado com CI)
+- [Node.js](https://nodejs.org/) 24.x (runtime de produção no Vercel)
 - [pnpm](https://pnpm.io/) 9 (`packageManager` no `package.json`; Corepack: `corepack enable`)
 - Uma conta [Supabase](https://supabase.com/) com projeto criado
 - (Opcional) Uma conta [Sentry](https://sentry.io/) para monitorização
