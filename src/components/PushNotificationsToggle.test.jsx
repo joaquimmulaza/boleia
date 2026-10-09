@@ -6,6 +6,7 @@ import PushNotificationsToggle from './PushNotificationsToggle';
 import {
   PUSH_PROFILE_BLOCKED_HELP,
   PUSH_PROFILE_ERROR,
+  PUSH_PROFILE_ERROR_DISABLE,
   PUSH_PROFILE_IPHONE_HELPER,
   PUSH_PROFILE_STATE_ACTIVATING,
   PUSH_PROFILE_STATE_BLOCKED,
@@ -108,6 +109,33 @@ describe('PushNotificationsToggle — 6 estados /perfil', () => {
       expect(screen.getByTestId('push-profile-status-erro')).toHaveTextContent(PUSH_PROFILE_ERROR);
     });
     expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+  });
+
+  describe('desactivar (review B1)', () => {
+    it('ao desligar: spinner sem linha «A activar…» e switch mantém-se ligado', () => {
+      mockUnsubscribe.mockImplementation(() => new Promise(() => {}));
+
+      renderToggle();
+      fireEvent.click(screen.getByRole('switch'));
+
+      expect(screen.getByRole('switch')).toHaveAttribute('aria-busy', 'true');
+      expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
+      expect(screen.queryByTestId('push-profile-status-line')).not.toBeInTheDocument();
+      expect(screen.queryByText(PUSH_PROFILE_STATE_ACTIVATING)).not.toBeInTheDocument();
+    });
+
+    it('falha ao desligar: copy de desactivação e switch continua ligado', async () => {
+      mockUnsubscribe.mockResolvedValue({ error: 'falhou desactivar' });
+
+      renderToggle();
+      fireEvent.click(screen.getByRole('switch'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('push-profile-status-erro')).toHaveTextContent(PUSH_PROFILE_ERROR_DISABLE);
+      });
+      expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
+      expect(screen.getByTestId('push-profile-status-erro')).not.toHaveTextContent(PUSH_PROFILE_ERROR);
+    });
   });
 
   it('estado 6 · Sem suporte: navegador sem push (iPhone mostra linha de ajuda)', () => {

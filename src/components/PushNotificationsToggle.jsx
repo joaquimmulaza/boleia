@@ -6,6 +6,7 @@ import { usePwaInstall } from '../hooks/usePwaInstall';
 import {
   PUSH_PROFILE_BLOCKED_HELP,
   PUSH_PROFILE_ERROR,
+  PUSH_PROFILE_ERROR_DISABLE,
   PUSH_PROFILE_HELP,
   PUSH_PROFILE_IPHONE_HELPER,
   PUSH_PROFILE_LABEL,
@@ -42,8 +43,12 @@ export default function PushNotificationsToggle() {
     unsubscribe,
   } = usePushNotifications();
 
-  const [activating, setActivating] = useState(false);
-  const [activationError, setActivationError] = useState(false);
+  /** @type {['enable' | 'disable' | null, React.Dispatch<React.SetStateAction<'enable' | 'disable' | null>>]} */
+  const [pendingAction, setPendingAction] = useState(null);
+  /** @type {['enable' | 'disable' | null, React.Dispatch<React.SetStateAction<'enable' | 'disable' | null>>]} */
+  const [actionError, setActionError] = useState(null);
+
+  const isPending = pendingAction !== null;
 
   const uiState = useMemo(
     () =>
@@ -52,8 +57,8 @@ export default function PushNotificationsToggle() {
         permission,
         isSubscribed,
         initialLoading: hookLoading,
-        activating,
-        activationError,
+        activating: isPending,
+        activationError: actionError !== null,
         isInstalled,
         platform,
       }),
@@ -62,8 +67,8 @@ export default function PushNotificationsToggle() {
       permission,
       isSubscribed,
       hookLoading,
-      activating,
-      activationError,
+      isPending,
+      actionError,
       isInstalled,
       platform,
     ],
@@ -75,31 +80,34 @@ export default function PushNotificationsToggle() {
     platform,
   });
 
-  const switchChecked = uiState === 'activado';
   const switchLoading = uiState === 'activating';
+  const permissionGranted = String(permission).toLowerCase() === 'granted';
+  const switchChecked = switchLoading
+    ? pendingAction === 'disable'
+    : isSubscribed && permissionGranted;
   const switchDisabled =
     uiState === 'bloqueado' || uiState === 'sem_suporte' || switchLoading || hookLoading;
 
   const handleToggle = async (next) => {
     if (!user?.id || switchDisabled) return;
 
-    setActivationError(false);
+    setActionError(null);
 
     if (next) {
-      setActivating(true);
+      setPendingAction('enable');
       const result = await subscribe(user.id);
-      setActivating(false);
+      setPendingAction(null);
       if (result?.error) {
-        setActivationError(true);
+        setActionError('enable');
       }
       return;
     }
 
-    setActivating(true);
+    setPendingAction('disable');
     const result = await unsubscribe(user.id);
-    setActivating(false);
+    setPendingAction(null);
     if (result?.error) {
-      setActivationError(true);
+      setActionError('disable');
     }
   };
 
@@ -110,7 +118,7 @@ export default function PushNotificationsToggle() {
     statusLine = PUSH_PROFILE_STATE_ON;
   } else if (uiState === 'desactivado') {
     statusLine = PUSH_PROFILE_STATE_OFF;
-  } else if (uiState === 'activating') {
+  } else if (uiState === 'activating' && pendingAction === 'enable') {
     statusLine = PUSH_PROFILE_STATE_ACTIVATING;
   } else if (uiState === 'bloqueado') {
     statusPanel = (
@@ -130,7 +138,9 @@ export default function PushNotificationsToggle() {
         data-testid="push-profile-status-erro"
       >
         <AlertTriangle className="size-6 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden="true" />
-        <p className="leading-relaxed">{PUSH_PROFILE_ERROR}</p>
+        <p className="leading-relaxed">
+          {actionError === 'disable' ? PUSH_PROFILE_ERROR_DISABLE : PUSH_PROFILE_ERROR}
+        </p>
       </div>
     );
   } else if (uiState === 'sem_suporte') {

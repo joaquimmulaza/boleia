@@ -103,19 +103,23 @@ export function usePushNotifications() {
       const subscription = await registration.pushManager.getSubscription();
 
       if (subscription) {
-         // Apagar na BD primeiro
-         const subscriptionJSON = subscription.toJSON();
+        const subscriptionJSON = subscription.toJSON();
+        const endpoint = subscriptionJSON?.endpoint;
 
-         if (userId) {
-             await supabase
-                .from('push_subscriptions')
-                .delete()
-                .eq('user_id', userId)
-                .eq('subscription', JSON.stringify(subscriptionJSON));
-         }
+        if (userId && endpoint) {
+          const { error: deleteError } = await supabase
+            .from('push_subscriptions')
+            .delete()
+            .eq('user_id', userId)
+            .eq('subscription->>endpoint', endpoint);
 
-         // Anular no browser
-         await subscription.unsubscribe();
+          if (deleteError) {
+            setLoading(false);
+            return { error: deleteError.message };
+          }
+        }
+
+        await subscription.unsubscribe();
       }
 
       setIsSubscribed(false);

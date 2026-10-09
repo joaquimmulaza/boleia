@@ -21,6 +21,10 @@ export const PUSH_PROFILE_BLOCKED_HELP =
 export const PUSH_PROFILE_ERROR =
   'Não foi possível activar as notificações. Tenta outra vez.';
 
+/** Copy pendente aprovação PM — falha ao desactivar push no perfil. */
+export const PUSH_PROFILE_ERROR_DISABLE =
+  'Não foi possível desactivar as notificações. Tenta outra vez.';
+
 export const PUSH_PROFILE_UNSUPPORTED =
   'Este navegador não permite notificações.';
 
