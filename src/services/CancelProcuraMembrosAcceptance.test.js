@@ -51,10 +51,12 @@ describe('cancel_procura membros — migração obrigatória', () => {
     expect(existsSync(join(MIGRATIONS, MIGRATION_FILE))).toBe(true);
   });
 
-  it('script de prova PG com cadeia completa de migrações existe', () => {
+  it('script de prova PG corre main→#244 e main→#243→#244', () => {
     expect(existsSync(PG_PROOF)).toBe(true);
     const sh = readFileSync(PG_PROOF, 'utf8');
-    expect(sh).toMatch(/apply-all-migrations-local\.sh/);
+    expect(sh).toMatch(/bootstrap_roles_first\.sql/);
+    expect(sh).toMatch(/sem-160000/);
+    expect(sh).toMatch(/cursor\/sec-default-privileges/);
   });
 
   /** @type {string} */
