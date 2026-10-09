@@ -9,24 +9,29 @@ DECLARE
   v_pax_solo uuid := '0e444444-4444-4444-8444-444444444444';
   v_pax_cons uuid := '0e4aaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   v_pax_jc uuid := '0e4bbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  v_pax_cp uuid := '0e4ccccc-cccc-4ccc-8ccc-cccccccccccc';
   v_veiculo uuid;
   v_oferta uuid;
   v_oferta_solo uuid;
   v_oferta_cons uuid;
   v_oferta_jc uuid;
+  v_oferta_cp uuid;
   v_procura uuid;
   v_procura_solo uuid;
   v_procura_cons uuid;
   v_procura_jc uuid;
+  v_procura_cp uuid;
   v_acordo uuid := '0e555555-5555-4555-8555-555555555555';
   v_acordo_solo uuid := '0e666666-6666-4666-8666-666666666666';
   v_acordo_cons uuid := '0e6aaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   v_acordo_jc uuid := '0e6bbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  v_acordo_cp uuid := '0e6ccccc-cccc-4ccc-8ccc-cccccccccccc';
   v_ap1 uuid := '0e777777-7777-4777-8777-777777777777';
   v_ap2 uuid := '0e888888-8888-4888-8888-888888888888';
   v_ap_solo uuid := '0e999999-9999-4999-8999-999999999999';
   v_ap_cons uuid := '0e7aaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   v_ap_jc uuid := '0e7bbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  v_ap_cp uuid := '0e7ccccc-cccc-4ccc-8ccc-cccccccccccc';
   v_motivo text;
   v_estado text;
   v_key1 uuid := '0e011111-1111-4111-8111-111111111111';
@@ -88,6 +93,14 @@ BEGIN
     'POR_PASSAGEIRO', 20000, 'disponivel'
   ) RETURNING id INTO v_oferta_jc;
 
+  INSERT INTO public.ofertas_capacidade (
+    id, driver_id, veiculo_id, flexibilidade_rota, departure_time, vagas_disponiveis, vagas_totais,
+    modo_preco, valor_mensal_ask_kz, estado, is_test
+  ) VALUES (
+    '0eeccccc-cccc-4ccc-8ccc-cccccccccccc', v_driver, v_veiculo, true, '11:00', 4, 4,
+    'POR_PASSAGEIRO', 20000, 'disponivel', true
+  ) RETURNING id INTO v_oferta_cp;
+
   INSERT INTO public.procuras (owner_id, preferred_time, n_candidato, estado)
   VALUES (v_pax1, '07:30', 2, 'activa') RETURNING id INTO v_procura;
   INSERT INTO public.procuras (owner_id, preferred_time, n_candidato, estado)
@@ -96,6 +109,8 @@ BEGIN
   VALUES (v_pax_cons, '09:30', 1, 'activa') RETURNING id INTO v_procura_cons;
   INSERT INTO public.procuras (owner_id, preferred_time, n_candidato, estado)
   VALUES (v_pax_jc, '10:30', 1, 'activa') RETURNING id INTO v_procura_jc;
+  INSERT INTO public.procuras (owner_id, preferred_time, n_candidato, estado)
+  VALUES (v_pax_cp, '11:30', 1, 'activa') RETURNING id INTO v_procura_cp;
 
   INSERT INTO public.acordos (
     id, oferta_id, procura_id, driver_id, modo_preco, n_passageiros_contrato,
@@ -104,7 +119,13 @@ BEGIN
     (v_acordo, v_oferta, v_procura, v_driver, 'POR_PASSAGEIRO', 2, 40000, 20000, 'activo', 22),
     (v_acordo_solo, v_oferta_solo, v_procura_solo, v_driver, 'POR_PASSAGEIRO', 1, 20000, 20000, 'activo', 22),
     (v_acordo_cons, v_oferta_cons, v_procura_cons, v_driver, 'POR_PASSAGEIRO', 1, 20000, 20000, 'activo', 22),
-    (v_acordo_jc, v_oferta_jc, v_procura_jc, v_driver, 'POR_PASSAGEIRO', 1, 20000, 20000, 'activo', 22);
+    (v_acordo_jc, v_oferta_jc, v_procura_jc, v_driver, 'POR_PASSAGEIRO', 1, 20000, 20000, 'activo', 22),
+    (v_acordo_cp, v_oferta_cp, v_procura_cp, v_driver, 'POR_PASSAGEIRO', 1, 20000, 20000, 'cancelamento_pendente', 22);
+
+  UPDATE public.acordos
+  SET rescisao_modo = 'consensual',
+      rescisao_confirmada_em = NULL
+  WHERE id = v_acordo_cp;
 
   INSERT INTO public.acordos_passageiros (id, acordo_id, passenger_id, estado, quota_mensal_kz, ordem_insercao)
   VALUES
@@ -112,7 +133,8 @@ BEGIN
     (v_ap2, v_acordo, v_pax2, 'activo', 20000, 1),
     (v_ap_solo, v_acordo_solo, v_pax_solo, 'activo', 20000, 0),
     (v_ap_cons, v_acordo_cons, v_pax_cons, 'activo', 20000, 0),
-    (v_ap_jc, v_acordo_jc, v_pax_jc, 'activo', 20000, 0);
+    (v_ap_jc, v_acordo_jc, v_pax_jc, 'activo', 20000, 0),
+    (v_ap_cp, v_acordo_cp, v_pax_cp, 'activo', 20000, 0);
 
   PERFORM set_config('session_replication_role', 'origin', true);
 
@@ -187,6 +209,18 @@ BEGIN
   END IF;
   IF v_motivo IS NOT NULL THEN
     RAISE EXCEPTION 'FAIL P1M: justa_causa não deve definir encerramento_motivo (=%)', v_motivo;
+  END IF;
+
+  -- Consensual pendente (sem confirmação): último leave define sem_lugares_vivos
+  PERFORM set_config('request.jwt.claim.sub', v_pax_cp::text, true);
+  SET LOCAL ROLE authenticated;
+  PERFORM public.leave_passenger(v_acordo_cp, v_pax_cp, gen_random_uuid());
+  RESET ROLE;
+
+  SELECT encerramento_motivo INTO v_motivo FROM public.acordos WHERE id = v_acordo_cp;
+  SELECT lower(estado) INTO v_estado FROM public.acordos WHERE id = v_acordo_cp;
+  IF v_estado <> 'cancelado' OR v_motivo IS DISTINCT FROM 'sem_lugares_vivos' THEN
+    RAISE EXCEPTION 'FAIL P1M: consensual pendente + último leave devia sem_lugares_vivos (estado=%, motivo=%)', v_estado, v_motivo;
   END IF;
 
   RAISE NOTICE 'PASS P1M: encerramento_motivo leave vs terminate';

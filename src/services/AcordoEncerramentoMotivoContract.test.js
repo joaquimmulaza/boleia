@@ -10,6 +10,10 @@ const ROOT = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS = join(ROOT, '../../supabase/migrations');
 const MIGRATION_FILE = '20261009235000_acordo_encerramento_motivo.sql';
 const MIGRATION_LEAVE_SOFT = '20261009240000_encerramento_motivo_leave_passenger_soft.sql';
+const MIGRATION_LEAVE_CONSENSUAL_PENDENTE =
+  '20261009240300_encerramento_motivo_consensual_pendente.sql';
+const MIGRATION_COUNT_LUGARES_VIVOS =
+  '20261009240400_count_lugares_vivos_passageiro_vivo.sql';
 const BASE_LEAVE_MIGRATION = '20261009230000_notif_b4_txid_cancel_suppress.sql';
 
 /** @param {string} raw */
@@ -55,6 +59,24 @@ describe('Acordo encerramento_motivo — contrato', () => {
       /_maybe_fechar_acordo_sem_lugares_vivos\(p_acordo_id\);\s*\n\s*IF v_ultimo_passageiro_saiu THEN[\s\S]*encerramento_motivo = 'sem_lugares_vivos'/,
     );
     expect(next).toMatch(/Último passageiro: supressão via tabela interna \+ txid/);
+
+    expect(existsSync(join(MIGRATIONS, MIGRATION_LEAVE_CONSENSUAL_PENDENTE))).toBe(true);
+    const consPend = extractLeavePassengerBody(
+      readFileSync(join(MIGRATIONS, MIGRATION_LEAVE_CONSENSUAL_PENDENTE), 'utf8'),
+    );
+    expect(consPend).toMatch(/rescisao_confirmada_em IS NULL/);
+    expect(consPend).toMatch(/justa_causa/);
+    expect(consPend).not.toMatch(
+      /encerramento_motivo = 'sem_lugares_vivos'[\s\S]*AND rescisao_modo IS NULL/,
+    );
+  });
+
+  it('count_lugares_vivos_acordo: só passageiro vivo (sem motorista)', () => {
+    expect(existsSync(join(MIGRATIONS, MIGRATION_COUNT_LUGARES_VIVOS))).toBe(true);
+    const sql = readFileSync(join(MIGRATIONS, MIGRATION_COUNT_LUGARES_VIVOS), 'utf8');
+    expect(sql).toMatch(/lower\(ap\.estado\) IN \('activo', 'reservado'\)/);
+    expect(sql).not.toMatch(/v_is_driver := v_uid = v_acordo\.driver_id/);
+    expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION public\.count_lugares_vivos_acordo\(uuid\) TO authenticated;/);
   });
 
   it('GRANT/REVOKE leave_passenger alinhados (authenticated, sem anon)', () => {

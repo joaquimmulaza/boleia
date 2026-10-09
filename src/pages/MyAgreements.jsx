@@ -1320,6 +1320,7 @@ const MyAgreements = () => {
         ? copyCartaoEstadoPagamentoPassageiro(pagamentoUiPassageiro.variant, {
           pagamento: pagamentoViewer,
           obrigacao: obrigacaoPagamento,
+          pagamentoLoading,
         })
         : null;
     const sheetTitulo = pagamentoUiPassageiro?.sheetTitle || 'Detalhe do acordo';
@@ -1394,8 +1395,9 @@ const MyAgreements = () => {
                 variant={pagamentoUiPassageiro.variant}
                 corpo={cartaoEstadoPagamento.corpo}
                 secundaria={cartaoEstadoPagamento.secundaria}
+                aguardarMontante={Boolean(cartaoEstadoPagamento.aguardarMontante)}
                 chipPagamento={
-                  pagamentoUiPassageiro.variant === 'S3'
+                  pagamentoUiPassageiro.variant === 'S3' && !cartaoEstadoPagamento.aguardarMontante
                     ? labelEstadoPagamento(pagamento?.estado, { placement: 'cabecalho' })
                     : null
                 }

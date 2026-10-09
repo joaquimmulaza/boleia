@@ -135,8 +135,9 @@ export function resolveAcordoPagamentoUiPassageiro(ctx) {
  * @param {{
  *   pagamento?: { anulacao_motivo?: string | null, valor_quota_original_kz?: number } | null,
  *   obrigacao?: import('./pagamentoObrigacaoCopy.js').ObrigacaoSnapshot | null,
+ *   pagamentoLoading?: boolean,
  * }} ctx
- * @returns {{ titulo?: string, corpo: string, secundaria: string | null, mostrarUploadNoCartao: boolean }}
+ * @returns {{ titulo?: string, corpo: string, secundaria: string | null, mostrarUploadNoCartao: boolean, aguardarMontante?: boolean }}
  */
 export function copyCartaoEstadoPagamentoPassageiro(variant, ctx) {
   const obrigacao = normalizeObrigacaoSnapshot(ctx.obrigacao);
@@ -162,9 +163,28 @@ export function copyCartaoEstadoPagamentoPassageiro(variant, ctx) {
   }
 
   if (variant === 'S3') {
+    const quotaConhecida =
+      pagamento?.valor_quota_original_kz != null
+      || (obrigacao?.quota != null && Number(obrigacao.quota) > 0);
+    if (ctx.pagamentoLoading && !quotaConhecida) {
+      return {
+        corpo: '',
+        secundaria: null,
+        mostrarUploadNoCartao: false,
+        aguardarMontante: true,
+      };
+    }
     const valorCancelado = Number(
       pagamento?.valor_quota_original_kz ?? obrigacao?.quota ?? valorDivida,
     ) || 0;
+    if (!ctx.pagamentoLoading && !quotaConhecida && valorCancelado <= 0) {
+      return {
+        corpo: '',
+        secundaria: null,
+        mostrarUploadNoCartao: false,
+        aguardarMontante: true,
+      };
+    }
     const motivo = String(pagamento?.anulacao_motivo || '').trim();
     let secundaria = null;
     if (motivo) {

@@ -68,10 +68,42 @@ BEGIN
   PERFORM set_config('request.jwt.claim.sub', v_driver::text, true);
   PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
   SET LOCAL ROLE authenticated;
+  BEGIN
+    PERFORM public.count_lugares_vivos_acordo(v_acordo);
+    RAISE EXCEPTION 'FAIL P1C2: motorista devia ser negado';
+  EXCEPTION
+    WHEN OTHERS THEN
+      GET STACKED DIAGNOSTICS v_err = MESSAGE_TEXT;
+      IF v_err NOT ILIKE '%Sem permissão%' THEN
+        RAISE;
+      END IF;
+  END;
+  RESET ROLE;
+
+  UPDATE public.acordos_passageiros
+  SET estado = 'saiu'
+  WHERE acordo_id = v_acordo AND passenger_id = v_pax2;
+
+  PERFORM set_config('request.jwt.claim.sub', v_pax2::text, true);
+  SET LOCAL ROLE authenticated;
+  BEGIN
+    PERFORM public.count_lugares_vivos_acordo(v_acordo);
+    RAISE EXCEPTION 'FAIL P1C2b: passageiro saiu devia ser negado';
+  EXCEPTION
+    WHEN OTHERS THEN
+      GET STACKED DIAGNOSTICS v_err = MESSAGE_TEXT;
+      IF v_err NOT ILIKE '%Sem permissão%' THEN
+        RAISE;
+      END IF;
+  END;
+  RESET ROLE;
+
+  PERFORM set_config('request.jwt.claim.sub', v_pax1::text, true);
+  SET LOCAL ROLE authenticated;
   v_n := public.count_lugares_vivos_acordo(v_acordo);
   RESET ROLE;
-  IF v_n <> 2 THEN
-    RAISE EXCEPTION 'FAIL P1C2: motorista devia ver 2 vivos (n=%)', v_n;
+  IF v_n <> 1 THEN
+    RAISE EXCEPTION 'FAIL P1C2c: passageiro vivo devia ver 1 (n=%)', v_n;
   END IF;
 
   PERFORM set_config('request.jwt.claim.sub', v_outsider::text, true);

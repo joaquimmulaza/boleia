@@ -973,6 +973,9 @@ describe('MyAgreements — marketplace 1:N', () => {
     expect(within(dialog).getByTestId('estados-lugar-glossario')).toHaveTextContent(/Reservado/i);
     expect(within(dialog).getByTestId('estados-lugar-glossario')).toHaveTextContent(/Confirmado/i);
     expect(within(dialog).getByTestId('estados-lugar-glossario')).toHaveTextContent(/Em custódia/i);
+    expect(within(dialog).getByTestId('estados-lugar-glossario').textContent).not.toMatch(
+      /Em custódia:\s*Em custódia:/i,
+    );
     expect(within(dialog).getByTestId('acordo-pagamento-panel')).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: /Sair só eu/i })).toBeInTheDocument();
     expect(within(dialog).queryByTestId('mudar-preco-proximo-mes-cta')).not.toBeInTheDocument();

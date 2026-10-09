@@ -62,7 +62,8 @@ describe('acordoPassageiroStatus — piloto reservado', () => {
   it('glossário curto Reservado / Confirmado / Em custódia', () => {
     expect(helpGlossarioReservado()).toMatch(/pagamento/i);
     expect(helpGlossarioConfirmado()).toMatch(/confirmad/i);
-    expect(helpGlossarioEmCustodia()).toMatch(/custódia/i);
+    expect(helpGlossarioEmCustodia()).toMatch(/valor recebido/i);
+    expect(helpGlossarioEmCustodia()).not.toMatch(/^Em custódia:/);
     expect(GLOSSARIO_ESTADOS_LUGAR).toHaveLength(3);
     expect(GLOSSARIO_ESTADOS_LUGAR.map((g) => g.termo)).toEqual([
       'Reservado',

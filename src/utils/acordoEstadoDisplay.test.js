@@ -23,7 +23,7 @@ describe('labelEstadoAcordo', () => {
     ).toBe('Encerrado');
   });
 
-  it('cancelado real (rescisão ou outro) mantém Cancelado', () => {
+  it('cancelado real (rescisão confirmada ou justa causa) mantém Cancelado', () => {
     expect(labelEstadoAcordo('cancelado', null)).toBe('Cancelado');
     expect(labelEstadoAcordo('cancelado', undefined)).toBe('Cancelado');
     expect(
@@ -31,8 +31,34 @@ describe('labelEstadoAcordo', () => {
         estado: 'cancelado',
         encerramento_motivo: 'sem_lugares_vivos',
         rescisao_modo: 'consensual',
+        rescisao_confirmada_em: '2026-10-01T12:00:00Z',
       }),
     ).toBe('Cancelado');
+    expect(
+      labelEstadoAcordo({
+        estado: 'cancelado',
+        encerramento_motivo: 'sem_lugares_vivos',
+        rescisao_modo: 'justa_causa',
+      }),
+    ).toBe('Cancelado');
+  });
+
+  it('consensual pendente (sem confirmação) com sem_lugares_vivos mostra Encerrado', () => {
+    expect(
+      labelEstadoAcordo({
+        estado: 'cancelado',
+        encerramento_motivo: 'sem_lugares_vivos',
+        rescisao_modo: 'consensual',
+        rescisao_confirmada_em: null,
+      }),
+    ).toBe('Encerrado');
+    expect(
+      variantChipEstadoAcordo({
+        estado: 'cancelado',
+        encerramento_motivo: 'sem_lugares_vivos',
+        rescisao_modo: 'consensual',
+      }),
+    ).toBe('encerrado');
   });
 
   it('não devolve snake_case cru', () => {

@@ -83,6 +83,16 @@ describe('resolveAcordoPagamentoUi — P0 Figma', () => {
     expect(ui.variant).toBe('S1');
   });
 
+  it('S3 não mostra 0 Kz enquanto o montante não está carregado', () => {
+    const copy = copyCartaoEstadoPagamentoPassageiro('S3', {
+      pagamento: { estado: 'anulado' },
+      obrigacao: { valor_em_divida: 0 },
+      pagamentoLoading: true,
+    });
+    expect(copy.aguardarMontante).toBe(true);
+    expect(copy.corpo).not.toMatch(/0[\s\u00a0]?Kz/);
+  });
+
   it('S3 saída antes da activação com lugar expirado e pagamento anulado (não S1)', () => {
     const ui = resolveAcordoPagamentoUiPassageiro({
       minhaLinha: { estado: 'expirado' },

@@ -251,7 +251,7 @@ export function helpGlossarioConfirmado() {
 
 /** @returns {string} */
 export function helpGlossarioEmCustodia() {
-  return 'Em custódia: valor recebido e retido pela plataforma até libertar ao motorista.';
+  return 'Valor recebido e retido pela plataforma até libertar ao motorista.';
 }
 
 /** Glossário curto para secção de passageiros. */
