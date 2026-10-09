@@ -72,14 +72,15 @@ describe('BoleiaSwitch — shadcn + geometria', () => {
     expect(onCheckedChange).not.toHaveBeenCalled();
   });
 
-  it('zona de toque ≥44px: o root Switch é clicável na área inteira', () => {
+  it('zona de toque ≥44px: label dispara toggle; trilho visual h-8 (32px)', () => {
     const onCheckedChange = vi.fn();
-    renderSwitch({ onCheckedChange });
-    const root = screen.getByTestId('boleia-switch');
-    expect(root.className).toMatch(/h-11/);
-    expect(root.className).toMatch(/min-h-\[44px\]/);
-    expect(root).toHaveAttribute('role', 'switch');
-    fireEvent.click(root);
+    renderSwitch({ id: 'boleia-switch-test', onCheckedChange });
+    const hit = screen.getByTestId('boleia-switch-hit');
+    const sw = screen.getByRole('switch');
+    expect(hit.className).toMatch(/min-h-\[44px\]/);
+    expect(sw.className).toMatch(/\bh-8\b/);
+    expect(sw.className).not.toMatch(/\bh-11\b/);
+    fireEvent.click(hit);
     expect(onCheckedChange).toHaveBeenCalledWith(true);
   });
 

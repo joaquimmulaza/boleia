@@ -44,10 +44,10 @@ vi.mock('./hooks/usePasswordRecoveryRouteRedirect', () => ({
   usePasswordRecoveryRouteRedirect: () => {},
 }));
 
-vi.mock('./dev/DevAppRoutes.jsx', async () => {
+vi.mock('./dev/LazyDevRoutes.jsx', async () => {
   const { Routes, Route } = await import('react-router-dom');
   return {
-    default: function MockDevAppRoutes() {
+    default: function MockLazyDevRoutes() {
       return (
         <Routes>
           <Route path="perfil-push" element={<div data-testid="dev-perfil-push-route">Push DEV</div>} />

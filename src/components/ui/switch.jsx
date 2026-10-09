@@ -4,14 +4,14 @@ import * as SwitchPrimitives from '@radix-ui/react-switch';
 import { cn } from '@/lib/utils';
 
 /**
- * Switch shadcn (Radix) — tokens Boleia, trilho 52×32 (Figma); zona de toque ≥44px (h-11).
+ * Switch shadcn (Radix) — trilho visual 52×32 (Figma). Zona de toque ≥44px no BoleiaSwitch (label).
  * @param {React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root>} props
  */
 const Switch = React.forwardRef(function Switch({ className, children, ...props }, ref) {
   return (
     <SwitchPrimitives.Root
       className={cn(
-        'peer inline-flex h-11 min-h-[44px] w-[52px] shrink-0 cursor-pointer items-center rounded-full border-2 p-0.5 transition-colors',
+        'peer inline-flex h-8 w-[52px] shrink-0 cursor-pointer items-center rounded-full border-2 p-0.5 transition-colors',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         'disabled:cursor-not-allowed disabled:opacity-50',
         'data-[state=checked]:border-primary data-[state=checked]:bg-primary',

@@ -32,6 +32,7 @@ export default function PushNotificationsToggle() {
   const labelId = useId();
   const helpId = useId();
   const statusId = useId();
+  const switchId = useId();
   const { user } = useAuth();
   const { platform, isInstalled } = usePwaInstall();
   const {
@@ -170,6 +171,7 @@ export default function PushNotificationsToggle() {
             </p>
           </div>
           <BoleiaSwitch
+            id={switchId}
             checked={switchChecked}
             disabled={switchDisabled}
             loading={switchLoading}
