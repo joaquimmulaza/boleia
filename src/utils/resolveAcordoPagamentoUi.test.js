@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { ANULACAO_MOTIVO } from '../constants/anulacaoMotivos.js';
 import {
   resolveAcordoPagamentoUiPassageiro,
   copyCartaoEstadoPagamentoPassageiro,
@@ -8,12 +9,25 @@ import {
 } from './resolveAcordoPagamentoUi.js';
 
 describe('resolveAcordoPagamentoUi — P0 Figma', () => {
-  it('S1 reserva expirada por falta de pagamento (TTL)', () => {
+  it('S1 apply_due_reserva_expiry — «Prazo de reserva expirado»', () => {
     const ui = resolveAcordoPagamentoUiPassageiro({
       minhaLinha: { estado: 'expirado' },
       pagamento: {
         estado: 'anulado',
-        anulacao_motivo: 'Reserva terminada sem activação',
+        anulacao_motivo: ANULACAO_MOTIVO.PRAZO_RESERVA_EXPIRADO,
+      },
+      obrigacao: { valor_em_divida: 0, quota: 43000 },
+    });
+    expect(ui.variant).toBe('S1');
+    expect(ui.sheetTitle).toBe('A tua reserva expirou');
+  });
+
+  it('S1 reserva terminada sem activação (literal exacto)', () => {
+    const ui = resolveAcordoPagamentoUiPassageiro({
+      minhaLinha: { estado: 'expirado' },
+      pagamento: {
+        estado: 'anulado',
+        anulacao_motivo: ANULACAO_MOTIVO.RESERVA_TERMINADA_SEM_ACTIVACAO,
       },
       obrigacao: { valor_em_divida: 0, quota: 43000 },
     });
@@ -22,6 +36,41 @@ describe('resolveAcordoPagamentoUi — P0 Figma', () => {
     expect(ui.ocultarPainelPagamento).toBe(true);
     const copy = copyCartaoEstadoPagamentoPassageiro('S1', {});
     expect(copy.corpo).toMatch(/não tens nada a pagar/);
+  });
+
+  it('S3 acordo terminado antes da activação (não S1)', () => {
+    const ui = resolveAcordoPagamentoUiPassageiro({
+      minhaLinha: { estado: 'expirado' },
+      pagamento: {
+        estado: 'anulado',
+        anulacao_motivo: ANULACAO_MOTIVO.ACORDO_TERMINADO_ANTES_ACTIVACAO,
+        valor_quota_original_kz: 16000,
+      },
+      obrigacao: { valor_em_divida: 0 },
+    });
+    expect(ui.variant).toBe('S3');
+    expect(ui.sheetTitle).toBe('Não tens nada a pagar');
+  });
+
+  it('S3 motivo desconhecido (não S1)', () => {
+    const ui = resolveAcordoPagamentoUiPassageiro({
+      minhaLinha: { estado: 'expirado' },
+      pagamento: {
+        estado: 'anulado',
+        anulacao_motivo: 'Texto livre não catalogado',
+      },
+      obrigacao: { valor_em_divida: 0 },
+    });
+    expect(ui.variant).toBe('S3');
+  });
+
+  it('S1 legacy — motivo vazio com lugar expirado', () => {
+    const ui = resolveAcordoPagamentoUiPassageiro({
+      minhaLinha: { estado: 'expirado' },
+      pagamento: { estado: 'anulado', anulacao_motivo: null },
+      obrigacao: { valor_em_divida: 0 },
+    });
+    expect(ui.variant).toBe('S1');
   });
 
   it('S3 saída antes da activação com lugar expirado e pagamento anulado (não S1)', () => {

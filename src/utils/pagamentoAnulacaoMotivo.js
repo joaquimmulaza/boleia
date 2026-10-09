@@ -1,30 +1,29 @@
+import {
+  ANULACAO_MOTIVO,
+  ANULACAO_MOTIVOS_EXPIRACAO_RESERVA,
+} from '../constants/anulacaoMotivos.js';
+
 /**
- * Motivos de anulação de pagamento (espelha copy da BD / RPC P0).
- * Usado para distinguir S1 (TTL) vs S3 (saída antes da activação).
- *
  * @param {{ anulacao_motivo?: string | null } | null | undefined} pagamento
  * @returns {boolean}
  */
 export function isAnulacaoPorSaidaAntesActivacao(pagamento) {
-  const motivo = String(pagamento?.anulacao_motivo || '').trim().toLowerCase();
-  if (!motivo) return false;
-  return motivo.includes('saíste antes') || motivo.includes('saiste antes');
+  const motivo = String(pagamento?.anulacao_motivo ?? '').trim();
+  return motivo === ANULACAO_MOTIVO.SAISTE_ANTES_ACTIVACAO;
 }
 
 /**
- * Reserva expirou por falta de pagamento no prazo (não saída voluntária).
+ * S1 (expiração TTL / reserva terminada) — matching exacto ou legacy vazio.
+ * Qualquer outro texto (incl. desconhecido) → false (UI S3).
  *
  * @param {{ anulacao_motivo?: string | null } | null | undefined} pagamento
  * @returns {boolean}
  */
 export function isAnulacaoReservaExpiradaPorPagamento(pagamento) {
-  const motivo = String(pagamento?.anulacao_motivo || '').trim().toLowerCase();
-  if (!motivo) return true;
-  if (isAnulacaoPorSaidaAntesActivacao(pagamento)) return false;
-  if (motivo.includes('acordo terminado antes')) return false;
-  return (
-    motivo.includes('reserva terminada')
-    || motivo.includes('expirou')
-    || motivo.includes('falta de pagamento')
-  );
+  const raw = pagamento?.anulacao_motivo;
+  if (raw == null || String(raw).trim() === '') {
+    return true;
+  }
+  const motivo = String(raw).trim();
+  return ANULACAO_MOTIVOS_EXPIRACAO_RESERVA.includes(motivo);
 }

@@ -690,6 +690,45 @@ describe('MyAgreements — marketplace 1:N', () => {
     ).toBeInTheDocument();
   });
 
+  it('passageiro reservado: modal de saída neutro enquanto pagamento carrega', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    const acordoReservado = {
+      ...acordoPassageiro,
+      acordos_passageiros: [
+        {
+          id: 'ap-1',
+          passenger_id: 'pax-viewer',
+          estado: 'reservado',
+          quota_mensal_kz: 40000,
+          perfis: { nome_completo: 'Tu Mesmo' },
+        },
+      ],
+    };
+    getAgreementsForPassenger.mockResolvedValue([acordoReservado]);
+    listPagamentosByAcordo.mockResolvedValue([]);
+    let resolveObrigacao;
+    getObrigacaoPagamentoPassageiro.mockImplementation(
+      () => new Promise((resolve) => {
+        resolveObrigacao = resolve;
+      }),
+    );
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    fireEvent.click(await screen.findByRole('button', { name: /Sair só eu/i }));
+    expect(screen.getByText(/A confirmar o estado do pagamento/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Não tens nada a pagar neste acordo/i)).not.toBeInTheDocument();
+
+    resolveObrigacao({ obrigacao: { valor_em_divida: 0 }, pagamento: null });
+    await act(async () => {
+      await Promise.resolve();
+    });
+  });
+
   it('passageiro reservado: Sair só eu avisa cancelamento de pagamento', async () => {
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     const acordoReservado = {

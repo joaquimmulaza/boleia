@@ -682,6 +682,10 @@ const PassengerDashboard = () => {
   };
 
   const persistProcuraUpdate = async (payload) => {
+    if (submitProcuraInFlightRef.current || savingProcura) {
+      return undefined;
+    }
+    submitProcuraInFlightRef.current = true;
     setSavingProcura(true);
     try {
       const actualizada = await updateProcura(procura.id, payload);
@@ -700,6 +704,7 @@ const PassengerDashboard = () => {
       throw err;
     } finally {
       setSavingProcura(false);
+      submitProcuraInFlightRef.current = false;
     }
   };
 

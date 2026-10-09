@@ -2055,6 +2055,7 @@ const MyAgreements = () => {
             (p) => p.passenger_id === user?.id,
           )?.estado,
           pagamento,
+          pagamentoLoading,
         })}
         confirmText="Sair"
         onConfirm={handleLeaveSolo}

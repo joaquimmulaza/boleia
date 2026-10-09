@@ -12,6 +12,23 @@ describe('leavePassageiroCopy — saída antes vs depois da activação', () => 
     expect(isLugarActivadoParaQuota('saiu')).toBe(false);
   });
 
+  it('confirmação reservado enquanto pagamento carrega — neutro', () => {
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        lugarEstado: 'reservado',
+        pagamento: null,
+        pagamentoLoading: true,
+      }),
+    ).toMatch(/A confirmar o estado do pagamento/);
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        lugarEstado: 'reservado',
+        pagamento: null,
+        pagamentoLoading: true,
+      }),
+    ).not.toMatch(/Não tens nada a pagar/);
+  });
+
   it('confirmação antes da activação sem pagamento em aberto', () => {
     expect(
       copyConfirmacaoSaidaPassageiro({ lugarEstado: 'reservado', pagamento: null }),

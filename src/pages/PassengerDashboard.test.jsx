@@ -3015,6 +3015,36 @@ describe('PassengerDashboard — marketplace', () => {
     expect(screen.queryByRole('button', { name: /Editar procura/i })).not.toBeInTheDocument();
   });
 
+  it('Guardar alterações ignora double-submit enquanto updateProcura está em curso', async () => {
+    listProcurasByOwner.mockResolvedValue([
+      { ...procuraBase, n_candidato: 1, teto_mensal_kz: 25000 },
+    ]);
+    let resolveUpdate;
+    updateProcura.mockImplementation(
+      () => new Promise((resolve) => {
+        resolveUpdate = () => resolve({ ...procuraBase, teto_mensal_kz: 18000 });
+      }),
+    );
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    await abrirMinhaProcura();
+    fireEvent.click(await screen.findByRole('button', { name: /Editar procura/i }));
+    const btn = screen.getByRole('button', { name: /Guardar alterações/i });
+    fireEvent.click(btn);
+    fireEvent.click(btn);
+    expect(updateProcura).toHaveBeenCalledTimes(1);
+    expect(btn).toBeDisabled();
+    resolveUpdate();
+    await waitFor(() => {
+      expect(updateProcura).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('editar teto grava sem modal e recarrega matching', async () => {
     listProcurasByOwner.mockResolvedValue([
       { ...procuraBase, n_candidato: 1, teto_mensal_kz: 25000 },

@@ -26,6 +26,7 @@ function pagamentoPendenteOuComprovativo(pagamentoEstado) {
  * @param {{
  *   lugarEstado?: string | null,
  *   pagamento?: { estado?: string } | null,
+ *   pagamentoLoading?: boolean,
  * }} ctx
  * @returns {string}
  */
@@ -34,6 +35,12 @@ export function copyConfirmacaoSaidaPassageiro(ctx) {
     return (
       'Saída individual: o acordo mantém-se activo para os restantes. '
       + 'A tua quota deste mês não é reembolsada.'
+    );
+  }
+  if (ctx.pagamentoLoading) {
+    return (
+      'Saída individual: o acordo mantém-se activo para os restantes. '
+      + 'A confirmar o estado do pagamento…'
     );
   }
   if (pagamentoPendenteOuComprovativo(ctx.pagamento?.estado)) {
