@@ -239,6 +239,33 @@ describe('AcordoPagamentoPanel', () => {
     expect(screen.queryByTestId('comprovativo-upload-btn')).not.toBeInTheDocument();
   });
 
+  it('#251 comprovativo enviado: título longo só uma vez e sem linha Valor a pagar', () => {
+    render(
+      <AcordoPagamentoPanel
+        pagamento={{
+          id: 'pag-comp',
+          valor_kz: 0,
+          estado: 'comprovativo_enviado',
+          comprovativo_path: 'uid/pag-comp/recibo.pdf',
+        }}
+        lugarEstado="activo"
+        obrigacao={{
+          quota: 43000,
+          valor_em_divida: 0,
+          prazo: '2026-10-12T12:00:00.000Z',
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId('pagamento-estado-chip')).toHaveTextContent(
+      /Comprovativo enviado — aguarda validação\./,
+    );
+    expect(screen.queryAllByText(/Comprovativo enviado — aguarda validação\./)).toHaveLength(1);
+    expect(screen.queryByTestId('linha-valor-pagar-resumo')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Valor a pagar:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/0[\s\u00a0]?000 Kz/)).not.toBeInTheDocument();
+  });
+
   it('v1.6 em custódia sem dívida: mostra check', () => {
     render(
       <AcordoPagamentoPanel
