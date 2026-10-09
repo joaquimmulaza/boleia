@@ -74,22 +74,22 @@ function AppShell() {
 
   const routes = (
     <Routes>
-        {/* Rotas públicas */}
-        <Route path="/" element={<RootRoute />} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/explorar" element={<MarketplaceExplore />} />
-        <Route path="/privacidade" element={<PublicLegalPage page="privacidade" />} />
-        <Route path="/eliminacao-de-dados" element={<PublicLegalPage page="eliminacao" />} />
-        {import.meta.env.DEV && LazyDevRoutes ? (
-          <Route
-            path="/__dev/*"
-            element={(
-              <Suspense fallback={null}>
-                <LazyDevRoutes />
-              </Suspense>
-            )}
-          />
-        ) : null}
+      {/* Rotas públicas */}
+      <Route path="/" element={<RootRoute />} />
+      <Route path="/auth" element={<Auth />} />
+      <Route path="/explorar" element={<MarketplaceExplore />} />
+      <Route path="/privacidade" element={<PublicLegalPage page="privacidade" />} />
+      <Route path="/eliminacao-de-dados" element={<PublicLegalPage page="eliminacao" />} />
+      {import.meta.env.DEV && LazyDevRoutes ? (
+        <Route
+          path="/__dev/*"
+          element={(
+            <Suspense fallback={null}>
+              <LazyDevRoutes />
+            </Suspense>
+          )}
+        />
+      ) : null}
 
       {/* Rotas protegidas envolvidas pelo Layout global (com BottomBar) */}
       <Route element={<Layout />}>

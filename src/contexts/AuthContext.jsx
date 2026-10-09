@@ -32,7 +32,10 @@ const normalizeTipoPerfil = (value) => {
   return null;
 };
 
-export function AuthProvider({ children }) {
+/**
+ * @param {{ children: React.ReactNode }} props
+ */
+function AuthProviderLive({ children }) {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -265,6 +268,17 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+/**
+ * @param {{ children: React.ReactNode; devValue?: Record<string, unknown> }} props
+ * `devValue` — apenas DEV: injecta valor AuthContext (capturas `/__dev/*`).
+ */
+export function AuthProvider({ children, devValue }) {
+  if (import.meta.env.DEV && devValue !== undefined) {
+    return <AuthContext.Provider value={devValue}>{children}</AuthContext.Provider>;
+  }
+  return <AuthProviderLive>{children}</AuthProviderLive>;
+}
+
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -273,5 +287,3 @@ export function useAuth() {
   return context;
 }
 
-/** @internal DEV — `DevAuthProvider` em `src/dev/` */
-export { AuthContext };

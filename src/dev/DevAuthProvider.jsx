@@ -1,10 +1,10 @@
 import React from 'react';
-import { AuthContext } from '../contexts/AuthContext';
+import { AuthProvider } from '../contexts/AuthContext';
 
 /**
- * Provider DEV-only para capturas / fixtures (sobrepõe AuthContext).
+ * Provider DEV-only para capturas / fixtures (sobrepõe AuthContext via API pública).
  * @param {{ children: React.ReactNode; value: Record<string, unknown> }} props
  */
 export default function DevAuthProvider({ children, value }) {
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthProvider devValue={value}>{children}</AuthProvider>;
 }

@@ -72,14 +72,22 @@ describe('BoleiaSwitch — shadcn + geometria', () => {
     expect(onCheckedChange).not.toHaveBeenCalled();
   });
 
-  it('zona de toque ≥44px: label dispara toggle; trilho visual h-8 (32px)', () => {
+  it('trilho visual 52×32: classes h-8 (32px) e w-[52px] no Root', () => {
+    renderSwitch({ id: 'boleia-switch-track' });
+    const sw = screen.getByRole('switch');
+    expect(sw.className).toMatch(/\bh-8\b/);
+    expect(sw.className).toMatch(/\bw-\[52px\]/);
+    expect(sw.className).not.toMatch(/\bh-11\b/);
+    expect(sw.className).not.toMatch(/min-h-\[44px\]/);
+  });
+
+  it('zona de toque ≥44px: label min-h-[44px] e clique fora do trilho alterna', () => {
     const onCheckedChange = vi.fn();
     renderSwitch({ id: 'boleia-switch-test', onCheckedChange });
     const hit = screen.getByTestId('boleia-switch-hit');
-    const sw = screen.getByRole('switch');
     expect(hit.className).toMatch(/min-h-\[44px\]/);
+    const sw = screen.getByRole('switch');
     expect(sw.className).toMatch(/\bh-8\b/);
-    expect(sw.className).not.toMatch(/\bh-11\b/);
     fireEvent.click(hit);
     expect(onCheckedChange).toHaveBeenCalledWith(true);
   });
