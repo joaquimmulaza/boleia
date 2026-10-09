@@ -152,8 +152,13 @@ function mockPagamentosGate(acordo, viewerId, emCustodia = true, estadoPagamento
     }
     const pag = pagamentos.find((p) => p.passenger_id === linha.passenger_id) ?? null;
     const valor = pag?.valor_kz ?? linha.quota_mensal_kz ?? acordo?.valor_mensal_por_passageiro_kz ?? 40000;
+    const valorEmDivida = emCustodia ? 0 : valor;
     return {
-      obrigacao: { valor, valor_em_divida: valor, quota: linha.quota_mensal_kz ?? valor },
+      obrigacao: {
+        valor: valorEmDivida,
+        valor_em_divida: valorEmDivida,
+        quota: linha.quota_mensal_kz ?? valor,
+      },
       pagamento: pag,
     };
   });
@@ -662,15 +667,19 @@ describe('MyAgreements — marketplace 1:N', () => {
     expect(within(picker).getByText(/^Justa causa imediata$/i)).toBeInTheDocument();
   });
 
-  it('passageiro activo: Sair só eu chama leavePassenger', async () => {
+  it('passageiro activo: Sair só eu chama leavePassenger e avisa quota', async () => {
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    mockPagamentosGate(acordoPassageiro, 'pax-viewer');
     leavePassenger.mockResolvedValue({ ok: true });
 
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
     fireEvent.click(await screen.findByRole('button', { name: /Sair só eu/i }));
+    expect(
+      screen.getByText(/A tua quota deste mês não é reembolsada/i),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^Sair$/i }));
 
     await waitFor(() => {
@@ -678,6 +687,41 @@ describe('MyAgreements — marketplace 1:N', () => {
     });
     expect(
       await screen.findByText(/Saíste do acordo\. A quota do mês mantém-se/i),
+    ).toBeInTheDocument();
+  });
+
+  it('passageiro reservado: Sair só eu avisa cancelamento de pagamento', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    const acordoReservado = {
+      ...acordoPassageiro,
+      acordos_passageiros: [
+        {
+          id: 'ap-1',
+          passenger_id: 'pax-viewer',
+          estado: 'reservado',
+          quota_mensal_kz: 40000,
+          perfis: { nome_completo: 'Tu Mesmo' },
+        },
+      ],
+    };
+    getAgreementsForPassenger.mockResolvedValue([acordoReservado]);
+    mockPagamentosGate(acordoReservado, 'pax-viewer', false);
+    leavePassenger.mockResolvedValue({ ok: true });
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Sair só eu/i }));
+    expect(
+      screen.getByText(/pagamento pendente será cancelado/i),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Sair$/i }));
+
+    await waitFor(() => {
+      expect(leavePassenger).toHaveBeenCalledWith('acordo-pax', 'pax-viewer');
+    });
+    expect(
+      await screen.findByText(/O pagamento pendente foi cancelado/i),
     ).toBeInTheDocument();
   });
 

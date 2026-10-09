@@ -8,10 +8,13 @@ import {
 } from './resolveAcordoPagamentoUi.js';
 
 describe('resolveAcordoPagamentoUi — P0 Figma', () => {
-  it('S1 reserva expirada sem dívida', () => {
+  it('S1 reserva expirada por falta de pagamento (TTL)', () => {
     const ui = resolveAcordoPagamentoUiPassageiro({
       minhaLinha: { estado: 'expirado' },
-      pagamento: { estado: 'anulado' },
+      pagamento: {
+        estado: 'anulado',
+        anulacao_motivo: 'Reserva terminada sem activação',
+      },
       obrigacao: { valor_em_divida: 0, quota: 43000 },
     });
     expect(ui.variant).toBe('S1');
@@ -19,6 +22,30 @@ describe('resolveAcordoPagamentoUi — P0 Figma', () => {
     expect(ui.ocultarPainelPagamento).toBe(true);
     const copy = copyCartaoEstadoPagamentoPassageiro('S1', {});
     expect(copy.corpo).toMatch(/não tens nada a pagar/);
+  });
+
+  it('S3 saída antes da activação com lugar expirado e pagamento anulado (não S1)', () => {
+    const ui = resolveAcordoPagamentoUiPassageiro({
+      minhaLinha: { estado: 'expirado' },
+      pagamento: {
+        estado: 'anulado',
+        anulacao_motivo: 'Saíste antes da activação do lugar',
+        valor_quota_original_kz: 16000,
+      },
+      obrigacao: { valor_em_divida: 0 },
+    });
+    expect(ui.variant).toBe('S3');
+    expect(ui.sheetTitle).toBe('Não tens nada a pagar');
+    const copy = copyCartaoEstadoPagamentoPassageiro('S3', {
+      pagamento: {
+        estado: 'anulado',
+        anulacao_motivo: 'Saíste antes da activação do lugar',
+        valor_quota_original_kz: 16000,
+      },
+      obrigacao: { valor_em_divida: 0 },
+    });
+    expect(copy.corpo).toMatch(/foi cancelado/);
+    expect(copy.secundaria).toMatch(/Saíste antes da activação/);
   });
 
   it('S2 saída com dívida', () => {

@@ -219,6 +219,7 @@ const PassengerDashboard = () => {
   const [confirmEditN, setConfirmEditN] = useState(null);
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
   const [savingProcura, setSavingProcura] = useState(false);
+  const submitProcuraInFlightRef = useRef(false);
   const [browseBusy, setBrowseBusy] = useState(false);
   /** @type {[Set<string>, Function]} */
   const [browseOfertasComProposta, setBrowseOfertasComProposta] = useState(() => new Set());
@@ -704,6 +705,7 @@ const PassengerDashboard = () => {
 
   const handleSubmitProcura = async (e) => {
     e.preventDefault();
+    if (submitProcuraInFlightRef.current || savingProcura) return;
     setFeedback({ type: '', text: '' });
     const built = buildProcuraPayload();
     if (!built.ok) return;
@@ -730,6 +732,8 @@ const PassengerDashboard = () => {
     }
 
     const { payload } = built;
+    submitProcuraInFlightRef.current = true;
+    setSavingProcura(true);
     try {
       const criada = tipoProcura === 'grupo'
         ? await createProcuraWithGrupo(payload, {
@@ -754,6 +758,9 @@ const PassengerDashboard = () => {
       setFeedback({ type: 'success', text: 'Procura criada.' });
     } catch (err) {
       setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+    } finally {
+      setSavingProcura(false);
+      submitProcuraInFlightRef.current = false;
     }
   };
 

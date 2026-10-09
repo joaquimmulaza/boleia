@@ -1452,6 +1452,40 @@ describe('PassengerDashboard — marketplace', () => {
     });
   });
 
+  it('Guardar procura ignora double-submit enquanto o pedido está em curso', async () => {
+    let resolveCreate;
+    createProcura.mockImplementation(
+      () => new Promise((resolve) => {
+        resolveCreate = () => resolve({ ...procuraBase, id: 'pr-once' });
+      }),
+    );
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Criar procura/i }));
+    fireEvent.change(screen.getByLabelText(/^Origem$/i), {
+      target: { name: 'origin_name', value: 'Talatona' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Destino$/i), {
+      target: { name: 'destination_name', value: 'Miramar' },
+    });
+
+    const btn = screen.getByRole('button', { name: /Guardar procura/i });
+    fireEvent.click(btn);
+    fireEvent.click(btn);
+    expect(createProcura).toHaveBeenCalledTimes(1);
+    expect(btn).toBeDisabled();
+
+    resolveCreate();
+    await waitFor(() => {
+      expect(createProcura).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('formulário usa TimeInput 24h para hora preferida', async () => {
     render(
       <MemoryRouter>

@@ -93,7 +93,40 @@ export function linhaSecundariaExcessoPassageiro(obrigacao) {
  * @param {ObrigacaoSnapshot | null | undefined} obrigacao
  * @returns {string | null}
  */
-export function linhaProporcionalPagamento(obrigacao) {
+/**
+ * Desagregação proporcional só em saída / rescisão (não no acordo activo).
+ *
+ * @param {string | null | undefined} lugarEstado
+ * @param {'S1' | 'S2' | 'S3' | 'S6a' | null | undefined} uiVariant
+ * @returns {boolean}
+ */
+export function mostrarDesagregacaoProporcionalPagamento(lugarEstado, uiVariant) {
+  if (uiVariant === 'S2') return true;
+  const lugar = String(lugarEstado || '').toLowerCase();
+  return lugar === 'saiu';
+}
+
+/**
+ * Resumo simples no acordo activo ou reservado.
+ *
+ * @param {ObrigacaoSnapshot | null | undefined} obrigacao
+ * @param {{ valor_kz?: number } | null | undefined} pagamento
+ * @returns {string}
+ */
+export function linhaValorAPagarResumo(obrigacao, pagamento) {
+  const valor = valorEmDividaParaExibir(obrigacao, pagamento);
+  return `Valor a pagar: ${formatKwanza(valor)} Kz`;
+}
+
+/**
+ * @param {ObrigacaoSnapshot | null | undefined} obrigacao
+ * @param {{
+ *   pagamentoEstado?: string | null,
+ *   valorComprovativo?: number | null,
+ * }} [options]
+ * @returns {string | null}
+ */
+export function linhaProporcionalPagamento(obrigacao, options = {}) {
   const norm = normalizeObrigacaoSnapshot(obrigacao);
   if (!norm) return null;
   const dias = Number(norm.dias);
@@ -104,10 +137,21 @@ export function linhaProporcionalPagamento(obrigacao) {
   const pago = Number(norm.pago) || 0;
   const valorEmDivida = Number(norm.valor_em_divida) || 0;
   const diasTxt = Number.isFinite(dias) ? dias : 0;
+  const pagamentoEstado = String(options.pagamentoEstado || '').toLowerCase();
+  const valorComprovativo = Number(options.valorComprovativo);
+  let linhaPago;
+  if (pagamentoEstado === PAYMENT_STATES.COMPROVATIVO) {
+    const valorValidacao = Number.isFinite(valorComprovativo) && valorComprovativo > 0
+      ? valorComprovativo
+      : (pago > 0 ? pago : valorEmDivida);
+    linhaPago = `comprovativo de ${formatKwanza(valorValidacao)} Kz em validação`;
+  } else {
+    linhaPago = `Já pago ${formatKwanza(pago)} Kz`;
+  }
   return (
     `${diasTxt} de ${diasMes} dias úteis em ${mesLabel} · `
     + `Proporcional ${formatKwanza(proporcional)} Kz · `
-    + `Já pago ${formatKwanza(pago)} Kz · `
+    + `${linhaPago} · `
     + `A pagar ${formatKwanza(valorEmDivida)} Kz`
   );
 }
