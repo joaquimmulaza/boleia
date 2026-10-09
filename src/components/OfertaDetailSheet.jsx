@@ -17,6 +17,9 @@ import { formatKwanza } from '../utils/formatKwanza';
  *   onClose: () => void,
  *   onVerProcuras: () => void,
  *   onVerPropostas: () => void,
+ *   canReactivar?: boolean,
+ *   onReactivar?: () => void,
+ *   reactivarBusy?: boolean,
  * }} props
  */
 function OfertaDetailSheet({
@@ -30,6 +33,9 @@ function OfertaDetailSheet({
   onClose,
   onVerProcuras,
   onVerPropostas,
+  canReactivar = false,
+  onReactivar = () => {},
+  reactivarBusy = false,
 }) {
   return (
     <OverlayShell
@@ -85,20 +91,33 @@ function OfertaDetailSheet({
         </div>
 
         <div className="flex flex-col gap-2 pt-2">
-          <button
-            type="button"
-            onClick={onVerProcuras}
-            className="w-full min-h-11 text-sm font-bold text-primary flex items-center justify-center gap-1"
-          >
-            Procuras compatíveis <ChevronRight size={16} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            onClick={onVerPropostas}
-            className="w-full min-h-11 rounded-xl bg-primary/10 text-primary text-sm font-bold flex items-center justify-center gap-1"
-          >
-            Ver propostas <ChevronRight size={16} aria-hidden="true" />
-          </button>
+          {canReactivar ? (
+            <button
+              type="button"
+              onClick={onReactivar}
+              disabled={reactivarBusy}
+              className="w-full min-h-11 rounded-xl bg-primary text-white text-sm font-bold flex items-center justify-center gap-1 disabled:opacity-60"
+            >
+              Reactivar
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={onVerProcuras}
+                className="w-full min-h-11 text-sm font-bold text-primary flex items-center justify-center gap-1"
+              >
+                Procuras compatíveis <ChevronRight size={16} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={onVerPropostas}
+                className="w-full min-h-11 rounded-xl bg-primary/10 text-primary text-sm font-bold flex items-center justify-center gap-1"
+              >
+                Ver propostas <ChevronRight size={16} aria-hidden="true" />
+              </button>
+            </>
+          )}
         </div>
       </div>
     </OverlayShell>

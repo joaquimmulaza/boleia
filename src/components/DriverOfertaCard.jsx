@@ -37,6 +37,7 @@ function OfertaRotaTitulo({ oferta }) {
  *   modoLabel: string,
  *   canEdit: boolean,
  *   canDespublicar: boolean,
+ *   canReactivar?: boolean,
  *   editing: boolean,
  *   ofertaBusy: boolean,
  *   editPropostas: object[],
@@ -47,6 +48,7 @@ function OfertaRotaTitulo({ oferta }) {
  *   onVerPropostas: () => void,
  *   onEditar: () => void,
  *   onDespublicar: () => void,
+ *   onReactivar?: () => void,
  *   onCancelEdit: () => void,
  *   onSaved: (oferta: object) => void,
  *   temAcordoActivoMsg?: boolean,
@@ -60,6 +62,7 @@ function DriverOfertaCard({
   modoLabel,
   canEdit,
   canDespublicar,
+  canReactivar = false,
   editing,
   ofertaBusy,
   editPropostas,
@@ -70,6 +73,7 @@ function DriverOfertaCard({
   onVerPropostas,
   onEditar,
   onDespublicar,
+  onReactivar = () => {},
   onCancelEdit,
   onSaved,
   temAcordoActivoMsg = false,
@@ -91,9 +95,11 @@ function DriverOfertaCard({
         <OfertaKebabMenu
           canEdit={canEdit}
           canDespublicar={canDespublicar}
+          canReactivar={canReactivar}
           disabled={ofertaBusy}
           onEditar={onEditar}
           onDespublicar={onDespublicar}
+          onReactivar={onReactivar}
         />
       </div>
 

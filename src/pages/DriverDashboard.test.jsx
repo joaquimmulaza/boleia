@@ -13,7 +13,13 @@ import { createAgreementFromProposal } from '../services/AgreementService';
 import { findCompatibleProcuras } from '../services/MatchingService';
 import { getGrupoByProcura } from '../services/GrupoService';
 import { getProcura, listProcurasDisponiveis } from '../services/ProcuraService';
-import { listOfertasByDriver, cancelOferta, updateOferta, createOferta } from '../services/OfertaService';
+import {
+  listOfertasByDriver,
+  cancelOferta,
+  reactivateOferta,
+  updateOferta,
+  createOferta,
+} from '../services/OfertaService';
 import { getAgreementsForDriver } from '../services/AgreementService';
 import { supabase } from '../lib/supabase';
 import { expectNoUserFacingJargon } from '../test/jargonBan';
@@ -74,6 +80,7 @@ vi.mock('../services/OfertaService', async (importOriginal) => {
     ...actual,
     createOferta: vi.fn(),
     cancelOferta: vi.fn(),
+    reactivateOferta: vi.fn(),
     updateOferta: vi.fn(),
     listOfertasByDriver: vi.fn().mockResolvedValue([
       {
@@ -1063,9 +1070,9 @@ describe('DriverDashboard — marketplace', () => {
     expect(screen.getByRole('menuitem', { name: /Despublicar oferta/i })).toBeInTheDocument();
   });
 
-  it('não mostra Editar quando oferta inactiva', async () => {
+  it('não mostra Editar quando oferta inactiva sem motivo motorista', async () => {
     listOfertasByDriver.mockResolvedValue([
-      { ...ofertaFixa, estado: 'inactiva' },
+      { ...ofertaFixa, estado: 'inactiva', inactiva_motivo: null },
     ]);
 
     render(
@@ -1076,6 +1083,106 @@ describe('DriverDashboard — marketplace', () => {
 
     await screen.findByText('Inactiva');
     expect(screen.queryByRole('button', { name: /Mais acções/i })).not.toBeInTheDocument();
+  });
+
+  it('mostra Reactivar no kebab quando inactiva por motorista', async () => {
+    listOfertasByDriver.mockResolvedValue([
+      {
+        ...ofertaFixa,
+        estado: 'inactiva',
+        inactiva_motivo: 'motorista',
+        is_test: false,
+        hidden_by_admin: false,
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Inactiva');
+    abrirKebabOferta();
+    expect(screen.getByRole('menuitem', { name: /^Reactivar$/i })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /Despublicar/i })).not.toBeInTheDocument();
+  });
+
+  it('oculta Reactivar para is_test ou hidden_by_admin', async () => {
+    listOfertasByDriver.mockResolvedValue([
+      {
+        ...ofertaFixa,
+        id: 'of-test',
+        estado: 'inactiva',
+        inactiva_motivo: 'motorista',
+        is_test: true,
+      },
+      {
+        ...ofertaFixa,
+        id: 'of-admin',
+        estado: 'inactiva',
+        inactiva_motivo: 'motorista',
+        hidden_by_admin: true,
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByTestId('driver-oferta-card-of-test');
+    expect(screen.queryByRole('button', { name: /Mais acções/i })).not.toBeInTheDocument();
+  });
+
+  it('reactivar chama reactivateOferta e mostra sucesso', async () => {
+    listOfertasByDriver.mockResolvedValue([
+      {
+        ...ofertaFixa,
+        estado: 'inactiva',
+        inactiva_motivo: 'motorista',
+      },
+    ]);
+    reactivateOferta.mockResolvedValue({ ...ofertaFixa, estado: 'parcial' });
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Inactiva');
+    abrirKebabOferta();
+    fireEvent.click(screen.getByRole('menuitem', { name: /^Reactivar$/i }));
+
+    await waitFor(() => {
+      expect(reactivateOferta).toHaveBeenCalledWith('of-1');
+    });
+    expect(await screen.findByText(/Oferta reactivada/i)).toBeInTheDocument();
+  });
+
+  it('reactivar mostra erro do servidor', async () => {
+    listOfertasByDriver.mockResolvedValue([
+      {
+        ...ofertaFixa,
+        estado: 'inactiva',
+        inactiva_motivo: 'motorista',
+      },
+    ]);
+    reactivateOferta.mockRejectedValue(new Error('Não há lugares suficientes no veículo'));
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Inactiva');
+    abrirKebabOferta();
+    fireEvent.click(screen.getByRole('menuitem', { name: /^Reactivar$/i }));
+
+    expect(await screen.findByText(/Não há lugares suficientes/i)).toBeInTheDocument();
   });
 
   it('bloqueia despublicar com acordo activo na oferta', async () => {

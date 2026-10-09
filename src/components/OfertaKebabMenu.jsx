@@ -7,21 +7,25 @@ import { useKebabMenu } from '../hooks/useKebabMenu';
  * @param {{
  *   canEdit: boolean,
  *   canDespublicar: boolean,
+ *   canReactivar?: boolean,
  *   onEditar: () => void,
  *   onDespublicar: () => void,
+ *   onReactivar?: () => void,
  *   disabled?: boolean,
  * }} props
  */
 function OfertaKebabMenu({
   canEdit,
   canDespublicar,
+  canReactivar = false,
   onEditar,
   onDespublicar,
+  onReactivar = () => {},
   disabled = false,
 }) {
   const { open, close, toggle, rootRef, triggerRef, triggerAria, menuProps } = useKebabMenu();
 
-  if (!canEdit && !canDespublicar) return null;
+  if (!canEdit && !canDespublicar && !canReactivar) return null;
 
   const fecharE = (action) => {
     close();
@@ -70,6 +74,16 @@ function OfertaKebabMenu({
                 Despublicar oferta
               </button>
             </>
+          ) : null}
+          {canReactivar ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="w-full px-4 py-2.5 text-left text-sm font-semibold text-primary hover:bg-primary/5 dark:hover:bg-primary/10"
+              onClick={() => fecharE(onReactivar)}
+            >
+              Reactivar
+            </button>
           ) : null}
         </div>
       ) : null}
