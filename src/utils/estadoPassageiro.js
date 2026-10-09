@@ -3,7 +3,10 @@
  * @typedef {'activo' | 'reservado' | 'saiu' | 'expirado' | string} EstadoPassageiroDb
  */
 
-import { isAnulacaoMotivoSaidaVoluntaria } from './pagamentoAnulacaoMotivo.js';
+import {
+  isAnulacaoMotivoAcordoTerminadoAntesActivacao,
+  isAnulacaoMotivoSaidaVoluntaria,
+} from './pagamentoAnulacaoMotivo.js';
 
 /**
  * @param {string | null | undefined} estado
@@ -22,8 +25,13 @@ export function normalizeEstadoPassageiroKey(estado) {
  */
 export function estadoPassageiroParaChip(estado, pagamento) {
   const e = normalizeEstadoPassageiroKey(estado);
-  if (e === 'expirado' && isAnulacaoMotivoSaidaVoluntaria(pagamento)) {
-    return 'saiu';
+  if (e === 'expirado') {
+    if (isAnulacaoMotivoAcordoTerminadoAntesActivacao(pagamento)) {
+      return 'terminado';
+    }
+    if (isAnulacaoMotivoSaidaVoluntaria(pagamento)) {
+      return 'saiu';
+    }
   }
   return e;
 }
@@ -51,6 +59,15 @@ export function isReservadoPassageiro(estado) {
  */
 export function isSaiuPassageiro(estado, pagamento) {
   return estadoPassageiroParaChip(estado, pagamento) === 'saiu';
+}
+
+/**
+ * @param {string | null | undefined} estado
+ * @param {{ anulacao_motivo?: string | null } | null | undefined} [pagamento]
+ * @returns {boolean}
+ */
+export function isTerminadoPassageiro(estado, pagamento) {
+  return estadoPassageiroParaChip(estado, pagamento) === 'terminado';
 }
 
 /**
@@ -98,6 +115,7 @@ export function labelChipEstadoPassageiro(estado, pagamento) {
   if (e === 'reservado') return 'Reservado';
   if (e === 'expirado') return 'Expirado';
   if (e === 'saiu') return 'Saiu';
+  if (e === 'terminado') return 'Terminado';
   return estado || '—';
 }
 
@@ -117,14 +135,14 @@ export function chipClassEstadoPassageiro(estado, pagamento) {
   if (e === 'expirado') {
     return 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400 line-through';
   }
-  if (e === 'saiu') {
+  if (e === 'saiu' || e === 'terminado') {
     return 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400';
   }
   return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
 }
 
 /** Estados que mostram chip secundário no cartão/sheet do passageiro (nunca «Activo»). */
-export const ESTADOS_LUGAR_COM_CHIP_UI = Object.freeze(['reservado', 'expirado', 'saiu']);
+export const ESTADOS_LUGAR_COM_CHIP_UI = Object.freeze(['reservado', 'expirado', 'saiu', 'terminado']);
 
 /**
  * @param {string | null | undefined} estado

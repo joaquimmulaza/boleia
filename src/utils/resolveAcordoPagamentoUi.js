@@ -98,7 +98,7 @@ export function resolveAcordoPagamentoUiPassageiro(ctx) {
     };
   }
 
-  if (lugar === 'saiu' && valorDivida <= 0 && pgEst === PAYMENT_STATES.ANULADO) {
+  if ((lugar === 'saiu' || lugar === 'terminado') && valorDivida <= 0 && pgEst === PAYMENT_STATES.ANULADO) {
     return {
       variant: 'S3',
       sheetTitle: 'Não tens nada a pagar',

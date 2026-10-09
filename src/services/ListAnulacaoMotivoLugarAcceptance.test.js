@@ -35,10 +35,10 @@ describe('list_anulacao_motivo_lugar_acordos — RPC estreita', () => {
     expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION public\.list_anulacao_motivo_lugar_acordos\(uuid\[\]\) TO authenticated/);
   });
 
-  it('search_path fixo public, pg_temp e mascaramento pagamento_estado', () => {
+  it('search_path fixo public, pg_temp e passageiro só linha própria', () => {
     expect(sql).toMatch(/SET search_path = public, pg_temp/);
-    expect(sql).toMatch(/WHEN ap\.passenger_id = v_uid THEN pg\.estado/);
-    expect(sql).toMatch(/ELSE NULL\s*\n\s*END AS pagamento_estado/s);
-    expect(sql).toMatch(/WHEN pg\.estado = 'anulado' THEN pg\.anulacao_motivo/);
+    expect(sql).toMatch(/OR ap\.passenger_id = v_uid/);
+    expect(sql).not.toMatch(/EXISTS\s*\(\s*\n\s*SELECT 1 FROM public\.acordos_passageiros ap_self/s);
+    expect(sql).toMatch(/pg\.estado AS pagamento_estado/);
   });
 });

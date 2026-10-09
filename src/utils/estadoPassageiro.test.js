@@ -58,9 +58,17 @@ describe('estadoPassageiro — chip por estado', () => {
     expect(isSaiuPassageiro('expirado', pagamento)).toBe(true);
   });
 
-  it('legacy: expirado + acordo terminado antes da activação → chip Saiu', () => {
+  it('legacy: expirado + acordo terminado antes da activação → chip Terminado', () => {
     const pagamento = { anulacao_motivo: ANULACAO_MOTIVO.ACORDO_TERMINADO_ANTES_ACTIVACAO };
-    expect(estadoPassageiroParaChip('expirado', pagamento)).toBe('saiu');
-    expect(labelChipEstadoPassageiro('expirado', pagamento)).toBe('Saiu');
+    expect(estadoPassageiroParaChip('expirado', pagamento)).toBe('terminado');
+    expect(labelChipEstadoPassageiro('expirado', pagamento)).toBe('Terminado');
+    expect(mostrarChipEstadoLugarPassageiro('expirado', pagamento)).toBe(true);
+    expect(isSaiuPassageiro('expirado', pagamento)).toBe(false);
+  });
+
+  it('expirado + motivo desconhecido → chip Expirado (UI pagamento S3)', () => {
+    const pagamento = { anulacao_motivo: 'Texto livre não catalogado' };
+    expect(estadoPassageiroParaChip('expirado', pagamento)).toBe('expirado');
+    expect(labelChipEstadoPassageiro('expirado', pagamento)).toBe('Expirado');
   });
 });

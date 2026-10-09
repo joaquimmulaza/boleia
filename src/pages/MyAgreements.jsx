@@ -111,7 +111,6 @@ import {
   GLOSSARIO_ESTADOS_LUGAR,
   mostrarChipEstadoLugarPassageiro,
   estadoPassageiroParaChip,
-  isSaiuPassageiro,
 } from '../utils/estadoPassageiro';
 import { formatPrimeiroNome } from '../utils/primeiroNome';
 
@@ -599,7 +598,11 @@ const MyAgreements = () => {
       try {
         const acordoIds = filtered.map((a) => a.id).filter(Boolean);
         if (acordoIds.length > 0) {
-          const rows = await listAnulacaoMotivoLugarAcordos(acordoIds);
+          let rows = await listAnulacaoMotivoLugarAcordos(acordoIds);
+          if (tipoPerfil === 'Passageiro' && user?.id) {
+            const viewerId = String(user.id);
+            rows = (rows || []).filter((r) => String(r.passenger_id || '') === viewerId);
+          }
           if (generation === carregarGenerationRef.current) {
             setChipContextPorAcordo(groupAnulacaoMotivoRowsByAcordo(rows));
           }
@@ -1651,7 +1654,8 @@ const MyAgreements = () => {
                     viewerPassengerId: user?.id,
                     chipFromList: chipCtxForAcordoPassageiro(selected.id, p.passenger_id),
                   });
-                  const saiu = isSaiuPassageiro(p.estado, chipCtxLinha);
+                  const chipLugar = estadoPassageiroParaChip(p.estado, chipCtxLinha);
+                  const saiu = chipLugar === 'saiu' || chipLugar === 'terminado';
                   return (
                     <li
                       key={p.id || p.passenger_id}

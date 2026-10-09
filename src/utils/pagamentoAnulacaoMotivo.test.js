@@ -14,6 +14,14 @@ describe('pagamentoAnulacaoMotivo', () => {
     ).toBe(true);
   });
 
+  it('acordo terminado antes da activação não conta como saída voluntária do passageiro', () => {
+    expect(
+      isAnulacaoPorSaidaAntesActivacao({
+        anulacao_motivo: ANULACAO_MOTIVO.ACORDO_TERMINADO_ANTES_ACTIVACAO,
+      }),
+    ).toBe(false);
+  });
+
   it('expiração TTL — literais exactos e legacy vazio', () => {
     expect(
       isAnulacaoReservaExpiradaPorPagamento({

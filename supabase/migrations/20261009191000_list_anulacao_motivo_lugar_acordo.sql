@@ -1,4 +1,4 @@
--- Contexto estreito para chips de lugar (anulacao_motivo) — sem vazar pagamento_estado entre passageiros.
+-- Contexto estreito para chips de lugar: passageiro só a própria linha; motorista/admin todas.
 
 CREATE OR REPLACE FUNCTION public.list_anulacao_motivo_lugar_acordos(p_acordo_ids uuid[])
 RETURNS TABLE (
@@ -16,7 +16,6 @@ AS $function$
 DECLARE
   v_uid uuid := auth.uid();
   v_mes date := date_trunc('month', timezone('Africa/Luanda', now()))::date;
-  v_full_access boolean := false;
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'Não autenticado.';
@@ -31,17 +30,8 @@ BEGIN
     a.id AS acordo_id,
     ap.id AS acordo_passageiro_id,
     ap.passenger_id,
-    CASE
-      WHEN a.driver_id = v_uid OR public.is_platform_admin() THEN pg.estado
-      WHEN ap.passenger_id = v_uid THEN pg.estado
-      ELSE NULL
-    END AS pagamento_estado,
-    CASE
-      WHEN a.driver_id = v_uid OR public.is_platform_admin() THEN pg.anulacao_motivo
-      WHEN ap.passenger_id = v_uid THEN pg.anulacao_motivo
-      WHEN pg.estado = 'anulado' THEN pg.anulacao_motivo
-      ELSE NULL
-    END AS anulacao_motivo
+    pg.estado AS pagamento_estado,
+    pg.anulacao_motivo
   FROM public.acordos a
   JOIN public.acordos_passageiros ap ON ap.acordo_id = a.id
   LEFT JOIN public.pagamentos_acordo pg
@@ -51,11 +41,7 @@ BEGIN
     AND (
       a.driver_id = v_uid
       OR public.is_platform_admin()
-      OR EXISTS (
-        SELECT 1 FROM public.acordos_passageiros ap_self
-        WHERE ap_self.acordo_id = a.id
-          AND ap_self.passenger_id = v_uid
-      )
+      OR ap.passenger_id = v_uid
     );
 END;
 $function$;
