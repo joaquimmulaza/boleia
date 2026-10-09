@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, waitFor, fireEvent, within, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import MyAgreements from './MyAgreements';
@@ -46,6 +47,7 @@ vi.mock('../services/PaymentService', async (importOriginal) => {
     listPagamentosByAcordo: vi.fn(),
     getPagamentoForPassageiro: vi.fn(),
     getAcordoContactos: vi.fn(),
+    getObrigacaoPagamentoPassageiro: vi.fn(),
   };
 });
 
@@ -81,6 +83,7 @@ import {
   getPagamentoForPassageiro,
   getAcordoContactos,
   getMesReferenciaAtual,
+  getObrigacaoPagamentoPassageiro,
 } from '../services/PaymentService';
 
 /** @param {boolean} [emCustodia] */
@@ -105,9 +108,15 @@ function setupPagamentosDefault(emCustodia = true) {
   ));
 }
 
-/** @param {object} [acordo] @param {string} [viewerId] @param {boolean} [emCustodia] */
-function mockPagamentosGate(acordo, viewerId, emCustodia = true) {
-  const estado = emCustodia ? 'em_custodia' : 'pendente_pagamento';
+/**
+ * @param {object} [acordo]
+ * @param {string} [viewerId]
+ * @param {boolean} [emCustodia]
+ * @param {string} [estadoPagamentoOverride]
+ */
+function mockPagamentosGate(acordo, viewerId, emCustodia = true, estadoPagamentoOverride) {
+  const estado = estadoPagamentoOverride
+    ?? (emCustodia ? 'em_custodia' : 'pendente_pagamento');
   const mesReferencia = getMesReferenciaAtual();
   const noAcordo = (acordo?.acordos_passageiros || []).filter((p) => {
     const e = String(p.estado || '').toLowerCase();
@@ -136,6 +145,24 @@ function mockPagamentosGate(acordo, viewerId, emCustodia = true) {
       pagamentos.find((p) => p.passenger_id === viewerId) ?? null,
     );
   }
+
+  getObrigacaoPagamentoPassageiro.mockImplementation(async (acordoPassageiroId) => {
+    const linha = noAcordo.find((p) => p.id === acordoPassageiroId);
+    if (!linha) {
+      return { obrigacao: null, pagamento: null };
+    }
+    const pag = pagamentos.find((p) => p.passenger_id === linha.passenger_id) ?? null;
+    const valor = pag?.valor_kz ?? linha.quota_mensal_kz ?? acordo?.valor_mensal_por_passageiro_kz ?? 40000;
+    const valorEmDivida = emCustodia ? 0 : valor;
+    return {
+      obrigacao: {
+        valor: valorEmDivida,
+        valor_em_divida: valorEmDivida,
+        quota: linha.quota_mensal_kz ?? valor,
+      },
+      pagamento: pag,
+    };
+  });
 }
 
 const acordoMotorista = {
@@ -235,6 +262,16 @@ describe('MyAgreements — marketplace 1:N', () => {
     getAgreementsForPassenger.mockResolvedValue([]);
     listPending.mockResolvedValue([]);
     setupPagamentosDefault();
+    getObrigacaoPagamentoPassageiro.mockResolvedValue({
+      obrigacao: { valor: 40000, valor_em_divida: 40000, quota: 40000 },
+      pagamento: {
+        id: 'pag-pax-viewer',
+        passenger_id: 'pax-viewer',
+        valor_kz: 40000,
+        estado: 'em_custodia',
+        mes_referencia: getMesReferenciaAtual(),
+      },
+    });
   });
 
   afterEach(() => {
@@ -631,15 +668,19 @@ describe('MyAgreements — marketplace 1:N', () => {
     expect(within(picker).getByText(/^Justa causa imediata$/i)).toBeInTheDocument();
   });
 
-  it('passageiro activo: Sair só eu chama leavePassenger', async () => {
+  it('passageiro activo: Sair só eu chama leavePassenger e avisa quota', async () => {
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    mockPagamentosGate(acordoPassageiro, 'pax-viewer');
     leavePassenger.mockResolvedValue({ ok: true });
 
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
     fireEvent.click(await screen.findByRole('button', { name: /Sair só eu/i }));
+    expect(
+      screen.getByText(/A tua quota deste mês não é reembolsada/i),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^Sair$/i }));
 
     await waitFor(() => {
@@ -647,6 +688,80 @@ describe('MyAgreements — marketplace 1:N', () => {
     });
     expect(
       await screen.findByText(/Saíste do acordo\. A quota do mês mantém-se/i),
+    ).toBeInTheDocument();
+  });
+
+  it('passageiro reservado: modal de saída neutro enquanto pagamento carrega', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    const acordoReservado = {
+      ...acordoPassageiro,
+      acordos_passageiros: [
+        {
+          id: 'ap-1',
+          passenger_id: 'pax-viewer',
+          estado: 'reservado',
+          quota_mensal_kz: 40000,
+          perfis: { nome_completo: 'Tu Mesmo' },
+        },
+      ],
+    };
+    getAgreementsForPassenger.mockResolvedValue([acordoReservado]);
+    listPagamentosByAcordo.mockResolvedValue([]);
+    let resolveObrigacao;
+    getObrigacaoPagamentoPassageiro.mockImplementation(
+      () => new Promise((resolve) => {
+        resolveObrigacao = resolve;
+      }),
+    );
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    fireEvent.click(await screen.findByRole('button', { name: /Sair só eu/i }));
+    expect(screen.getByText(/A confirmar o estado do pagamento/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Não tens nada a pagar neste acordo/i)).not.toBeInTheDocument();
+
+    resolveObrigacao({ obrigacao: { valor_em_divida: 0 }, pagamento: null });
+    await act(async () => {
+      await Promise.resolve();
+    });
+  });
+
+  it('passageiro reservado: Sair só eu avisa cancelamento de pagamento', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    const acordoReservado = {
+      ...acordoPassageiro,
+      acordos_passageiros: [
+        {
+          id: 'ap-1',
+          passenger_id: 'pax-viewer',
+          estado: 'reservado',
+          quota_mensal_kz: 40000,
+          perfis: { nome_completo: 'Tu Mesmo' },
+        },
+      ],
+    };
+    getAgreementsForPassenger.mockResolvedValue([acordoReservado]);
+    mockPagamentosGate(acordoReservado, 'pax-viewer', false);
+    leavePassenger.mockResolvedValue({ ok: true });
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Sair só eu/i }));
+    expect(
+      screen.getByText(/pagamento pendente será cancelado/i),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Sair$/i }));
+
+    await waitFor(() => {
+      expect(leavePassenger).toHaveBeenCalledWith('acordo-pax', 'pax-viewer');
+    });
+    expect(
+      await screen.findByText(/O pagamento pendente foi cancelado/i),
     ).toBeInTheDocument();
   });
 
@@ -699,6 +814,139 @@ describe('MyAgreements — marketplace 1:N', () => {
     openAcordoKebab(dialog);
     expect(screen.queryByRole('menuitem', { name: /Registar falta/i })).not.toBeInTheDocument();
     expectNoUserFacingJargon(dialog.textContent);
+  });
+
+  it('S1-B: reservado com obrigação valor 0 oculta banner 72h e CTA pagamento', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    const acordoReservado = {
+      ...acordoPassageiro,
+      acordos_passageiros: [
+        {
+          id: 'ap-1',
+          passenger_id: 'pax-viewer',
+          estado: 'reservado',
+          quota_mensal_kz: 40000,
+          perfis: { nome_completo: 'Tu Mesmo' },
+        },
+      ],
+    };
+    getAgreementsForPassenger.mockResolvedValue([acordoReservado]);
+    mockPagamentosGate(acordoReservado, 'pax-viewer', false);
+    vi.mocked(getObrigacaoPagamentoPassageiro).mockResolvedValue({
+      obrigacao: { valor: 0, valor_em_divida: 0, quota: 40000 },
+      pagamento: {
+        id: 'pag-pax-viewer',
+        valor_kz: 0,
+        estado: 'pendente_pagamento',
+      },
+    });
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).queryByTestId('lugar-reservado-banner')).not.toBeInTheDocument();
+    expect(within(dialog).queryByTestId('lugar-reservado-pagamento-cta')).not.toBeInTheDocument();
+  });
+
+  it('passageiro reservado com comprovativo_enviado: não vê hint de próximo passo', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    const acordoReservado = {
+      ...acordoPassageiro,
+      acordos_passageiros: [
+        {
+          id: 'ap-1',
+          passenger_id: 'pax-viewer',
+          estado: 'reservado',
+          quota_mensal_kz: 40000,
+          perfis: { nome_completo: 'Tu Mesmo' },
+        },
+      ],
+    };
+    getAgreementsForPassenger.mockResolvedValue([acordoReservado]);
+    mockPagamentosGate(acordoReservado, 'pax-viewer', false, 'comprovativo_enviado');
+    getAcordoContactos.mockResolvedValue({
+      bloqueado: true,
+      motivo: 'Disponíveis após pagamento em custódia.',
+      motorista: { nome_completo: 'Motorista Teste', telefone: null },
+    });
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).queryByTestId('contactos-proximo-passo')).not.toBeInTheDocument();
+  });
+
+  it('passageiro reservado com contactos bloqueados: vê próximo passo do comprovativo', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    const acordoReservado = {
+      ...acordoPassageiro,
+      acordos_passageiros: [
+        {
+          id: 'ap-1',
+          passenger_id: 'pax-viewer',
+          estado: 'reservado',
+          quota_mensal_kz: 40000,
+          perfis: { nome_completo: 'Tu Mesmo' },
+        },
+      ],
+    };
+    getAgreementsForPassenger.mockResolvedValue([acordoReservado]);
+    mockPagamentosGate(acordoReservado, 'pax-viewer', false);
+    getAcordoContactos.mockResolvedValue({
+      bloqueado: true,
+      motivo: 'Disponíveis após pagamento em custódia.',
+      motorista: { nome_completo: 'Motorista Teste', telefone: null },
+    });
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByTestId('contactos-proximo-passo')).toHaveTextContent(
+      /envia o comprovativo de transferência/i,
+    );
+    expect(within(dialog).queryByTestId('contactos-aguardar-pagamento')).not.toBeInTheDocument();
+  });
+
+  it('motorista com passageiro reservado: contactos bloqueados mostram aguardar pagamento', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+    const acordoMix = {
+      ...acordoMotorista,
+      acordos_passageiros: [
+        {
+          id: 'ap-1',
+          passenger_id: 'pax-1',
+          estado: 'activo',
+          quota_mensal_kz: 40000,
+          perfis: { nome_completo: 'Ana Costa' },
+        },
+        {
+          id: 'ap-2',
+          passenger_id: 'pax-2',
+          estado: 'reservado',
+          quota_mensal_kz: 40000,
+          perfis: { nome_completo: 'João Pedro' },
+        },
+      ],
+    };
+    getAgreementsForDriver.mockResolvedValue([acordoMix]);
+    mockPagamentosGate(acordoMix, undefined, false);
+    getAcordoContactos.mockResolvedValue({
+      bloqueado: true,
+      motivo: 'Disponíveis após pagamento em custódia.',
+      motorista: { nome_completo: 'Motorista Teste', telefone: null },
+    });
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).queryByTestId('contactos-proximo-passo')).not.toBeInTheDocument();
+    expect(within(dialog).getByTestId('contactos-aguardar-pagamento')).toHaveTextContent(
+      /A aguardar o pagamento de João Pedro\./,
+    );
   });
 
   it('passageiro reservado: CTA pagamento faz scroll ao painel', async () => {
@@ -2277,18 +2525,30 @@ describe('MyAgreements — cabeçalho fixo do sheet Detalhe do acordo', () => {
     expect(terminateAgreement).not.toHaveBeenCalled();
   });
 
-  it('Enter no menuitem Encerrar acordo abre o picker de modalidade', async () => {
+  it('Enter e Espaço no menuitem Encerrar acordo abrem o picker de modalidade', async () => {
+    const user = userEvent.setup();
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    await user.click(await screen.findByRole('button', { name: /Talatona/i }));
     const detalhe = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
 
     openAcordoKebab(detalhe);
     const item = screen.getByRole('menuitem', { name: /Encerrar acordo/i });
     item.focus();
-    fireEvent.keyDown(item, { key: 'Enter' });
+    await user.keyboard('{Enter}');
+    expect(await screen.findByTestId('terminate-modality-picker')).toBeInTheDocument();
 
+    const picker = await screen.findByRole('dialog', { name: /Como queres encerrar o acordo/i });
+    fireEvent.click(within(picker).getByRole('button', { name: /^Voltar$/i }));
+    await waitFor(() => {
+      expect(screen.queryByTestId('terminate-modality-picker')).not.toBeInTheDocument();
+    });
+
+    openAcordoKebab(detalhe);
+    const item2 = screen.getByRole('menuitem', { name: /Encerrar acordo/i });
+    item2.focus();
+    await user.keyboard(' ');
     expect(await screen.findByTestId('terminate-modality-picker')).toBeInTheDocument();
   });
 

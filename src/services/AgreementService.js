@@ -717,7 +717,7 @@ export async function getAgreementsForPassenger(passengerId) {
       'id, acordo_id, passenger_id, estado, quota_mensal_kz, acordos(*, acordos_passageiros(*), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota), acordos_adendas(*))',
     )
     .eq('passenger_id', passengerId)
-    .in('estado', ['activo', 'reservado', 'expirado']);
+    .in('estado', ['activo', 'reservado', 'expirado', 'saiu']);
 
   if (error) throw error;
   return (data || [])

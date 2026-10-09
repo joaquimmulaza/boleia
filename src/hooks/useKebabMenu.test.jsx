@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import OverlayShell from '../components/OverlayShell';
 import { useKebabMenu } from './useKebabMenu';
@@ -65,7 +66,8 @@ describe('useKebabMenu', () => {
     expect(document.activeElement).toBe(trigger);
   });
 
-  it('Enter e Espaço no menuitem activam o clique', () => {
+  it('Enter e Espaço no menuitem activam o clique uma única vez cada', async () => {
+    const user = userEvent.setup();
     const onAction = vi.fn();
 
     function TestKebabAction() {
@@ -87,11 +89,15 @@ describe('useKebabMenu', () => {
     }
 
     render(<TestKebabAction />);
-    fireEvent.click(screen.getByRole('button', { name: 'Abrir' }));
+    await user.click(screen.getByRole('button', { name: 'Abrir' }));
     const item = screen.getByRole('menuitem', { name: 'Acção' });
     item.focus();
-    fireEvent.keyDown(item, { key: 'Enter' });
+    await user.keyboard('{Enter}');
     expect(onAction).toHaveBeenCalledTimes(1);
+
+    item.focus();
+    await user.keyboard(' ');
+    expect(onAction).toHaveBeenCalledTimes(2);
   });
 
   it('Escape fecha só o menu e não a sheet por baixo', () => {

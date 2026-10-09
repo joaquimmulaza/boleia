@@ -18,7 +18,6 @@ import { popOverlay, pushOverlay } from '../utils/overlayStack';
  *   menuProps: {
  *     id: string,
  *     role: 'menu',
- *     onKeyDown: (event: React.KeyboardEvent) => void,
  *   },
  * }}
  */
@@ -42,16 +41,6 @@ export function useKebabMenu() {
   const toggle = useCallback((event) => {
     event?.stopPropagation?.();
     setOpen((prev) => !prev);
-  }, []);
-
-  const handleMenuKeyDown = useCallback((event) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) return;
-    if (target.getAttribute('role') !== 'menuitem') return;
-    event.preventDefault();
-    event.stopPropagation();
-    target.click();
   }, []);
 
   useEffect(() => {
@@ -105,7 +94,6 @@ export function useKebabMenu() {
     menuProps: {
       id: menuId,
       role: 'menu',
-      onKeyDown: handleMenuKeyDown,
     },
   };
 }

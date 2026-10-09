@@ -1,20 +1,14 @@
 import React from 'react';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import AcordoDetalheKebabMenu from './AcordoDetalheKebabMenu';
 import { resetOverlayStackForTests } from '../utils/overlayStack';
 
-/** @param {HTMLElement} element @param {string} key */
-function activateMenuItemWithKey(element, key) {
-  fireEvent.keyDown(element, { key });
-}
-
 describe('AcordoDetalheKebabMenu', () => {
   afterEach(() => {
-    resetOverlayStackForTests();
-  });
-  afterEach(() => {
     cleanup();
+    resetOverlayStackForTests();
   });
 
   it('não renderiza kebab quando não há acções disponíveis', () => {
@@ -91,7 +85,8 @@ describe('AcordoDetalheKebabMenu', () => {
     expect(document.activeElement).toBe(trigger);
   });
 
-  it('Enter e Espaço em Encerrar acordo activam o callback', () => {
+  it('Enter e Espaço em Encerrar acordo activam o callback uma única vez cada', async () => {
+    const user = userEvent.setup();
     const onEncerrar = vi.fn();
 
     render(
@@ -103,18 +98,17 @@ describe('AcordoDetalheKebabMenu', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Mais acções do acordo/i }));
+    await user.click(screen.getByRole('button', { name: /Mais acções do acordo/i }));
     const item = screen.getByRole('menuitem', { name: /Encerrar acordo/i });
     item.focus();
-
-    activateMenuItemWithKey(item, 'Enter');
+    await user.keyboard('{Enter}');
     expect(onEncerrar).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Mais acções do acordo/i }));
+    await user.click(screen.getByRole('button', { name: /Mais acções do acordo/i }));
     const item2 = screen.getByRole('menuitem', { name: /Encerrar acordo/i });
     item2.focus();
-    activateMenuItemWithKey(item2, ' ');
+    await user.keyboard(' ');
     expect(onEncerrar).toHaveBeenCalledTimes(2);
   });
 
