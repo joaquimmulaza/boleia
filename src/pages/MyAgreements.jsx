@@ -59,7 +59,6 @@ import { mostrarProximoPassoComprovativoPassageiro } from '../utils/contactosPro
 import {
   copyConfirmacaoSaidaPassageiro,
   copyToastSaidaPassageiro,
-  isUltimoPassageiroVivoNoAcordo,
 } from '../utils/leavePassageiroCopy';
 import { labelEstadoPagamento } from '../utils/paymentStatus';
 import {
@@ -1323,6 +1322,7 @@ const MyAgreements = () => {
             acordoId={selected.id}
             estadoAcordo={selected.estado}
             encerramentoMotivoAcordo={selected.encerramento_motivo}
+            rescisaoModoAcordo={selected.rescisao_modo}
             minhaLinhaEstado={minhaLinha?.estado}
             minhaLinhaPagamento={pagamentoViewer}
             leavePending={leavePending}
@@ -2183,10 +2183,6 @@ const MyAgreements = () => {
           )?.estado,
           pagamento,
           pagamentoLoading,
-          ultimoPassageiroVivo: isUltimoPassageiroVivoNoAcordo(
-            selected?.acordos_passageiros,
-            user?.id,
-          ),
         })}
         confirmText="Sair"
         onConfirm={handleLeaveSolo}

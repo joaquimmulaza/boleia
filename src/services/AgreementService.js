@@ -6,11 +6,9 @@ import {
 } from '../utils/callRpcWithOfflineFallback.js';
 
 /**
- * Coluna acordos.encerramento_motivo — label «Encerrado» em MyAgreements.
- * Leitura: authenticated tem TABLE SELECT em public.acordos (coluna incluída em `*`).
- * Se migrações futuras passarem a grants por coluna, manter este fragmento explícito.
+ * Listagens MyAgreements: `acordos.*` inclui encerramento_motivo (TABLE SELECT authenticated).
+ * Se migrações futuras passarem a grants por coluna, rever selects explícitos.
  */
-export const ACORDO_COLUMN_ENCERRAMENTO_MOTIVO = 'encerramento_motivo';
 
 /**
  * @param {unknown} rpcOut
@@ -724,7 +722,7 @@ export async function getAgreementsForDriver(driverId) {
   const { data, error } = await supabase
     .from('acordos')
     .select(
-      `*, ${ACORDO_COLUMN_ENCERRAMENTO_MOTIVO}, acordos_passageiros(*, perfis(nome_completo)), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota), acordos_adendas(*)`,
+      '*, acordos_passageiros(*, perfis(nome_completo)), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota), acordos_adendas(*)',
     )
     .eq('driver_id', driverId)
     .order('created_at', { ascending: false });
@@ -745,7 +743,7 @@ export async function getAgreementsForPassenger(passengerId) {
   const { data, error } = await supabase
     .from('acordos_passageiros')
     .select(
-      `id, acordo_id, passenger_id, estado, quota_mensal_kz, acordos(*, ${ACORDO_COLUMN_ENCERRAMENTO_MOTIVO}, acordos_passageiros(*), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota), acordos_adendas(*))`,
+      'id, acordo_id, passenger_id, estado, quota_mensal_kz, acordos(*, acordos_passageiros(*), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota), acordos_adendas(*))',
     )
     .eq('passenger_id', passengerId)
     .in('estado', ['activo', 'reservado', 'expirado', 'saiu']);

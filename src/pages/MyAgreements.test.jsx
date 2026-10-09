@@ -786,32 +786,6 @@ describe('MyAgreements — marketplace 1:N', () => {
     expect(within(picker).getByText(/^Justa causa imediata$/i)).toBeInTheDocument();
   });
 
-  it('último passageiro vivo: modal avisa encerramento do acordo', async () => {
-    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
-    const acordoSolo = {
-      ...acordoPassageiro,
-      acordos_passageiros: [
-        {
-          id: 'ap-1',
-          passenger_id: 'pax-viewer',
-          estado: 'activo',
-          quota_mensal_kz: 40000,
-          perfis: { nome_completo: 'Tu Mesmo' },
-        },
-      ],
-    };
-    getAgreementsForPassenger.mockResolvedValue([acordoSolo]);
-    mockPagamentosGate(acordoSolo, 'pax-viewer');
-
-    renderPage();
-
-    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /Sair só eu/i }));
-    expect(
-      screen.getByText(/És o último passageiro\. Ao saíres, o acordo é encerrado\./),
-    ).toBeInTheDocument();
-  });
-
   it('passageiro activo: Sair só eu chama leavePassenger e avisa quota', async () => {
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
@@ -846,13 +820,6 @@ describe('MyAgreements — marketplace 1:N', () => {
           estado: 'reservado',
           quota_mensal_kz: 40000,
           perfis: { nome_completo: 'Tu Mesmo' },
-        },
-        {
-          id: 'ap-2',
-          passenger_id: 'pax-2',
-          estado: 'activo',
-          quota_mensal_kz: 40000,
-          perfis: { nome_completo: 'João Pedro' },
         },
       ],
     };
@@ -892,13 +859,6 @@ describe('MyAgreements — marketplace 1:N', () => {
           estado: 'reservado',
           quota_mensal_kz: 40000,
           perfis: { nome_completo: 'Tu Mesmo' },
-        },
-        {
-          id: 'ap-2',
-          passenger_id: 'pax-2',
-          estado: 'activo',
-          quota_mensal_kz: 40000,
-          perfis: { nome_completo: 'João Pedro' },
         },
       ],
     };

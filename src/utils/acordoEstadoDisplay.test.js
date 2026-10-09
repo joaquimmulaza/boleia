@@ -25,6 +25,13 @@ describe('labelEstadoAcordo', () => {
   it('cancelado real (rescisão ou outro) mantém Cancelado', () => {
     expect(labelEstadoAcordo('cancelado', null)).toBe('Cancelado');
     expect(labelEstadoAcordo('cancelado', undefined)).toBe('Cancelado');
+    expect(
+      labelEstadoAcordo({
+        estado: 'cancelado',
+        encerramento_motivo: 'sem_lugares_vivos',
+        rescisao_modo: 'consensual',
+      }),
+    ).toBe('Cancelado');
   });
 
   it('não devolve snake_case cru', () => {
