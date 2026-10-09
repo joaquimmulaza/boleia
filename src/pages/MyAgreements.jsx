@@ -1633,11 +1633,11 @@ const MyAgreements = () => {
             </div>
           ) : null}
 
-          {isMotorista && !activo ? (
+          {isMotorista ? (
             <AcordoPagamentosMotoristaPanel
               rows={motoristaPagamentos}
               loading={pagamentoLoading}
-              acordoTerminado
+              acordoTerminado={!activo}
               multiplePaymentSections={false}
             />
           ) : null}
