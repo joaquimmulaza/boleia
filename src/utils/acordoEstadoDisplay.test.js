@@ -97,6 +97,13 @@ describe('labelEstadoAcordo', () => {
   it('não devolve snake_case cru', () => {
     expect(labelEstadoAcordo('cancelamento_pendente')).not.toMatch(/_/);
   });
+
+  it('estado desconhecido (objecto ou string) não rebenta e capitaliza e', () => {
+    expect(labelEstadoAcordo({ estado: 'em_revisao_ops' })).toBe('Em revisao ops');
+    expect(labelEstadoAcordo('em_revisao_ops')).toBe('Em revisao ops');
+    expect(labelEstadoAcordo(null)).toBe('—');
+    expect(labelEstadoAcordo({ estado: null })).toBe('—');
+  });
 });
 
 describe('variantChipEstadoAcordo', () => {

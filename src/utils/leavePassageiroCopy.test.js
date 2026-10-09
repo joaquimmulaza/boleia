@@ -53,7 +53,7 @@ describe('leavePassageiroCopy — saída antes vs depois da activação', () => 
     ).not.toMatch(/cancelado — não/);
   });
 
-  it('confirmação último passageiro vivo (contagem servidor = 1)', () => {
+  it('confirmação último passageiro vivo (contagem servidor = 1) inclui aviso financeiro', () => {
     expect(
       copyConfirmacaoSaidaPassageiro({
         lugarEstado: 'activo',
@@ -61,15 +61,21 @@ describe('leavePassageiroCopy — saída antes vs depois da activação', () => 
         lugaresVivosCount: 1,
         lugaresVivosLoading: false,
       }),
-    ).toBe('És o último passageiro. Ao saíres, o acordo é encerrado.');
+    ).toBe(
+      'És o último passageiro. Ao saíres, o acordo é encerrado. '
+      + 'A tua quota deste mês não é reembolsada.',
+    );
     expect(
       copyConfirmacaoSaidaPassageiro({
         lugarEstado: 'reservado',
-        pagamento: null,
+        pagamento: { estado: 'comprovativo_enviado' },
         lugaresVivosCount: 1,
         lugaresVivosLoading: false,
       }),
-    ).toBe('És o último passageiro. Ao saíres, o acordo é encerrado.');
+    ).toBe(
+      'És o último passageiro. Ao saíres, o acordo é encerrado. '
+      + 'O teu pagamento pendente será cancelado. Não tens nada a pagar.',
+    );
   });
 
   it('confirmação com contagem > 1 mantém copy de saída individual', () => {

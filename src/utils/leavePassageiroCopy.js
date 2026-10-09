@@ -37,36 +37,42 @@ function pagamentoPendenteOuComprovativo(pagamentoEstado) {
  * }} ctx
  * @returns {string}
  */
+/**
+ * Linha financeira do modal (sem prefixo de saída individual).
+ *
+ * @param {{
+ *   lugarEstado?: string | null,
+ *   pagamento?: { estado?: string } | null,
+ *   pagamentoLoading?: boolean,
+ * }} ctx
+ * @returns {string}
+ */
+function copyLinhaFinanceiraSaidaPassageiro(ctx) {
+  if (isLugarActivadoParaQuota(ctx.lugarEstado)) {
+    return 'A tua quota deste mês não é reembolsada.';
+  }
+  if (ctx.pagamentoLoading) {
+    return 'A confirmar o estado do pagamento…';
+  }
+  if (pagamentoPendenteOuComprovativo(ctx.pagamento?.estado)) {
+    return 'O teu pagamento pendente será cancelado. Não tens nada a pagar.';
+  }
+  return 'Não tens nada a pagar neste acordo.';
+}
+
 export function copyConfirmacaoSaidaPassageiro(ctx) {
+  const prefixoIndividual =
+    'Saída individual: o acordo mantém-se activo para os restantes. ';
+
   if (
     !ctx.lugaresVivosLoading
     && ctx.lugaresVivosCount === 1
     && isLugarVivoPassageiro(ctx.lugarEstado)
   ) {
-    return COPY_CONFIRMACAO_ULTIMO_PASSAGEIRO;
+    return `${COPY_CONFIRMACAO_ULTIMO_PASSAGEIRO} ${copyLinhaFinanceiraSaidaPassageiro(ctx)}`;
   }
-  if (isLugarActivadoParaQuota(ctx.lugarEstado)) {
-    return (
-      'Saída individual: o acordo mantém-se activo para os restantes. '
-      + 'A tua quota deste mês não é reembolsada.'
-    );
-  }
-  if (ctx.pagamentoLoading) {
-    return (
-      'Saída individual: o acordo mantém-se activo para os restantes. '
-      + 'A confirmar o estado do pagamento…'
-    );
-  }
-  if (pagamentoPendenteOuComprovativo(ctx.pagamento?.estado)) {
-    return (
-      'Saída individual: o acordo mantém-se activo para os restantes. '
-      + 'O teu pagamento pendente será cancelado. Não tens nada a pagar.'
-    );
-  }
-  return (
-    'Saída individual: o acordo mantém-se activo para os restantes. '
-    + 'Não tens nada a pagar neste acordo.'
-  );
+
+  return prefixoIndividual + copyLinhaFinanceiraSaidaPassageiro(ctx);
 }
 
 /**

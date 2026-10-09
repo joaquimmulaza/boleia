@@ -46,9 +46,9 @@ function normalizeAcordoEstadoInput(estado, encerramentoMotivo, rescisaoModo) {
  */
 export function rescisaoBloqueiaLabelEncerrado(rescisaoModo, rescisaoConfirmadaEm) {
   const modo = String(rescisaoModo || '').trim().toLowerCase();
-  if (!modo) return false;
-  if (modo === 'consensual' && !rescisaoConfirmadaEm) return false;
-  return true;
+  if (modo === 'justa_causa') return true;
+  if (rescisaoConfirmadaEm) return true;
+  return false;
 }
 
 /**
@@ -100,9 +100,8 @@ export function labelEstadoAcordo(estado, encerramentoMotivo, rescisaoModo) {
   if (e === 'cancelado_justificado') return 'Cancelado por justa causa';
   if (e === 'suspenso') return 'Suspenso';
   if (e === 'expirado') return 'Expirado';
-  if (!estado) return '—';
-  const raw = typeof estado === 'object' ? String(estado.estado || '') : String(estado || '');
-  return raw.charAt(0).toUpperCase() + raw.slice(1).replace(/_/g, ' ');
+  if (!e) return '—';
+  return e.charAt(0).toUpperCase() + e.slice(1).replace(/_/g, ' ');
 }
 
 /**
