@@ -1457,6 +1457,94 @@ describe('MyAgreements — marketplace 1:N', () => {
       expect(screen.getByTestId('agreements-feedback')).toHaveTextContent(copy.corpo);
     });
 
+    it('motorista com 2 acordos: feedback de espera só actualiza quando o acordo pedido confirma', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      const copyAcordoA = copyCancelamentoPendente('2026-10-01');
+      const copyAcordoB = copyCancelamentoPendente('2026-12-01');
+
+      const acordoA = {
+        ...acordoMotorista,
+        id: 'acordo-a',
+        estado: 'cancelamento_pendente',
+        rescisao_effective_on: '2026-10-01',
+        ofertas_capacidade: {
+          origin_name: 'Belas',
+          destination_name: 'Centro',
+          departure_time: '07:00',
+        },
+      };
+      const acordoB = {
+        ...acordoMotorista,
+        id: 'acordo-b',
+        estado: 'activo',
+        ofertas_capacidade: {
+          origin_name: 'Viana',
+          destination_name: 'Aeroporto',
+          departure_time: '08:00',
+        },
+      };
+      const aposPedidoB = {
+        ...acordoB,
+        rescisao_modo: 'consensual',
+        rescisao_solicitada_por: 'driver-1',
+        rescisao_vigencia: 'fim_ciclo',
+      };
+      const aposConfirmacaoB = {
+        ...aposPedidoB,
+        estado: 'cancelamento_pendente',
+        rescisao_solicitada_por: null,
+        rescisao_effective_on: '2026-12-01',
+      };
+
+      getAgreementsForDriver
+        .mockResolvedValueOnce([acordoA, acordoB])
+        .mockResolvedValueOnce([acordoA, aposPedidoB])
+        .mockResolvedValue([acordoA, aposPedidoB]);
+      terminateAgreement.mockResolvedValue({
+        id: 'acordo-b',
+        estado: 'activo',
+        rescisao_modo: 'consensual',
+        rescisao_solicitada_por: 'driver-1',
+        rescisao_vigencia: 'fim_ciclo',
+      });
+
+      renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: /Viana/i }));
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      openAcordoKebab(dialog);
+      await clickAcordoKebabItem(/Encerrar acordo/i);
+
+      const picker = await screen.findByTestId('terminate-modality-picker');
+      fireEvent.click(within(picker).getByRole('button', { name: /Acordo amigável/i }));
+      const vigencia = await screen.findByTestId('terminate-vigencia-picker');
+      fireEvent.click(within(vigencia).getByRole('button', { name: /Fim deste mês/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^Encerrar acordo$/i }));
+
+      await waitFor(() => {
+        expect(terminateAgreement).toHaveBeenCalledWith(
+          'acordo-b',
+          { modo: 'consensual', vigencia: 'fim_ciclo' },
+          expect.any(Object),
+        );
+      });
+
+      const feedback = await screen.findByTestId('agreements-feedback');
+      await waitFor(() => {
+        expect(feedback).toHaveTextContent(/A outra parte precisa de confirmar/i);
+        expect(feedback).not.toHaveTextContent(copyAcordoA.corpo);
+      });
+
+      getAgreementsForDriver.mockResolvedValue([acordoA, aposConfirmacaoB]);
+      notifyMarketplaceHubRefresh();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('agreements-feedback')).toHaveTextContent(copyAcordoB.corpo);
+        expect(screen.getByTestId('agreements-feedback')).not.toHaveTextContent(
+          /A outra parte precisa de confirmar/i,
+        );
+      });
+    });
+
     it('resposta antiga de carregar não fecha o sheet quando lista veio vazia', async () => {
       mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
       const acordo = {
