@@ -4,14 +4,6 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE SCHEMA IF NOT EXISTS extensions;
-GRANT USAGE ON SCHEMA extensions TO postgres, authenticated, anon, service_role;
-
-CREATE OR REPLACE FUNCTION extensions.uuid_generate_v4()
-RETURNS uuid
-LANGUAGE sql
-AS $$ SELECT gen_random_uuid(); $$;
-
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
@@ -27,6 +19,14 @@ BEGIN
     CREATE ROLE supabase_auth_admin NOLOGIN;
   END IF;
 END $$;
+
+CREATE SCHEMA IF NOT EXISTS extensions;
+GRANT USAGE ON SCHEMA extensions TO postgres, authenticated, anon, service_role;
+
+CREATE OR REPLACE FUNCTION extensions.uuid_generate_v4()
+RETURNS uuid
+LANGUAGE sql
+AS $$ SELECT gen_random_uuid(); $$;
 
 GRANT USAGE ON SCHEMA public TO authenticated, anon, service_role;
 GRANT authenticated TO postgres;
