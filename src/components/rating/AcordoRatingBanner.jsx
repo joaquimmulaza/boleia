@@ -13,7 +13,7 @@ export default function AcordoRatingBanner({ prompt, onAvaliar }) {
 
   return (
     <section
-      className="rounded-2xl border border-emerald-200 bg-emerald-50/80 dark:bg-emerald-950/30 dark:border-emerald-900/50 p-4 space-y-3"
+      className="rounded-2xl border border-emerald-200 bg-emerald-50/80 dark:bg-emerald-950/30 dark:border-emerald-900/50 p-4 space-y-3 scroll-mt-acordo-detalhe"
       data-testid="acordo-rating-banner"
     >
       <div className="flex flex-wrap items-center gap-2">

@@ -2037,3 +2037,210 @@ describe('MyAgreements — PACOTE ENG #14 renovação período', () => {
     expect(within(dialog).getByText(/Período seguinte renovado/i)).toBeInTheDocument();
   });
 });
+
+describe('MyAgreements — cabeçalho fixo do sheet Detalhe do acordo', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    setupPagamentosDefault(true);
+    listAdendaHistorico.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    resetOverlayStackForTests();
+  });
+
+  it('cabeçalho sticky fora do corpo scrollável; Fechar e puxador permanecem no header', async () => {
+    renderPage(['/acordos?openAcordoId=acordo-pax&focus=rescisao']);
+
+    await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+    const header = screen.getByTestId('acordo-detalhe-sheet-header');
+    const body = screen.getByTestId('acordo-detalhe-sheet-body');
+
+    expect(header.className).toMatch(/\bsticky\b/);
+    expect(body).not.toContainElement(header);
+    expect(within(header).getByTestId('sheet-drag-handle')).toBeInTheDocument();
+    expect(within(header).getByTestId('acordo-detalhe-fechar')).toHaveAccessibleName(/Fechar/i);
+    expect(within(header).getByRole('heading', { name: /Detalhe do acordo/i })).toBeInTheDocument();
+    expect(within(header).getByText(/^activo$/i)).toBeInTheDocument();
+  });
+
+  it('secções de focus têm scroll-margin para não ficarem debaixo do cabeçalho', async () => {
+    renderPage(['/acordos?openAcordoId=acordo-pax&focus=pagamento']);
+
+    await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+    const pagamento = screen.getByTestId('acordo-pagamento-section');
+    expect(pagamento.className).toMatch(/\bscroll-mt-acordo-detalhe\b/);
+  });
+
+  it('ao abrir, o foco vai para o botão Fechar', async () => {
+    renderPage();
+
+    const trigger = await screen.findByRole('button', { name: /Talatona/i });
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const fechar = within(dialog).getByTestId('acordo-detalhe-fechar');
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(fechar);
+    });
+  });
+
+  it('Tab no último focável do sheet volta ao Fechar; Shift+Tab no Fechar vai ao último', async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const fechar = within(dialog).getByTestId('acordo-detalhe-fechar');
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(fechar);
+    });
+
+    const { getFocusableElements } = await import('../utils/focusTrap');
+    const focusables = getFocusableElements(dialog);
+    expect(focusables.length).toBeGreaterThan(1);
+
+    const last = focusables[focusables.length - 1];
+    last.focus();
+    fireEvent.keyDown(document, { key: 'Tab', code: 'Tab', keyCode: 9 });
+    expect(document.activeElement).toBe(fechar);
+
+    fechar.focus();
+    fireEvent.keyDown(document, { key: 'Tab', code: 'Tab', keyCode: 9, shiftKey: true });
+    expect(document.activeElement).toBe(last);
+  });
+
+  it('Tab não escapa para a shell por trás do sheet', async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const fechar = within(dialog).getByTestId('acordo-detalhe-fechar');
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(fechar);
+    });
+
+    fireEvent.keyDown(document, { key: 'Tab', code: 'Tab', keyCode: 9 });
+    expect(dialog).toContainElement(document.activeElement);
+  });
+
+  it('Fechar devolve o foco ao cartão que abriu o sheet', async () => {
+    renderPage();
+
+    const trigger = await screen.findByRole('button', { name: /Talatona/i });
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    fireEvent.click(within(dialog).getByTestId('acordo-detalhe-fechar'));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: /Detalhe do acordo/i })).not.toBeInTheDocument();
+    });
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('Tab no picker Encerrar acordo mantém foco no overlay empilhado', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const detalhe = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const fechar = within(detalhe).getByTestId('acordo-detalhe-fechar');
+
+    openAcordoKebab(detalhe);
+    fireEvent.click(screen.getByRole('menuitem', { name: /Encerrar acordo/i }));
+
+    const picker = await screen.findByRole('dialog', { name: /Como queres encerrar o acordo/i });
+    const avisoBtn = within(picker).getByRole('button', { name: /Aviso prévio/i });
+    avisoBtn.focus();
+
+    fireEvent.keyDown(document, { key: 'Tab', code: 'Tab', keyCode: 9 });
+    expect(picker).toContainElement(document.activeElement);
+    expect(document.activeElement).not.toBe(fechar);
+  });
+
+  it('fechar com origem destacada do DOM não lança e não restaura foco', async () => {
+    renderPage();
+
+    const trigger = await screen.findByRole('button', { name: /Talatona/i });
+    fireEvent.click(trigger);
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    trigger.remove();
+
+    expect(() => {
+      fireEvent.click(within(dialog).getByTestId('acordo-detalhe-fechar'));
+    }).not.toThrow();
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: /Detalhe do acordo/i })).not.toBeInTheDocument();
+    });
+    expect(document.activeElement).not.toBe(trigger);
+  });
+
+  it('remove listener keydown capture ao desmontar o sheet', async () => {
+    const removeSpy = vi.spyOn(document, 'removeEventListener');
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+    fireEvent.click(within(dialog).getByTestId('acordo-detalhe-fechar'));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: /Detalhe do acordo/i })).not.toBeInTheDocument();
+    });
+
+    expect(removeSpy).toHaveBeenCalledWith('keydown', expect.any(Function), true);
+    removeSpy.mockRestore();
+  });
+
+  it('focus=rescisao só scrolla quando o viewer é contraparte (não o requerente)', async () => {
+    const scrollSpy = vi.spyOn(Element.prototype, 'scrollIntoView');
+
+    mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        rescisao_modo: 'consensual',
+        rescisao_solicitada_por: 'driver-1',
+        rescisao_vigencia: 'imediato',
+      },
+    ]);
+    getAgreementsForPassenger.mockResolvedValue([]);
+
+    renderPage(['/acordos?openAcordoId=acordo-1&focus=rescisao']);
+
+    await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    await waitFor(() => {
+      expect(scrollSpy).not.toHaveBeenCalled();
+    });
+
+    scrollSpy.mockRestore();
+  });
+
+  it('cabeçalho marca data-scrolled quando o corpo do sheet faz scroll', async () => {
+    renderPage(['/acordos?openAcordoId=acordo-pax']);
+
+    await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const header = screen.getByTestId('acordo-detalhe-sheet-header');
+    const panel = screen.getByTestId('acordo-detalhe-sheet');
+
+    expect(header).toHaveAttribute('data-scrolled', 'false');
+
+    Object.defineProperty(panel, 'scrollTop', { value: 24, writable: true, configurable: true });
+    fireEvent.scroll(panel);
+
+    await waitFor(() => {
+      expect(header).toHaveAttribute('data-scrolled', 'true');
+    });
+  });
+});

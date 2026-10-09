@@ -31,6 +31,8 @@
   --bottom-nav-height-sm: 5rem;
   --shell-bottom-inset: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
   --sheet-bottom-inset: calc(16px + env(safe-area-inset-bottom, 0px));
+  /* Altura aproximada do cabeçalho sticky (puxador + Fechar + chips + título) para scrollIntoView */
+  --acordo-detalhe-sheet-scroll-margin: 9.5rem;
 }
 
 .dark {
@@ -245,4 +247,8 @@ body {
 .hero-route-line {
   transform-origin: left center;
   animation: hero-route-draw 900ms 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.scroll-mt-acordo-detalhe {
+  scroll-margin-top: var(--acordo-detalhe-sheet-scroll-margin);
 }
