@@ -460,7 +460,10 @@ describe('MyAgreements — marketplace 1:N', () => {
     const snapshot = within(dialog).getByTestId('acordo-contrato-snapshot');
     expect(within(snapshot).getAllByText(/Por passageiro/i).length).toBeGreaterThanOrEqual(1);
     expect(within(snapshot).getByText(/Grupo · 3 pessoas/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/Passageiros · 3/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Passageiros · 2/i)).toBeInTheDocument();
+    expect(within(dialog).getByTestId('passageiros-contagem')).toHaveTextContent(
+      'Confirmados 2 · Reservados 0',
+    );
 
     expect(within(dialog).getByText('Ana')).toBeInTheDocument();
     expect(within(dialog).getByText('João')).toBeInTheDocument();
