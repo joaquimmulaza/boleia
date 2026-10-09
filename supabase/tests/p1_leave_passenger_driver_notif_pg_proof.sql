@@ -67,7 +67,7 @@ BEGIN
   SELECT COUNT(*)::integer INTO v_n
   FROM public.notificacoes
   WHERE user_id = v_driver
-    AND mensagem = 'Um passageiro saiu do acordo.'
+    AND mensagem = 'P1L Pax1 saiu do acordo. Ficou um lugar livre.'
     AND metadata->>'type' = 'agreement_update'
     AND (metadata->>'acordo_id')::uuid = v_acordo;
 
