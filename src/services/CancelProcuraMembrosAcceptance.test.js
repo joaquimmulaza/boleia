@@ -12,6 +12,7 @@ const ROOT = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS = join(ROOT, '../../supabase/migrations');
 const MIGRATION_FILE = '20261009170000_cancel_procura_membros_saiu.sql';
 const LEGACY_CANCEL = '20260908225833_editar_procura_update_cancel_rpc.sql';
+const PG_PROOF = join(ROOT, '../../scripts/run-cancel-procura-membros-pg-proof.sh');
 
 /** @param {string} filename */
 function readMigration(filename) {
@@ -28,6 +29,16 @@ function cancelProcuraFunctionBody() {
   return match[0];
 }
 
+/** @returns {string} */
+function leaveGrupoFunctionBody() {
+  const sql = readMigration(MIGRATION_FILE);
+  const match = sql.match(
+    /CREATE OR REPLACE FUNCTION public\.leave_grupo_membro[\s\S]*?\n\$function\$/,
+  );
+  if (!match) throw new Error('leave_grupo_membro não encontrada na migração nova');
+  return match[0];
+}
+
 vi.mock('../lib/supabase', () => ({
   supabase: {
     rpc: vi.fn(),
@@ -38,6 +49,12 @@ vi.mock('../lib/supabase', () => ({
 describe('cancel_procura membros — migração obrigatória', () => {
   it('ficheiro de migração 20261009170000 existe', () => {
     expect(existsSync(join(MIGRATIONS, MIGRATION_FILE))).toBe(true);
+  });
+
+  it('script de prova PG com cadeia completa de migrações existe', () => {
+    expect(existsSync(PG_PROOF)).toBe(true);
+    const sh = readFileSync(PG_PROOF, 'utf8');
+    expect(sh).toMatch(/apply-all-migrations-local\.sh/);
   });
 
   /** @type {string} */
@@ -55,24 +72,42 @@ describe('cancel_procura membros — migração obrigatória', () => {
     expect(sql).toMatch(/fechado/);
   });
 
-  it('cancel_procura marca o passageiro cancelador activo→saiu com saiu_em', () => {
-    const body = cancelProcuraFunctionBody();
-    expect(body).toMatch(/UPDATE public\.membros_grupo/);
-    expect(body).toMatch(/estado = 'saiu'/);
-    expect(body).toMatch(/saiu_em/);
-    expect(body).toMatch(/passenger_id = v_uid/);
-    expect(body).toMatch(/lower\(estado\) = 'activo'/);
+  it('helper _sync_grupo_pos_cancel_procura: owner saiu, pendente rejeitado, fecha só sem activos', () => {
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\._sync_grupo_pos_cancel_procura/);
+    expect(sql).toMatch(/estado = 'rejeitado'/);
+    expect(sql).toMatch(/lower\(estado\) = 'pendente'/);
+    expect(sql).toMatch(/PERFORM public\._sync_grupo_pos_cancel_procura/);
   });
 
-  it('fecha grupo só sem membros activos', () => {
+  it('cancel_procura usa helper (não fecha grupo com activos restantes)', () => {
     const body = cancelProcuraFunctionBody();
-    expect(body).toMatch(/estado = 'fechado'/);
-    expect(body).toMatch(/v_n_activos/);
+    expect(body).toMatch(/PERFORM public\._sync_grupo_pos_cancel_procura/);
+    expect(body).not.toMatch(/UPDATE public\.membros_grupo[\s\S]*rejeitado/);
   });
 
-  it('backfill só is_test em procuras canceladas', () => {
-    expect(sql).toMatch(/p\.is_test\s*=\s*true/);
-    expect(sql).toMatch(/lower\(p\.estado\)\s*=\s*'cancelada'/);
+  it('leave_grupo_membro: procura cancelada permite último activo; saiu_em; fecha sem activos', () => {
+    const body = leaveGrupoFunctionBody();
+    expect(body).toMatch(/v_procura_estado <> 'cancelada' AND v_n_activos <= 1/);
+    expect(body).toMatch(/saiu_em = v_now/);
+    expect(body).toMatch(/_close_grupo_se_zero_activos/);
+  });
+
+  it('INSERT guard: grupo aberto + procura activa|em_negociacao', () => {
+    expect(sql).toMatch(/trg_membros_grupo_insert_estado_guard/);
+    expect(sql).toMatch(/v_grupo_estado <> 'aberto'/);
+    expect(sql).toMatch(/'activa', 'em_negociacao'/);
+    expect(sql).toMatch(/membros_insert_envolvidos/);
+  });
+
+  it('passenger update guard bloqueia saiu→activo com grupo fechado ou procura cancelada', () => {
+    expect(sql).toMatch(/trg_membros_grupo_passenger_update_guard/);
+    expect(sql).toMatch(/v_grupo_estado = 'fechado' OR v_procura_estado = 'cancelada'/);
+    expect(sql).toMatch(/lower\(OLD\.estado\) = 'saiu' AND lower\(NEW\.estado\) = 'activo'/);
+  });
+
+  it('backfill is_test chama _sync_grupo_pos_cancel_procura por grupo cancelado', () => {
+    expect(sql).toMatch(/p\.is_test = true/);
+    expect(sql).toMatch(/PERFORM public\._sync_grupo_pos_cancel_procura/);
   });
 
   it('mantém SECURITY DEFINER, search_path e GRANT authenticated', () => {
@@ -82,7 +117,9 @@ describe('cancel_procura membros — migração obrigatória', () => {
     expect(sql).toMatch(
       /GRANT EXECUTE ON FUNCTION public\.cancel_procura\(uuid\) TO authenticated/,
     );
-    expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.cancel_procura\(uuid\) FROM anon/);
+    expect(sql).toMatch(
+      /GRANT EXECUTE ON FUNCTION public\.leave_grupo_membro\(uuid, uuid, uuid\) TO authenticated/,
+    );
   });
 
   it('não altera acordos nem acordos_passageiros', () => {
