@@ -51,12 +51,13 @@ describe('cancel_procura membros — migração obrigatória', () => {
     expect(existsSync(join(MIGRATIONS, MIGRATION_FILE))).toBe(true);
   });
 
-  it('script de prova PG corre main→#244 e main→#243→#244', () => {
+  it('script de prova PG aplica cadeia completa main (incl. 160000) + 170000', () => {
     expect(existsSync(PG_PROOF)).toBe(true);
     const sh = readFileSync(PG_PROOF, 'utf8');
     expect(sh).toMatch(/bootstrap_roles_first\.sql/);
-    expect(sh).toMatch(/sem-160000/);
-    expect(sh).toMatch(/cursor\/sec-default-privileges/);
+    expect(sh).toMatch(/bootstrap_local_supabase\.sql/);
+    expect(sh).toMatch(/supabase\/migrations\/\*\.sql/);
+    expect(sh).not.toMatch(/sec-default-privileges/);
   });
 
   /** @type {string} */
@@ -92,6 +93,7 @@ describe('cancel_procura membros — migração obrigatória', () => {
     expect(body).toMatch(/v_procura_estado <> 'cancelada' AND v_n_activos <= 1/);
     expect(body).toMatch(/saiu_em = v_now/);
     expect(body).toMatch(/_close_grupo_se_zero_activos/);
+    expect(body).toMatch(/FROM public\.procuras p[\s\S]*FOR UPDATE[\s\S]*FROM public\.grupos g[\s\S]*FOR UPDATE/);
   });
 
   it('INSERT guard: grupo aberto + procura activa|em_negociacao', () => {
@@ -101,10 +103,12 @@ describe('cancel_procura membros — migração obrigatória', () => {
     expect(sql).toMatch(/membros_insert_envolvidos/);
   });
 
-  it('passenger update guard bloqueia saiu→activo com grupo fechado ou procura cancelada', () => {
+  it('passenger update guard bloqueia activo|pendente com grupo fechado ou procura cancelada', () => {
     expect(sql).toMatch(/trg_membros_grupo_passenger_update_guard/);
     expect(sql).toMatch(/v_grupo_estado = 'fechado' OR v_procura_estado = 'cancelada'/);
-    expect(sql).toMatch(/lower\(OLD\.estado\) = 'saiu' AND lower\(NEW\.estado\) = 'activo'/);
+    expect(sql).toMatch(/lower\(NEW\.estado\) IN \('activo', 'pendente'\)/);
+    expect(sql).toMatch(/RAISE EXCEPTION 'Este grupo está fechado.'/);
+    expect(sql).toMatch(/NEW\.saiu_em := NULL/);
   });
 
   it('backfill is_test chama _sync_grupo_pos_cancel_procura por grupo cancelado', () => {

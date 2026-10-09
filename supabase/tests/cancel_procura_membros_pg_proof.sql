@@ -23,10 +23,14 @@ DECLARE
   v_oferta uuid;
   v_acordo uuid;
   v_membro_saiu uuid;
+  v_membro_owner_saiu uuid;
+  v_membro_rej uuid;
+  v_membro_pend uuid;
   v_n integer;
   v_estado text;
   v_tem_saiu_em boolean;
   v_blocked boolean;
+  c_msg_grupo_fechado constant text := 'Este grupo está fechado.';
 BEGIN
   INSERT INTO auth.users (id, email) VALUES
     (v_owner, 'owner@test.local'),
@@ -179,7 +183,7 @@ BEGIN
     VALUES (v_grupo, v_pendente, 'pendente');
   EXCEPTION
     WHEN OTHERS THEN
-      IF SQLERRM = 'Este grupo está fechado.' THEN
+      IF SQLERRM = c_msg_grupo_fechado THEN
         v_blocked := true;
       ELSE
         RAISE;
@@ -213,7 +217,7 @@ BEGIN
   EXCEPTION
     WHEN OTHERS THEN
       RESET ROLE;
-      IF SQLERRM = 'Não podes voltar a activo neste grupo.' THEN
+      IF SQLERRM = c_msg_grupo_fechado THEN
         v_blocked := true;
       ELSE
         RAISE;
@@ -221,6 +225,148 @@ BEGIN
   END;
   IF NOT v_blocked THEN
     RAISE EXCEPTION 'FAIL: saiu→activo deveria ser recusado';
+  END IF;
+
+  -- Cenário 6: dono em procura cancelada — saiu→pendente (própria linha)
+  INSERT INTO public.procuras (id, owner_id, estado, n_candidato, preferred_time)
+  VALUES (gen_random_uuid(), v_owner, 'cancelada', 1, '07:00')
+  RETURNING id INTO v_procura;
+
+  INSERT INTO public.grupos (procura_id, estado) VALUES (v_procura, 'fechado') RETURNING id INTO v_grupo;
+
+  ALTER TABLE public.membros_grupo DISABLE TRIGGER trg_membros_grupo_insert_estado_guard;
+  INSERT INTO public.membros_grupo (grupo_id, passenger_id, estado)
+  VALUES (v_grupo, v_owner, 'saiu')
+  RETURNING id INTO v_membro_owner_saiu;
+  ALTER TABLE public.membros_grupo ENABLE TRIGGER trg_membros_grupo_insert_estado_guard;
+
+  PERFORM set_config('request.jwt.claim.sub', v_owner::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+
+  v_blocked := false;
+  BEGIN
+    SET LOCAL ROLE authenticated;
+    UPDATE public.membros_grupo SET estado = 'pendente' WHERE id = v_membro_owner_saiu;
+    RESET ROLE;
+  EXCEPTION
+    WHEN OTHERS THEN
+      RESET ROLE;
+      IF SQLERRM = c_msg_grupo_fechado THEN
+        v_blocked := true;
+      ELSE
+        RAISE;
+      END IF;
+  END;
+  IF NOT v_blocked THEN
+    RAISE EXCEPTION 'FAIL: dono saiu→pendente com procura cancelada deveria falhar';
+  END IF;
+
+  -- Cenário 7: co-membro em grupo fechado — saiu→pendente
+  INSERT INTO public.procuras (id, owner_id, estado, n_candidato, preferred_time)
+  VALUES (gen_random_uuid(), v_owner, 'activa', 2, '07:00')
+  RETURNING id INTO v_procura;
+
+  INSERT INTO public.grupos (procura_id, estado) VALUES (v_procura, 'fechado') RETURNING id INTO v_grupo;
+
+  ALTER TABLE public.membros_grupo DISABLE TRIGGER trg_membros_grupo_insert_estado_guard;
+  INSERT INTO public.membros_grupo (grupo_id, passenger_id, estado)
+  VALUES (v_grupo, v_other, 'saiu')
+  RETURNING id INTO v_membro_saiu;
+  ALTER TABLE public.membros_grupo ENABLE TRIGGER trg_membros_grupo_insert_estado_guard;
+
+  PERFORM set_config('request.jwt.claim.sub', v_other::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+
+  v_blocked := false;
+  BEGIN
+    SET LOCAL ROLE authenticated;
+    UPDATE public.membros_grupo SET estado = 'pendente' WHERE id = v_membro_saiu;
+    RESET ROLE;
+  EXCEPTION
+    WHEN OTHERS THEN
+      RESET ROLE;
+      IF SQLERRM = c_msg_grupo_fechado THEN
+        v_blocked := true;
+      ELSE
+        RAISE;
+      END IF;
+  END;
+  IF NOT v_blocked THEN
+    RAISE EXCEPTION 'FAIL: co-membro saiu→pendente em grupo fechado deveria falhar';
+  END IF;
+
+  -- Cenário 8: dono — outro membro rejeitado→activo (grupo fechado)
+  INSERT INTO public.procuras (id, owner_id, estado, n_candidato, preferred_time)
+  VALUES (gen_random_uuid(), v_owner, 'activa', 2, '07:00')
+  RETURNING id INTO v_procura;
+
+  INSERT INTO public.grupos (procura_id, estado) VALUES (v_procura, 'fechado') RETURNING id INTO v_grupo;
+
+  ALTER TABLE public.membros_grupo DISABLE TRIGGER trg_membros_grupo_insert_estado_guard;
+  INSERT INTO public.membros_grupo (grupo_id, passenger_id, estado) VALUES
+    (v_grupo, v_owner, 'saiu'),
+    (v_grupo, v_other, 'rejeitado');
+  SELECT id INTO v_membro_rej
+  FROM public.membros_grupo
+  WHERE grupo_id = v_grupo AND passenger_id = v_other;
+  ALTER TABLE public.membros_grupo ENABLE TRIGGER trg_membros_grupo_insert_estado_guard;
+
+  PERFORM set_config('request.jwt.claim.sub', v_owner::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+
+  v_blocked := false;
+  BEGIN
+    SET LOCAL ROLE authenticated;
+    UPDATE public.membros_grupo SET estado = 'activo' WHERE id = v_membro_rej;
+    RESET ROLE;
+  EXCEPTION
+    WHEN OTHERS THEN
+      RESET ROLE;
+      IF SQLERRM = c_msg_grupo_fechado THEN
+        v_blocked := true;
+      ELSE
+        RAISE;
+      END IF;
+  END;
+  IF NOT v_blocked THEN
+    RAISE EXCEPTION 'FAIL: dono rejeitado→activo em grupo fechado deveria falhar';
+  END IF;
+
+  -- Cenário 9: dono — outro membro pendente→activo (grupo fechado)
+  INSERT INTO public.procuras (id, owner_id, estado, n_candidato, preferred_time)
+  VALUES (gen_random_uuid(), v_owner, 'activa', 2, '07:00')
+  RETURNING id INTO v_procura;
+
+  INSERT INTO public.grupos (procura_id, estado) VALUES (v_procura, 'fechado') RETURNING id INTO v_grupo;
+
+  ALTER TABLE public.membros_grupo DISABLE TRIGGER trg_membros_grupo_insert_estado_guard;
+  INSERT INTO public.membros_grupo (grupo_id, passenger_id, estado) VALUES
+    (v_grupo, v_owner, 'saiu'),
+    (v_grupo, v_pendente, 'pendente');
+  SELECT id INTO v_membro_pend
+  FROM public.membros_grupo
+  WHERE grupo_id = v_grupo AND passenger_id = v_pendente;
+  ALTER TABLE public.membros_grupo ENABLE TRIGGER trg_membros_grupo_insert_estado_guard;
+
+  PERFORM set_config('request.jwt.claim.sub', v_owner::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+
+  v_blocked := false;
+  BEGIN
+    SET LOCAL ROLE authenticated;
+    UPDATE public.membros_grupo SET estado = 'activo' WHERE id = v_membro_pend;
+    RESET ROLE;
+  EXCEPTION
+    WHEN OTHERS THEN
+      RESET ROLE;
+      IF SQLERRM = c_msg_grupo_fechado THEN
+        v_blocked := true;
+      ELSE
+        RAISE;
+      END IF;
+  END;
+  IF NOT v_blocked THEN
+    RAISE EXCEPTION 'FAIL: dono pendente→activo em grupo fechado deveria falhar';
   END IF;
 
   RAISE NOTICE 'OK: cancel_procura_membros_pg_proof passou';

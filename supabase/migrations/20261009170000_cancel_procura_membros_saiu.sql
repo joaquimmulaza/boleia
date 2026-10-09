@@ -195,16 +195,23 @@ BEGIN
     RAISE EXCEPTION 'Só podes sair do grupo por ti próprio.';
   END IF;
 
-  SELECT p.id, lower(p.estado)
-  INTO v_procura_id, v_procura_estado
+  SELECT g.procura_id INTO v_procura_id
   FROM public.grupos g
-  JOIN public.procuras p ON p.id = g.procura_id
-  WHERE g.id = p_grupo_id
-  FOR UPDATE OF g;
+  WHERE g.id = p_grupo_id;
 
   IF v_procura_id IS NULL THEN
     RAISE EXCEPTION 'Grupo não encontrado.';
   END IF;
+
+  SELECT lower(p.estado) INTO v_procura_estado
+  FROM public.procuras p
+  WHERE p.id = v_procura_id
+  FOR UPDATE;
+
+  PERFORM 1
+  FROM public.grupos g
+  WHERE g.id = p_grupo_id
+  FOR UPDATE;
 
   SELECT * INTO v_membro
   FROM public.membros_grupo
@@ -343,15 +350,15 @@ BEGIN
   JOIN public.procuras p ON p.id = g.procura_id
   WHERE g.id = NEW.grupo_id;
 
-  IF auth.uid() = NEW.passenger_id
-     AND (v_grupo_estado = 'fechado' OR v_procura_estado = 'cancelada') THEN
-    IF lower(OLD.estado) = 'saiu' AND lower(NEW.estado) = 'activo' THEN
-      RAISE EXCEPTION 'Não podes voltar a activo neste grupo.';
-    END IF;
-    IF lower(OLD.estado) = 'rejeitado'
-       AND lower(NEW.estado) IN ('activo', 'pendente') THEN
-      RAISE EXCEPTION 'Não podes reactivar este pedido.';
-    END IF;
+  IF (v_grupo_estado = 'fechado' OR v_procura_estado = 'cancelada')
+     AND lower(NEW.estado) IN ('activo', 'pendente')
+     AND lower(NEW.estado) IS DISTINCT FROM lower(OLD.estado) THEN
+    RAISE EXCEPTION 'Este grupo está fechado.';
+  END IF;
+
+  IF lower(OLD.estado) = 'saiu'
+     AND lower(NEW.estado) IS DISTINCT FROM lower(OLD.estado) THEN
+    NEW.saiu_em := NULL;
   END IF;
 
   IF auth.uid() IS DISTINCT FROM v_owner AND auth.uid() = NEW.passenger_id THEN
