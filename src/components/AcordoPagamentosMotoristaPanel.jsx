@@ -155,9 +155,19 @@ function AcordoPagamentosMotoristaPanel({
                 className="p-4 flex items-start justify-between gap-3"
                 data-testid={`motorista-pagamento-comprovativo-${row.passenger_id}`}
               >
-                <p className="text-sm text-slate-800 dark:text-slate-100 text-pretty flex-1">
-                  {linhaComprovativoPending}
-                </p>
+                <div className="space-y-1 flex-1 min-w-0">
+                  <p className="text-sm text-slate-800 dark:text-slate-100 text-pretty">
+                    {linhaComprovativoPending}
+                  </p>
+                  {linhaPrazo ? (
+                    <p
+                      className="text-xs text-amber-800 dark:text-amber-200"
+                      data-testid={`motorista-s4-prazo-${row.passenger_id}`}
+                    >
+                      {linhaPrazo}
+                    </p>
+                  ) : null}
+                </div>
                 <span
                   className={`shrink-0 text-xs font-semibold px-2 py-1 rounded-full ${chipClassEstadoPagamento(PAYMENT_STATES.COMPROVATIVO)}`}
                 >

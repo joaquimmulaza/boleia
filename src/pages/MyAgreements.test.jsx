@@ -49,6 +49,7 @@ vi.mock('../services/PaymentService', async (importOriginal) => {
     getAcordoContactos: vi.fn(),
     getObrigacaoPagamentoPassageiro: vi.fn(),
     listAnulacaoMotivoLugarAcordos: vi.fn().mockResolvedValue([]),
+    listPagamentosPendentesMotoristaAcordo: vi.fn().mockResolvedValue([]),
   };
 });
 
@@ -86,6 +87,7 @@ import {
   getMesReferenciaAtual,
   getObrigacaoPagamentoPassageiro,
   listAnulacaoMotivoLugarAcordos,
+  listPagamentosPendentesMotoristaAcordo,
 } from '../services/PaymentService';
 
 /** @param {boolean} [emCustodia] */
@@ -1358,6 +1360,35 @@ describe('MyAgreements — marketplace 1:N', () => {
     openAcordoKebab(dialog);
     expect(screen.getByRole('menuitem', { name: /Encerrar acordo/i })).toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: /Sair só eu/i })).not.toBeInTheDocument();
+  });
+
+  it('motorista em acordo activo vê pagamentos do mês (RPC estreita, read-only)', async () => {
+    listPagamentosPendentesMotoristaAcordo.mockResolvedValue([
+      {
+        pagamento_id: 'pg-s4',
+        passenger_id: 'pax-1',
+        passenger_nome: 'Ana Costa',
+        estado: 'comprovativo_enviado',
+        valor: 0,
+        valor_em_divida: 0,
+        valor_comprovativo: 40000,
+        prazo: '2026-10-18T23:59:59.000Z',
+      },
+    ]);
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+    await waitFor(() => {
+      expect(listPagamentosPendentesMotoristaAcordo).toHaveBeenCalledWith('acordo-1');
+    });
+    expect(within(dialog).getByTestId('motorista-pagamentos-titulo')).toHaveTextContent(
+      'Pagamentos do mês',
+    );
+    expect(within(dialog).getByTestId('motorista-pagamento-comprovativo-pax-1')).toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: /Enviar comprovativo/i })).not.toBeInTheDocument();
   });
 
   it('motorista não vê Sair só eu', async () => {
