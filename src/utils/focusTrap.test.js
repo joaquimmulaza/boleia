@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { getFocusableElements, handleFocusTrapTabKey } from './focusTrap';
+import {
+  getFocusableElements,
+  handleFocusTrapTabKey,
+  isActiveElementInNestedModal,
+  isElementFocusReturnable,
+  focusReturnableElement,
+} from './focusTrap';
 
 describe('focusTrap', () => {
   it('lista botões focáveis dentro do contentor', () => {
@@ -36,5 +42,54 @@ describe('focusTrap', () => {
     expect(handled).toBe(true);
     expect(event.defaultPrevented).toBe(true);
     expect(document.activeElement?.id).toBe('first');
+  });
+
+  it('não rouba Tab quando o foco está num dialog empilhado', () => {
+    document.body.innerHTML = `
+      <div id="sheet-dialog">
+        <button type="button" id="fechar">Fechar</button>
+      </div>
+      <div id="nested-dialog" role="dialog" aria-modal="true">
+        <button type="button" id="nested-last">Confirmar</button>
+      </div>
+    `;
+    const sheet = document.getElementById('sheet-dialog');
+    const nestedLast = document.getElementById('nested-last');
+    nestedLast.focus();
+
+    const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    const handled = handleFocusTrapTabKey(event, sheet);
+
+    expect(handled).toBe(false);
+    expect(document.activeElement?.id).toBe('nested-last');
+  });
+
+  it('isElementFocusReturnable rejeita nulo e nós destacados', () => {
+    expect(isElementFocusReturnable(null)).toBe(false);
+    const btn = document.createElement('button');
+    expect(isElementFocusReturnable(btn)).toBe(false);
+    document.body.appendChild(btn);
+    expect(isElementFocusReturnable(btn)).toBe(true);
+    btn.remove();
+    expect(isElementFocusReturnable(btn)).toBe(false);
+  });
+
+  it('focusReturnableElement não foca elemento destacado', () => {
+    const btn = document.createElement('button');
+    btn.id = 'detached-focus';
+    document.body.appendChild(btn);
+    btn.focus();
+    btn.remove();
+    expect(() => focusReturnableElement(btn)).not.toThrow();
+  });
+
+  it('isActiveElementInNestedModal detecta portal sibling', () => {
+    document.body.innerHTML = `
+      <div id="sheet"><button id="a">A</button></div>
+      <div id="nested" role="dialog" aria-modal="true"><button id="b">B</button></div>
+    `;
+    const sheet = document.getElementById('sheet');
+    document.getElementById('b').focus();
+    expect(isActiveElementInNestedModal(sheet)).toBe(true);
   });
 });

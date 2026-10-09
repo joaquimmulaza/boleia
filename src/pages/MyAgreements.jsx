@@ -23,6 +23,7 @@ import OverlayShell from '../components/OverlayShell';
 import AcordoDetalheSheetHeader from '../components/AcordoDetalheSheetHeader';
 import SheetDragHandle from '../components/SheetDragHandle';
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
+import { focusReturnableElement } from '../utils/focusTrap';
 import TerminateConfirmSheet from '../components/TerminateConfirmSheet';
 import { Button } from '../components/ui/button';
 import { formatKwanza } from '../utils/formatKwanza';
@@ -453,9 +454,7 @@ const MyAgreements = () => {
         setAcordoSheetHeaderScrolled(false);
         setSelected(null);
         syncOpenAcordoQuery(null);
-        if (returnTo instanceof HTMLElement) {
-          requestAnimationFrame(() => returnTo.focus());
-        }
+        focusReturnableElement(returnTo);
         return;
       }
       setSelected(acordo);
@@ -464,10 +463,18 @@ const MyAgreements = () => {
     [syncOpenAcordoQuery],
   );
 
+  const acordoSheetNestedOverlayOpen =
+    terminatePickerOpen
+    || terminateConfirmOpen
+    || terminateJustaPickerOpen
+    || terminateVigenciaPickerOpen
+    || leaveModalOpen;
+
   useDialogFocusTrap({
     containerRef: acordoSheetDialogRef,
     initialFocusRef: acordoSheetFecharRef,
-    active: Boolean(selected),
+    initialFocusSelector: '[data-testid="acordo-detalhe-fechar"]',
+    active: Boolean(selected) && !acordoSheetNestedOverlayOpen,
   });
 
   useEffect(() => {
@@ -653,6 +660,7 @@ const MyAgreements = () => {
     if (focus === 'pagamento' && pagamentoLoading) return undefined;
 
     pendingFocusRef.current = null;
+    // focus=rescisao: scroll só para a contraparte (quem confirma/recusa), nunca para o requerente.
     if (
       focus === 'rescisao'
       && !acordoTemRescisaoConsensualPendenteParaUser(selected, user?.id)

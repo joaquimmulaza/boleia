@@ -1,6 +1,6 @@
 /**
  * Elementos focáveis dentro de um contentor (para armadilha de foco em dialogs).
- * @param {ParentNode} root
+ * @param {Element | DocumentFragment | null | undefined} root
  * @returns {HTMLElement[]}
  */
 export function getFocusableElements(root) {
@@ -29,6 +29,40 @@ export function getFocusableElements(root) {
 }
 
 /**
+ * Modal/dialog empilhado por cima do contentor da armadilha (portal sibling).
+ * @param {HTMLElement} container
+ * @param {Element | null} [active]
+ * @returns {boolean}
+ */
+export function isActiveElementInNestedModal(container, active = document.activeElement) {
+  if (!(active instanceof HTMLElement)) return false;
+  if (container.contains(active)) return false;
+  const dialog = active.closest('[role="dialog"][aria-modal="true"]');
+  if (!(dialog instanceof HTMLElement)) return false;
+  return !container.contains(dialog);
+}
+
+/**
+ * @param {HTMLElement | null | undefined} el
+ * @returns {boolean}
+ */
+export function isElementFocusReturnable(el) {
+  return el instanceof HTMLElement && el.isConnected;
+}
+
+/**
+ * @param {HTMLElement | null | undefined} el
+ */
+export function focusReturnableElement(el) {
+  if (!isElementFocusReturnable(el)) return;
+  requestAnimationFrame(() => {
+    if (isElementFocusReturnable(el)) {
+      el.focus();
+    }
+  });
+}
+
+/**
  * @param {KeyboardEvent} event
  * @param {HTMLElement} container
  * @returns {boolean} true se o evento foi tratado (preventDefault)
@@ -44,6 +78,9 @@ export function handleFocusTrapTabKey(event, container) {
   const active = document.activeElement;
 
   if (!container.contains(active)) {
+    if (isActiveElementInNestedModal(container, active)) {
+      return false;
+    }
     event.preventDefault();
     first.focus();
     return true;

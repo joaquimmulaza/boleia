@@ -31,6 +31,7 @@
   --bottom-nav-height-sm: 5rem;
   --shell-bottom-inset: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
   --sheet-bottom-inset: calc(16px + env(safe-area-inset-bottom, 0px));
+  /* Altura aproximada do cabeçalho sticky (puxador + Fechar + chips + título) para scrollIntoView */
   --acordo-detalhe-sheet-scroll-margin: 9.5rem;
 }
 

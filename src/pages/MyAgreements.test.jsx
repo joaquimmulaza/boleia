@@ -2147,6 +2147,86 @@ describe('MyAgreements — cabeçalho fixo do sheet Detalhe do acordo', () => {
     expect(document.activeElement).toBe(trigger);
   });
 
+  it('Tab no picker Encerrar acordo mantém foco no overlay empilhado', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const detalhe = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const fechar = within(detalhe).getByTestId('acordo-detalhe-fechar');
+
+    openAcordoKebab(detalhe);
+    fireEvent.click(screen.getByRole('menuitem', { name: /Encerrar acordo/i }));
+
+    const picker = await screen.findByRole('dialog', { name: /Como queres encerrar o acordo/i });
+    const avisoBtn = within(picker).getByRole('button', { name: /Aviso prévio/i });
+    avisoBtn.focus();
+
+    fireEvent.keyDown(document, { key: 'Tab', code: 'Tab', keyCode: 9 });
+    expect(picker).toContainElement(document.activeElement);
+    expect(document.activeElement).not.toBe(fechar);
+  });
+
+  it('fechar com origem destacada do DOM não lança e não restaura foco', async () => {
+    renderPage();
+
+    const trigger = await screen.findByRole('button', { name: /Talatona/i });
+    fireEvent.click(trigger);
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    trigger.remove();
+
+    expect(() => {
+      fireEvent.click(within(dialog).getByTestId('acordo-detalhe-fechar'));
+    }).not.toThrow();
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: /Detalhe do acordo/i })).not.toBeInTheDocument();
+    });
+    expect(document.activeElement).not.toBe(trigger);
+  });
+
+  it('remove listener keydown capture ao desmontar o sheet', async () => {
+    const removeSpy = vi.spyOn(document, 'removeEventListener');
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+    fireEvent.click(within(dialog).getByTestId('acordo-detalhe-fechar'));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: /Detalhe do acordo/i })).not.toBeInTheDocument();
+    });
+
+    expect(removeSpy).toHaveBeenCalledWith('keydown', expect.any(Function), true);
+    removeSpy.mockRestore();
+  });
+
+  it('focus=rescisao só scrolla quando o viewer é contraparte (não o requerente)', async () => {
+    const scrollSpy = vi.spyOn(Element.prototype, 'scrollIntoView');
+
+    mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        rescisao_modo: 'consensual',
+        rescisao_solicitada_por: 'driver-1',
+        rescisao_vigencia: 'imediato',
+      },
+    ]);
+    getAgreementsForPassenger.mockResolvedValue([]);
+
+    renderPage(['/acordos?openAcordoId=acordo-1&focus=rescisao']);
+
+    await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    await waitFor(() => {
+      expect(scrollSpy).not.toHaveBeenCalled();
+    });
+
+    scrollSpy.mockRestore();
+  });
+
   it('cabeçalho marca data-scrolled quando o corpo do sheet faz scroll', async () => {
     renderPage(['/acordos?openAcordoId=acordo-pax']);
 

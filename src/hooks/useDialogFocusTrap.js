@@ -7,9 +7,15 @@ import { handleFocusTrapTabKey } from '../utils/focusTrap';
  *   containerRef: import('react').RefObject<HTMLElement | null>,
  *   active: boolean,
  *   initialFocusRef?: import('react').RefObject<HTMLElement | null>,
+ *   initialFocusSelector?: string,
  * }} options
  */
-export function useDialogFocusTrap({ containerRef, active, initialFocusRef }) {
+export function useDialogFocusTrap({
+  containerRef,
+  active,
+  initialFocusRef,
+  initialFocusSelector,
+}) {
   useEffect(() => {
     if (!active) return undefined;
     const container = containerRef.current;
@@ -17,7 +23,9 @@ export function useDialogFocusTrap({ containerRef, active, initialFocusRef }) {
 
     const focusInitial = () => {
       const target = initialFocusRef?.current
-        ?? container.querySelector('[data-testid="acordo-detalhe-fechar"]');
+        ?? (initialFocusSelector
+          ? container.querySelector(initialFocusSelector)
+          : null);
       if (target instanceof HTMLElement) {
         target.focus();
       }
@@ -35,5 +43,5 @@ export function useDialogFocusTrap({ containerRef, active, initialFocusRef }) {
       cancelAnimationFrame(raf);
       document.removeEventListener('keydown', onKeyDown, true);
     };
-  }, [active, containerRef, initialFocusRef]);
+  }, [active, containerRef, initialFocusRef, initialFocusSelector]);
 }
