@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import webpush from "https://esm.sh/web-push@3.6.7";
+import { resolvePushDataUrl } from "../_shared/safeNotificationLink.ts";
 
 serve(async (req) => {
   // Configurar CORS
@@ -26,7 +27,7 @@ serve(async (req) => {
     }
 
     const { record } = payload;
-    const { user_id, mensagem, tipo, metadata } = record;
+    const { user_id, mensagem, tipo, metadata, link } = record;
 
     if (!user_id || !mensagem) {
       return new Response(JSON.stringify({ error: "Missing user_id or mensagem in record" }), {
@@ -96,7 +97,7 @@ serve(async (req) => {
       icon: "/pwa-192x192.png", // Ícone PWA
       badge: "/pwa-512x512.png",
       data: {
-        url: "/", // Fallback URL
+        url: resolvePushDataUrl(link, metadata as Record<string, unknown> | null),
         notificationId: record.id,
         metadata: metadata || {},
         unreadCount: unreadCount ?? 1,

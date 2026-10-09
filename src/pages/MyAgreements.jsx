@@ -64,6 +64,7 @@ import { labelEstadoPagamento } from '../utils/paymentStatus';
 import {
   acordoTemRescisaoConsensualPendenteParaUser,
   copyCancelamentoPendente,
+  formatRescisaoSolicitadaEmPt,
 } from '../utils/rescisaoDisplay';
 import AcordoPrecoProximoMesPanel from '../components/precoProximoMes/AcordoPrecoProximoMesPanel';
 import {
@@ -1231,6 +1232,7 @@ const MyAgreements = () => {
       String(selected.rescisao_modo || '').toLowerCase() === 'consensual' &&
       selected.rescisao_solicitada_por === user?.id;
     const vigenciaConsensualPendente = String(selected.rescisao_vigencia || 'imediato').toLowerCase();
+    const pedidoFeitoEm = formatRescisaoSolicitadaEmPt(selected.rescisao_solicitada_em);
     const cancelamentoPendente =
       String(selected.estado || '').toLowerCase() === 'cancelamento_pendente';
     const cancelamentoCopy = cancelamentoPendente
@@ -1497,6 +1499,14 @@ const MyAgreements = () => {
                         ? 'Pediste encerramento no fim deste mês. A outra parte pode confirmar ou recusar em Acordos.'
                         : 'Pediste encerramento imediato com ajuste proporcional. A outra parte pode confirmar ou recusar em Acordos.'}
                     </p>
+                    {pedidoFeitoEm ? (
+                      <p
+                        className="text-xs font-medium text-slate-500 dark:text-slate-400"
+                        data-testid="rescisao-pedido-feito-em"
+                      >
+                        {`Pedido feito a ${pedidoFeitoEm}`}
+                      </p>
+                    ) : null}
                   </div>
                 ) : null}
 
@@ -1513,6 +1523,14 @@ const MyAgreements = () => {
                         ? 'A outra parte quer encerrar no fim deste mês. Confirma se concordas.'
                         : 'A outra parte quer encerrar agora com ajuste proporcional das quotas. Confirma se concordas.'}
                     </p>
+                    {pedidoFeitoEm ? (
+                      <p
+                        className="text-xs font-medium text-slate-500 dark:text-slate-400"
+                        data-testid="rescisao-pedido-feito-em"
+                      >
+                        {`Pedido feito a ${pedidoFeitoEm}`}
+                      </p>
+                    ) : null}
                     <div className="flex flex-col gap-2">
                       <Button
                         type="button"

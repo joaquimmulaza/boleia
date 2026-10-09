@@ -153,7 +153,7 @@ export default function NotificationBell() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-9 rounded-full px-4 text-sm font-bold text-slate-700 dark:text-slate-200"
+                  className="h-9 rounded-full px-4 text-sm font-bold border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
                   onClick={() => setIsOpen(false)}
                 >
                   Fechar
@@ -194,7 +194,7 @@ export default function NotificationBell() {
                           handleNotificationClick(notif);
                         }
                       }}
-                      className={`flex items-start gap-3 px-5 py-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${
+                      className={`flex items-start gap-3 px-5 py-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary focus-visible:ring-offset-0 dark:text-foreground ${
                         !notif.lida ? 'bg-primary/5 dark:bg-primary/10' : ''
                       }`}
                       onClick={() => handleNotificationClick(notif)}
