@@ -196,7 +196,8 @@ AS $$
 DECLARE
   v_owner uuid;
 BEGIN
-  IF auth.uid() IS NULL THEN
+  -- RPC SECURITY DEFINER (leave_grupo_membro) actualiza estado=saiu; não bloquear.
+  IF auth.uid() IS NULL OR current_user <> 'authenticated' THEN
     RETURN NEW;
   END IF;
 
@@ -249,10 +250,27 @@ CREATE POLICY membros_update_self_pickup ON public.membros_grupo
 -- =============================================================================
 CREATE OR REPLACE FUNCTION public.storage_comprovativo_pagamento_id(p_name text)
 RETURNS uuid
-LANGUAGE sql
+LANGUAGE plpgsql
 IMMUTABLE
+SET search_path TO public, storage
 AS $$
-  SELECT NULLIF((storage.foldername(p_name))[2], '')::uuid;
+DECLARE
+  v_segment text;
+BEGIN
+  v_segment := NULLIF((storage.foldername(p_name))[2], '');
+  IF v_segment IS NULL THEN
+    RETURN NULL;
+  END IF;
+  IF v_segment !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
+    RETURN NULL;
+  END IF;
+  BEGIN
+    RETURN v_segment::uuid;
+  EXCEPTION
+    WHEN invalid_text_representation THEN
+      RETURN NULL;
+  END;
+END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.can_access_comprovativo_storage(p_name text)
@@ -323,6 +341,7 @@ CREATE POLICY comprovativos_insert_own ON storage.objects
   );
 
 DROP POLICY IF EXISTS comprovativos_select_own_or_admin ON storage.objects;
+DROP POLICY IF EXISTS comprovativos_select_partes_acordo ON storage.objects;
 CREATE POLICY comprovativos_select_partes_acordo ON storage.objects
   FOR SELECT TO authenticated
   USING (

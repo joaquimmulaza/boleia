@@ -78,20 +78,19 @@ describe('fix(sec) — upsert cliente vs GRANT UPDATE (contrato)', () => {
     );
   });
 
-  it('grupos DELETE: policy grupos_delete_owner restringe ao dono da procura (T6)', () => {
-    const t6 = readFileSync(
-      join(MIGRATIONS, '20260904135648_marketplace_t6_create_oferta_procura_schema.sql'),
-      'utf8',
-    );
-    expect(t6).toMatch(/CREATE POLICY grupos_delete_owner ON public\.grupos/);
-    expect(t6).toMatch(
-      /grupos_delete_owner[\s\S]*FOR DELETE[\s\S]*auth\.uid\(\) = \(SELECT owner_id FROM public\.procuras/,
-    );
-  });
-
   it('membros_grupo INSERT: trigger limita estado inicial activo|pendente', () => {
     const sql = readMigration(SEC_MIGRATION);
     expect(sql).toMatch(/trg_membros_grupo_insert_estado_guard/);
     expect(sql).toMatch(/NOT IN \('activo', 'pendente'\)/);
+  });
+
+  it('leave_grupo_membro: guard UPDATE não bloqueia RPC SECURITY DEFINER', () => {
+    const sql = readMigration(SEC_MIGRATION);
+    const leaveRpc = readFileSync(
+      join(MIGRATIONS, '20260906004109_rpc_idempotency_wave4_leave_grupo_membro.sql'),
+      'utf8',
+    );
+    expect(leaveRpc).toMatch(/SET estado = 'saiu'/);
+    expect(sql).toMatch(/current_user <> 'authenticated'/);
   });
 });

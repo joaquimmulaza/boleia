@@ -83,6 +83,14 @@ describe('fix(sec) — RLS/grants médios (contrato migração)', () => {
     expect(sql).toMatch(/membros_update_self_pickup/);
   });
 
+  it('membros_grupo: guard UPDATE ignora SECURITY DEFINER (leave_grupo_membro → saiu)', () => {
+    const sql = readMigration(SEC_MIGRATION);
+    expect(sql).toMatch(/leave_grupo_membro/);
+    expect(sql).toMatch(
+      /IF auth\.uid\(\) IS NULL OR current_user <> 'authenticated' THEN[\s\S]*?RETURN NEW;/,
+    );
+  });
+
   it('veiculos, grupos, push_subscriptions: column grants / revoke UPDATE', () => {
     const sql = readMigration(SEC_MIGRATION);
     expect(sql).toMatch(/GRANT UPDATE \(\s*id_motorista/);
@@ -98,9 +106,20 @@ describe('fix(sec) — RLS/grants médios (contrato migração)', () => {
     const sql = readMigration(SEC_MIGRATION);
     expect(sql).toMatch(/CREATE POLICY comprovativos_update_own ON storage\.objects/);
     expect(sql).toMatch(/comprovativos_insert_own/);
+    expect(sql).toMatch(
+      /DROP POLICY IF EXISTS comprovativos_select_partes_acordo ON storage\.objects/,
+    );
     expect(sql).toMatch(/comprovativos_select_partes_acordo/);
     expect(sql).toMatch(/can_access_comprovativo_storage/);
     expect(sql).toMatch(/storage_comprovativo_pagamento_id\(name\)/);
+  });
+
+  it('storage_comprovativo_pagamento_id: segmento inválido devolve NULL (sem cast à cegas)', () => {
+    const sql = readMigration(SEC_MIGRATION);
+    expect(sql).not.toMatch(
+      /storage_comprovativo_pagamento_id[\s\S]*?SELECT NULLIF\(\(storage\.foldername\(p_name\)\)\[2\], ''\)::uuid;/,
+    );
+    expect(sql).toMatch(/invalid_text_representation|!~ '\^\[0-9a-f\]/);
   });
 
   it('helpers das policies storage: EXECUTE para authenticated após REVOKE de PUBLIC/anon', () => {
