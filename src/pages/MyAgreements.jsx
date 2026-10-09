@@ -195,8 +195,8 @@ function isNoAcordo(estado) {
  * @param {Array<{ estado?: string }>} linhas
  * @returns {object | null}
  */
-function pickLinhaVivaPassageiro(linhas, ctx = {}) {
-  const vivos = lugaresVivosFromLinhas(linhas, ctx);
+function pickLinhaVivaPassageiro(linhas) {
+  const vivos = lugaresVivosFromLinhas(linhas);
   if (vivos[0]) return vivos[0];
   const list = linhas || [];
   return list[0] ?? null;
@@ -1157,8 +1157,6 @@ const MyAgreements = () => {
     const rota = labelRotaOferta(oferta || {});
     const horaPartida = formatHora(oferta?.departure_time);
     const linhas = selected.acordos_passageiros || [];
-    const mesReferenciaDetalhe = getMesReferenciaAtual();
-    const chipContextPorPassenger = chipContextPorAcordo[selected.id] || {};
     const activo = isActivo(selected.estado);
     const isPassageiro = tipoPerfil === 'Passageiro';
     const isMotorista = tipoPerfil === 'Motorista';
@@ -1167,18 +1165,11 @@ const MyAgreements = () => {
       ? chipCtxForAcordoPassageiro(selected.id, minhaLinha.passenger_id)
       : null;
     const pagamentoViewer = mergePagamentoComChipContexto(pagamento, minhaChipCtxSheet);
-    const lugaresVivosCtx = {
-      pagamentosAcordo,
-      mesReferencia: mesReferenciaDetalhe,
-      pagamentoViewer,
-      viewerPassengerId: user?.id,
-      chipContextPorPassenger,
-    };
     const {
       total: nPassageirosVivos,
       confirmados: nConfirmados,
       reservados: nReservados,
-    } = contagemLugaresVivos(linhas, lugaresVivosCtx);
+    } = contagemLugaresVivos(linhas);
     const quotaDestaque =
       minhaLinha?.quota_mensal_kz ?? selected.valor_mensal_por_passageiro_kz;
     const podeSair =
@@ -1291,11 +1282,13 @@ const MyAgreements = () => {
     });
 
     const idsPassageirosVivos = new Set(
-      lugaresVivosFromLinhas(linhas, lugaresVivosCtx)
+      lugaresVivosFromLinhas(linhas)
         .map((p) => String(p.passenger_id || ''))
         .filter(Boolean),
     );
-    const contactosFiltrados = filterContactosPassageirosVivos(contactos, idsPassageirosVivos);
+    const contactosFiltrados = isMotorista
+      ? filterContactosPassageirosVivos(contactos, idsPassageirosVivos)
+      : contactos;
 
     const pagamentoUiPassageiro = isPassageiro
       ? resolveAcordoPagamentoUiPassageiro({
@@ -1693,7 +1686,7 @@ const MyAgreements = () => {
             <section className="space-y-3">
               <div className="space-y-1">
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                  Passageiros · {nPassageirosVivos || linhas.length}
+                  Passageiros · {nPassageirosVivos}
                 </p>
                 {mostrarContagemPassageiros ? (
                   <p
@@ -1794,7 +1787,7 @@ const MyAgreements = () => {
             </section>
           ) : (
             <p className="text-sm text-slate-500">
-              Passageiros · {nPassageirosVivos || 0}
+              Passageiros · {nPassageirosVivos}
             </p>
           )}
 

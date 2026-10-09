@@ -7,6 +7,7 @@ import {
   isAnulacaoMotivoAcordoTerminadoAntesActivacao,
   isAnulacaoMotivoSaidaVoluntaria,
 } from './pagamentoAnulacaoMotivo.js';
+import { PAYMENT_STATES } from './paymentStatus.js';
 /**
  * @param {string | null | undefined} estado
  * @returns {string}
@@ -92,44 +93,28 @@ export function isExpiradoPassageiro(estado, pagamento) {
 }
 
 /**
- * Contexto partilhado para resolver `pagamento_chip` por linha.
- *
- * @typedef {{
- *   pagamentosAcordo?: object[],
- *   mesReferencia?: string,
- *   pagamentoViewer?: { anulacao_motivo?: string | null, estado?: string | null } | null,
- *   viewerPassengerId?: string | null,
- *   chipContextPorPassenger?: Record<string, { anulacao_motivo?: string | null, estado?: string | null }>,
- * }} LugaresVivosContexto
- */
-
-/**
- * @param {{ acordos_passageiros?: Array<{ passenger_id?: string, estado?: string, pagamento_chip?: object }> }} acordo
- * @param {LugaresVivosContexto} [ctx]
+ * @param {{ acordos_passageiros?: Array<{ passenger_id?: string, estado?: string }> }} acordo
  * @returns {Array<{ passenger_id?: string, estado?: string }>}
  */
-export function lugaresVivos(acordo, ctx = {}) {
-  const linhas = acordo?.acordos_passageiros;
-  return lugaresVivosFromLinhas(linhas, ctx);
+export function lugaresVivos(acordo) {
+  return lugaresVivosFromLinhas(acordo?.acordos_passageiros);
 }
 
 /**
- * @param {Array<{ passenger_id?: string, estado?: string, pagamento_chip?: object }> | null | undefined} linhas
- * @param {LugaresVivosContexto} [ctx]
+ * @param {Array<{ passenger_id?: string, estado?: string }> | null | undefined} linhas
  * @returns {Array<{ passenger_id?: string, estado?: string }>}
  */
-export function lugaresVivosFromLinhas(linhas, _ctx = {}) {
+export function lugaresVivosFromLinhas(linhas) {
   const rows = Array.isArray(linhas) ? linhas : [];
   return rows.filter((p) => isLugarVivoPassageiro(p.estado));
 }
 
 /**
  * @param {Array<{ passenger_id?: string, estado?: string }>} linhas
- * @param {LugaresVivosContexto} [ctx]
  * @returns {{ total: number, confirmados: number, reservados: number }}
  */
-export function contagemLugaresVivos(linhas, ctx = {}) {
-  const vivos = lugaresVivosFromLinhas(linhas, ctx);
+export function contagemLugaresVivos(linhas) {
+  const vivos = lugaresVivosFromLinhas(linhas);
   let confirmados = 0;
   let reservados = 0;
   vivos.forEach((p) => {
@@ -141,33 +126,39 @@ export function contagemLugaresVivos(linhas, ctx = {}) {
 
 /**
  * @param {Array<{ estado?: string }>} linhas
- * @param {LugaresVivosContexto} [ctx]
  * @returns {{ confirmados: number, reservados: number }}
  */
-export function countPassageirosConfirmadosReservados(linhas, ctx = {}) {
-  const { confirmados, reservados } = contagemLugaresVivos(linhas, ctx);
+export function countPassageirosConfirmadosReservados(linhas) {
+  const { confirmados, reservados } = contagemLugaresVivos(linhas);
   return { confirmados, reservados };
 }
 
 /**
- * Pagamentos pendentes motorista — só passageiros com lugar `activo`|`reservado`.
+ * Motorista — oculta só pagamentos `anulado` de lugares não vivos; dívidas/histórico mantêm-se.
  *
  * @param {object[]} rows
- * @param {{ linhas?: object[] }} ctx
+ * @param {{ linhas?: Array<{ passenger_id?: string, estado?: string }> }} ctx
  * @returns {object[]}
  */
 export function filterMotoristaPagamentosLugaresVivos(rows, ctx = {}) {
   const list = Array.isArray(rows) ? rows : [];
   const linhas = ctx.linhas || [];
-  const vivosIds = new Set(
-    lugaresVivosFromLinhas(linhas)
-      .map((p) => String(p.passenger_id || ''))
-      .filter(Boolean),
+  /** @type {Map<string, { estado?: string }>} */
+  const linhaPorPassageiro = new Map(
+    linhas.map((p) => [String(p.passenger_id || ''), p]),
   );
 
   return list.filter((row) => {
     const pid = String(row.passenger_id || '');
-    return Boolean(pid && vivosIds.has(pid));
+    if (!pid) return false;
+
+    const linha = linhaPorPassageiro.get(pid);
+    if (!linha || isLugarVivoPassageiro(linha.estado)) {
+      return true;
+    }
+
+    const pgEst = String(row.estado || '').toLowerCase();
+    return pgEst !== PAYMENT_STATES.ANULADO;
   });
 }
 
