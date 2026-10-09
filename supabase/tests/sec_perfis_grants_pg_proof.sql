@@ -89,7 +89,7 @@ GRANT EXECUTE ON FUNCTION public._create_pagamentos_periodo(uuid, date, uuid) TO
 GRANT EXECUTE ON FUNCTION public._refresh_repasse_motorista(uuid, date, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.notify_domain_event(uuid, text, text, jsonb, uuid) TO authenticated;
 
-\i supabase/migrations/20261009143000_sec_perfis_notificacoes_grants.sql
+\i supabase/migrations/20261009033000_sec_perfis_notificacoes_grants.sql
 
 DO $$
 DECLARE
