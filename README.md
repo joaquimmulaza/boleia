@@ -11,7 +11,7 @@
 | Funcionalidade | Descrição |
 |---|---|
 | **Dual Dashboard** | Interfaces separadas para Passageiro e Motorista com fluxos otimizados |
-| **Publicação de Trajetos** | Motoristas publicam rotas com Geocoding automático via Google Maps API |
+| **Publicação de ofertas** | Motoristas publicam ofertas de capacidade (fixa ou flexível) com autocomplete de endereços via Photon (OpenStreetMap) |
 | **Acordos de Boleia** | Sistema de matching com estados `pendente → ativo → cancelado` |
 | **Registo de Faltas** | Passageiros e motoristas registam ausências por acordo |
 | **Notificações Push** | Alertas em tempo real via Web Push (PWA) com deep linking |
@@ -41,22 +41,22 @@
 
 ### Pré-requisitos
 
-- [Node.js](https://nodejs.org/) (versão LTS recomendada)
+- [Node.js](https://nodejs.org/) 22 (alinhado com CI)
+- [pnpm](https://pnpm.io/) 9 (`packageManager` no `package.json`; Corepack: `corepack enable`)
 - Uma conta [Supabase](https://supabase.com/) com projeto criado
-- Uma chave de API do [Google Maps Platform](https://console.cloud.google.com/) (Geocoding API)
 - (Opcional) Uma conta [Sentry](https://sentry.io/) para monitorização
 
 ### 1. Clonar o repositório
 
 ```bash
 git clone https://github.com/joaquimmulaza/boleia.git
-cd boleia-certa
+cd boleia
 ```
 
 ### 2. Instalar dependências
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### 3. Configurar variáveis de ambiente
@@ -86,7 +86,7 @@ VITE_VAPID_PUBLIC_KEY=your-vapid-public-key-here
 ### 4. Iniciar o servidor de desenvolvimento
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 A aplicação fica disponível em `http://localhost:5173` (ou no IP da rede local para testes em dispositivos móveis, graças ao flag `--host`).
@@ -97,22 +97,22 @@ A aplicação fica disponível em `http://localhost:5173` (ou no IP da rede loca
 
 ```bash
 # Servidor de desenvolvimento (acessível na rede local)
-npm run dev
+pnpm dev
 
 # Correr todos os testes em modo watch
-npm test
+pnpm test
 
 # Correr os testes uma única vez (para CI/CD)
-npm run test:run
+pnpm test:run
 
 # Build de produção
-npm run build
+pnpm build
 
 # Pré-visualizar o build de produção
-npm run preview
+pnpm preview
 
 # Verificar erros de linting
-npm run lint
+pnpm lint
 ```
 
 ---
@@ -120,65 +120,54 @@ npm run lint
 ## 📁 Estrutura do Projeto
 
 ```
-boleia-certa/
+boleia/
 ├── public/                    # Ficheiros estáticos e manifest da PWA
 ├── src/
-│   ├── components/            # Componentes reutilizáveis
-│   │   ├── AcordoDetailsModal.jsx   # Modal de detalhes de um acordo
-│   │   ├── NotificationBell.jsx     # Central de notificações (slide-in panel)
+│   ├── components/            # Componentes reutilizáveis (+ ui/ primitivos shadcn)
+│   │   ├── NotificationBell.jsx     # Central de notificações
+│   │   ├── PropostaReviewCard.jsx   # Revisão e aceite de propostas (motorista)
+│   │   ├── OpportunityCard.jsx      # Cartões do marketplace /explorar
 │   │   ├── ProtectedRoute.jsx       # Guarda de rota com controlo de perfil
-│   │   ├── ThemeToggle.jsx          # Seletor de tema claro/escuro
+│   │   ├── ConfirmationModal.jsx    # Modais de confirmação partilhados
 │   │   └── ...
 │   ├── contexts/              # Contextos React globais
-│   │   ├── AuthContext.jsx    # Sessão global, utilizador e tipoPerfil
-│   │   └── ThemeContext.jsx   # Preferências visuais persistentes
-│   ├── hooks/                 # Custom hooks reutilizáveis
-│   │   ├── useAuthForm.js     # Lógica de formulários de autenticação
-│   │   ├── useAutocomplete.js # Geocoding de endereços (Google Maps)
-│   │   ├── useNotifications.js      # Notificações in-app
-│   │   └── usePushNotifications.js  # Subscrição a notificações Web Push
-│   ├── layouts/               # Layouts partilhados
-│   │   └── Layout.jsx         # Layout global com BottomBar de navegação
-│   ├── pages/                 # Páginas da aplicação (uma por rota)
-│   │   ├── LandingPage.jsx          # Página de boas-vindas (pública)
-│   │   ├── Auth.jsx                 # Registo e Login
-│   │   ├── PassengerDashboard.jsx   # Dashboard do Passageiro
-│   │   ├── DriverDashboard.jsx      # Dashboard do Motorista
-│   │   ├── PublishRoute.jsx         # Publicar oferta de capacidade
-│   │   ├── VehicleSetup.jsx         # Registar/editar veículo (capacidade_total)
-│   │   ├── MyAgreements.jsx         # Acordos 1:N (motorista ↔ passageiros)
-│   │   ├── AbsenceTracker.jsx       # Registo de faltas por acordo
-│   │   └── Profile.jsx              # Perfil do utilizador
-│   ├── services/              # Camada de acesso a dados (Supabase)
-│   │   ├── OfertaService.js         # Ofertas de capacidade (motorista)
-│   │   ├── ProcuraService.js        # Procuras (passageiro)
-│   │   ├── GrupoService.js          # Grupos de procura
-│   │   ├── PropostaService.js       # Propostas oferta→procura
-│   │   ├── AgreementService.js      # Acordos 1:N (RPC accept_proposal)
-│   │   ├── MatchingService.js       # Matching ±15min / 2500m
-│   │   ├── WaitlistService.js       # Lista de espera
-│   │   ├── AbsenceService.js        # Registo de faltas
-│   │   ├── LocationService.js       # Geocoding Photon (OSM)
-│   │   └── ProfileService.js        # Dados do perfil do utilizador
-│   ├── utils/                 # Funções utilitárias puras
-│   │   ├── notificationRouter.js    # Estratégia de deep linking por notificação
-│   │   ├── matchingFilters.js       # Filtros de matching
-│   │   ├── pricing.js               # Quotas POR_PASSAGEIRO / TOTAL_ACORDO
-│   │   ├── geo.js                   # Haversine / raio OD
-│   │   ├── formatters.js            # Formatação de datas e valores (Kz)
-│   │   ├── validation.js            # Regras de validação de formulários
-│   │   └── errorHandler.js          # Tratamento centralizado de erros
-│   ├── sw.js                  # Service Worker (PWA / Web Push)
-│   ├── App.jsx                # Componente raiz e definição de rotas
-│   └── main.jsx               # Ponto de entrada da aplicação
+│   │   ├── AuthContext.jsx    # Sessão, perfil e tipoPerfil
+│   │   └── ThemeContext.jsx   # Tema claro/escuro persistente
+│   ├── hooks/                 # Custom hooks
+│   │   ├── useAutocomplete.js # Autocomplete OD via LocationService (Photon, AO)
+│   │   ├── useNotifications.js
+│   │   └── usePushNotifications.js
+│   ├── layouts/
+│   │   └── Layout.jsx         # Shell autenticado + BottomBar
+│   ├── lib/
+│   │   ├── supabase.js        # Cliente Supabase
+│   │   └── utils.js           # cn() e helpers
+│   ├── pages/                 # Uma página por rota principal
+│   │   ├── LandingPage.jsx
+│   │   ├── Auth.jsx
+│   │   ├── MarketplaceExplore.jsx   # /explorar (browse público)
+│   │   ├── PassengerDashboard.jsx
+│   │   ├── DriverDashboard.jsx
+│   │   ├── PublishRoute.jsx
+│   │   ├── VehicleSetup.jsx
+│   │   ├── MyAgreements.jsx         # Gestão de acordos 1:N
+│   │   ├── AbsenceTracker.jsx
+│   │   ├── Profile.jsx
+│   │   └── AdminPagamentos.jsx      # /admin/pagamentos
+│   ├── services/              # Supabase / RPC (Oferta, Procura, Agreement, …)
+│   ├── utils/                 # pricing, geo, notificationRouter, errorHandler, …
+│   ├── sw.js                  # Service Worker (PWA offline)
+│   ├── App.jsx
+│   └── main.jsx
 ├── supabase/
-│   ├── functions/             # Edge Functions (Deno)
-│   │   └── send-push/         # Envio de notificações Web Push (VAPID)
-│   └── migrations/            # Migrações SQL da base de dados
-├── .env.example               # Template das variáveis de ambiente
-├── vercel.json                # Configuração de deploy (SPA rewrites)
-├── vite.config.js             # Configuração do Vite e plugins
-└── package.json
+│   ├── functions/send-push/
+│   └── migrations/
+├── .env.example
+├── .npmrc                     # Hoist Workbox para o SW (pnpm)
+├── pnpm-lock.yaml
+├── vercel.json                # Headers de segurança + rewrites SPA (sem installCommand)
+├── vite.config.js
+└── package.json               # packageManager: pnpm@9.15.9
 ```
 
 ---
@@ -188,7 +177,9 @@ boleia-certa/
 | Rota | Componente | Acesso |
 |---|---|---|
 | `/` | `LandingPage` | Público (redireciona se autenticado) |
+| `/explorar` | `MarketplaceExplore` | Público (browse); CTAs autenticados |
 | `/auth` | `Auth` | Público |
+| `/privacidade`, `/eliminacao-de-dados` | `PublicLegalPage` | Público |
 | `/passageiro` | `PassengerDashboard` | Perfil: Passageiro |
 | `/motorista` | `DriverDashboard` | Perfil: Motorista |
 | `/veiculo` | `VehicleSetup` | Perfil: Motorista |
@@ -196,6 +187,7 @@ boleia-certa/
 | `/acordos` | `MyAgreements` | Autenticado |
 | `/faltas` / `/faltas/:acordoId` | `AbsenceTracker` | Autenticado |
 | `/perfil` | `Profile` | Autenticado |
+| `/admin/pagamentos` | `AdminPagamentos` | Admin |
 
 ---
 
@@ -229,13 +221,14 @@ boleia-certa/
 
 ## 🚢 Deploy
 
-O projeto está configurado para deploy automático no **Vercel**. O ficheiro `vercel.json` inclui as regras de reescrita necessárias para o roteamento SPA (todos os pedidos são redirecionados para `index.html`).
+O projeto está configurado para deploy automático no **Vercel**. O `vercel.json` define apenas headers de segurança e rewrites SPA — **não** fixa `installCommand`; o Vercel detecta `pnpm-lock.yaml` e usa pnpm (alinhado com CI).
 
 Para fazer deploy manualmente:
 
 ```bash
-npm run build
-# Faz upload da pasta dist/ para o Vercel ou plataforma à tua escolha
+pnpm install --frozen-lockfile
+pnpm build
+# Faz upload da pasta dist/ ou liga o repositório no Vercel
 ```
 
 ---
@@ -246,8 +239,8 @@ O projeto segue **TDD (Test-Driven Development)** com [Vitest](https://vitest.de
 
 ```bash
 # Correr os testes em modo watch (desenvolvimento)
-npm test
+pnpm test
 
-# Uma única execução (relatório + cobertura)
-npm run test:run
+# Uma única execução (CI)
+pnpm test:run
 ```
