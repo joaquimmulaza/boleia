@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import webpush from "https://esm.sh/web-push@3.6.7";
+import { resolvePushNotificationUrl } from "../_shared/safeNotificationLink.ts";
 
 serve(async (req) => {
   // Configurar CORS
@@ -96,7 +97,7 @@ serve(async (req) => {
       icon: "/pwa-192x192.png", // Ícone PWA
       badge: "/pwa-512x512.png",
       data: {
-        url: link || "/",
+        url: resolvePushNotificationUrl(link),
         notificationId: record.id,
         metadata: metadata || {},
         unreadCount: unreadCount ?? 1,

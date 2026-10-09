@@ -175,6 +175,23 @@ describe('notificationRouter', () => {
       expect(route).toBe('/custom-link');
     });
 
+    it('sem metadata.type: link interno válido passa', () => {
+      const link = '/acordos?openAcordoId=x&focus=rescisao';
+      expect(resolveNotificationRoute({ link, mensagem: 'Teste' })).toBe(link);
+    });
+
+    it('sem metadata.type: rejeita open redirect e cai no fallback seguro', () => {
+      const attacks = [
+        'https://evil.com',
+        '//evil.com',
+        '/\\evil.com',
+        'javascript:alert(1)',
+      ];
+      for (const link of attacks) {
+        expect(resolveNotificationRoute({ link, mensagem: 'Bem-vindo!' })).toBe('/acordos');
+      }
+    });
+
     it('deve ignorar notif.link se for /dashboard ou / e deduzir pela mensagem', () => {
       const notif = {
         link: '/dashboard',
