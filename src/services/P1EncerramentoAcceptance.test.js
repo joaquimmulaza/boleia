@@ -107,6 +107,7 @@ describe('P1 encerramento — regra 3 (notificação motorista leave)', () => {
     expect(sh).toMatch(/p1_leave_passenger_reservado_saiu_pg_proof/);
     expect(sh).toMatch(/p1_terminate_ja_encerrado_pg_proof/);
     expect(sh).toMatch(/p1_leave_driver_caller_no_notif_pg_proof/);
+    expect(sh).toMatch(/p1_encerramento_motivo_pg_proof/);
     expect(sh).not.toMatch(/fixtures\/20261009190000/);
   });
 });

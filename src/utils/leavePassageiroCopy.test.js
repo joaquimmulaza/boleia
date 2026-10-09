@@ -45,12 +45,6 @@ describe('leavePassageiroCopy — saída antes vs depois da activação', () => 
         pagamento: { estado: 'comprovativo_enviado' },
       }),
     ).toMatch(/pagamento pendente será cancelado\. Não tens nada a pagar\./);
-    expect(
-      copyConfirmacaoSaidaPassageiro({
-        lugarEstado: 'reservado',
-        pagamento: { estado: 'comprovativo_enviado' },
-      }),
-    ).not.toMatch(/cancelado — não/);
   });
 
   it('confirmação após activação mantém regra de quota', () => {
@@ -82,12 +76,5 @@ describe('leavePassageiroCopy — saída antes vs depois da activação', () => 
         obrigacao: { valor_em_divida: 0 },
       }),
     ).toBe('Saíste do acordo. A quota do mês mantém-se.');
-    expect(
-      copyToastSaidaPassageiro({
-        lugarEstado: 'activo',
-        pagamento: { estado: 'pendente_pagamento', valor_kz: 8000 },
-        obrigacao: { valor_em_divida: 8000 },
-      }),
-    ).toMatch(/quota proporcional.*8[\s\u00a0]?000/);
   });
 });

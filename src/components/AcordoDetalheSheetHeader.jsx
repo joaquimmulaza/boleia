@@ -33,6 +33,8 @@ function chipClassEstadoAcordo(variant) {
  * @param {{
  *   acordoId: string,
  *   estadoAcordo: string | null | undefined,
+ *   encerramentoMotivoAcordo?: string | null,
+ *   rescisaoModoAcordo?: string | null,
  *   minhaLinhaEstado?: string | null,
  *   minhaLinhaPagamento?: { anulacao_motivo?: string | null } | null,
  *   leavePending?: boolean,
@@ -50,6 +52,8 @@ function chipClassEstadoAcordo(variant) {
 export default function AcordoDetalheSheetHeader({
   acordoId,
   estadoAcordo,
+  encerramentoMotivoAcordo,
+  rescisaoModoAcordo,
   minhaLinhaEstado,
   minhaLinhaPagamento = null,
   leavePending = false,
@@ -110,7 +114,7 @@ export default function AcordoDetalheSheetHeader({
                 variantChipEstadoAcordo(estadoAcordo),
               )}`}
             >
-              {labelEstadoAcordo(estadoAcordo)}
+              {labelEstadoAcordo(estadoAcordo, encerramentoMotivoAcordo, rescisaoModoAcordo)}
             </span>
             {mostrarChipLugar ? (
               <span

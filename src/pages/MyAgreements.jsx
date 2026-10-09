@@ -1055,7 +1055,7 @@ const MyAgreements = () => {
     const rota = labelRotaOferta(oferta || {});
     const activo = isActivo(acordo.estado);
     const estadoVariant = variantChipEstadoAcordo(acordo.estado);
-    const estadoLabel = labelEstadoAcordo(acordo.estado);
+    const estadoLabel = labelEstadoAcordo(acordo);
     const leavePending = Boolean(pendingLeaveIds[acordo.id]);
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
     const minhaChipCtxCard = minhaLinha
@@ -1329,6 +1329,8 @@ const MyAgreements = () => {
           <AcordoDetalheSheetHeader
             acordoId={selected.id}
             estadoAcordo={selected.estado}
+            encerramentoMotivoAcordo={selected.encerramento_motivo}
+            rescisaoModoAcordo={selected.rescisao_modo}
             minhaLinhaEstado={minhaLinha?.estado}
             minhaLinhaPagamento={pagamentoViewer}
             leavePending={leavePending}

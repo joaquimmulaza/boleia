@@ -6,6 +6,11 @@ import {
 } from '../utils/callRpcWithOfflineFallback.js';
 
 /**
+ * Listagens MyAgreements: `acordos.*` inclui encerramento_motivo (TABLE SELECT authenticated).
+ * Se migrações futuras passarem a grants por coluna, rever selects explícitos.
+ */
+
+/**
  * @param {unknown} rpcOut
  * @param {string} fallbackAcordoId
  * @returns {{ acordoId: string, status: string }}
