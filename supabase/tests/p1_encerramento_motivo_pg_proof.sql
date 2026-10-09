@@ -28,6 +28,7 @@ DECLARE
   v_ap_cons uuid := '0e7aaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   v_ap_jc uuid := '0e7bbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
   v_motivo text;
+  v_estado text;
   v_key1 uuid := '0e011111-1111-4111-8111-111111111111';
   v_key2 uuid := '0e022222-2222-4222-8222-222222222222';
   v_key_jc uuid := '0e033333-3333-4333-8333-333333333333';
@@ -164,7 +165,11 @@ BEGIN
   PERFORM public.terminate_agreement(v_acordo_cons, 'consensual', NULL, v_key2, 'imediato');
   RESET ROLE;
 
-  SELECT encerramento_motivo INTO v_motivo FROM public.acordos WHERE id = v_acordo_cons;
+  SELECT lower(estado), encerramento_motivo INTO v_estado, v_motivo
+  FROM public.acordos WHERE id = v_acordo_cons;
+  IF v_estado <> 'cancelado' THEN
+    RAISE EXCEPTION 'FAIL P1M: consensual imediato devia terminar cancelado (=%)', v_estado;
+  END IF;
   IF v_motivo IS NOT NULL THEN
     RAISE EXCEPTION 'FAIL P1M: consensual imediato não deve definir encerramento_motivo (=%)', v_motivo;
   END IF;
@@ -175,7 +180,11 @@ BEGIN
   PERFORM public.terminate_agreement(v_acordo_jc, 'justa_causa', 'avaria_veiculo', v_key_jc, 'imediato');
   RESET ROLE;
 
-  SELECT encerramento_motivo INTO v_motivo FROM public.acordos WHERE id = v_acordo_jc;
+  SELECT lower(estado), encerramento_motivo INTO v_estado, v_motivo
+  FROM public.acordos WHERE id = v_acordo_jc;
+  IF v_estado <> 'cancelado_justificado' THEN
+    RAISE EXCEPTION 'FAIL P1M: justa_causa devia terminar cancelado_justificado (=%)', v_estado;
+  END IF;
   IF v_motivo IS NOT NULL THEN
     RAISE EXCEPTION 'FAIL P1M: justa_causa não deve definir encerramento_motivo (=%)', v_motivo;
   END IF;

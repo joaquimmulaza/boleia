@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import {
   labelEstadoAcordo,
   variantChipEstadoAcordo,
+  chipClassEstadoAcordoVariant,
 } from '../utils/acordoEstadoDisplay';
 import {
   labelChipEstadoPassageiro,
@@ -13,20 +14,6 @@ import {
   mostrarChipEstadoLugarPassageiro,
   estadoPassageiroParaChip,
 } from '../utils/estadoPassageiro';
-
-/**
- * @param {'activo' | 'pendente' | 'inactivo'} variant
- * @returns {string}
- */
-function chipClassEstadoAcordo(variant) {
-  if (variant === 'activo') {
-    return 'bg-emerald-100 text-emerald-800';
-  }
-  if (variant === 'pendente') {
-    return 'bg-amber-100 text-amber-900';
-  }
-  return 'bg-slate-100 text-slate-600';
-}
 
 /**
  * Cabeçalho fixo (sticky) do sheet «Detalhe do acordo» — puxador, Fechar, estado e título.
@@ -110,8 +97,12 @@ export default function AcordoDetalheSheetHeader({
         <div className="flex items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoAcordo(
-                variantChipEstadoAcordo(estadoAcordo),
+              className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoAcordoVariant(
+                variantChipEstadoAcordo(
+                  estadoAcordo,
+                  encerramentoMotivoAcordo,
+                  rescisaoModoAcordo,
+                ),
               )}`}
             >
               {labelEstadoAcordo(estadoAcordo, encerramentoMotivoAcordo, rescisaoModoAcordo)}
