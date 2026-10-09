@@ -12,9 +12,16 @@ import { Phone, Lock } from 'lucide-react';
  *     passageiros?: Array<{ passenger_id?: string, nome_completo?: string, telefone?: string | null }>,
  *   } | null,
  *   loading?: boolean,
+ *   mostrarProximoPassoPagamento?: boolean,
+ *   passageirosAguardarPagamento?: Array<{ passenger_id?: string, nome?: string }>,
  * }} props
  */
-function AcordoContactosPanel({ contactos, loading = false }) {
+function AcordoContactosPanel({
+  contactos,
+  loading = false,
+  mostrarProximoPassoPagamento = false,
+  passageirosAguardarPagamento = [],
+}) {
   if (loading) {
     return (
       <p className="text-sm text-slate-500" data-testid="contactos-loading">
@@ -40,12 +47,26 @@ function AcordoContactosPanel({ contactos, loading = false }) {
             <p className="text-xs text-slate-600 dark:text-slate-300 text-pretty">
               {contactos.motivo || 'Disponíveis após pagamento em custódia.'}
             </p>
-            <p
-              className="text-xs font-medium text-amber-800 dark:text-amber-200 text-pretty"
-              data-testid="contactos-proximo-passo"
-            >
-              Próximo passo: envia o comprovativo de transferência na secção Pagamento mensal abaixo.
-            </p>
+            {mostrarProximoPassoPagamento ? (
+              <p
+                className="text-xs font-medium text-amber-800 dark:text-amber-200 text-pretty"
+                data-testid="contactos-proximo-passo"
+              >
+                Próximo passo: envia o comprovativo de transferência na secção Pagamento mensal abaixo.
+              </p>
+            ) : null}
+            {passageirosAguardarPagamento.length > 0 ? (
+              <ul className="space-y-1" data-testid="contactos-aguardar-pagamento">
+                {passageirosAguardarPagamento.map((p) => (
+                  <li
+                    key={p.passenger_id || p.nome || 'passageiro'}
+                    className="text-xs font-medium text-amber-800 dark:text-amber-200 text-pretty"
+                  >
+                    A aguardar o pagamento de {p.nome || 'Passageiro'}.
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         </div>
       </section>

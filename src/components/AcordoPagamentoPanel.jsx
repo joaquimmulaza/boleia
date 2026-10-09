@@ -1,11 +1,22 @@
 import React, { useRef, useState } from 'react';
-import { Upload, Loader2, FileText } from 'lucide-react';
+import { Upload, Loader2, FileText, CheckCircle2 } from 'lucide-react';
 import { formatKwanza } from '../utils/formatKwanza';
 import {
-  labelEstadoPagamento,
   helpEstadoPagamento,
   chipClassEstadoPagamento,
+  PAYMENT_STATES,
 } from '../utils/paymentStatus';
+import {
+  normalizeObrigacaoSnapshot,
+  linhaProporcionalPagamento,
+  linhaPrazoPagamento,
+  linhaSecundariaExcessoPassageiro,
+  labelEstadoPagamentoPassageiro,
+  mostrarIconeSucessoPagamento,
+  valorEmDividaParaExibir,
+  isDestaqueValorEmDividaSaiuPendente,
+  isPagamentoEmExcessoAnalise,
+} from '../utils/pagamentoObrigacaoCopy';
 import { basenameComprovativoPath } from '../utils/comprovativoPath';
 import { getPlatformIban, uploadComprovativo } from '../services/PaymentService';
 import FeedbackAlert from './FeedbackAlert';
@@ -21,11 +32,21 @@ import FeedbackAlert from './FeedbackAlert';
  *     estado: string,
  *     comprovativo_path?: string | null,
  *     rejeicao_motivo?: string | null,
+ *     requer_resolucao_admin?: boolean,
  *   } | null,
+ *   obrigacao?: import('../utils/pagamentoObrigacaoCopy.js').ObrigacaoSnapshot | null,
+ *   lugarEstado?: string | null,
  *   onUpdated?: () => void,
+ *   layout?: 'completo' | 'acoes' | 'uploadButton',
  * }} props
  */
-function AcordoPagamentoPanel({ pagamento, onUpdated }) {
+function AcordoPagamentoPanel({
+  pagamento,
+  obrigacao = null,
+  lugarEstado = null,
+  onUpdated,
+  layout = 'completo',
+}) {
   const inputRef = useRef(/** @type {HTMLInputElement | null} */ (null));
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState(/** @type {{ type: 'success' | 'error', text: string } | null} */ (null));
@@ -38,15 +59,35 @@ function AcordoPagamentoPanel({ pagamento, onUpdated }) {
     );
   }
 
+  const obrigacaoNorm = normalizeObrigacaoSnapshot(obrigacao);
   const platformIban = getPlatformIban();
   const ibanConfigurado = Boolean(platformIban);
-  const podeEnviar = ['pendente_pagamento', 'comprovativo_enviado'].includes(
-    String(pagamento.estado || '').toLowerCase(),
-  );
+  const estadoNorm = String(pagamento.estado || '').toLowerCase();
+  const emExcesso = isPagamentoEmExcessoAnalise(pagamento);
+  const obrigacaoValorZero = obrigacaoNorm != null && Number(obrigacaoNorm.valor) === 0;
+  const podeEnviar = ['pendente_pagamento', 'comprovativo_enviado'].includes(estadoNorm)
+    && estadoNorm !== PAYMENT_STATES.ANULADO
+    && !emExcesso
+    && !obrigacaoValorZero;
+  const linhaProp = emExcesso ? null : linhaProporcionalPagamento(obrigacaoNorm);
+  const linhaExcesso = emExcesso ? linhaSecundariaExcessoPassageiro(obrigacaoNorm) : null;
+  const linhaPrazo = obrigacaoValorZero
+    ? null
+    : linhaPrazoPagamento(obrigacaoNorm?.prazo ?? pagamento.prazo_pagamento_em);
+  const valorEmDivida = valorEmDividaParaExibir(obrigacaoNorm, pagamento);
+  const destaqueSaiuPendente = isDestaqueValorEmDividaSaiuPendente(lugarEstado, pagamento);
   const comprovativoNome = basenameComprovativoPath(pagamento.comprovativo_path);
   const temComprovativo = Boolean(comprovativoNome);
   const labelUpload = temComprovativo ? 'Substituir comprovativo' : 'Enviar comprovativo';
-  const helpEstado = helpEstadoPagamento(pagamento.estado);
+  const helpEstado = emExcesso
+    ? 'A plataforma está a analisar a diferença entre o valor pago e o devido neste mês.'
+    : helpEstadoPagamento(pagamento.estado);
+  const labelEstado = labelEstadoPagamentoPassageiro(pagamento, obrigacaoNorm);
+  const mostrarCheck = mostrarIconeSucessoPagamento({
+    pagamento,
+    obrigacao: obrigacaoNorm,
+    lugarEstado,
+  });
 
   const handleFile = async (event) => {
     const file = event.target.files?.[0];
@@ -69,31 +110,104 @@ function AcordoPagamentoPanel({ pagamento, onUpdated }) {
     }
   };
 
+  const uploadButton = podeEnviar ? (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,application/pdf"
+        className="sr-only"
+        data-testid="comprovativo-input"
+        onChange={handleFile}
+      />
+      <button
+        type="button"
+        disabled={busy || !ibanConfigurado}
+        onClick={() => inputRef.current?.click()}
+        className="w-full min-h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-primary text-white font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+        data-testid="comprovativo-upload-btn"
+      >
+        {busy ? (
+          <Loader2 size={18} className="animate-spin" aria-hidden="true" />
+        ) : (
+          <Upload size={18} aria-hidden="true" />
+        )}
+        {labelUpload}
+      </button>
+    </>
+  ) : null;
+
+  if (layout === 'uploadButton') {
+    return (
+      <div data-testid="acordo-pagamento-upload-slot">
+        {uploadButton}
+      </div>
+    );
+  }
+
+  const mostrarCorpoCompleto = layout === 'completo';
+
   return (
     <section
       className="rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-3"
       data-testid="acordo-pagamento-panel"
+      data-layout={layout}
     >
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Pagamento mensal</h3>
-        <span
-          className={`text-xs font-semibold px-2 py-1 rounded-full ${chipClassEstadoPagamento(pagamento.estado)}`}
-          title={helpEstado || undefined}
-        >
-          {labelEstadoPagamento(pagamento.estado)}
-        </span>
-      </div>
+      {mostrarCorpoCompleto ? (
+        <>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Pagamento mensal</h3>
+            <span
+              className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${chipClassEstadoPagamento(pagamento.estado)}`}
+              title={helpEstado || undefined}
+              data-testid="pagamento-estado-chip"
+            >
+              {mostrarCheck ? (
+                <CheckCircle2 size={14} className="shrink-0" aria-hidden="true" data-testid="pagamento-estado-check" />
+              ) : null}
+              {labelEstado}
+            </span>
+          </div>
 
-      {helpEstado ? (
-        <p className="text-xs text-slate-500 text-pretty">{helpEstado}</p>
+          {helpEstado ? (
+            <p className="text-xs text-slate-500 text-pretty">{helpEstado}</p>
+          ) : null}
+
+          {linhaExcesso ? (
+            <p className="text-xs text-slate-600 dark:text-slate-300 text-pretty" data-testid="linha-excesso-pagamento">
+              {linhaExcesso}
+            </p>
+          ) : null}
+
+          {linhaProp ? (
+            <p className="text-xs text-slate-600 dark:text-slate-300 text-pretty" data-testid="linha-proporcional-pagamento">
+              {linhaProp}
+            </p>
+          ) : null}
+
+          {linhaPrazo ? (
+            <p className="text-xs text-amber-800 dark:text-amber-200" data-testid="linha-prazo-pagamento">
+              {linhaPrazo}
+            </p>
+          ) : null}
+
+          {destaqueSaiuPendente ? (
+            <div className="space-y-1" data-testid="valor-em-divida-destaque">
+              <p className="text-xs text-slate-500">Valor em dívida</p>
+              <p className="text-2xl font-bold tabular-nums text-primary">
+                {formatKwanza(valorEmDivida)} Kz
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              {linhaProp ? 'Valor a pagar agora' : 'Valor acordado'}:{' '}
+              <strong className="tabular-nums text-slate-900 dark:text-white">
+                {formatKwanza(valorEmDivida)} Kz
+              </strong>
+            </p>
+          )}
+        </>
       ) : null}
-
-      <p className="text-sm text-slate-600 dark:text-slate-300">
-        Valor acordado:{' '}
-        <strong className="tabular-nums text-slate-900 dark:text-white">
-          {formatKwanza(pagamento.valor_kz)} Kz
-        </strong>
-      </p>
 
       {ibanConfigurado ? (
         <p className="text-xs text-slate-500 text-pretty">
@@ -136,31 +250,7 @@ function AcordoPagamentoPanel({ pagamento, onUpdated }) {
         </div>
       ) : null}
 
-      {podeEnviar ? (
-        <>
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,application/pdf"
-            className="sr-only"
-            data-testid="comprovativo-input"
-            onChange={handleFile}
-          />
-          <button
-            type="button"
-            disabled={busy || !ibanConfigurado}
-            onClick={() => inputRef.current?.click()}
-            className="w-full min-h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-primary text-white font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {busy ? (
-              <Loader2 size={18} className="animate-spin" aria-hidden="true" />
-            ) : (
-              <Upload size={18} aria-hidden="true" />
-            )}
-            {labelUpload}
-          </button>
-        </>
-      ) : null}
+      {uploadButton}
     </section>
   );
 }

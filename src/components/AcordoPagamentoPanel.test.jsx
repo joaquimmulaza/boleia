@@ -15,6 +15,30 @@ describe('AcordoPagamentoPanel', () => {
     vi.mocked(getPlatformIban).mockReturnValue('AO06004000000000000000000');
   });
 
+  it('mostra linha proporcional v1.4 quando obrigacao vem da RPC', () => {
+    render(
+      <AcordoPagamentoPanel
+        pagamento={{
+          id: 'pag-1',
+          valor_kz: 15636,
+          estado: 'pendente_pagamento',
+        }}
+        obrigacao={{
+          dias: 8,
+          dias_mes: 22,
+          mes: '2026-10-01',
+          quota: 43000,
+          proporcional: 15636,
+          pago: 0,
+          valor_em_divida: 15636,
+          prazo: '2026-10-12T12:00:00.000Z',
+        }}
+      />,
+    );
+    expect(screen.getByTestId('linha-proporcional-pagamento')).toBeInTheDocument();
+    expect(screen.getByTestId('linha-prazo-pagamento')).toBeInTheDocument();
+  });
+
   it('mostra valor do acordo e IBAN da plataforma', () => {
     render(
       <AcordoPagamentoPanel
@@ -66,6 +90,20 @@ describe('AcordoPagamentoPanel', () => {
     expect(screen.getByRole('button', { name: /Substituir comprovativo/i })).toBeInTheDocument();
   });
 
+  it('estado anulado — chip Cancelado no painel', () => {
+    render(
+      <AcordoPagamentoPanel
+        pagamento={{
+          id: 'pag-3',
+          valor_kz: 0,
+          estado: 'anulado',
+        }}
+      />,
+    );
+    expect(screen.getByText('Cancelado')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Enviar comprovativo/i })).not.toBeInTheDocument();
+  });
+
   it('não mostra upload quando pagamento já em custódia', () => {
     render(
       <AcordoPagamentoPanel
@@ -98,5 +136,94 @@ describe('AcordoPagamentoPanel', () => {
     fireEvent.change(input, { target: { files: [file] } });
 
     expect(uploadComprovativo).toHaveBeenCalledWith('pag-1', file);
+  });
+
+  it('v1.6 excesso: Diferença em análise e linha secundária, sem check', () => {
+    render(
+      <AcordoPagamentoPanel
+        pagamento={{
+          id: 'pag-ex',
+          valor_kz: 0,
+          estado: 'em_custodia',
+          requer_resolucao_admin: true,
+        }}
+        obrigacao={{
+          dias: 5,
+          dias_mes: 22,
+          mes: '2026-10-01',
+          proporcional: 9773,
+          pago: 12000,
+          valor_em_divida: 0,
+          quota: 43000,
+        }}
+      />,
+    );
+    expect(screen.getByText('Diferença em análise')).toBeInTheDocument();
+    expect(screen.getByTestId('linha-excesso-pagamento')).toHaveTextContent(
+      /correspondem a 5 de 22 dias úteis/,
+    );
+    expect(screen.queryByTestId('pagamento-estado-check')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('linha-proporcional-pagamento')).not.toBeInTheDocument();
+  });
+
+  it('v1.6 saiu com pagamento pendente: destaca valor em dívida', () => {
+    render(
+      <AcordoPagamentoPanel
+        lugarEstado="saiu"
+        pagamento={{
+          id: 'pag-saiu',
+          valor_kz: 8000,
+          estado: 'pendente_pagamento',
+        }}
+        obrigacao={{
+          quota: 43000,
+          valor_em_divida: 8000,
+          proporcional: 8000,
+          dias: 4,
+          dias_mes: 22,
+          mes: '2026-10-01',
+        }}
+      />,
+    );
+    const destaque = screen.getByTestId('valor-em-divida-destaque');
+    expect(destaque).toHaveTextContent(/8[\s\u00a0]?000/);
+    expect(destaque.querySelector('.text-2xl')).toBeTruthy();
+    expect(screen.queryByTestId('pagamento-estado-check')).not.toBeInTheDocument();
+  });
+
+  it('S1-B: obrigação valor 0 oculta prazo 72h e CTA de upload', () => {
+    render(
+      <AcordoPagamentoPanel
+        pagamento={{
+          id: 'pag-zero',
+          valor_kz: 0,
+          estado: 'pendente_pagamento',
+          prazo_pagamento_em: '2026-10-12T12:00:00.000Z',
+        }}
+        obrigacao={{
+          valor: 0,
+          valor_em_divida: 0,
+          quota: 43000,
+          prazo: '2026-10-12T12:00:00.000Z',
+        }}
+      />,
+    );
+    expect(screen.queryByTestId('linha-prazo-pagamento')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('comprovativo-upload-btn')).not.toBeInTheDocument();
+  });
+
+  it('v1.6 em custódia sem dívida: mostra check', () => {
+    render(
+      <AcordoPagamentoPanel
+        lugarEstado="activo"
+        pagamento={{
+          id: 'pag-ok',
+          valor_kz: 0,
+          estado: 'em_custodia',
+        }}
+        obrigacao={{ valor_em_divida: 0, quota: 43000 }}
+      />,
+    );
+    expect(screen.getByTestId('pagamento-estado-check')).toBeInTheDocument();
   });
 });

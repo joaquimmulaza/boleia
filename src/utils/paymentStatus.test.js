@@ -16,9 +16,10 @@ import {
 } from './paymentStatus.js';
 
 describe('paymentStatus — máquina de estados PACOTE ENG #5', () => {
-  it('define os cinco estados obrigatórios', () => {
+  it('define os estados obrigatórios incluindo anulado (P0)', () => {
     expect(Object.values(PAYMENT_STATES).sort()).toEqual(
       [
+        'anulado',
         'comprovativo_enviado',
         'em_custodia',
         'liquidado',
@@ -26,6 +27,11 @@ describe('paymentStatus — máquina de estados PACOTE ENG #5', () => {
         'reembolsado',
       ].sort(),
     );
+  });
+
+  it('labelEstadoPagamento anulado — painel vs cabeçalho (v1.5)', () => {
+    expect(labelEstadoPagamento('anulado', { placement: 'painel' })).toBe('Cancelado');
+    expect(labelEstadoPagamento('anulado', { placement: 'cabecalho' })).toBe('Pagamento cancelado');
   });
 
   it('take-rate documentado é ~10%', () => {

@@ -11,6 +11,7 @@ import {
   listAdendaHistorico,
 } from '../services/AgreementService';
 import { resolveIdempotencyKey } from '../utils/callRpcWithOfflineFallback.js';
+import { terminateConfirmIdempotencyKey } from '../utils/terminateIdempotency.js';
 import { listPending } from '../services/offlineQueue';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import EmptyState from '../components/EmptyState';
@@ -42,7 +43,16 @@ import { buildAcordoContratoSnapshot } from '../utils/buildAcordoContratoSnapsho
 import AcordoContratoSnapshot from '../components/AcordoContratoSnapshot';
 import { isOfertaFlexivel } from '../services/OfertaService';
 import AcordoPagamentoPanel from '../components/AcordoPagamentoPanel';
+import AcordoPagamentoEstadoCartao from '../components/AcordoPagamentoEstadoCartao';
+import AcordoPagamentosHistorico from '../components/AcordoPagamentosHistorico';
+import AcordoPagamentosMotoristaPanel from '../components/AcordoPagamentosMotoristaPanel';
+import {
+  resolveAcordoPagamentoUiPassageiro,
+  copyCartaoEstadoPagamentoPassageiro,
+  linhaJaConfirmadoRescisaoConsensual,
+} from '../utils/resolveAcordoPagamentoUi';
 import AcordoContactosPanel from '../components/AcordoContactosPanel';
+import { mostrarProximoPassoComprovativoPassageiro } from '../utils/contactosProximoPassoPagamento';
 import {
   acordoTemRescisaoConsensualPendenteParaUser,
   copyCancelamentoPendente,
@@ -58,6 +68,8 @@ import {
   getAcordoContactos,
   listPagamentosByAcordo,
   getMesReferenciaAtual,
+  getObrigacaoPagamentoPassageiro,
+  listPagamentosPendentesMotoristaAcordo,
 } from '../services/PaymentService';
 import {
   labelRenovacaoEstado,
@@ -95,6 +107,25 @@ import { formatPrimeiroNome } from '../utils/primeiroNome';
  */
 function isActivo(estado) {
   return isActivoPassageiro(estado);
+}
+
+/**
+ * Passageiro vê painel de pagamento (activo, reservado ou saiu com dívida).
+ * @param {{ estado?: string } | null | undefined} minhaLinha
+ * @param {object | null | undefined} pagamento
+ * @param {object | null | undefined} obrigacao
+ * @returns {boolean}
+ */
+function passageiroMostraPainelPagamento(minhaLinha, pagamento, obrigacao) {
+  if (!minhaLinha) return false;
+  const est = String(minhaLinha.estado || '').toLowerCase();
+  if (est === 'activo' || est === 'reservado') return true;
+  if (est !== 'saiu' || !pagamento) return false;
+  const pgEst = String(pagamento.estado || '').toLowerCase();
+  if (pgEst === 'anulado' || pgEst === 'liquidado' || pgEst === 'reembolsado') return false;
+  if (pgEst === 'pendente_pagamento' || pgEst === 'comprovativo_enviado') return true;
+  const valor = Number(obrigacao?.valor_em_divida ?? obrigacao?.valor);
+  return Number.isFinite(valor) && valor > 0;
 }
 
 /**
@@ -314,6 +345,8 @@ const MyAgreements = () => {
 
   const [historicoPreco, setHistoricoPreco] = useState(/** @type {object[]} */ ([]));
   const [pagamento, setPagamento] = useState(/** @type {object | null} */ (null));
+  const [obrigacaoPagamento, setObrigacaoPagamento] = useState(/** @type {object | null} */ (null));
+  const [motoristaPagamentos, setMotoristaPagamentos] = useState(/** @type {object[]} */ ([]));
   const [pagamentosAcordo, setPagamentosAcordo] = useState(/** @type {object[]} */ ([]));
   const [contactos, setContactos] = useState(/** @type {object | null} */ (null));
   const [pagamentoLoading, setPagamentoLoading] = useState(false);
@@ -331,13 +364,37 @@ const MyAgreements = () => {
       setPagamentosAcordo(pagamentos);
       const mesAtual = getMesReferenciaAtual();
       if (tipoPerfil === 'Passageiro') {
-        const row = pagamentos.find(
-          (p) => p.passenger_id === user.id && String(p.mes_referencia || '').slice(0, 10) === mesAtual,
-        )
-          ?? await getPagamentoForPassageiro(acordo.id, user.id, mesAtual);
-        setPagamento(row);
+        const linha = (acordo.acordos_passageiros || []).find((p) => p.passenger_id === user.id);
+        if (linha?.id) {
+          try {
+            const payload = await getObrigacaoPagamentoPassageiro(linha.id);
+            setPagamento(payload?.pagamento ?? null);
+            setObrigacaoPagamento(payload?.obrigacao ?? null);
+          } catch (err) {
+            console.error('Erro ao carregar obrigação:', err);
+            const row = pagamentos.find(
+              (p) => p.passenger_id === user.id && String(p.mes_referencia || '').slice(0, 10) === mesAtual,
+            )
+              ?? await getPagamentoForPassageiro(acordo.id, user.id, mesAtual);
+            setPagamento(row);
+            setObrigacaoPagamento(null);
+          }
+        } else {
+          setPagamento(null);
+          setObrigacaoPagamento(null);
+        }
       } else {
         setPagamento(null);
+        setObrigacaoPagamento(null);
+        if (tipoPerfil === 'Motorista') {
+          try {
+            const rows = await listPagamentosPendentesMotoristaAcordo(acordo.id);
+            setMotoristaPagamentos(rows);
+          } catch (err) {
+            console.error('Erro ao listar pagamentos motorista:', err);
+            setMotoristaPagamentos([]);
+          }
+        }
       }
 
       if (podeContactos) {
@@ -373,6 +430,8 @@ const MyAgreements = () => {
   useEffect(() => {
     if (!selectedDetalheSyncKey || !selected) {
       setPagamento(null);
+      setObrigacaoPagamento(null);
+      setMotoristaPagamentos([]);
       setPagamentosAcordo([]);
       setContactos(null);
       setAvaliacoesAcordo([]);
@@ -758,12 +817,14 @@ const MyAgreements = () => {
     if (!modo) return;
 
     const acordoId = selected.id;
-    const idempotencyKey = resolveIdempotencyKey();
     const confirmandoConsensualPendente =
       modo === 'consensual'
       && String(selected.rescisao_modo || '').toLowerCase() === 'consensual'
       && selected.rescisao_solicitada_por
       && selected.rescisao_solicitada_por !== user?.id;
+    const idempotencyKey = confirmandoConsensualPendente
+      ? terminateConfirmIdempotencyKey(acordoId)
+      : resolveIdempotencyKey();
 
     terminateInFlightRef.current = true;
     setTerminateBusy(true);
@@ -851,6 +912,13 @@ const MyAgreements = () => {
             String(found.estado || '').toLowerCase(),
           );
         if (terminalForaLista || terminalEstado) {
+          const acordoRefreshed = found || selected;
+          const linhaJa = linhaJaConfirmadoRescisaoConsensual(acordoRefreshed?.rescisao_confirmada_em);
+          setMessage({
+            type: 'success',
+            text: linhaJa || 'Já confirmado.',
+          });
+          setRescisaoConfirmadaLocal(true);
           return;
         }
       }
@@ -1099,6 +1167,37 @@ const MyAgreements = () => {
         })
         : [];
 
+    const passageirosReservadosAguardar = isMotorista
+      ? linhas
+        .filter((p) => isReservado(p.estado))
+        .map((p) => ({
+          passenger_id: p.passenger_id,
+          nome: String(p.perfis?.nome_completo || '').trim() || 'Passageiro',
+        }))
+      : [];
+
+    const pagamentoUiPassageiro = isPassageiro
+      ? resolveAcordoPagamentoUiPassageiro({
+        minhaLinha,
+        pagamento,
+        obrigacao: obrigacaoPagamento,
+      })
+      : null;
+    const cartaoEstadoPagamento =
+      pagamentoUiPassageiro?.mostrarCartaoEstado && pagamentoUiPassageiro.variant
+        ? copyCartaoEstadoPagamentoPassageiro(pagamentoUiPassageiro.variant, {
+          pagamento,
+          obrigacao: obrigacaoPagamento,
+        })
+        : null;
+    const sheetTitulo = pagamentoUiPassageiro?.sheetTitle || 'Detalhe do acordo';
+    const linhaJaConfirmadoConsensual =
+      rescisaoConsensualPendente
+      && selected.rescisao_confirmada_em
+      && selected.rescisao_confirmada_por === user?.id
+        ? linhaJaConfirmadoRescisaoConsensual(selected.rescisao_confirmada_em)
+        : null;
+
     return (
       <OverlayShell
         variant="bottom"
@@ -1125,6 +1224,7 @@ const MyAgreements = () => {
             podeEncerrar={podeEncerrar}
             onRegistarFalta={() => navigate(`/faltas/${selected.id}`)}
             onEncerrar={() => setTerminatePickerOpen(true)}
+            titulo={sheetTitulo}
           />
 
           <div
@@ -1134,7 +1234,7 @@ const MyAgreements = () => {
             <p className="font-semibold text-slate-900 dark:text-white text-balance pt-2">
               {rota.origem} → {rota.destino}
             </p>
-            {minhaExpirada ? (
+            {minhaExpirada && !pagamentoUiPassageiro?.ocultarBannerExpiradoLegado ? (
               <div
                 role="status"
                 data-testid="lugar-expirado-banner"
@@ -1146,7 +1246,32 @@ const MyAgreements = () => {
                 </p>
               </div>
             ) : null}
-            {minhaReservada ? (
+            {cartaoEstadoPagamento && pagamentoUiPassageiro?.variant ? (
+              <AcordoPagamentoEstadoCartao
+                variant={pagamentoUiPassageiro.variant}
+                corpo={cartaoEstadoPagamento.corpo}
+                secundaria={cartaoEstadoPagamento.secundaria}
+                mostrarUploadNoCartao={cartaoEstadoPagamento.mostrarUploadNoCartao}
+                uploadSlot={
+                  pagamento && !pagamentoLoading ? (
+                    <AcordoPagamentoPanel
+                      layout="uploadButton"
+                      pagamento={pagamento}
+                      obrigacao={obrigacaoPagamento}
+                      lugarEstado={minhaLinha?.estado}
+                      onUpdated={() => carregarPagamentoContactos(selected)}
+                    />
+                  ) : null
+                }
+              />
+            ) : null}
+            {cartaoEstadoPagamento ? (
+              <p className="text-sm font-bold text-slate-900 dark:text-white" data-testid="acordo-detalhe-subtitulo">
+                Detalhe do acordo
+              </p>
+            ) : null}
+            {minhaReservada
+            && Number(obrigacaoPagamento?.valor ?? obrigacaoPagamento?.valor_em_divida ?? -1) !== 0 ? (
               <div
                 role="status"
                 data-testid="lugar-reservado-banner"
@@ -1289,6 +1414,15 @@ const MyAgreements = () => {
                           'Confirmar encerramento'
                         )}
                       </Button>
+                      {linhaJaConfirmadoConsensual ? (
+                        <p
+                          className="text-sm text-slate-600 dark:text-slate-300 text-pretty"
+                          data-testid="rescisao-ja-confirmado"
+                          role="status"
+                        >
+                          {linhaJaConfirmadoConsensual}
+                        </p>
+                      ) : null}
                       <Button
                         type="button"
                         variant="outline"
@@ -1362,17 +1496,43 @@ const MyAgreements = () => {
             </section>
           )}
 
-          {isPassageiro && activo ? (
+          {isPassageiro
+            && passageiroMostraPainelPagamento(minhaLinha, pagamento, obrigacaoPagamento)
+            && !pagamentoUiPassageiro?.ocultarPainelPagamento ? (
             <div data-testid="acordo-pagamento-section" className="scroll-mt-acordo-detalhe">
               <AcordoPagamentoPanel
                 pagamento={pagamentoLoading ? null : pagamento}
+                obrigacao={obrigacaoPagamento}
+                lugarEstado={minhaLinha?.estado}
                 onUpdated={() => carregarPagamentoContactos(selected)}
+                layout={pagamentoUiPassageiro?.variant === 'S2' ? 'acoes' : 'completo'}
+              />
+              <AcordoPagamentosHistorico
+                pagamentos={pagamentosAcordo.filter((p) => p.passenger_id === user?.id)}
+                mesActual={getMesReferenciaAtual()}
               />
             </div>
           ) : null}
 
+          {isMotorista && !activo ? (
+            <AcordoPagamentosMotoristaPanel
+              rows={motoristaPagamentos}
+              loading={pagamentoLoading}
+              acordoTerminado
+              multiplePaymentSections={false}
+            />
+          ) : null}
+
           {podeCarregarContactos(selected.estado) ? (
-            <AcordoContactosPanel contactos={contactos} loading={contactosLoading} />
+            <AcordoContactosPanel
+              contactos={contactos}
+              loading={contactosLoading}
+              mostrarProximoPassoPagamento={Boolean(
+                isPassageiro
+                  && mostrarProximoPassoComprovativoPassageiro(minhaReservada, pagamento?.estado),
+              )}
+              passageirosAguardarPagamento={passageirosReservadosAguardar}
+            />
           ) : null}
 
           <div className="border-t border-slate-100 dark:border-slate-800" role="separator" />
