@@ -1,6 +1,10 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { PERFIL_COLUNAS_SELECT_SESSAO } from '../utils/perfisGrants.js';
+import { PERFIL_COLUNAS_SELECT } from '../utils/perfisGrants.js';
+import {
+  isAnonOrAuthPrivilegeError,
+  isLiveAuthSession,
+} from '../utils/authProfileFetch.js';
 import {
   readPasswordRecoveryPending,
   markPasswordRecoveryPending,
@@ -39,27 +43,56 @@ export function AuthProvider({ children }) {
     setPasswordRecoveryPending(false);
   }, []);
 
-  const fetchProfile = useCallback(async (userId) => {
-    if (!userId) {
+  const fetchProfile = useCallback(async () => {
+    const { data: { session: liveSession }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !isLiveAuthSession(liveSession)) {
       setProfile(null);
       setProfileLoading(false);
       return null;
     }
 
+    const userId = liveSession.user.id;
     setProfileLoading(true);
-    try {
-      const [{ data, error }, contactoResult] = await Promise.all([
-        supabase.from('perfis').select(PERFIL_COLUNAS_SELECT_SESSAO).eq('id', userId).single(),
+
+    const loadProfile = async () => {
+      const [perfisResult, contactoResult] = await Promise.all([
+        supabase.from('perfis').select(PERFIL_COLUNAS_SELECT).eq('id', userId).single(),
         supabase.rpc('get_own_perfil_contacto'),
       ]);
+      return { perfisResult, contactoResult };
+    };
 
-      if (error || contactoResult.error) {
-        console.warn('[AuthContext] Erro ao carregar perfil:', error || contactoResult.error);
+    try {
+      let { perfisResult, contactoResult } = await loadProfile();
+      let perfisError = perfisResult.error;
+      let contactoError = contactoResult.error;
+
+      if (
+        (isAnonOrAuthPrivilegeError(perfisError) || isAnonOrAuthPrivilegeError(contactoError))
+      ) {
+        const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+        if (!refreshError && isLiveAuthSession(refreshed?.session)) {
+          ({ perfisResult, contactoResult } = await loadProfile());
+          perfisError = perfisResult.error;
+          contactoError = contactoResult.error;
+        }
+      }
+
+      const { data: { session: afterSession } } = await supabase.auth.getSession();
+      if (!isLiveAuthSession(afterSession)) {
         setProfile(null);
         return null;
       }
 
-      const { is_admin: _isAdmin, ...resto } = data;
+      if (perfisError || contactoError) {
+        if (!isAnonOrAuthPrivilegeError(perfisError) && !isAnonOrAuthPrivilegeError(contactoError)) {
+          console.warn('[AuthContext] Erro ao carregar perfil:', perfisError || contactoError);
+        }
+        setProfile(null);
+        return null;
+      }
+
+      const { is_admin: _isAdmin, ...resto } = perfisResult.data;
       const profile = {
         ...resto,
         telefone: contactoResult.data?.telefone ?? null,
@@ -73,9 +106,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   const refreshProfile = useCallback(async () => {
-    const currentUserId = user?.id;
-    if (!currentUserId) return null;
-    return fetchProfile(currentUserId);
+    if (!user?.id) return null;
+    return fetchProfile();
   }, [user, fetchProfile]);
 
   useEffect(() => {
@@ -88,13 +120,11 @@ export function AuthProvider({ children }) {
       setSession(initialSession);
       setUser(initialSession?.user || null);
 
-      if (initialSession?.user?.id) {
+      if (isLiveAuthSession(initialSession)) {
         lastUserIdRef.current = initialSession.user.id;
-        // Marcar perfil a carregar ANTES de libertar loading da sessão
-        // (evita AdminRoute ver session ok + profile null + profileLoading false).
         setProfileLoading(true);
         setLoading(false);
-        await fetchProfile(initialSession.user.id);
+        await fetchProfile();
       } else {
         setProfile(null);
         setProfileLoading(false);
@@ -135,8 +165,8 @@ export function AuthProvider({ children }) {
         // Evita deadlock com getSession: não usar async/await nem chamadas Supabase directas aqui.
         setTimeout(() => {
           if (!isMounted) return;
-          if (nextSession?.user?.id) {
-            void fetchProfile(nextSession.user.id);
+          if (isLiveAuthSession(nextSession)) {
+            void fetchProfile();
           } else {
             setProfile(null);
             setProfileLoading(false);

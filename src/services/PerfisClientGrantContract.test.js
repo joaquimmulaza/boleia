@@ -5,12 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  PERFIL_COLUNAS_GRANT_SELECT,
-  PERFIL_COLUNAS_SELECT,
-  PERFIL_COLUNAS_SELECT_SESSAO,
-} from '../utils/perfisGrants.js';
-import { DRIVER_ACORDOS_SELECT } from './AgreementService.js';
+import { PERFIL_COLUNAS_GRANT_SELECT, PERFIL_COLUNAS_SELECT } from '../utils/perfisGrants.js';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const SRC = join(ROOT, '..');
@@ -36,21 +31,10 @@ describe('perfis — contrato grants vs cliente', () => {
     expect(PERFIL_COLUNAS_SELECT.split(',').map((s) => s.trim()).sort()).toEqual(fromMigration);
   });
 
-  it('getAgreementsForDriver não embute perfis (evita fan-out GET /rest/v1/perfis)', () => {
-    expect(DRIVER_ACORDOS_SELECT).not.toMatch(/\bperfis\s*\(/);
-  });
-
-  it('AuthContext usa select de sessão sem iban_titular (prod QA 42501)', () => {
-    const prodQaSelect =
-      'id,nome_completo,tipo_perfil,created_at,onboarding_completed,iban_titular,perfil_completo';
-    expect(PERFIL_COLUNAS_SELECT).toBe(
-      prodQaSelect.split(',').map((s) => s.trim()).join(', '),
-    );
-    expect(PERFIL_COLUNAS_SELECT_SESSAO).not.toMatch(/\biban_titular\b/);
-    expect(PERFIL_COLUNAS_SELECT_SESSAO).not.toBe(prodQaSelect);
-    for (const col of PERFIL_COLUNAS_SELECT_SESSAO.split(',').map((s) => s.trim())) {
-      expect(PERFIL_COLUNAS_GRANT_SELECT).toContain(col);
-    }
+  it('AuthContext importa PERFIL_COLUNAS_SELECT (select grantado completo)', () => {
+    const authCtx = readFileSync(join(SRC, 'contexts/AuthContext.jsx'), 'utf8');
+    expect(authCtx).toMatch(/PERFIL_COLUNAS_SELECT/);
+    expect(authCtx).not.toMatch(/PERFIL_COLUNAS_SELECT_SESSAO/);
   });
 
   it('src: .from(perfis).select só usa PERFIL_COLUNAS_SELECT ou constante derivada', () => {

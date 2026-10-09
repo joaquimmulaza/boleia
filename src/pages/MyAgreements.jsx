@@ -85,7 +85,6 @@ import {
   resolvePagamentoChipContexto,
   mergePagamentoComChipContexto,
 } from '../utils/pagamentoMotivoLugar.js';
-import { mergeNomesPassageirosAcordo } from '../utils/acordoPassageiroNomes.js';
 import {
   labelRenovacaoEstado,
   podeRenovarPeriodo,
@@ -397,8 +396,6 @@ const MyAgreements = () => {
       const pagamentos = await listPagamentosByAcordo(acordo.id);
       setPagamentosAcordo(pagamentos);
       const mesAtual = getMesReferenciaAtual();
-      /** @type {object[]} */
-      let motoristaPagamentosRows = [];
       if (tipoPerfil === 'Passageiro') {
         const linha = (acordo.acordos_passageiros || []).find((p) => p.passenger_id === user.id);
         if (linha?.id) {
@@ -424,22 +421,19 @@ const MyAgreements = () => {
         setObrigacaoPagamento(null);
         if (tipoPerfil === 'Motorista') {
           try {
-            motoristaPagamentosRows = await listPagamentosPendentesMotoristaAcordo(acordo.id);
-            setMotoristaPagamentos(motoristaPagamentosRows);
+            const rows = await listPagamentosPendentesMotoristaAcordo(acordo.id);
+            setMotoristaPagamentos(rows);
           } catch (err) {
             console.error('Erro ao listar pagamentos motorista:', err);
             setMotoristaPagamentos([]);
-            motoristaPagamentosRows = [];
           }
         }
       }
 
-      /** @type {object | null} */
-      let contactosPayload = null;
       if (podeContactos) {
         try {
-          contactosPayload = await getAcordoContactos(acordo.id);
-          setContactos(contactosPayload);
+          const payload = await getAcordoContactos(acordo.id);
+          setContactos(payload);
         } catch (err) {
           setContactos(null);
           if (err?.code !== 'P0001') {
@@ -448,25 +442,6 @@ const MyAgreements = () => {
         }
       } else {
         setContactos(null);
-      }
-
-      if (tipoPerfil === 'Motorista') {
-        const sources = {
-          contactos: contactosPayload,
-          motoristaPagamentos: motoristaPagamentosRows,
-        };
-        setAcordos((prev) =>
-          prev.map((a) => {
-            if (a.id !== acordo.id) return a;
-            const enriched = mergeNomesPassageirosAcordo(a, sources);
-            return enriched === a ? a : enriched;
-          }),
-        );
-        setSelected((prev) => {
-          if (prev?.id !== acordo.id) return prev;
-          const enriched = mergeNomesPassageirosAcordo(prev, sources);
-          return enriched === prev ? prev : enriched;
-        });
       }
 
       const avs = await listMinhasAvaliacoesAcordo(acordo.id);

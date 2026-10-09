@@ -15,20 +15,7 @@ export const PERFIL_COLUNAS_GRANT_SELECT = [
   'perfil_completo',
 ];
 
-/**
- * Sessão / AuthContext — sem `iban_titular` (só página Perfil; evita 42501 em `/acordos`).
- * @type {string}
- */
-export const PERFIL_COLUNAS_SELECT_SESSAO = [
-  'id',
-  'nome_completo',
-  'tipo_perfil',
-  'created_at',
-  'onboarding_completed',
-  'perfil_completo',
-].join(', ');
-
-/** Leitura completa do próprio perfil (`getProfile` / `updateProfile` RETURNING). */
+/** Leitura do próprio perfil no AuthContext / `getProfile` / `updateProfile` RETURNING. */
 export const PERFIL_COLUNAS_SELECT = PERFIL_COLUNAS_GRANT_SELECT.join(', ');
 
 /** Embed seguro noutras tabelas — só `nome_completo` (PK incluída pelo PostgREST). */

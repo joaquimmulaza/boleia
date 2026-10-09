@@ -5,10 +5,6 @@ import {
   resolveIdempotencyKey,
 } from '../utils/callRpcWithOfflineFallback.js';
 
-/** Sem embed `perfis` — evita fan-out GET /rest/v1/perfis (42501 pós column grants). Nomes via RPCs. */
-export const DRIVER_ACORDOS_SELECT =
-  '*, acordos_passageiros(*), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota), acordos_adendas(*)';
-
 /**
  * @param {unknown} rpcOut
  * @param {string} fallbackAcordoId
@@ -720,7 +716,9 @@ export async function getAgreementsForDriver(driverId) {
 
   const { data, error } = await supabase
     .from('acordos')
-    .select(DRIVER_ACORDOS_SELECT)
+    .select(
+      '*, acordos_passageiros(*, perfis(nome_completo)), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota), acordos_adendas(*)',
+    )
     .eq('driver_id', driverId)
     .order('created_at', { ascending: false });
 

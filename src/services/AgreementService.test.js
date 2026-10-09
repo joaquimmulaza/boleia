@@ -8,7 +8,6 @@ import {
   terminateAgreement,
   rejectAgreementTermination,
   getAgreementsForDriver,
-  DRIVER_ACORDOS_SELECT,
   getAgreementsForPassenger,
 } from './AgreementService.js';
 import { resolveAgreementPricing } from '../utils/resolveAgreementPricing.js';
@@ -784,8 +783,9 @@ describe('AgreementService', () => {
         select: mockSelect,
       });
       const result = await getAgreementsForDriver('driver-1');
-      expect(mockSelect).toHaveBeenCalledWith(DRIVER_ACORDOS_SELECT);
-      expect(DRIVER_ACORDOS_SELECT).not.toMatch(/\bperfis\s*\(/);
+      expect(mockSelect).toHaveBeenCalledWith(
+        '*, acordos_passageiros(*, perfis(nome_completo)), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota), acordos_adendas(*)',
+      );
       expect(result).toHaveLength(1);
       expect(supabase.rpc).toHaveBeenCalledWith('apply_due_agreement_adendas', {
         p_acordo_id: null,

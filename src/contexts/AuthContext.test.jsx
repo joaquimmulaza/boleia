@@ -3,8 +3,16 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import React from 'react';
 
 import { AuthProvider, useAuth } from './AuthContext';
-import { PERFIL_COLUNAS_SELECT_SESSAO } from '../utils/perfisGrants.js';
+import { PERFIL_COLUNAS_SELECT } from '../utils/perfisGrants.js';
 import { supabase } from '../lib/supabase';
+
+/** @param {string} userId @param {Record<string, unknown>} [userMetadata] */
+function liveSession(userId, userMetadata = {}) {
+  return {
+    access_token: 'test-access-token',
+    user: { id: userId, user_metadata: userMetadata },
+  };
+}
 
 const mockSingle = vi.fn();
 const mockEq = vi.fn(() => ({ single: mockSingle }));
@@ -14,6 +22,7 @@ vi.mock('../lib/supabase', () => ({
   supabase: {
     auth: {
       getSession: vi.fn(),
+      refreshSession: vi.fn(),
       onAuthStateChange: vi.fn(),
     },
     from: vi.fn(() => ({
@@ -96,14 +105,7 @@ describe('AuthContext', () => {
   });
 
   it('user, tipoPerfil normalizado e profile quando há sessão activa', async () => {
-    const mockSession = {
-      user: {
-        id: 'user-123',
-        user_metadata: {
-          tipo_perfil: 'motorista'
-        }
-      }
-    };
+    const mockSession = liveSession('user-123', { tipo_perfil: 'motorista' });
     supabase.auth.getSession.mockResolvedValue({ data: { session: mockSession }, error: null });
     supabase.auth.onAuthStateChange.mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } });
 
@@ -120,8 +122,8 @@ describe('AuthContext', () => {
     expect(screen.getByTestId('user')).toHaveTextContent('user-123');
     expect(screen.getByTestId('tipoPerfil')).toHaveTextContent('Motorista');
     expect(supabase.from).toHaveBeenCalledWith('perfis');
-    expect(mockSelect).toHaveBeenCalledWith(PERFIL_COLUNAS_SELECT_SESSAO);
-    expect(PERFIL_COLUNAS_SELECT_SESSAO).not.toMatch(/\biban_titular\b/);
+    expect(mockSelect).toHaveBeenCalledWith(PERFIL_COLUNAS_SELECT);
+    expect(PERFIL_COLUNAS_SELECT).toMatch(/\biban_titular\b/);
     expect(screen.getByTestId('admin')).toHaveTextContent('nao-admin');
   });
 
@@ -141,11 +143,7 @@ describe('AuthContext', () => {
       error: null,
     });
     supabase.auth.getSession.mockResolvedValue({
-      data: {
-        session: {
-          user: { id: 'user-123', user_metadata: { tipo_perfil: 'passageiro' } },
-        },
-      },
+      data: { session: liveSession('user-123', { tipo_perfil: 'passageiro' }) },
       error: null,
     });
     supabase.auth.onAuthStateChange.mockReturnValue({
@@ -184,22 +182,17 @@ describe('AuthContext', () => {
       expect(screen.getByTestId('user')).toHaveTextContent('no-user');
     });
 
-    const mockSession = {
-      user: {
-        id: 'user-456',
-        user_metadata: {
-          tipo_perfil: 'passageiro'
-        }
-      }
-    };
-    
+    const mockSession = liveSession('user-456', { tipo_perfil: 'passageiro' });
+
     mockSingle.mockResolvedValueOnce({
       data: { id: 'user-456', tipo_perfil: 'Passageiro', onboarding_completed: false },
       error: null,
     });
+    supabase.auth.getSession.mockResolvedValue({ data: { session: mockSession }, error: null });
 
     await act(async () => {
-      await authChangeListener('SIGNED_IN', mockSession);
+      authChangeListener('SIGNED_IN', mockSession);
+      await new Promise((r) => setTimeout(r, 0));
     });
 
     await waitFor(() => {
@@ -279,10 +272,37 @@ describe('AuthContext', () => {
     expect(sessionStorage.getItem('bc_password_recovery')).toBe('1');
   });
 
+  it('não consulta perfis sem sessão viva (user id sem access_token)', async () => {
+    supabase.auth.getSession.mockResolvedValue({ data: { session: null }, error: null });
+
+    let authChangeListener;
+    supabase.auth.onAuthStateChange.mockImplementation((callback) => {
+      authChangeListener = callback;
+      return { data: { subscription: { unsubscribe: vi.fn() } } };
+    });
+
+    render(
+      <AuthProvider>
+        <TestComponent />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('user')).toHaveTextContent('no-user');
+    });
+
+    supabase.from.mockClear();
+
+    await act(async () => {
+      authChangeListener('INITIAL_SESSION', { user: { id: 'stale-from-storage' } });
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(supabase.from).not.toHaveBeenCalled();
+  });
+
   it('SIGNED_OUT limpa cache runtime do service worker', async () => {
-    const mockSession = {
-      user: { id: 'user-123', user_metadata: { tipo_perfil: 'Passageiro' } },
-    };
+    const mockSession = liveSession('user-123', { tipo_perfil: 'Passageiro' });
     supabase.auth.getSession.mockResolvedValue({ data: { session: mockSession }, error: null });
 
     let authChangeListener;
@@ -312,9 +332,7 @@ describe('AuthContext', () => {
   });
 
   it('troca de user id limpa cache runtime do service worker', async () => {
-    const sessionA = {
-      user: { id: 'user-a', user_metadata: { tipo_perfil: 'Passageiro' } },
-    };
+    const sessionA = liveSession('user-a', { tipo_perfil: 'Passageiro' });
     supabase.auth.getSession.mockResolvedValue({ data: { session: sessionA }, error: null });
 
     let authChangeListener;
@@ -335,16 +353,16 @@ describe('AuthContext', () => {
 
     mockClearSwRuntimeCache.mockClear();
 
-    const sessionB = {
-      user: { id: 'user-b', user_metadata: { tipo_perfil: 'Motorista' } },
-    };
+    const sessionB = liveSession('user-b', { tipo_perfil: 'Motorista' });
     mockSingle.mockResolvedValueOnce({
       data: { id: 'user-b', tipo_perfil: 'Motorista', onboarding_completed: false },
       error: null,
     });
+    supabase.auth.getSession.mockResolvedValue({ data: { session: sessionB }, error: null });
 
     await act(async () => {
       authChangeListener('SIGNED_IN', sessionB);
+      await new Promise((r) => setTimeout(r, 0));
     });
 
     await waitFor(() => {
