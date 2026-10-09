@@ -1,15 +1,21 @@
 import React, { useRef, useState } from 'react';
-import { Upload, Loader2, FileText } from 'lucide-react';
+import { Upload, Loader2, FileText, CheckCircle2 } from 'lucide-react';
 import { formatKwanza } from '../utils/formatKwanza';
 import {
-  labelEstadoPagamento,
   helpEstadoPagamento,
   chipClassEstadoPagamento,
   PAYMENT_STATES,
 } from '../utils/paymentStatus';
 import {
+  normalizeObrigacaoSnapshot,
   linhaProporcionalPagamento,
   linhaPrazoPagamento,
+  linhaSecundariaExcessoPassageiro,
+  labelEstadoPagamentoPassageiro,
+  mostrarIconeSucessoPagamento,
+  valorEmDividaParaExibir,
+  isDestaqueValorEmDividaSaiuPendente,
+  isPagamentoEmExcessoAnalise,
 } from '../utils/pagamentoObrigacaoCopy';
 import { basenameComprovativoPath } from '../utils/comprovativoPath';
 import { getPlatformIban, uploadComprovativo } from '../services/PaymentService';
@@ -26,12 +32,19 @@ import FeedbackAlert from './FeedbackAlert';
  *     estado: string,
  *     comprovativo_path?: string | null,
  *     rejeicao_motivo?: string | null,
+ *     requer_resolucao_admin?: boolean,
  *   } | null,
  *   obrigacao?: import('../utils/pagamentoObrigacaoCopy.js').ObrigacaoSnapshot | null,
+ *   lugarEstado?: string | null,
  *   onUpdated?: () => void,
  * }} props
  */
-function AcordoPagamentoPanel({ pagamento, obrigacao = null, onUpdated }) {
+function AcordoPagamentoPanel({
+  pagamento,
+  obrigacao = null,
+  lugarEstado = null,
+  onUpdated,
+}) {
   const inputRef = useRef(/** @type {HTMLInputElement | null} */ (null));
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState(/** @type {{ type: 'success' | 'error', text: string } | null} */ (null));
@@ -44,18 +57,31 @@ function AcordoPagamentoPanel({ pagamento, obrigacao = null, onUpdated }) {
     );
   }
 
+  const obrigacaoNorm = normalizeObrigacaoSnapshot(obrigacao);
   const platformIban = getPlatformIban();
   const ibanConfigurado = Boolean(platformIban);
   const estadoNorm = String(pagamento.estado || '').toLowerCase();
+  const emExcesso = isPagamentoEmExcessoAnalise(pagamento);
   const podeEnviar = ['pendente_pagamento', 'comprovativo_enviado'].includes(estadoNorm)
-    && estadoNorm !== PAYMENT_STATES.ANULADO;
-  const linhaProp = linhaProporcionalPagamento(obrigacao);
-  const linhaPrazo = linhaPrazoPagamento(obrigacao?.prazo ?? pagamento.prazo_pagamento_em);
-  const valorExibir = obrigacao?.valor != null ? obrigacao.valor : pagamento.valor_kz;
+    && estadoNorm !== PAYMENT_STATES.ANULADO
+    && !emExcesso;
+  const linhaProp = emExcesso ? null : linhaProporcionalPagamento(obrigacaoNorm);
+  const linhaExcesso = emExcesso ? linhaSecundariaExcessoPassageiro(obrigacaoNorm) : null;
+  const linhaPrazo = linhaPrazoPagamento(obrigacaoNorm?.prazo ?? pagamento.prazo_pagamento_em);
+  const valorEmDivida = valorEmDividaParaExibir(obrigacaoNorm, pagamento);
+  const destaqueSaiuPendente = isDestaqueValorEmDividaSaiuPendente(lugarEstado, pagamento);
   const comprovativoNome = basenameComprovativoPath(pagamento.comprovativo_path);
   const temComprovativo = Boolean(comprovativoNome);
   const labelUpload = temComprovativo ? 'Substituir comprovativo' : 'Enviar comprovativo';
-  const helpEstado = helpEstadoPagamento(pagamento.estado);
+  const helpEstado = emExcesso
+    ? 'A plataforma está a analisar a diferença entre o valor pago e o devido neste mês.'
+    : helpEstadoPagamento(pagamento.estado);
+  const labelEstado = labelEstadoPagamentoPassageiro(pagamento, obrigacaoNorm);
+  const mostrarCheck = mostrarIconeSucessoPagamento({
+    pagamento,
+    obrigacao: obrigacaoNorm,
+    lugarEstado,
+  });
 
   const handleFile = async (event) => {
     const file = event.target.files?.[0];
@@ -86,15 +112,25 @@ function AcordoPagamentoPanel({ pagamento, obrigacao = null, onUpdated }) {
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-bold text-slate-900 dark:text-white">Pagamento mensal</h3>
         <span
-          className={`text-xs font-semibold px-2 py-1 rounded-full ${chipClassEstadoPagamento(pagamento.estado)}`}
+          className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${chipClassEstadoPagamento(pagamento.estado)}`}
           title={helpEstado || undefined}
+          data-testid="pagamento-estado-chip"
         >
-          {labelEstadoPagamento(pagamento.estado, { placement: 'painel' })}
+          {mostrarCheck ? (
+            <CheckCircle2 size={14} className="shrink-0" aria-hidden="true" data-testid="pagamento-estado-check" />
+          ) : null}
+          {labelEstado}
         </span>
       </div>
 
       {helpEstado ? (
         <p className="text-xs text-slate-500 text-pretty">{helpEstado}</p>
+      ) : null}
+
+      {linhaExcesso ? (
+        <p className="text-xs text-slate-600 dark:text-slate-300 text-pretty" data-testid="linha-excesso-pagamento">
+          {linhaExcesso}
+        </p>
       ) : null}
 
       {linhaProp ? (
@@ -109,12 +145,21 @@ function AcordoPagamentoPanel({ pagamento, obrigacao = null, onUpdated }) {
         </p>
       ) : null}
 
-      <p className="text-sm text-slate-600 dark:text-slate-300">
-        {linhaProp ? 'Valor a pagar agora' : 'Valor acordado'}:{' '}
-        <strong className="tabular-nums text-slate-900 dark:text-white">
-          {formatKwanza(valorExibir)} Kz
-        </strong>
-      </p>
+      {destaqueSaiuPendente ? (
+        <div className="space-y-1" data-testid="valor-em-divida-destaque">
+          <p className="text-xs text-slate-500">Valor em dívida</p>
+          <p className="text-2xl font-bold tabular-nums text-primary">
+            {formatKwanza(valorEmDivida)} Kz
+          </p>
+        </div>
+      ) : (
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          {linhaProp ? 'Valor a pagar agora' : 'Valor acordado'}:{' '}
+          <strong className="tabular-nums text-slate-900 dark:text-white">
+            {formatKwanza(valorEmDivida)} Kz
+          </strong>
+        </p>
+      )}
 
       {ibanConfigurado ? (
         <p className="text-xs text-slate-500 text-pretty">

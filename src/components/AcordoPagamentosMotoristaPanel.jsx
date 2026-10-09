@@ -1,8 +1,11 @@
 import React from 'react';
 import { formatKwanza } from '../utils/formatKwanza';
 import {
+  normalizeObrigacaoSnapshot,
   linhaProporcionalPagamento,
   linhaPrazoPagamento,
+  tituloSecaoPagamentosMotorista,
+  valorEmDividaParaExibir,
 } from '../utils/pagamentoObrigacaoCopy';
 import {
   labelEstadoPagamento,
@@ -12,10 +15,21 @@ import {
 /**
  * Motorista — estado de pagamento dos passageiros (RPC list_pagamentos_pendentes_motorista_acordo).
  *
- * @param {{ rows: object[], loading?: boolean }} props
+ * @param {{
+ *   rows: object[],
+ *   loading?: boolean,
+ *   acordoTerminado?: boolean,
+ *   multiplePaymentSections?: boolean,
+ * }} props
  */
-function AcordoPagamentosMotoristaPanel({ rows, loading = false }) {
+function AcordoPagamentosMotoristaPanel({
+  rows,
+  loading = false,
+  acordoTerminado = false,
+  multiplePaymentSections = false,
+}) {
   const list = Array.isArray(rows) ? rows : [];
+  const titulo = tituloSecaoPagamentosMotorista({ acordoTerminado, multipleSections: multiplePaymentSections });
 
   if (loading) {
     return (
@@ -27,30 +41,38 @@ function AcordoPagamentosMotoristaPanel({ rows, loading = false }) {
 
   if (list.length === 0) {
     return (
-      <p className="text-sm text-slate-500" data-testid="motorista-pagamentos-vazio">
-        Sem pagamentos pendentes este mês.
-      </p>
+      <section className="space-y-2" data-testid="motorista-pagamentos-vazio-wrap">
+        <p className="text-sm font-bold text-slate-900 dark:text-white" data-testid="motorista-pagamentos-titulo">
+          {titulo}
+        </p>
+        <p className="text-sm text-slate-500" data-testid="motorista-pagamentos-vazio">
+          Sem pagamentos pendentes este mês.
+        </p>
+      </section>
     );
   }
 
   return (
     <section className="space-y-3" data-testid="motorista-pagamentos-panel">
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-        Pagamentos do mês
+      <p className="text-sm font-bold text-slate-900 dark:text-white" data-testid="motorista-pagamentos-titulo">
+        {titulo}
       </p>
       <ul className="space-y-3">
         {list.map((row) => {
-          const snap = {
+          const snap = normalizeObrigacaoSnapshot({
             dias: row.dias,
             dias_mes: row.dias_mes,
             mes: row.mes,
+            quota: row.quota,
             proporcional: row.proporcional,
             pago: row.pago,
             valor: row.valor,
+            valor_em_divida: row.valor_em_divida ?? row.valor,
             prazo: row.prazo,
-          };
+          });
           const linhaProp = linhaProporcionalPagamento(snap);
           const linhaPrazo = linhaPrazoPagamento(row.prazo);
+          const valorDivida = valorEmDividaParaExibir(snap, { valor_kz: row.valor });
           return (
             <li
               key={row.pagamento_id || row.passenger_id}
@@ -73,7 +95,7 @@ function AcordoPagamentosMotoristaPanel({ rows, loading = false }) {
                 </p>
               ) : (
                 <p className="text-xs text-slate-500 tabular-nums">
-                  A pagar: {formatKwanza(row.valor)} Kz
+                  A pagar: {formatKwanza(valorDivida)} Kz
                 </p>
               )}
               {linhaPrazo ? (

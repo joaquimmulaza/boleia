@@ -382,9 +382,11 @@ BEGIN
     'dias', v_dias,
     'dias_mes', v_dias_mes,
     'mes', to_char(v_mes, 'YYYY-MM-DD'),
+    'quota', v_quota,
     'proporcional', v_proporcional,
     'pago', v_pago,
     'valor', v_valor,
+    'valor_em_divida', v_valor,
     'prazo', v_pg.prazo_pagamento_em
   );
 END;
@@ -455,9 +457,11 @@ RETURNS TABLE (
   dias integer,
   dias_mes integer,
   mes date,
+  quota integer,
   proporcional integer,
   pago integer,
   valor integer,
+  valor_em_divida integer,
   prazo timestamptz
 )
 LANGUAGE plpgsql
@@ -507,9 +511,11 @@ BEGIN
     dias := COALESCE((v_snap->>'dias')::integer, 0);
     dias_mes := COALESCE((v_snap->>'dias_mes')::integer, 0);
     mes := COALESCE((v_snap->>'mes')::date, v_mes);
+    quota := COALESCE((v_snap->>'quota')::integer, 0);
     proporcional := COALESCE((v_snap->>'proporcional')::integer, 0);
     pago := COALESCE((v_snap->>'pago')::integer, 0);
-    valor := COALESCE((v_snap->>'valor')::integer, 0);
+    valor_em_divida := COALESCE((v_snap->>'valor_em_divida')::integer, (v_snap->>'valor')::integer, 0);
+    valor := valor_em_divida;
     prazo := (v_snap->>'prazo')::timestamptz;
     RETURN NEXT;
   END LOOP;

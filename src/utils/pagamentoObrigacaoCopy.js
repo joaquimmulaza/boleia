@@ -1,5 +1,6 @@
 import { formatKwanza } from './formatKwanza';
 import { formatMesAdendaPt } from './adendaStatus';
+import { labelEstadoPagamento, PAYMENT_STATES } from './paymentStatus';
 
 /**
  * Snapshot de obrigação mensal (fonte: RPC `build_ui_obrigacao_snapshot` / `get_obrigacao_pagamento_passageiro`).
@@ -9,12 +10,83 @@ import { formatMesAdendaPt } from './adendaStatus';
  *   dias?: number,
  *   dias_mes?: number,
  *   mes?: string,
+ *   quota?: number,
  *   proporcional?: number,
  *   pago?: number,
  *   valor?: number,
+ *   valor_em_divida?: number,
  *   prazo?: string | null,
  * }} ObrigacaoSnapshot
  */
+
+/**
+ * Normaliza campos da RPC: `quota` (mensal congelada) vs `valor_em_divida` (resto a pagar).
+ * @param {ObrigacaoSnapshot | null | undefined} raw
+ * @returns {ObrigacaoSnapshot | null}
+ */
+export function normalizeObrigacaoSnapshot(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const valorEmDividaRaw = raw.valor_em_divida ?? raw.valor;
+  const valorEmDivida = Number(valorEmDividaRaw);
+  const quota = Number(raw.quota);
+  return {
+    ...raw,
+    quota: Number.isFinite(quota) ? quota : raw.quota,
+    valor_em_divida: Number.isFinite(valorEmDivida) ? valorEmDivida : 0,
+    valor: Number.isFinite(valorEmDivida) ? valorEmDivida : raw.valor,
+  };
+}
+
+/**
+ * Valor em dívida para exibição (nunca a quota mensal).
+ * @param {ObrigacaoSnapshot | null | undefined} obrigacao
+ * @param {{ valor_kz?: number } | null | undefined} pagamento
+ * @returns {number}
+ */
+export function valorEmDividaParaExibir(obrigacao, pagamento) {
+  const norm = normalizeObrigacaoSnapshot(obrigacao);
+  if (norm && norm.valor_em_divida != null) return Number(norm.valor_em_divida) || 0;
+  return Number(pagamento?.valor_kz ?? 0) || 0;
+}
+
+/**
+ * @param {{ requer_resolucao_admin?: boolean } | null | undefined} pagamento
+ * @returns {boolean}
+ */
+export function isPagamentoEmExcessoAnalise(pagamento) {
+  return Boolean(pagamento?.requer_resolucao_admin);
+}
+
+/**
+ * Label do chip no painel passageiro (v1.6 excesso).
+ * @param {{ estado?: string, requer_resolucao_admin?: boolean } | null | undefined} pagamento
+ * @param {ObrigacaoSnapshot | null | undefined} obrigacao
+ * @returns {string}
+ */
+export function labelEstadoPagamentoPassageiro(pagamento, _obrigacao) {
+  if (isPagamentoEmExcessoAnalise(pagamento)) {
+    return 'Diferença em análise';
+  }
+  return labelEstadoPagamento(pagamento?.estado, { placement: 'painel' });
+}
+
+/**
+ * Linha secundária v1.6 — caso excesso («Diferença em análise»).
+ * @param {ObrigacaoSnapshot | null | undefined} obrigacao
+ * @returns {string | null}
+ */
+export function linhaSecundariaExcessoPassageiro(obrigacao) {
+  const norm = normalizeObrigacaoSnapshot(obrigacao);
+  if (!norm) return null;
+  const dias = Number(norm.dias);
+  const diasMes = Number(norm.dias_mes);
+  if (!Number.isFinite(diasMes) || diasMes < 1) return null;
+  const mesLabel = norm.mes ? formatMesAdendaPt(String(norm.mes).slice(0, 10)) : 'este mês';
+  const devido = Number(norm.proporcional);
+  if (!Number.isFinite(devido)) return null;
+  const diasTxt = Number.isFinite(dias) ? dias : 0;
+  return `Os ${formatKwanza(devido)} Kz correspondem a ${diasTxt} de ${diasMes} dias úteis de ${mesLabel}.`;
+}
 
 /**
  * Linha v1.4 — quota proporcional do mês (dias úteis decorridos).
@@ -22,20 +94,21 @@ import { formatMesAdendaPt } from './adendaStatus';
  * @returns {string | null}
  */
 export function linhaProporcionalPagamento(obrigacao) {
-  if (!obrigacao || typeof obrigacao !== 'object') return null;
-  const dias = Number(obrigacao.dias);
-  const diasMes = Number(obrigacao.dias_mes);
+  const norm = normalizeObrigacaoSnapshot(obrigacao);
+  if (!norm) return null;
+  const dias = Number(norm.dias);
+  const diasMes = Number(norm.dias_mes);
   if (!Number.isFinite(diasMes) || diasMes < 1) return null;
-  const mesLabel = obrigacao.mes ? formatMesAdendaPt(String(obrigacao.mes).slice(0, 10)) : 'este mês';
-  const proporcional = Number(obrigacao.proporcional);
-  const pago = Number(obrigacao.pago) || 0;
-  const valor = Number(obrigacao.valor) || 0;
+  const mesLabel = norm.mes ? formatMesAdendaPt(String(norm.mes).slice(0, 10)) : 'este mês';
+  const proporcional = Number(norm.proporcional);
+  const pago = Number(norm.pago) || 0;
+  const valorEmDivida = Number(norm.valor_em_divida) || 0;
   const diasTxt = Number.isFinite(dias) ? dias : 0;
   return (
     `${diasTxt} de ${diasMes} dias úteis em ${mesLabel} · `
     + `Proporcional ${formatKwanza(proporcional)} Kz · `
     + `Já pago ${formatKwanza(pago)} Kz · `
-    + `A pagar ${formatKwanza(valor)} Kz`
+    + `A pagar ${formatKwanza(valorEmDivida)} Kz`
   );
 }
 
@@ -70,7 +143,7 @@ export function tituloHistoricoPagamento(mesReferencia) {
 
 /**
  * Valor a mostrar no histórico (riscado se anulado).
- * @param {{ estado?: string, valor_kz?: number } | null | undefined} pagamento
+ * @param {{ estado?: string, valor_kz?: number, valor_quota_original_kz?: number } | null | undefined} pagamento
  * @param {ObrigacaoSnapshot | null | undefined} [obrigacao]
  * @returns {{ texto: string, anulado: boolean }}
  */
@@ -79,9 +152,63 @@ export function valorHistoricoPagamento(pagamento, obrigacao) {
   const anulado = estado === 'anulado';
   const valor = anulado
     ? Number(pagamento?.valor_quota_original_kz ?? pagamento?.valor_kz ?? 0)
-    : Number(obrigacao?.valor ?? pagamento?.valor_kz ?? 0);
+    : valorEmDividaParaExibir(obrigacao, pagamento);
   return {
     texto: `${formatKwanza(valor)} Kz`,
     anulado,
   };
+}
+
+/**
+ * Ícone ✓ só em estados «fechados» sem dívida nem expirado (v1.6).
+ * @param {{
+ *   pagamento?: { estado?: string, requer_resolucao_admin?: boolean } | null,
+ *   obrigacao?: ObrigacaoSnapshot | null,
+ *   lugarEstado?: string | null,
+ * }} ctx
+ * @returns {boolean}
+ */
+export function mostrarIconeSucessoPagamento(ctx) {
+  const lugar = String(ctx.lugarEstado || '').toLowerCase();
+  if (lugar === 'expirado') return false;
+
+  const pagamento = ctx.pagamento;
+  if (isPagamentoEmExcessoAnalise(pagamento)) return false;
+
+  const estado = String(pagamento?.estado || '').toLowerCase();
+  const valorDivida = valorEmDividaParaExibir(ctx.obrigacao, pagamento);
+
+  if (valorDivida > 0) return false;
+  if (estado === PAYMENT_STATES.PENDENTE || estado === PAYMENT_STATES.COMPROVATIVO) return false;
+  if (lugar === 'saiu' && (estado === PAYMENT_STATES.PENDENTE || estado === PAYMENT_STATES.COMPROVATIVO)) {
+    return false;
+  }
+
+  return estado === PAYMENT_STATES.CUSTODIA
+    || estado === PAYMENT_STATES.LIQUIDADO
+    || estado === PAYMENT_STATES.REEMBOLSADO;
+}
+
+/**
+ * @param {string | null | undefined} lugarEstado
+ * @param {{ estado?: string } | null | undefined} pagamento
+ * @returns {boolean}
+ */
+export function isDestaqueValorEmDividaSaiuPendente(lugarEstado, pagamento) {
+  const lugar = String(lugarEstado || '').toLowerCase();
+  if (lugar !== 'saiu') return false;
+  const e = String(pagamento?.estado || '').toLowerCase();
+  return e === PAYMENT_STATES.PENDENTE || e === PAYMENT_STATES.COMPROVATIVO;
+}
+
+/**
+ * Cabeçalho secção pagamentos motorista (v1.6).
+ * @param {{ acordoTerminado?: boolean, multipleSections?: boolean }} opts
+ * @returns {string}
+ */
+export function tituloSecaoPagamentosMotorista(opts = {}) {
+  if (opts.acordoTerminado) {
+    return opts.multipleSections ? 'Pagamentos deste acordo' : 'Pagamentos';
+  }
+  return 'Pagamentos do mês';
 }

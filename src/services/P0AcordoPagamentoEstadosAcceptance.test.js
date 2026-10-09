@@ -61,6 +61,8 @@ describe('P0 acordo pagamento estados — migração obrigatória', () => {
   it('função única calc_quota_proporcional_kz + build_ui_obrigacao_snapshot', () => {
     expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\.calc_quota_proporcional_kz/);
     expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\.build_ui_obrigacao_snapshot/);
+    expect(sql).toMatch(/'valor_em_divida', v_valor/);
+    expect(sql).toMatch(/'quota', v_quota/);
     expect(sql).toMatch(/get_obrigacao_pagamento_passageiro/);
     expect(sql).toMatch(/list_pagamentos_pendentes_motorista_acordo/);
     expect(sql).toMatch(/list_pagamentos_resolucao_admin/);

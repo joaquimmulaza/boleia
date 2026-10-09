@@ -77,7 +77,7 @@ describe('PACOTE #19 — gaps visão path crítico', () => {
     it('AcordoPagamentoPanel não renderiza OD (só valor acordado)', () => {
       const src = readSrc('components/AcordoPagamentoPanel.jsx');
       expect(src).not.toMatch(/origin_name|destination_name|Origem|Destino/);
-      expect(src).toMatch(/pagamento\.valor_kz/);
+      expect(src).toMatch(/valorEmDividaParaExibir/);
     });
 
     it('resolveOdFields anula OD quando flexível (API)', () => {
@@ -202,8 +202,8 @@ describe('PACOTE #19 — gaps visão path crítico', () => {
   describe('AC5 — Valores do acordo/snapshot (nunca defaults plataforma)', () => {
     it('AcordoPagamentoPanel usa valor da RPC/obrigação ou pagamento.valor_kz (sem defaults)', () => {
       const src = readSrc('components/AcordoPagamentoPanel.jsx');
-      expect(src).toMatch(/formatKwanza\(valorExibir\)/);
-      expect(src).toMatch(/pagamento\.valor_kz/);
+      expect(src).toMatch(/valorEmDividaParaExibir\(obrigacaoNorm, pagamento\)/);
+      expect(readSrc('utils/pagamentoObrigacaoCopy.js')).toMatch(/pagamento\?\.valor_kz/);
       expect(src).not.toMatch(/35000|43000|valor_default/);
     });
 

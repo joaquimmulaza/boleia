@@ -117,7 +117,7 @@ function passageiroMostraPainelPagamento(minhaLinha, pagamento, obrigacao) {
   const pgEst = String(pagamento.estado || '').toLowerCase();
   if (pgEst === 'anulado' || pgEst === 'liquidado' || pgEst === 'reembolsado') return false;
   if (pgEst === 'pendente_pagamento' || pgEst === 'comprovativo_enviado') return true;
-  const valor = Number(obrigacao?.valor);
+  const valor = Number(obrigacao?.valor_em_divida ?? obrigacao?.valor);
   return Number.isFinite(valor) && valor > 0;
 }
 
@@ -1432,6 +1432,7 @@ const MyAgreements = () => {
               <AcordoPagamentoPanel
                 pagamento={pagamentoLoading ? null : pagamento}
                 obrigacao={obrigacaoPagamento}
+                lugarEstado={minhaLinha?.estado}
                 onUpdated={() => carregarPagamentoContactos(selected)}
               />
               <AcordoPagamentosHistorico
@@ -1445,6 +1446,8 @@ const MyAgreements = () => {
             <AcordoPagamentosMotoristaPanel
               rows={motoristaPagamentos}
               loading={pagamentoLoading}
+              acordoTerminado={!activo}
+              multiplePaymentSections={false}
             />
           ) : null}
 
