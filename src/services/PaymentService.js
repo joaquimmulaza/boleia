@@ -283,3 +283,39 @@ export async function getComprovativoSignedUrl(storagePath) {
   if (error) throw error;
   return data?.signedUrl ?? null;
 }
+
+/**
+ * Obrigação mensal + pagamento do lugar (RPC P0 — snapshot proporcional na BD).
+ * @param {string} acordoPassageiroId
+ * @returns {Promise<{ pagamento: object | null, lugar_estado: string, obrigacao: object | null }>}
+ */
+export async function getObrigacaoPagamentoPassageiro(acordoPassageiroId) {
+  const { data, error } = await supabase.rpc('get_obrigacao_pagamento_passageiro', {
+    p_acordo_passageiro_id: acordoPassageiroId,
+  });
+  if (error) throw error;
+  return data || { pagamento: null, lugar_estado: '', obrigacao: null };
+}
+
+/**
+ * Motorista: pagamentos pendentes do mês com snapshot proporcional (RPC P0).
+ * @param {string} acordoId
+ * @returns {Promise<object[]>}
+ */
+export async function listPagamentosPendentesMotoristaAcordo(acordoId) {
+  const { data, error } = await supabase.rpc('list_pagamentos_pendentes_motorista_acordo', {
+    p_acordo_id: acordoId,
+  });
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Admin: fila de pagamentos que requerem resolução manual (P0).
+ * @returns {Promise<object[]>}
+ */
+export async function listPagamentosResolucaoAdmin() {
+  const { data, error } = await supabase.rpc('list_pagamentos_resolucao_admin');
+  if (error) throw error;
+  return data || [];
+}

@@ -50,6 +50,7 @@ export const PAYMENT_STATES = Object.freeze({
   CUSTODIA: 'em_custodia',
   LIQUIDADO: 'liquidado',
   REEMBOLSADO: 'reembolsado',
+  ANULADO: 'anulado',
 });
 
 /** @type {Readonly<Record<string, readonly string[]>>} */
@@ -156,10 +157,12 @@ export function canTransitionPayment(from, to) {
 
 /**
  * @param {string | null | undefined} estado
+ * @param {{ placement?: 'painel' | 'cabecalho' }} [options] v1.5 — chip «Cancelado» vs «Pagamento cancelado»
  * @returns {string}
  */
-export function labelEstadoPagamento(estado) {
+export function labelEstadoPagamento(estado, options = {}) {
   const e = String(estado || '').toLowerCase();
+  const placement = options.placement === 'cabecalho' ? 'cabecalho' : 'painel';
   switch (e) {
     case PAYMENT_STATES.PENDENTE:
       return 'Pagamento pendente';
@@ -171,6 +174,8 @@ export function labelEstadoPagamento(estado) {
       return 'Liquidado';
     case PAYMENT_STATES.REEMBOLSADO:
       return 'Reembolsado';
+    case PAYMENT_STATES.ANULADO:
+      return placement === 'cabecalho' ? 'Pagamento cancelado' : 'Cancelado';
     default:
       return estado || '—';
   }
@@ -194,6 +199,8 @@ export function helpEstadoPagamento(estado) {
       return 'Comprovativo enviado — aguarda validação.';
     case PAYMENT_STATES.REEMBOLSADO:
       return 'Valor devolvido ao passageiro.';
+    case PAYMENT_STATES.ANULADO:
+      return 'Este pagamento foi cancelado — não há valor em dívida.';
     default:
       return null;
   }
@@ -256,6 +263,8 @@ export function chipClassEstadoPagamento(estado) {
       return 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100';
     case PAYMENT_STATES.REEMBOLSADO:
       return 'bg-violet-100 text-violet-900 dark:bg-violet-950/50 dark:text-violet-100';
+    case PAYMENT_STATES.ANULADO:
+      return 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400 line-through decoration-slate-400/80';
     default:
       return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
   }

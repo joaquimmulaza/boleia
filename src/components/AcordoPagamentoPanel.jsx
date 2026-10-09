@@ -5,7 +5,12 @@ import {
   labelEstadoPagamento,
   helpEstadoPagamento,
   chipClassEstadoPagamento,
+  PAYMENT_STATES,
 } from '../utils/paymentStatus';
+import {
+  linhaProporcionalPagamento,
+  linhaPrazoPagamento,
+} from '../utils/pagamentoObrigacaoCopy';
 import { basenameComprovativoPath } from '../utils/comprovativoPath';
 import { getPlatformIban, uploadComprovativo } from '../services/PaymentService';
 import FeedbackAlert from './FeedbackAlert';
@@ -22,10 +27,11 @@ import FeedbackAlert from './FeedbackAlert';
  *     comprovativo_path?: string | null,
  *     rejeicao_motivo?: string | null,
  *   } | null,
+ *   obrigacao?: import('../utils/pagamentoObrigacaoCopy.js').ObrigacaoSnapshot | null,
  *   onUpdated?: () => void,
  * }} props
  */
-function AcordoPagamentoPanel({ pagamento, onUpdated }) {
+function AcordoPagamentoPanel({ pagamento, obrigacao = null, onUpdated }) {
   const inputRef = useRef(/** @type {HTMLInputElement | null} */ (null));
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState(/** @type {{ type: 'success' | 'error', text: string } | null} */ (null));
@@ -40,9 +46,12 @@ function AcordoPagamentoPanel({ pagamento, onUpdated }) {
 
   const platformIban = getPlatformIban();
   const ibanConfigurado = Boolean(platformIban);
-  const podeEnviar = ['pendente_pagamento', 'comprovativo_enviado'].includes(
-    String(pagamento.estado || '').toLowerCase(),
-  );
+  const estadoNorm = String(pagamento.estado || '').toLowerCase();
+  const podeEnviar = ['pendente_pagamento', 'comprovativo_enviado'].includes(estadoNorm)
+    && estadoNorm !== PAYMENT_STATES.ANULADO;
+  const linhaProp = linhaProporcionalPagamento(obrigacao);
+  const linhaPrazo = linhaPrazoPagamento(obrigacao?.prazo ?? pagamento.prazo_pagamento_em);
+  const valorExibir = obrigacao?.valor != null ? obrigacao.valor : pagamento.valor_kz;
   const comprovativoNome = basenameComprovativoPath(pagamento.comprovativo_path);
   const temComprovativo = Boolean(comprovativoNome);
   const labelUpload = temComprovativo ? 'Substituir comprovativo' : 'Enviar comprovativo';
@@ -80,7 +89,7 @@ function AcordoPagamentoPanel({ pagamento, onUpdated }) {
           className={`text-xs font-semibold px-2 py-1 rounded-full ${chipClassEstadoPagamento(pagamento.estado)}`}
           title={helpEstado || undefined}
         >
-          {labelEstadoPagamento(pagamento.estado)}
+          {labelEstadoPagamento(pagamento.estado, { placement: 'painel' })}
         </span>
       </div>
 
@@ -88,10 +97,22 @@ function AcordoPagamentoPanel({ pagamento, onUpdated }) {
         <p className="text-xs text-slate-500 text-pretty">{helpEstado}</p>
       ) : null}
 
+      {linhaProp ? (
+        <p className="text-xs text-slate-600 dark:text-slate-300 text-pretty" data-testid="linha-proporcional-pagamento">
+          {linhaProp}
+        </p>
+      ) : null}
+
+      {linhaPrazo ? (
+        <p className="text-xs text-amber-800 dark:text-amber-200" data-testid="linha-prazo-pagamento">
+          {linhaPrazo}
+        </p>
+      ) : null}
+
       <p className="text-sm text-slate-600 dark:text-slate-300">
-        Valor acordado:{' '}
+        {linhaProp ? 'Valor a pagar agora' : 'Valor acordado'}:{' '}
         <strong className="tabular-nums text-slate-900 dark:text-white">
-          {formatKwanza(pagamento.valor_kz)} Kz
+          {formatKwanza(valorExibir)} Kz
         </strong>
       </p>
 

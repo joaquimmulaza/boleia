@@ -17,6 +17,7 @@ import {
   listPagamentosPendentesValidacao,
   listPagamentosEmCustodia,
   listRepassesMotorista,
+  listPagamentosResolucaoAdmin,
 } from '../services/PaymentService';
 import {
   computeRepasseLiquidoKz,
@@ -24,21 +25,25 @@ import {
   chipClassEstadoRepasse,
   resumoLiquidacaoPeriodo,
   findMotoristasSemIban,
+  labelEstadoPagamento,
+  chipClassEstadoPagamento,
 } from '../utils/paymentStatus';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 
-/** @typedef {'validar' | 'custodia' | 'repasses'} AdminPagamentosTab */
+/** @typedef {'validar' | 'custodia' | 'repasses' | 'resolucao'} AdminPagamentosTab */
 
 const TABS = /** @type {const} */ ([
   { id: 'validar', label: 'Validar comprovativos' },
   { id: 'custodia', label: 'Custódia e liquidação' },
   { id: 'repasses', label: 'Repasses motorista' },
+  { id: 'resolucao', label: 'Resolução manual' },
 ]);
 
 const AdminPagamentos = () => {
   const [rows, setRows] = useState([]);
   const [custodiaRows, setCustodiaRows] = useState([]);
   const [repasses, setRepasses] = useState([]);
+  const [resolucaoRows, setResolucaoRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(/** @type {AdminPagamentosTab} */ ('validar'));
   const [periodBusy, setPeriodBusy] = useState(false);
@@ -66,14 +71,16 @@ const AdminPagamentos = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [pendentes, custodia, repasseRows] = await Promise.all([
+      const [pendentes, custodia, repasseRows, resolucao] = await Promise.all([
         listPagamentosPendentesValidacao(),
         listPagamentosEmCustodia(),
         listRepassesMotorista(),
+        listPagamentosResolucaoAdmin(),
       ]);
       setRows(pendentes);
       setCustodiaRows(custodia);
       setRepasses(repasseRows);
+      setResolucaoRows(resolucao);
     } catch (error) {
       console.error('Erro ao listar pagamentos:', error);
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(error) });
@@ -482,6 +489,50 @@ const AdminPagamentos = () => {
                   </li>
                 );
               })}
+            </ul>
+          )}
+        </>
+      ) : null}
+
+      {activeTab === 'resolucao' ? (
+        <>
+          <p className="mb-3 text-sm text-slate-600 dark:text-slate-300 text-pretty">
+            Pagamentos validados com acordo terminado ou lugar expirado — requerem decisão manual (P0).
+          </p>
+          {loading ? (
+            <div className="flex justify-center py-8 text-slate-500">
+              <Loader2 className="animate-spin" aria-hidden="true" />
+            </div>
+          ) : resolucaoRows.length === 0 ? (
+            <p className="text-sm text-slate-500" data-testid="admin-resolucao-vazio">
+              Nenhum pagamento pendente de resolução.
+            </p>
+          ) : (
+            <ul className="space-y-3" data-testid="admin-resolucao-lista">
+              {resolucaoRows.map((row) => (
+                <li
+                  key={row.id}
+                  className="rounded-xl border border-amber-200/80 bg-amber-50/50 dark:bg-amber-950/20 p-4 space-y-2"
+                  data-testid={`resolucao-pagamento-${row.id}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold tabular-nums">
+                      {formatKwanza(row.valor_kz)} Kz
+                    </span>
+                    <span
+                      className={`text-xs font-bold px-2 py-1 rounded-full ${chipClassEstadoPagamento(row.estado)}`}
+                    >
+                      {labelEstadoPagamento(row.estado, { placement: 'cabecalho' })}
+                    </span>
+                  </div>
+                  {row.resolucao_admin_motivo ? (
+                    <p className="text-xs text-amber-900 dark:text-amber-100">
+                      {row.resolucao_admin_motivo}
+                    </p>
+                  ) : null}
+                  <p className="text-xs text-slate-500 font-mono truncate">ID {row.id}</p>
+                </li>
+              ))}
             </ul>
           )}
         </>
