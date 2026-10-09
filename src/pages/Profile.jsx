@@ -9,6 +9,7 @@ import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import InstallAppCard from '../components/InstallAppCard';
+import PushNotificationsToggle from '../components/PushNotificationsToggle';
 import LoginMethodsSection from '../components/LoginMethodsSection';
 import ConfirmationModal from '../components/ConfirmationModal';
 
@@ -182,6 +183,8 @@ const Profile = () => {
             {feedback.text}
           </div>
         )}
+
+        <PushNotificationsToggle />
 
         <InstallAppCard />
 

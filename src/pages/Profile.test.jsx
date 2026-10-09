@@ -32,6 +32,10 @@ vi.mock('../services/AccountService', () => ({
   deleteOwnAccount: vi.fn(),
 }));
 
+vi.mock('../components/PushNotificationsToggle', () => ({
+  default: () => <div data-testid="push-notifications-toggle-stub" />,
+}));
+
 describe('Profile Component', () => {
 
   const renderComponent = async () => {
