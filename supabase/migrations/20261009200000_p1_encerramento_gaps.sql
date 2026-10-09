@@ -1,4 +1,5 @@
 -- P1 encerramento: idempotência 2.ª confirmação consensual + notificação motorista em leave_passenger
+-- Depende de #249 (20261009190000_leave_passenger_reservado_saiu): merge #249 antes de #250.
 
 CREATE OR REPLACE FUNCTION public.leave_passenger(
   p_acordo_id uuid,
@@ -17,6 +18,7 @@ DECLARE
   v_row public.acordos_passageiros%ROWTYPE;
   v_hoje date := (timezone('Africa/Luanda', now()))::date;
   v_estado_antes text;
+  v_pg_id uuid;
   v_estado_acordo text;
 BEGIN
   IF v_uid IS NULL THEN
@@ -67,10 +69,26 @@ BEGIN
   v_estado_antes := lower(v_row.estado);
 
   IF v_estado_antes = 'reservado' THEN
-    PERFORM public._expirar_lugar_reservado_sem_divida(
-      v_row.id,
-      'Saíste antes da activação do lugar'
-    );
+    UPDATE public.acordos_passageiros
+    SET
+      estado = 'saiu',
+      reservado_expira_em = NULL
+    WHERE id = v_row.id
+      AND lower(estado) = 'reservado';
+
+    SELECT id INTO v_pg_id
+    FROM public.pagamentos_acordo
+    WHERE acordo_passageiro_id = v_row.id
+      AND mes_referencia = date_trunc('month', timezone('Africa/Luanda', now()))::date
+    ORDER BY created_at DESC
+    LIMIT 1;
+
+    IF v_pg_id IS NOT NULL THEN
+      PERFORM public._anular_pagamento_sem_divida(
+        v_pg_id,
+        'Saíste antes da activação do lugar'
+      );
+    END IF;
   ELSE
     UPDATE public.acordos_passageiros SET estado = 'saiu' WHERE id = v_row.id;
     PERFORM public.ajustar_obrigacao_pagamento_mes(v_row.id, v_hoje, false);

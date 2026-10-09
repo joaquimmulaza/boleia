@@ -35,9 +35,32 @@ describe('P1 encerramento — regra 3 (notificação motorista leave)', () => {
     expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\.leave_passenger/);
   });
 
+  it('leave_passenger mantém corpo PR #249 (reservado → saiu, _anular_pagamento)', () => {
+    const sql = readFileSync(join(MIGRATIONS, MIGRATION_FILE), 'utf8');
+    expect(sql).toMatch(/v_estado_antes = 'reservado'/);
+    expect(sql).toMatch(/estado = 'saiu'/);
+    expect(sql).toMatch(/_anular_pagamento_sem_divida/);
+    expect(sql).not.toMatch(/_expirar_lugar_reservado_sem_divida/);
+    expect(sql).toMatch(/Depende de #249/);
+  });
+
   it('script prova PG leave existe', () => {
     expect(existsSync(join(ROOT, '../../supabase/tests/p1_leave_passenger_driver_notif_pg_proof.sql'))).toBe(
       true,
     );
+    expect(existsSync(join(ROOT, '../../supabase/tests/p1_leave_passenger_reservado_saiu_pg_proof.sql'))).toBe(
+      true,
+    );
+    expect(
+      existsSync(
+        join(ROOT, '../../supabase/tests/fixtures/20261009190000_leave_passenger_reservado_saiu.sql'),
+      ),
+    ).toBe(true);
+  });
+
+  it('runner PG aplica fixture #249 antes de 200000', () => {
+    const sh = readFileSync(PG_PROOF, 'utf8');
+    expect(sh).toMatch(/20261009190000_leave_passenger_reservado_saiu/);
+    expect(sh).toMatch(/p1_leave_passenger_reservado_saiu_pg_proof/);
   });
 });
