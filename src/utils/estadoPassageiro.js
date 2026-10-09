@@ -7,7 +7,7 @@ import {
   isAnulacaoMotivoAcordoTerminadoAntesActivacao,
   isAnulacaoMotivoSaidaVoluntaria,
 } from './pagamentoAnulacaoMotivo.js';
-
+import { PAYMENT_STATES } from './paymentStatus.js';
 /**
  * @param {string | null | undefined} estado
  * @returns {string}
@@ -53,6 +53,17 @@ export function isReservadoPassageiro(estado) {
 }
 
 /**
+ * Lugar ocupa vaga no acordo — só `acordos_passageiros.estado` (`activo`|`reservado`).
+ *
+ * @param {string | null | undefined} estado
+ * @returns {boolean}
+ */
+export function isLugarVivoPassageiro(estado) {
+  const e = normalizeEstadoPassageiroKey(estado);
+  return e === 'activo' || e === 'reservado';
+}
+
+/**
  * @param {string | null | undefined} estado
  * @param {{ anulacao_motivo?: string | null } | null | undefined} [pagamento]
  * @returns {boolean}
@@ -82,15 +93,89 @@ export function isExpiradoPassageiro(estado, pagamento) {
 }
 
 /**
+ * @param {{ acordos_passageiros?: Array<{ passenger_id?: string, estado?: string }> }} acordo
+ * @returns {Array<{ passenger_id?: string, estado?: string }>}
+ */
+export function lugaresVivos(acordo) {
+  return lugaresVivosFromLinhas(acordo?.acordos_passageiros);
+}
+
+/**
+ * @param {Array<{ passenger_id?: string, estado?: string }> | null | undefined} linhas
+ * @returns {Array<{ passenger_id?: string, estado?: string }>}
+ */
+export function lugaresVivosFromLinhas(linhas) {
+  const rows = Array.isArray(linhas) ? linhas : [];
+  return rows.filter((p) => isLugarVivoPassageiro(p.estado));
+}
+
+/**
+ * @param {Array<{ passenger_id?: string, estado?: string }>} linhas
+ * @returns {{ total: number, confirmados: number, reservados: number }}
+ */
+export function contagemLugaresVivos(linhas) {
+  const vivos = lugaresVivosFromLinhas(linhas);
+  let confirmados = 0;
+  let reservados = 0;
+  vivos.forEach((p) => {
+    if (isActivoPassageiro(p.estado)) confirmados += 1;
+    else if (isReservadoPassageiro(p.estado)) reservados += 1;
+  });
+  return { total: vivos.length, confirmados, reservados };
+}
+
+/**
  * @param {Array<{ estado?: string }>} linhas
  * @returns {{ confirmados: number, reservados: number }}
  */
 export function countPassageirosConfirmadosReservados(linhas) {
-  const rows = Array.isArray(linhas) ? linhas : [];
-  return {
-    confirmados: rows.filter((p) => isActivoPassageiro(p.estado)).length,
-    reservados: rows.filter((p) => isReservadoPassageiro(p.estado)).length,
-  };
+  const { confirmados, reservados } = contagemLugaresVivos(linhas);
+  return { confirmados, reservados };
+}
+
+/**
+ * Motorista — oculta só pagamentos `anulado` de lugares não vivos; dívidas/histórico mantêm-se.
+ *
+ * @param {object[]} rows
+ * @param {{ linhas?: Array<{ passenger_id?: string, estado?: string }> }} ctx
+ * @returns {object[]}
+ */
+export function filterMotoristaPagamentosLugaresVivos(rows, ctx = {}) {
+  const list = Array.isArray(rows) ? rows : [];
+  const linhas = ctx.linhas || [];
+  /** @type {Map<string, { estado?: string }>} */
+  const linhaPorPassageiro = new Map(
+    linhas.map((p) => [String(p.passenger_id || ''), p]),
+  );
+
+  return list.filter((row) => {
+    const pid = String(row.passenger_id || '');
+    if (!pid) return false;
+
+    const linha = linhaPorPassageiro.get(pid);
+    if (!linha || isLugarVivoPassageiro(linha.estado)) {
+      return true;
+    }
+
+    const pgEst = String(row.estado || '').toLowerCase();
+    return pgEst !== PAYMENT_STATES.ANULADO;
+  });
+}
+
+/**
+ * @param {object | null | undefined} contactos
+ * @param {Set<string> | string[]} livePassengerIds
+ * @returns {object | null}
+ */
+export function filterContactosPassageirosVivos(contactos, livePassengerIds) {
+  if (!contactos || contactos.bloqueado) return contactos ?? null;
+  const allow = livePassengerIds instanceof Set
+    ? livePassengerIds
+    : new Set((livePassengerIds || []).map((id) => String(id)));
+  const passageiros = (contactos.passageiros || []).filter((p) =>
+    allow.has(String(p.passenger_id || '')),
+  );
+  return { ...contactos, passageiros };
 }
 
 /**

@@ -108,13 +108,16 @@ import {
   isActivoPassageiro,
   isReservadoPassageiro,
   isExpiradoPassageiro,
-  countPassageirosConfirmadosReservados,
+  contagemLugaresVivos,
   formatContagemPassageiros,
   labelChipEstadoPassageiro,
   chipClassEstadoPassageiro,
   GLOSSARIO_ESTADOS_LUGAR,
   mostrarChipEstadoLugarPassageiro,
   estadoPassageiroParaChip,
+  lugaresVivosFromLinhas,
+  filterMotoristaPagamentosLugaresVivos,
+  filterContactosPassageirosVivos,
 } from '../utils/estadoPassageiro';
 import { formatPrimeiroNome } from '../utils/primeiroNome';
 
@@ -170,19 +173,6 @@ function podeCarregarContactos(estado) {
 }
 
 /**
- * Soft-hold: lugar ocupado mas ainda não confirmado (até em_custodia).
- * @param {string | null | undefined} estado
- * @returns {boolean}
- */
-function isReservado(estado) {
-  return isReservadoPassageiro(estado);
-}
-
-/**
- * @param {string | null | undefined} estado
- * @returns {boolean}
- */
-/**
  * @param {string | null | undefined} estado
  * @param {{ anulacao_motivo?: string | null } | null | undefined} [pagamento]
  */
@@ -206,9 +196,9 @@ function isNoAcordo(estado) {
  * @returns {object | null}
  */
 function pickLinhaVivaPassageiro(linhas) {
+  const vivos = lugaresVivosFromLinhas(linhas);
+  if (vivos[0]) return vivos[0];
   const list = linhas || [];
-  const viva = list.find((p) => isNoAcordo(p.estado));
-  if (viva) return viva;
   return list[0] ?? null;
 }
 
@@ -393,6 +383,9 @@ const MyAgreements = () => {
     const podeContactos = podeCarregarContactos(acordo.estado);
     setPagamentoLoading(true);
     setContactosLoading(podeContactos);
+    if (tipoPerfil === 'Motorista') {
+      setMotoristaPagamentos([]);
+    }
     try {
       const pagamentos = await listPagamentosByAcordo(acordo.id);
       setPagamentosAcordo(pagamentos);
@@ -1164,7 +1157,6 @@ const MyAgreements = () => {
     const rota = labelRotaOferta(oferta || {});
     const horaPartida = formatHora(oferta?.departure_time);
     const linhas = selected.acordos_passageiros || [];
-    const nLinhas = selected.n_passageiros_contrato || linhas.length || 0;
     const activo = isActivo(selected.estado);
     const isPassageiro = tipoPerfil === 'Passageiro';
     const isMotorista = tipoPerfil === 'Motorista';
@@ -1173,6 +1165,11 @@ const MyAgreements = () => {
       ? chipCtxForAcordoPassageiro(selected.id, minhaLinha.passenger_id)
       : null;
     const pagamentoViewer = mergePagamentoComChipContexto(pagamento, minhaChipCtxSheet);
+    const {
+      total: nPassageirosVivos,
+      confirmados: nConfirmados,
+      reservados: nReservados,
+    } = contagemLugaresVivos(linhas);
     const quotaDestaque =
       minhaLinha?.quota_mensal_kz ?? selected.valor_mensal_por_passageiro_kz;
     const podeSair =
@@ -1184,8 +1181,6 @@ const MyAgreements = () => {
     const minhaExpirada = Boolean(
       minhaLinha && isExpirado(minhaLinha.estado, pagamentoViewer),
     );
-    const { confirmados: nConfirmados, reservados: nReservados } =
-      countPassageirosConfirmadosReservados(linhas);
     const contagemPassageiros = formatContagemPassageiros(nConfirmados, nReservados);
     const mostrarContagemPassageiros = nConfirmados + nReservados > 0;
     const podeRenegociar =
@@ -1274,13 +1269,26 @@ const MyAgreements = () => {
         : [];
 
     const passageirosReservadosAguardar = isMotorista
-      ? linhas
-        .filter((p) => isReservado(p.estado))
+      ? lugaresVivosFromLinhas(linhas)
+        .filter((p) => isReservadoPassageiro(p.estado))
         .map((p) => ({
           passenger_id: p.passenger_id,
           nome: String(p.perfis?.nome_completo || '').trim() || 'Passageiro',
         }))
       : [];
+
+    const motoristaPagamentosVivos = filterMotoristaPagamentosLugaresVivos(motoristaPagamentos, {
+      linhas,
+    });
+
+    const idsPassageirosVivos = new Set(
+      lugaresVivosFromLinhas(linhas)
+        .map((p) => String(p.passenger_id || ''))
+        .filter(Boolean),
+    );
+    const contactosFiltrados = isMotorista
+      ? filterContactosPassageirosVivos(contactos, idsPassageirosVivos)
+      : contactos;
 
     const pagamentoUiPassageiro = isPassageiro
       ? resolveAcordoPagamentoUiPassageiro({
@@ -1653,7 +1661,7 @@ const MyAgreements = () => {
 
           {isMotorista ? (
             <AcordoPagamentosMotoristaPanel
-              rows={motoristaPagamentos}
+              rows={motoristaPagamentosVivos}
               loading={pagamentoLoading}
               acordoTerminado={!activo}
               multiplePaymentSections={false}
@@ -1662,7 +1670,7 @@ const MyAgreements = () => {
 
           {podeCarregarContactos(selected.estado) ? (
             <AcordoContactosPanel
-              contactos={contactos}
+              contactos={contactosFiltrados}
               loading={contactosLoading}
               mostrarProximoPassoPagamento={Boolean(
                 isPassageiro
@@ -1678,7 +1686,7 @@ const MyAgreements = () => {
             <section className="space-y-3">
               <div className="space-y-1">
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                  Passageiros · {nLinhas || linhas.length}
+                  Passageiros · {nPassageirosVivos}
                 </p>
                 {mostrarContagemPassageiros ? (
                   <p
@@ -1779,7 +1787,7 @@ const MyAgreements = () => {
             </section>
           ) : (
             <p className="text-sm text-slate-500">
-              Passageiros · {nLinhas || 0}
+              Passageiros · {nPassageirosVivos}
             </p>
           )}
 

@@ -50,6 +50,15 @@ describe('estadoPassageiro — chip por estado', () => {
     })).toBe(true);
   });
 
+  it('reservado + pagamento anulado mantém chip Reservado (inconsistência visível; DB deve ser saiu)', () => {
+    const pagamento = {
+      estado: 'anulado',
+      anulacao_motivo: ANULACAO_MOTIVO.SAISTE_ANTES_ACTIVACAO,
+    };
+    expect(estadoPassageiroParaChip('reservado', pagamento)).toBe('reservado');
+    expect(labelChipEstadoPassageiro('reservado', pagamento)).toBe('Reservado');
+  });
+
   it('legacy: expirado + saída voluntária → chip Saiu', () => {
     const pagamento = { anulacao_motivo: ANULACAO_MOTIVO.SAISTE_ANTES_ACTIVACAO };
     expect(estadoPassageiroParaChip('expirado', pagamento)).toBe('saiu');
