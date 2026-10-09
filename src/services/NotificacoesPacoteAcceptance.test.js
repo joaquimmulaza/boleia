@@ -11,6 +11,7 @@ const ROOT = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS = join(ROOT, '../../supabase/migrations');
 const MIGRATION_FILE = '20261009210000_notificacoes_pacote.sql';
 const MIGRATION_LAST_PAX = '20261009220000_last_passenger_leave_driver_notif.sql';
+const MIGRATION_B4 = '20261009230000_notif_b4_txid_cancel_suppress.sql';
 const MIG_P1 = '20261009200000_p1_encerramento_gaps.sql';
 
 /** @param {string} filename */
@@ -98,31 +99,38 @@ describe('Pacote notificações — último passageiro (PM)', () => {
     expect(existsSync(join(MIGRATIONS, MIGRATION_LAST_PAX))).toBe(true);
   });
 
-  it('leave_passenger activa skip do trigger antes de fechar acordo sem lugares vivos', () => {
-    const sql = readMigration(MIGRATION_LAST_PAX);
-    const body = extractLeavePassengerBody(MIGRATION_LAST_PAX);
-    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\.leave_passenger/);
-    expect(body).toContain("set_config('boleia.skip_acordo_cancel_notif', 'on', true)");
-    const skipOn = body.indexOf("set_config('boleia.skip_acordo_cancel_notif', 'on', true)");
-    const maybeFechar = body.indexOf('PERFORM public._maybe_fechar_acordo_sem_lugares_vivos');
-    expect(skipOn).toBeGreaterThan(-1);
-    expect(maybeFechar).toBeGreaterThan(skipOn);
-    expect(sql).toContain('A tua oferta continua publicada.');
-    expect(sql).toContain('saiu e o acordo foi encerrado.');
-    expect(sql).toContain('O último passageiro saiu e o acordo foi encerrado.');
+  it('B4: leave_passenger regista suppress txid (self-leave vs motorista remove último)', () => {
+    const body = extractLeavePassengerBody(MIGRATION_B4);
+    expect(body).toContain('_acordo_cancel_notif_suppress');
+    expect(body).toContain('last_passenger_self_left');
+    expect(body).toContain('last_passenger_driver_removed');
+    expect(body).toMatch(/last_passenger_self_left[\s\S]{0,120}true, true/);
+    expect(body).toMatch(/last_passenger_driver_removed[\s\S]{0,120}true, false/);
+    expect(body).not.toContain("set_config('boleia.skip_acordo_cancel_notif'");
+    expect(body).toMatch(/v_estado_acordo = 'cancelado'/);
+    expect(body).toMatch(/metadata, link\)/);
   });
 
-  it('último passageiro — notificação sem link (sem CTA); parcial mantém link', () => {
-    const pacote = extractLeavePassengerBody(MIGRATION_LAST_PAX);
-    expect(pacote).toMatch(/v_ultimo_passageiro_saiu/);
-    expect(pacote).toMatch(/INSERT INTO public\.notificacoes \(user_id, mensagem, tipo, metadata\)/);
-    expect(pacote).toContain('Ficou um lugar livre.');
+  it('B4: trigger handle_acordo_notifications usa txid + tabela (não GUC)', () => {
+    const sql = readMigration(MIGRATION_B4);
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\.handle_acordo_notifications/);
+    expect(sql).toContain('_acordo_cancel_notif_suppress');
+    expect(sql).toContain('txid_current()');
+    expect(sql).not.toMatch(/skip_acordo_cancel_notif/);
   });
 
-  it('documenta reutilização de boleia.skip_acordo_cancel_notif (trigger handle_acordo_notifications)', () => {
-    const sql = readMigration(MIGRATION_LAST_PAX);
-    expect(sql).toMatch(/handle_acordo_notifications|skip_acordo_cancel_notif/i);
-    expect(sql).not.toContain('Um acordo foi cancelado.');
+  it('B4: backfill rescisao_solicitada_em ORDER BY created_at DESC', () => {
+    const sql = readMigration(MIGRATION_B4);
+    expect(sql).toMatch(/created_at DESC/);
+  });
+
+  it('script prova PG B4 incluída no pacote leave', () => {
+    const proof = readFileSync(
+      join(ROOT, '../../supabase/tests/notif_pacote_leave_passenger_pg_proof.sql'),
+      'utf8',
+    );
+    expect(proof).toContain('FAIL B4');
+    expect(proof).toContain('skip_acordo_cancel_notif');
   });
 });
 
