@@ -7,3 +7,6 @@
 ## 2024-05-18 - Missing interactive role for custom interactive elements
 **Learning:** Using `tabIndex={0}` and `onKeyDown` allows users to navigate list items via keyboard, but screen readers may not announce them as actionable elements without a proper semantic role (e.g., `role="button"` or `role="link"`).
 **Action:** Always complement `tabIndex={0}` with appropriate ARIA roles on non-semantic interactive elements.
+## 2024-10-09 - Missing focus states on sheet/modal custom buttons
+**Learning:** Interactive components like bottom sheets and modals often use plain `<button>` elements instead of standard `<Button />` components for bespoke layouts. These bespoke buttons frequently miss out on hover and focus-visible styles, negatively impacting accessibility and visual feedback.
+**Action:** When working on modals and sheets, verify that all plain `<button>` elements implement standard focus rings (`focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900`) and appropriate hover styles.

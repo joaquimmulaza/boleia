@@ -26,7 +26,7 @@ export default function ExploreFilteredEmpty({ onCriarProcura }) {
       <button
         type="button"
         onClick={() => navigate('/explorar')}
-        className="block w-full text-sm font-bold text-primary"
+        className="block w-full text-sm font-bold text-primary rounded-md hover:bg-primary/5 dark:hover:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 px-3 py-1.5"
       >
         Ver todas as boleias
       </button>
