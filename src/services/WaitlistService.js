@@ -16,7 +16,6 @@ export async function enqueueWaitlist(input) {
         oferta_id: input.oferta_id,
         procura_id: input.procura_id,
         grupo_id: input.grupo_id ?? null,
-        estado: 'activa',
       },
     ])
     .select()
