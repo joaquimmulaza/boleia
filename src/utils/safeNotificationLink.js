@@ -11,6 +11,38 @@ export const INTERNAL_NOTIFICATION_URL_BASE = 'https://app.invalid';
 export const UNSAFE_NOTIFICATION_LINK_CHARS_RE = /[\u0000-\u001F\u007F\\]/;
 
 /**
+ * Validação pós-normalização (URL parser colapsa `..` → pathname `//host` open-redirect).
+ *
+ * @param {string} out pathname + search + hash
+ * @returns {boolean}
+ */
+export function isSafeNormalizedInternalPath(out) {
+  if (!out.startsWith('/') || out.startsWith('//') || out.includes('\\')) {
+    return false;
+  }
+  const q = out.indexOf('?');
+  const hashIdx = out.indexOf('#');
+  let pathEnd = out.length;
+  if (q >= 0) pathEnd = Math.min(pathEnd, q);
+  if (hashIdx >= 0) pathEnd = Math.min(pathEnd, hashIdx);
+  const pathOnly = out.slice(0, pathEnd);
+  try {
+    const decoded = decodeURIComponent(pathOnly);
+    if (decoded.startsWith('//') || decoded.includes('\\')) {
+      return false;
+    }
+  } catch {
+    return false;
+  }
+  try {
+    const url = new URL(out, INTERNAL_NOTIFICATION_URL_BASE);
+    return url.origin === INTERNAL_NOTIFICATION_URL_BASE;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * @param {unknown} link
  * @returns {boolean}
  */
@@ -35,10 +67,8 @@ export function isSafeInternalNotificationPath(link) {
     if (url.origin !== INTERNAL_NOTIFICATION_URL_BASE) {
       return false;
     }
-    if (!url.pathname.startsWith('/')) {
-      return false;
-    }
-    return true;
+    const out = `${url.pathname}${url.search}${url.hash}`;
+    return isSafeNormalizedInternalPath(out);
   } catch {
     return false;
   }
@@ -54,7 +84,11 @@ export function sanitizeNotificationLink(link, fallback = '/') {
     return fallback;
   }
   const url = new URL(/** @type {string} */ (link).trim(), INTERNAL_NOTIFICATION_URL_BASE);
-  return `${url.pathname}${url.search}${url.hash}`;
+  const out = `${url.pathname}${url.search}${url.hash}`;
+  if (!isSafeNormalizedInternalPath(out)) {
+    return fallback;
+  }
+  return out;
 }
 
 /**

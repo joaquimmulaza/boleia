@@ -189,6 +189,11 @@ describe('notificationRouter', () => {
         '/\t/evil.com',
         '/\n/evil.com',
         '/\r/evil.com',
+        '/..//evil.com',
+        '/.//evil.com',
+        '/a/..//evil.com',
+        '/%2e%2e//evil.com',
+        '/%2F%2Fevil.com',
         'javascript:alert(1)',
       ];
       for (const link of attacks) {

@@ -47,6 +47,21 @@ describe('safeNotificationLink — caminhos internos (B2 open redirect)', () => 
     expect(sanitizeNotificationLink('javascript:alert(1)')).toBe('/');
   });
 
+  it('rejeita bypass por colapso de segmentos .. (pathname //host após normalize)', () => {
+    const attacks = [
+      '/..//evil.com',
+      '/.//evil.com',
+      '/a/..//evil.com',
+      '/%2e%2e//evil.com',
+      '/%2F%2Fevil.com',
+    ];
+    for (const raw of attacks) {
+      expect(isSafeInternalNotificationPath(raw)).toBe(false);
+      expect(sanitizeNotificationLink(raw)).toBe('/');
+      expect(resolvePushNotificationUrl(raw)).toBe('/');
+    }
+  });
+
   it('fallback customizável', () => {
     expect(sanitizeNotificationLink('https://evil.com', '/acordos')).toBe('/acordos');
   });
