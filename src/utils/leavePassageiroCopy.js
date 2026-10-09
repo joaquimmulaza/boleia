@@ -46,7 +46,7 @@ export function copyConfirmacaoSaidaPassageiro(ctx) {
   if (pagamentoPendenteOuComprovativo(ctx.pagamento?.estado)) {
     return (
       'Saída individual: o acordo mantém-se activo para os restantes. '
-      + 'O teu pagamento pendente será cancelado — não tens nada a pagar.'
+      + 'O teu pagamento pendente será cancelado. Não tens nada a pagar.'
     );
   }
   return (

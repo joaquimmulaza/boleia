@@ -192,7 +192,8 @@ describe('PACOTE ENG #15 — saída parcial passageiro 1:N', () => {
     it('MyAgreements: podeSair exige passageiro activo', () => {
       const src = readFileSync(join(ROOT, '../pages/MyAgreements.jsx'), 'utf8');
       expect(src).toMatch(/const podeSair\s*=\s*\n\s*isPassageiro && activo/);
-      expect(src).toMatch(/estadoPassageiroLabel/);
+      expect(src).toMatch(/labelChipEstadoPassageiro/);
+      expect(src).toMatch(/listAnulacaoMotivoLugarAcordos/);
       expect(src).toMatch(/saiu/);
     });
 

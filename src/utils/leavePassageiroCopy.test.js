@@ -44,7 +44,13 @@ describe('leavePassageiroCopy — saída antes vs depois da activação', () => 
         lugarEstado: 'reservado',
         pagamento: { estado: 'comprovativo_enviado' },
       }),
-    ).toMatch(/pagamento pendente será cancelado/);
+    ).toMatch(/pagamento pendente será cancelado\. Não tens nada a pagar\./);
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        lugarEstado: 'reservado',
+        pagamento: { estado: 'comprovativo_enviado' },
+      }),
+    ).not.toMatch(/cancelado — não/);
   });
 
   it('confirmação após activação mantém regra de quota', () => {
