@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   labelEstadoAcordo,
+  labelChipListaEstadoAcordo,
+  variantChipListaEstadoAcordo,
   variantChipEstadoAcordo,
   chipClassEstadoAcordoVariant,
   isAcordoEncerradoSemLugaresVivos,
@@ -117,6 +119,37 @@ describe('labelEstadoAcordo', () => {
     expect(labelEstadoAcordo('em_revisao_ops')).toBe('Em revisao ops');
     expect(labelEstadoAcordo(null)).toBe('—');
     expect(labelEstadoAcordo({ estado: null })).toBe('—');
+  });
+});
+
+describe('labelChipListaEstadoAcordo', () => {
+  const pedidoConsensual = {
+    estado: 'activo',
+    rescisao_modo: 'consensual',
+    rescisao_confirmada_em: null,
+    rescisao_solicitada_por: 'driver-1',
+  };
+
+  it('requerente vê Encerramento pedido', () => {
+    expect(labelChipListaEstadoAcordo(pedidoConsensual, 'driver-1')).toBe('Encerramento pedido');
+  });
+
+  it('contraparte vê Falta a tua confirmação', () => {
+    expect(labelChipListaEstadoAcordo(pedidoConsensual, 'pax-1')).toBe('Falta a tua confirmação');
+  });
+
+  it('contraparte usa variante aviso (warning)', () => {
+    expect(variantChipListaEstadoAcordo(pedidoConsensual, 'pax-1')).toBe('aviso');
+    expect(variantChipListaEstadoAcordo(pedidoConsensual, 'driver-1')).toBe('pendente');
+  });
+
+  it('cancelamento_pendente mostra Termina a {data}', () => {
+    const acordo = {
+      estado: 'cancelamento_pendente',
+      rescisao_effective_on: '2026-11-01',
+    };
+    expect(labelChipListaEstadoAcordo(acordo, 'user-1')).toMatch(/^Termina a 31 de outubro de 2026$/);
+    expect(variantChipListaEstadoAcordo(acordo, 'user-1')).toBe('pendente');
   });
 });
 

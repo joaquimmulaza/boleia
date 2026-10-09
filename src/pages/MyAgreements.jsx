@@ -35,8 +35,8 @@ import {
   subscribeMarketplaceHubRefresh,
 } from '../utils/marketplaceHubRefresh';
 import {
-  labelEstadoAcordo,
-  variantChipEstadoAcordo,
+  labelChipListaEstadoAcordo,
+  variantChipListaEstadoAcordo,
   chipClassEstadoAcordoVariant,
 } from '../utils/acordoEstadoDisplay';
 import {
@@ -1072,8 +1072,8 @@ const MyAgreements = () => {
     const oferta = acordo.ofertas_capacidade;
     const rota = labelRotaOferta(oferta || {});
     const activo = isActivo(acordo.estado);
-    const estadoVariant = variantChipEstadoAcordo(acordo);
-    const estadoLabel = labelEstadoAcordo(acordo);
+    const estadoVariant = variantChipListaEstadoAcordo(acordo, user?.id);
+    const estadoLabel = labelChipListaEstadoAcordo(acordo, user?.id);
     const leavePending = Boolean(pendingLeaveIds[acordo.id]);
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
     const minhaChipCtxCard = minhaLinha
@@ -1206,11 +1206,7 @@ const MyAgreements = () => {
       nConfirmados >= 1 &&
       !minhaReservada &&
       (isMotorista || (isPassageiro && podeSair));
-    const temRescisaoConsensualAberta =
-      activo &&
-      String(selected.rescisao_modo || '').toLowerCase() === 'consensual' &&
-      selected.rescisao_solicitada_por;
-    const podeEncerrar = activo && (isMotorista || podeSair) && !temRescisaoConsensualAberta;
+    const podeEncerrar = activo && (isMotorista || podeSair);
     const passageirosActivosIds = linhas
       .filter((p) => isActivo(p.estado))
       .map((p) => p.passenger_id)

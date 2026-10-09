@@ -1450,6 +1450,58 @@ describe('MyAgreements — marketplace 1:N', () => {
     expect(within(dialog).queryByRole('button', { name: /Sair só eu/i })).not.toBeInTheDocument();
   });
 
+  describe('chip lista encerramento consensual', () => {
+    it('requerente vê chip Encerramento pedido na lista', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver.mockResolvedValue([
+        {
+          ...acordoMotorista,
+          rescisao_modo: 'consensual',
+          rescisao_confirmada_em: null,
+          rescisao_solicitada_por: 'driver-1',
+        },
+      ]);
+
+      renderPage();
+
+      expect(await screen.findByText('Encerramento pedido')).toBeInTheDocument();
+    });
+
+    it('contraparte vê chip Falta a tua confirmação na lista', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+      getAgreementsForPassenger.mockResolvedValue([
+        {
+          ...acordoPassageiro,
+          rescisao_modo: 'consensual',
+          rescisao_confirmada_em: null,
+          rescisao_solicitada_por: 'driver-1',
+        },
+      ]);
+
+      renderPage();
+
+      expect(await screen.findByText('Falta a tua confirmação')).toBeInTheDocument();
+    });
+
+    it('contraparte com pedido pendente mantém Encerrar acordo no kebab', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+      getAgreementsForPassenger.mockResolvedValue([
+        {
+          ...acordoPassageiro,
+          rescisao_modo: 'consensual',
+          rescisao_confirmada_em: null,
+          rescisao_solicitada_por: 'driver-1',
+        },
+      ]);
+
+      renderPage(['/acordos?openAcordoId=acordo-pax']);
+
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      openAcordoKebab(dialog);
+      expect(screen.getByRole('menuitem', { name: /Encerrar acordo/i })).toBeInTheDocument();
+    });
+  });
+
   describe('encerramento consensual', () => {
     afterEach(() => {
       resetOverlayStackForTests();
@@ -1537,7 +1589,7 @@ describe('MyAgreements — marketplace 1:N', () => {
       expect(await screen.findByText(/Pedido de encerramento recusado/i)).toBeInTheDocument();
     });
 
-    it('requerente vê pedido enviado e não tem Encerrar acordo no kebab', async () => {
+    it('requerente vê pedido enviado e mantém Encerrar acordo no kebab', async () => {
       mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
       getAgreementsForDriver.mockResolvedValue([
         {
@@ -1554,14 +1606,8 @@ describe('MyAgreements — marketplace 1:N', () => {
       expect(within(dialog).getByTestId('rescisao-consensual-enviada')).toHaveTextContent(
         /Pedido enviado, à espera da outra parte/i,
       );
-      expect(
-        within(dialog).queryByRole('menuitem', { name: /Encerrar acordo/i }),
-      ).not.toBeInTheDocument();
-      const kebabTrigger = within(dialog).queryByRole('button', { name: /Mais acções do acordo/i });
-      if (kebabTrigger) {
-        openAcordoKebab(dialog);
-        expect(screen.queryByRole('menuitem', { name: /Encerrar acordo/i })).not.toBeInTheDocument();
-      }
+      openAcordoKebab(dialog);
+      expect(screen.getByRole('menuitem', { name: /Encerrar acordo/i })).toBeInTheDocument();
     });
 
     it('após pedir consensual mantém detalhe aberto com estado enviado', async () => {
@@ -2577,7 +2623,7 @@ describe('MyAgreements — ENG#35 preço próximo mês', () => {
 
     renderPage();
 
-    expect(await screen.findByText('Cancelamento pendente')).toBeInTheDocument();
+    expect(await screen.findByText(/Termina a 31 de outubro de 2026/i)).toBeInTheDocument();
     expect(screen.queryByText('cancelamento_pendente')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Talatona/i }));
