@@ -9,6 +9,7 @@ import {
   rejectAgreementTermination,
   getAgreementsForDriver,
   getAgreementsForPassenger,
+  countLugaresVivosAcordo,
 } from './AgreementService.js';
 import { resolveAgreementPricing } from '../utils/resolveAgreementPricing.js';
 import { supabase } from '../lib/supabase';
@@ -842,6 +843,24 @@ describe('AgreementService', () => {
       );
       expect(denied).toBe(false);
       warnSpy.mockRestore();
+    });
+  });
+
+  describe('countLugaresVivosAcordo', () => {
+    it('chama RPC count_lugares_vivos_acordo e devolve inteiro', async () => {
+      supabase.rpc.mockResolvedValue({ data: 1, error: null });
+      await expect(countLugaresVivosAcordo('acordo-1')).resolves.toBe(1);
+      expect(supabase.rpc).toHaveBeenCalledWith('count_lugares_vivos_acordo', {
+        p_acordo_id: 'acordo-1',
+      });
+    });
+
+    it('propaga erro da RPC', async () => {
+      supabase.rpc.mockResolvedValue({
+        data: null,
+        error: { message: 'Sem permissão para contar lugares deste acordo.' },
+      });
+      await expect(countLugaresVivosAcordo('acordo-x')).rejects.toThrow(/Sem permissão/);
     });
   });
 });

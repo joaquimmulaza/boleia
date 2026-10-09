@@ -26,6 +26,7 @@ vi.mock('../services/AgreementService', () => ({
   getAgreementsForDriver: vi.fn(),
   getAgreementsForPassenger: vi.fn(),
   leavePassenger: vi.fn(),
+  countLugaresVivosAcordo: vi.fn().mockResolvedValue(2),
   terminateAgreement: vi.fn(),
   rejectAgreementTermination: vi.fn(),
   listAdendaHistorico: vi.fn().mockResolvedValue([]),
@@ -71,6 +72,7 @@ import {
   getAgreementsForDriver,
   getAgreementsForPassenger,
   leavePassenger,
+  countLugaresVivosAcordo,
   terminateAgreement,
   rejectAgreementTermination,
   listAdendaHistorico,
@@ -794,11 +796,15 @@ describe('MyAgreements — marketplace 1:N', () => {
     getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
     mockPagamentosGate(acordoPassageiro, 'pax-viewer');
     leavePassenger.mockResolvedValue({ ok: true });
+    countLugaresVivosAcordo.mockResolvedValue(2);
 
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
     fireEvent.click(await screen.findByRole('button', { name: /Sair só eu/i }));
+    await waitFor(() => {
+      expect(countLugaresVivosAcordo).toHaveBeenCalledWith('acordo-pax');
+    });
     expect(
       screen.getByText(/A tua quota deste mês não é reembolsada/i),
     ).toBeInTheDocument();
@@ -810,6 +816,44 @@ describe('MyAgreements — marketplace 1:N', () => {
     expect(
       await screen.findByText(/Saíste do acordo\. A quota do mês mantém-se/i),
     ).toBeInTheDocument();
+  });
+
+  it('passageiro: modal último passageiro quando RPC devolve 1 lugar vivo', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    mockPagamentosGate(acordoPassageiro, 'pax-viewer');
+    countLugaresVivosAcordo.mockResolvedValue(1);
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Sair só eu/i }));
+
+    expect(
+      await screen.findByText(/És o último passageiro\. Ao saíres, o acordo é encerrado\./i),
+    ).toBeInTheDocument();
+  });
+
+  it('passageiro: falha na contagem server-side mantém copy de saída individual', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    mockPagamentosGate(acordoPassageiro, 'pax-viewer');
+    countLugaresVivosAcordo.mockRejectedValue(new Error('Sem permissão'));
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Sair só eu/i }));
+
+    await waitFor(() => {
+      expect(countLugaresVivosAcordo).toHaveBeenCalled();
+    });
+    expect(
+      screen.getByText(/A tua quota deste mês não é reembolsada/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/És o último passageiro/i),
+    ).not.toBeInTheDocument();
   });
 
   it('passageiro reservado: modal de saída neutro enquanto pagamento carrega', async () => {

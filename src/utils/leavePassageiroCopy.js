@@ -1,7 +1,12 @@
 import { formatKwanza } from './formatKwanza';
 import { isActivoPassageiro } from './acordoPassageiroStatus';
+import { isLugarVivoPassageiro } from './estadoPassageiro.js';
 import { PAYMENT_STATES } from './paymentStatus';
 import { valorEmDividaParaExibir } from './pagamentoObrigacaoCopy';
+
+/** Copy modal quando o servidor confirma um único lugar vivo. */
+export const COPY_CONFIRMACAO_ULTIMO_PASSAGEIRO =
+  'És o último passageiro. Ao saíres, o acordo é encerrado.';
 
 /**
  * @param {string | null | undefined} lugarEstado
@@ -27,10 +32,19 @@ function pagamentoPendenteOuComprovativo(pagamentoEstado) {
  *   lugarEstado?: string | null,
  *   pagamento?: { estado?: string } | null,
  *   pagamentoLoading?: boolean,
+ *   lugaresVivosCount?: number | null,
+ *   lugaresVivosLoading?: boolean,
  * }} ctx
  * @returns {string}
  */
 export function copyConfirmacaoSaidaPassageiro(ctx) {
+  if (
+    !ctx.lugaresVivosLoading
+    && ctx.lugaresVivosCount === 1
+    && isLugarVivoPassageiro(ctx.lugarEstado)
+  ) {
+    return COPY_CONFIRMACAO_ULTIMO_PASSAGEIRO;
+  }
   if (isLugarActivadoParaQuota(ctx.lugarEstado)) {
     return (
       'Saída individual: o acordo mantém-se activo para os restantes. '

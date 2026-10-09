@@ -3,7 +3,10 @@
 
 UPDATE public.acordos a
 SET encerramento_motivo = NULL
-WHERE a.encerramento_motivo = 'sem_lugares_vivos'
+FROM public.ofertas_capacidade o
+WHERE a.oferta_id = o.id
+  AND o.is_test = true
+  AND a.encerramento_motivo = 'sem_lugares_vivos'
   AND NOT EXISTS (
     SELECT 1
     FROM public.acordos_passageiros ap

@@ -6,6 +6,7 @@ import {
   getAgreementsForDriver,
   getAgreementsForPassenger,
   leavePassenger,
+  countLugaresVivosAcordo,
   terminateAgreement,
   rejectAgreementTermination,
   listAdendaHistorico,
@@ -339,6 +340,9 @@ const MyAgreements = () => {
   const consensualAwaitFeedbackAcordoIdRef = useRef(/** @type {string | null} */ (null));
   const carregarGenerationRef = useRef(0);
   const [leaveModalOpen, setLeaveModalOpen] = useState(false);
+  const [leaveLugaresVivosLoading, setLeaveLugaresVivosLoading] = useState(false);
+  /** @type {[number | null, React.Dispatch<React.SetStateAction<number | null>>]} */
+  const [leaveLugaresVivosCount, setLeaveLugaresVivosCount] = useState(null);
   const [leaveBusy, setLeaveBusy] = useState(false);
   /** @type {[Record<string, true>, React.Dispatch<React.SetStateAction<Record<string, true>>>]} */
   const [pendingLeaveIds, setPendingLeaveIds] = useState({});
@@ -771,6 +775,33 @@ const MyAgreements = () => {
   useEffect(() => {
     setRescisaoConfirmadaLocal(false);
   }, [selected?.id]);
+
+  useEffect(() => {
+    if (!leaveModalOpen || !selected?.id) {
+      setLeaveLugaresVivosLoading(false);
+      setLeaveLugaresVivosCount(null);
+      return undefined;
+    }
+    let cancelled = false;
+    setLeaveLugaresVivosLoading(true);
+    setLeaveLugaresVivosCount(null);
+    countLugaresVivosAcordo(selected.id)
+      .then((n) => {
+        if (!cancelled) {
+          setLeaveLugaresVivosCount(n);
+          setLeaveLugaresVivosLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLeaveLugaresVivosCount(null);
+          setLeaveLugaresVivosLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [leaveModalOpen, selected?.id]);
 
   const activos = acordos.filter((a) => isActivo(a.estado));
   const outros = acordos.filter((a) => !isActivo(a.estado));
@@ -2172,12 +2203,15 @@ const MyAgreements = () => {
         isOpen={leaveModalOpen}
         busy={leaveBusy}
         title="Sair só tu?"
+        testId="leave-solo-modal"
         message={copyConfirmacaoSaidaPassageiro({
           lugarEstado: (selected?.acordos_passageiros || []).find(
             (p) => p.passenger_id === user?.id,
           )?.estado,
           pagamento,
           pagamentoLoading,
+          lugaresVivosCount: leaveLugaresVivosCount,
+          lugaresVivosLoading: leaveLugaresVivosLoading,
         })}
         confirmText="Sair"
         onConfirm={handleLeaveSolo}

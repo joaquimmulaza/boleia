@@ -53,6 +53,53 @@ describe('leavePassageiroCopy — saída antes vs depois da activação', () => 
     ).not.toMatch(/cancelado — não/);
   });
 
+  it('confirmação último passageiro vivo (contagem servidor = 1)', () => {
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        lugarEstado: 'activo',
+        pagamento: { estado: 'em_custodia' },
+        lugaresVivosCount: 1,
+        lugaresVivosLoading: false,
+      }),
+    ).toBe('És o último passageiro. Ao saíres, o acordo é encerrado.');
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        lugarEstado: 'reservado',
+        pagamento: null,
+        lugaresVivosCount: 1,
+        lugaresVivosLoading: false,
+      }),
+    ).toBe('És o último passageiro. Ao saíres, o acordo é encerrado.');
+  });
+
+  it('confirmação com contagem > 1 mantém copy de saída individual', () => {
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        lugarEstado: 'activo',
+        pagamento: { estado: 'em_custodia' },
+        lugaresVivosCount: 2,
+        lugaresVivosLoading: false,
+      }),
+    ).toMatch(/A tua quota deste mês não é reembolsada/);
+  });
+
+  it('confirmação enquanto contagem carrega ou falhou — não mostra último passageiro', () => {
+    const base = {
+      lugarEstado: 'activo',
+      pagamento: { estado: 'em_custodia' },
+    };
+    expect(
+      copyConfirmacaoSaidaPassageiro({ ...base, lugaresVivosLoading: true }),
+    ).toMatch(/A tua quota deste mês não é reembolsada/);
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        ...base,
+        lugaresVivosLoading: false,
+        lugaresVivosCount: null,
+      }),
+    ).toMatch(/A tua quota deste mês não é reembolsada/);
+  });
+
   it('confirmação após activação mantém regra de quota', () => {
     expect(
       copyConfirmacaoSaidaPassageiro({
