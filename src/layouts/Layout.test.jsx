@@ -13,7 +13,18 @@ vi.mock('../lib/supabase', () => ({
       getUser: vi.fn(),
       signOut: vi.fn(),
     },
+    channel: vi.fn(() => ({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn().mockReturnThis(),
+    })),
+    removeChannel: vi.fn(),
+    from: vi.fn(),
   },
+}));
+
+const removeCurrentDevicePushSubscription = vi.fn().mockResolvedValue({ success: true });
+vi.mock('../utils/pushSubscriptionLogout', () => ({
+  removeCurrentDevicePushSubscription: (...args) => removeCurrentDevicePushSubscription(...args),
 }));
 
 import * as AuthContextModule from '../contexts/AuthContext';
@@ -161,9 +172,10 @@ describe('Layout Component', () => {
     expect(lockup.closest('a')).toHaveAttribute('href', '/passageiro');
   });
 
-  it('terminar sessão chama signOut', async () => {
-    useAuth.mockReturnValue({ tipoPerfil: 'Passageiro' });
+  it('terminar sessão limpa push do dispositivo antes de signOut', async () => {
+    useAuth.mockReturnValue({ tipoPerfil: 'Passageiro', user: { id: 'user-logout-1' } });
     supabase.auth.signOut.mockResolvedValue({ error: null });
+    removeCurrentDevicePushSubscription.mockClear();
 
     await act(async () => {
       renderWithRouterAndTheme(<Layout />);
@@ -173,7 +185,11 @@ describe('Layout Component', () => {
       fireEvent.click(screen.getByRole('button', { name: /terminar sessão/i }));
     });
 
+    expect(removeCurrentDevicePushSubscription).toHaveBeenCalledWith('user-logout-1');
     expect(supabase.auth.signOut).toHaveBeenCalledTimes(1);
+    expect(removeCurrentDevicePushSubscription.mock.invocationCallOrder[0]).toBeLessThan(
+      supabase.auth.signOut.mock.invocationCallOrder[0],
+    );
   });
 
   it('main faz scroll interno e header não usa sticky sobre o conteúdo', async () => {
