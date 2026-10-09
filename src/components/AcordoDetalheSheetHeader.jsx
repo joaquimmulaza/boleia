@@ -41,6 +41,7 @@ function chipClassEstadoAcordo(variant) {
  *   onRegistarFalta: () => void,
  *   onEncerrar: () => void,
  *   titulo?: string,
+ *   onKebabTriggerRef?: (node: HTMLButtonElement | null) => void,
  * }} props
  */
 export default function AcordoDetalheSheetHeader({
@@ -56,6 +57,7 @@ export default function AcordoDetalheSheetHeader({
   onRegistarFalta,
   onEncerrar,
   titulo = 'Detalhe do acordo',
+  onKebabTriggerRef,
 }) {
   return (
     <header
@@ -85,6 +87,7 @@ export default function AcordoDetalheSheetHeader({
           podeEncerrar={podeEncerrar}
           onRegistarFalta={onRegistarFalta}
           onEncerrar={onEncerrar}
+          onTriggerRef={onKebabTriggerRef}
         />
       </div>
 

@@ -10,6 +10,7 @@ import { useKebabMenu } from '../hooks/useKebabMenu';
  *   podeEncerrar: boolean,
  *   onRegistarFalta: () => void,
  *   onEncerrar: () => void,
+ *   onTriggerRef?: (node: HTMLButtonElement | null) => void,
  * }} props
  */
 export default function AcordoDetalheKebabMenu({
@@ -17,22 +18,29 @@ export default function AcordoDetalheKebabMenu({
   podeEncerrar,
   onRegistarFalta,
   onEncerrar,
+  onTriggerRef,
 }) {
   const { open, close, toggle, rootRef, triggerRef, triggerAria, menuProps } = useKebabMenu();
   const hasActions = podeRegistarFaltas || podeEncerrar;
 
   if (!hasActions) return null;
 
-  const fecharE = (fn) => {
-    close();
-    fn();
+  /** @param {HTMLButtonElement | null} node */
+  const assignTriggerRef = (node) => {
+    triggerRef.current = node;
+    onTriggerRef?.(node);
+  };
+
+  const runMenuAction = (action, { returnFocus = true } = {}) => {
+    action();
+    close({ returnFocus });
   };
 
   return (
     <div ref={rootRef} className="relative shrink-0">
       <Button
         type="button"
-        ref={triggerRef}
+        ref={assignTriggerRef}
         {...triggerAria}
         onClick={toggle}
         variant="outline"
@@ -55,7 +63,7 @@ export default function AcordoDetalheKebabMenu({
               type="button"
               role="menuitem"
               className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-semibold text-slate-900 hover:bg-slate-50 dark:text-white dark:hover:bg-slate-800"
-              onClick={() => fecharE(onRegistarFalta)}
+              onClick={() => runMenuAction(onRegistarFalta)}
             >
               <Clock size={18} aria-hidden="true" className="shrink-0 text-slate-600 dark:text-slate-300" />
               Registar falta
@@ -66,7 +74,7 @@ export default function AcordoDetalheKebabMenu({
               type="button"
               role="menuitem"
               className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
-              onClick={() => fecharE(onEncerrar)}
+              onClick={() => runMenuAction(onEncerrar, { returnFocus: false })}
             >
               <CircleX size={18} aria-hidden="true" className="shrink-0" />
               Encerrar acordo

@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import OverlayShell from '../components/OverlayShell';
 import { useKebabMenu } from './useKebabMenu';
@@ -63,6 +64,40 @@ describe('useKebabMenu', () => {
     fireEvent.pointerDown(screen.getByRole('button', { name: 'Fora' }));
     expect(screen.queryByTestId('kebab-menu')).not.toBeInTheDocument();
     expect(document.activeElement).toBe(trigger);
+  });
+
+  it('Enter e Espaço no menuitem activam o clique uma única vez cada', async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn();
+
+    function TestKebabAction() {
+      const { open, toggle, rootRef, triggerRef, triggerAria, menuProps } = useKebabMenu();
+      return (
+        <div ref={rootRef}>
+          <button type="button" ref={triggerRef} {...triggerAria} onClick={toggle}>
+            Abrir
+          </button>
+          {open ? (
+            <div {...menuProps}>
+              <button type="button" role="menuitem" onClick={onAction}>
+                Acção
+              </button>
+            </div>
+          ) : null}
+        </div>
+      );
+    }
+
+    render(<TestKebabAction />);
+    await user.click(screen.getByRole('button', { name: 'Abrir' }));
+    const item = screen.getByRole('menuitem', { name: 'Acção' });
+    item.focus();
+    await user.keyboard('{Enter}');
+    expect(onAction).toHaveBeenCalledTimes(1);
+
+    item.focus();
+    await user.keyboard(' ');
+    expect(onAction).toHaveBeenCalledTimes(2);
   });
 
   it('Escape fecha só o menu e não a sheet por baixo', () => {

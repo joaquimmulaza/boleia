@@ -5,7 +5,7 @@ import { popOverlay, pushOverlay } from '../utils/overlayStack';
  * Comportamento partilhado dos menus «Mais acções».
  * @returns {{
  *   open: boolean,
- *   close: () => void,
+ *   close: (options?: { returnFocus?: boolean }) => void,
  *   toggle: (event?: React.SyntheticEvent) => void,
  *   rootRef: React.RefObject<HTMLDivElement | null>,
  *   triggerRef: React.RefObject<HTMLButtonElement | null>,
@@ -26,10 +26,15 @@ export function useKebabMenu() {
   const rootRef = useRef(/** @type {HTMLDivElement | null} */ (null));
   const triggerRef = useRef(/** @type {HTMLButtonElement | null} */ (null));
   const wasOpenRef = useRef(false);
+  const returnFocusOnCloseRef = useRef(true);
   const menuId = useId();
   const overlayId = useId();
 
-  const close = useCallback(() => {
+  /** @param {{ returnFocus?: boolean }} [options] */
+  const close = useCallback((options = {}) => {
+    if (options.returnFocus === false) {
+      returnFocusOnCloseRef.current = false;
+    }
     setOpen(false);
   }, []);
 
@@ -41,9 +46,10 @@ export function useKebabMenu() {
   useEffect(() => {
     if (!open) {
       popOverlay(overlayId);
-      if (wasOpenRef.current) {
+      if (wasOpenRef.current && returnFocusOnCloseRef.current) {
         triggerRef.current?.focus();
       }
+      returnFocusOnCloseRef.current = true;
       wasOpenRef.current = false;
       return undefined;
     }
