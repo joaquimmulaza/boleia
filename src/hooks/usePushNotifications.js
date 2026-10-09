@@ -21,7 +21,9 @@ export function usePushNotifications() {
   const [isSupported, setIsSupported] = useState(false);
   const [permission, setPermission] = useState('default');
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const [loading, setLoading] = useState(true);
+  /** Boot / getSubscription — não confundir com subscribe/unsubscribe */
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     const checkSupport = async () => {
@@ -37,7 +39,7 @@ export function usePushNotifications() {
           setIsSubscribed(!!subscription);
         }
       }
-      setLoading(false);
+      setInitialLoading(false);
     };
 
     checkSupport();
@@ -46,7 +48,7 @@ export function usePushNotifications() {
   const subscribe = async (userId) => {
     if (!isSupported) return { error: 'Push notifications not supported on this browser' };
 
-    setLoading(true);
+    setActionLoading(true);
     try {
       const permissionResult = await Notification.requestPermission();
       setPermission(permissionResult);
@@ -85,11 +87,11 @@ export function usePushNotifications() {
       }
 
       setIsSubscribed(true);
-      setLoading(false);
+      setActionLoading(false);
       return { success: true };
     } catch (err) {
       console.error('Failed to subscribe to push notifications:', err);
-      setLoading(false);
+      setActionLoading(false);
       return { error: err.message };
     }
   };
@@ -97,33 +99,45 @@ export function usePushNotifications() {
   const unsubscribe = async (userId) => {
     if (!isSupported) return { error: 'Push notifications not supported on this browser' };
 
-    setLoading(true);
+    setActionLoading(true);
     try {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
 
       if (subscription) {
-         // Apagar na BD primeiro
-         const subscriptionJSON = subscription.toJSON();
+        const subscriptionJSON = subscription.toJSON();
+        const endpoint = subscriptionJSON?.endpoint;
 
-         if (userId) {
-             await supabase
-                .from('push_subscriptions')
-                .delete()
-                .eq('user_id', userId)
-                .eq('subscription', JSON.stringify(subscriptionJSON));
-         }
+        if (userId && endpoint) {
+          const { data: deletedRows, error: deleteError } = await supabase
+            .from('push_subscriptions')
+            .delete()
+            .eq('user_id', userId)
+            .eq('subscription->>endpoint', endpoint)
+            .select('id');
 
-         // Anular no browser
-         await subscription.unsubscribe();
+          if (deleteError) {
+            setActionLoading(false);
+            return { error: deleteError.message };
+          }
+
+          // Sem linha na BD: desactivar localmente na mesma, sem fingir DELETE efectivo
+          if (!deletedRows?.length) {
+            console.warn(
+              'push_subscriptions: nenhuma linha apagada para este endpoint; prosseguir unsubscribe local',
+            );
+          }
+        }
+
+        await subscription.unsubscribe();
       }
 
       setIsSubscribed(false);
-      setLoading(false);
+      setActionLoading(false);
       return { success: true };
     } catch (err) {
       console.error('Failed to unsubscribe from push notifications:', err);
-      setLoading(false);
+      setActionLoading(false);
       return { error: err.message };
     }
   };
@@ -132,8 +146,10 @@ export function usePushNotifications() {
     isSupported,
     permission,
     isSubscribed,
-    loading,
+    initialLoading,
+    actionLoading,
+    loading: initialLoading || actionLoading,
     subscribe,
-    unsubscribe
+    unsubscribe,
   };
 }
