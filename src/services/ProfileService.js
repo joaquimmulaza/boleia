@@ -1,8 +1,8 @@
 import { supabase } from '../lib/supabase';
 import { validateTelefone } from '../utils/validation';
+import { PERFIL_COLUNAS_SELECT } from '../utils/perfisGrants.js';
 
-/** Colunas que `authenticated` ainda pode ler em `perfis`. Sem `*` — o PostgREST rejeita o wildcard. */
-export const PERFIL_COLUNAS_SELECT = 'id, nome_completo, tipo_perfil, created_at, onboarding_completed, iban_titular, perfil_completo';
+export { PERFIL_COLUNAS_SELECT };
 
 /**
  * Normaliza telefone angolano para E.164 (+244…).

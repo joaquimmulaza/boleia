@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { PERFIS_EMBED_NOME_COMPLETO } from '../utils/perfisGrants.js';
 import {
   callRpcWithOfflineFallback,
   resolveIdempotencyKey,
@@ -134,7 +135,7 @@ export async function listMembrosGrupo(grupoId) {
 
   const { data, error } = await supabase
     .from('membros_grupo')
-    .select('*, perfis(nome_completo)')
+    .select(`*, ${PERFIS_EMBED_NOME_COMPLETO}`)
     .eq('grupo_id', grupoId)
     .eq('estado', 'activo')
     .order('ordem_insercao', { ascending: true });
@@ -398,7 +399,7 @@ export async function listPedidosPendentes(grupoId) {
 
   const { data, error } = await supabase
     .from('membros_grupo')
-    .select('*, perfis(nome_completo)')
+    .select(`*, ${PERFIS_EMBED_NOME_COMPLETO}`)
     .eq('grupo_id', grupoId)
     .eq('estado', 'pendente')
     .order('created_at', { ascending: true });

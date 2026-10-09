@@ -776,12 +776,16 @@ describe('AgreementService', () => {
     it('getAgreementsForDriver filtra por driver_id e aplica lazy RPCs', async () => {
       supabase.rpc.mockResolvedValue({ data: 0, error: null });
       const mockOrder = vi.fn().mockResolvedValue({ data: [{ id: 'a1' }], error: null });
+      const mockSelect = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({ order: mockOrder }),
+      });
       supabase.from.mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({ order: mockOrder }),
-        }),
+        select: mockSelect,
       });
       const result = await getAgreementsForDriver('driver-1');
+      expect(mockSelect).toHaveBeenCalledWith(
+        '*, acordos_passageiros(*, perfis(nome_completo)), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota), acordos_adendas(*)',
+      );
       expect(result).toHaveLength(1);
       expect(supabase.rpc).toHaveBeenCalledWith('apply_due_agreement_adendas', {
         p_acordo_id: null,
