@@ -38,7 +38,7 @@ export default function PushNotificationsToggle() {
     isSupported,
     permission,
     isSubscribed,
-    loading: hookLoading,
+    initialLoading: hookInitialLoading,
     subscribe,
     unsubscribe,
   } = usePushNotifications();
@@ -56,7 +56,7 @@ export default function PushNotificationsToggle() {
         isSupported,
         permission,
         isSubscribed,
-        initialLoading: hookLoading,
+        initialLoading: hookInitialLoading,
         activating: isPending,
         activationError: actionError !== null,
         isInstalled,
@@ -66,7 +66,7 @@ export default function PushNotificationsToggle() {
       isSupported,
       permission,
       isSubscribed,
-      hookLoading,
+      hookInitialLoading,
       isPending,
       actionError,
       isInstalled,
@@ -86,7 +86,7 @@ export default function PushNotificationsToggle() {
     ? pendingAction === 'disable'
     : isSubscribed && permissionGranted;
   const switchDisabled =
-    uiState === 'bloqueado' || uiState === 'sem_suporte' || switchLoading || hookLoading;
+    uiState === 'bloqueado' || uiState === 'sem_suporte' || switchLoading || hookInitialLoading;
 
   const handleToggle = async (next) => {
     if (!user?.id || switchDisabled) return;

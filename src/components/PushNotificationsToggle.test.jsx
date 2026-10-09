@@ -18,14 +18,20 @@ import {
 const mockSubscribe = vi.fn();
 const mockUnsubscribe = vi.fn();
 
+/** @type {{ isSupported: boolean, permission: string, isSubscribed: boolean, initialLoading: boolean, actionLoading: boolean, loading: boolean, subscribe: typeof mockSubscribe, unsubscribe: typeof mockUnsubscribe }} */
 let pushHookState = {
   isSupported: true,
   permission: 'granted',
   isSubscribed: true,
+  initialLoading: false,
+  actionLoading: false,
   loading: false,
   subscribe: mockSubscribe,
   unsubscribe: mockUnsubscribe,
 };
+
+/** @type {() => void} */
+let rerenderToggle = () => {};
 
 let pwaState = {
   platform: 'android',
@@ -37,7 +43,18 @@ vi.mock('../contexts/AuthContext', () => ({
 }));
 
 vi.mock('../hooks/usePushNotifications', () => ({
-  usePushNotifications: () => pushHookState,
+  usePushNotifications: () => ({
+    ...pushHookState,
+    get loading() {
+      return pushHookState.initialLoading || pushHookState.actionLoading;
+    },
+    get initialLoading() {
+      return pushHookState.initialLoading;
+    },
+    get actionLoading() {
+      return pushHookState.actionLoading;
+    },
+  }),
 }));
 
 vi.mock('../hooks/usePwaInstall', () => ({
@@ -45,7 +62,27 @@ vi.mock('../hooks/usePwaInstall', () => ({
 }));
 
 function renderToggle() {
-  return render(<PushNotificationsToggle />);
+  const result = render(<PushNotificationsToggle />);
+  rerenderToggle = () => {
+    result.rerender(<PushNotificationsToggle />);
+  };
+  return result;
+}
+
+function simulateHookLoadingDuringAction(kind) {
+  if (kind === 'enable') {
+    mockSubscribe.mockImplementation(() => {
+      pushHookState.actionLoading = true;
+      rerenderToggle();
+      return new Promise(() => {});
+    });
+  } else {
+    mockUnsubscribe.mockImplementation(() => {
+      pushHookState.actionLoading = true;
+      rerenderToggle();
+      return new Promise(() => {});
+    });
+  }
 }
 
 describe('PushNotificationsToggle — 6 estados /perfil', () => {
@@ -55,10 +92,13 @@ describe('PushNotificationsToggle — 6 estados /perfil', () => {
       isSupported: true,
       permission: 'granted',
       isSubscribed: true,
+      initialLoading: false,
+      actionLoading: false,
       loading: false,
       subscribe: mockSubscribe,
       unsubscribe: mockUnsubscribe,
     };
+    rerenderToggle = () => {};
     pwaState = { platform: 'android', isInstalled: true };
   });
 
@@ -109,6 +149,35 @@ describe('PushNotificationsToggle — 6 estados /perfil', () => {
       expect(screen.getByTestId('push-profile-status-erro')).toHaveTextContent(PUSH_PROFILE_ERROR);
     });
     expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+  });
+
+  describe('hook loading durante acção (review B3)', () => {
+    it('ligar: com actionLoading no hook mantém «A activar…» e spinner', () => {
+      pushHookState = {
+        ...pushHookState,
+        isSubscribed: false,
+        permission: 'default',
+      };
+      simulateHookLoadingDuringAction('enable');
+
+      renderToggle();
+      fireEvent.click(screen.getByRole('switch'));
+
+      expect(screen.getByTestId('push-profile-status-line')).toHaveTextContent(PUSH_PROFILE_STATE_ACTIVATING);
+      expect(screen.getByRole('switch')).toHaveAttribute('aria-busy', 'true');
+    });
+
+    it('desligar: com actionLoading no hook mantém switch ON, spinner e sem copy OFF', () => {
+      simulateHookLoadingDuringAction('disable');
+
+      renderToggle();
+      fireEvent.click(screen.getByRole('switch'));
+
+      expect(screen.getByRole('switch')).toHaveAttribute('aria-busy', 'true');
+      expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
+      expect(screen.queryByText(PUSH_PROFILE_STATE_OFF)).not.toBeInTheDocument();
+      expect(screen.queryByText(PUSH_PROFILE_STATE_ACTIVATING)).not.toBeInTheDocument();
+    });
   });
 
   describe('desactivar (review B1)', () => {
