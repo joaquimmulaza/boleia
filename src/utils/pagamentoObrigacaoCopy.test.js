@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   linhaProporcionalPagamento,
+  mostrarDesagregacaoProporcionalPagamento,
+  linhaValorAPagarResumo,
   linhaPrazoPagamento,
   tituloHistoricoPagamento,
   valorHistoricoPagamento,
@@ -130,6 +132,35 @@ describe('pagamentoObrigacaoCopy — v1.6', () => {
   it('valorEmDividaParaExibir nunca usa quota', () => {
     const obrigacao = normalizeObrigacaoSnapshot({ quota: 43000, valor_em_divida: 8000 });
     expect(valorEmDividaParaExibir(obrigacao, { valor_kz: 43000 })).toBe(8000);
+  });
+
+  it('mostrarDesagregacaoProporcionalPagamento só em saída/rescisão', () => {
+    expect(mostrarDesagregacaoProporcionalPagamento('activo', null)).toBe(false);
+    expect(mostrarDesagregacaoProporcionalPagamento('reservado', null)).toBe(false);
+    expect(mostrarDesagregacaoProporcionalPagamento('saiu', null)).toBe(true);
+    expect(mostrarDesagregacaoProporcionalPagamento('activo', 'S2')).toBe(true);
+  });
+
+  it('linhaValorAPagarResumo no acordo activo', () => {
+    const obrigacao = normalizeObrigacaoSnapshot({ valor_em_divida: 16000, quota: 16000 });
+    expect(linhaValorAPagarResumo(obrigacao, { valor_kz: 16000 })).toBe('Valor a pagar: 16\u00a0000 Kz');
+  });
+
+  it('linhaProporcionalPagamento — comprovativo em validação em vez de Já pago', () => {
+    const obrigacao = normalizeObrigacaoSnapshot({
+      dias: 7,
+      dias_mes: 22,
+      mes: '2026-10-01',
+      proporcional: 16000,
+      pago: 0,
+      valor_em_divida: 16000,
+    });
+    const line = linhaProporcionalPagamento(obrigacao, {
+      pagamentoEstado: 'comprovativo_enviado',
+      valorComprovativo: 16000,
+    });
+    expect(line).toMatch(/comprovativo de 16[\s\u00a0]?000 Kz em validação/i);
+    expect(line).not.toMatch(/Já pago/);
   });
 
   it('isDestaqueValorEmDividaSaiuPendente só saiu com pagamento em aberto', () => {

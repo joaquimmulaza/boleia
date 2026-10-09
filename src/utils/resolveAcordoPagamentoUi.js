@@ -6,6 +6,7 @@ import {
   isPagamentoEmExcessoAnalise,
 } from './pagamentoObrigacaoCopy';
 import { PAYMENT_STATES } from './paymentStatus';
+import { isAnulacaoReservaExpiradaPorPagamento } from './pagamentoAnulacaoMotivo';
 
 /** @typedef {'S1' | 'S2' | 'S3' | 'S6a' | null} PassageiroPagamentoUiVariant */
 
@@ -55,9 +56,10 @@ export function resolveAcordoPagamentoUiPassageiro(ctx) {
     };
   }
 
-  if (lugar === 'expirado' || pgEst === PAYMENT_STATES.ANULADO) {
-    const semDivida = valorDivida <= 0 || pgEst === PAYMENT_STATES.ANULADO;
-    if (lugar === 'expirado' && semDivida) {
+  if (pgEst === PAYMENT_STATES.ANULADO && valorDivida <= 0) {
+    const expiradaPorPagamento =
+      lugar === 'expirado' && isAnulacaoReservaExpiradaPorPagamento(pagamento);
+    if (expiradaPorPagamento) {
       return {
         variant: 'S1',
         sheetTitle: 'A tua reserva expirou',
@@ -66,15 +68,22 @@ export function resolveAcordoPagamentoUiPassageiro(ctx) {
         ocultarBannerExpiradoLegado: true,
       };
     }
-  }
-
-  if (pgEst === PAYMENT_STATES.ANULADO && valorDivida <= 0) {
     return {
       variant: 'S3',
       sheetTitle: 'Não tens nada a pagar',
       mostrarCartaoEstado: true,
       ocultarPainelPagamento: true,
-      ocultarBannerExpiradoLegado: false,
+      ocultarBannerExpiradoLegado: true,
+    };
+  }
+
+  if (lugar === 'expirado' && valorDivida <= 0) {
+    return {
+      variant: 'S1',
+      sheetTitle: 'A tua reserva expirou',
+      mostrarCartaoEstado: true,
+      ocultarPainelPagamento: true,
+      ocultarBannerExpiradoLegado: true,
     };
   }
 

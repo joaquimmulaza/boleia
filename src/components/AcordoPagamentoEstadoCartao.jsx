@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle, Info } from 'lucide-react';
+import { chipClassEstadoPagamento } from '../utils/paymentStatus';
 
 /**
  * Cartão de estado P0 (Figma S1–S3 / S6a) no detalhe do acordo.
@@ -10,6 +11,7 @@ import { AlertTriangle, Info } from 'lucide-react';
  *   secundaria?: string | null,
  *   mostrarUploadNoCartao?: boolean,
  *   uploadSlot?: React.ReactNode,
+ *   chipPagamento?: string | null,
  * }} props
  */
 function AcordoPagamentoEstadoCartao({
@@ -18,6 +20,7 @@ function AcordoPagamentoEstadoCartao({
   secundaria = null,
   mostrarUploadNoCartao = false,
   uploadSlot = null,
+  chipPagamento = null,
 }) {
   const Icon = variant === 'S2' ? AlertTriangle : Info;
   const iconWrapClass =
@@ -31,16 +34,26 @@ function AcordoPagamentoEstadoCartao({
       data-testid="acordo-pagamento-estado-cartao"
       data-variant={variant}
     >
-      <div className="flex gap-3">
+      <div className="flex gap-3 items-start">
         <div
           className={`shrink-0 w-10 h-10 rounded-full inline-flex items-center justify-center ${iconWrapClass}`}
           aria-hidden="true"
         >
           <Icon size={22} />
         </div>
-        <p className="text-sm text-slate-800 dark:text-slate-100 text-pretty flex-1 min-w-0">
-          {corpo}
-        </p>
+        <div className="flex-1 min-w-0 space-y-2">
+          {chipPagamento ? (
+            <span
+              className={`inline-flex text-xs font-semibold px-2 py-1 rounded-full ${chipClassEstadoPagamento('anulado')}`}
+              data-testid="cartao-estado-chip-pagamento"
+            >
+              {chipPagamento}
+            </span>
+          ) : null}
+          <p className="text-sm text-slate-800 dark:text-slate-100 text-pretty">
+            {corpo}
+          </p>
+        </div>
       </div>
       {secundaria ? (
         <p

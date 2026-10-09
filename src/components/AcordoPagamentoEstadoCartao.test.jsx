@@ -14,6 +14,17 @@ describe('AcordoPagamentoEstadoCartao', () => {
     expect(screen.getByText(/não tens nada a pagar/)).toBeInTheDocument();
   });
 
+  it('S3 mostra chip Pagamento cancelado', () => {
+    render(
+      <AcordoPagamentoEstadoCartao
+        variant="S3"
+        corpo="O pagamento de 16 000 Kz deste acordo foi cancelado."
+        chipPagamento="Pagamento cancelado"
+      />,
+    );
+    expect(screen.getByTestId('cartao-estado-chip-pagamento')).toHaveTextContent('Pagamento cancelado');
+  });
+
   it('S2 pode montar slot de upload', () => {
     render(
       <AcordoPagamentoEstadoCartao

@@ -54,6 +54,11 @@ import {
 import AcordoContactosPanel from '../components/AcordoContactosPanel';
 import { mostrarProximoPassoComprovativoPassageiro } from '../utils/contactosProximoPassoPagamento';
 import {
+  copyConfirmacaoSaidaPassageiro,
+  copyToastSaidaPassageiro,
+} from '../utils/leavePassageiroCopy';
+import { labelEstadoPagamento } from '../utils/paymentStatus';
+import {
   acordoTemRescisaoConsensualPendenteParaUser,
   copyCancelamentoPendente,
 } from '../utils/rescisaoDisplay';
@@ -777,6 +782,9 @@ const MyAgreements = () => {
   const handleLeaveSolo = async () => {
     if (!selected || !user?.id || leaveBusy) return;
     const acordoId = selected.id;
+    const minhaLinhaLeave = (selected.acordos_passageiros || []).find(
+      (p) => p.passenger_id === user.id,
+    );
     setLeaveBusy(true);
     try {
       const result = await leavePassenger(acordoId, user.id);
@@ -793,7 +801,11 @@ const MyAgreements = () => {
       }
       setMessage({
         type: 'success',
-        text: 'Saíste do acordo. A quota do mês mantém-se.',
+        text: copyToastSaidaPassageiro({
+          lugarEstado: minhaLinhaLeave?.estado,
+          pagamento,
+          obrigacao: obrigacaoPagamento,
+        }),
       });
       selectAcordo(null);
       setPendingLeaveIds((prev) => {
@@ -1251,6 +1263,11 @@ const MyAgreements = () => {
                 variant={pagamentoUiPassageiro.variant}
                 corpo={cartaoEstadoPagamento.corpo}
                 secundaria={cartaoEstadoPagamento.secundaria}
+                chipPagamento={
+                  pagamentoUiPassageiro.variant === 'S3'
+                    ? labelEstadoPagamento(pagamento?.estado, { placement: 'cabecalho' })
+                    : null
+                }
                 mostrarUploadNoCartao={cartaoEstadoPagamento.mostrarUploadNoCartao}
                 uploadSlot={
                   pagamento && !pagamentoLoading ? (
@@ -1504,6 +1521,7 @@ const MyAgreements = () => {
                 pagamento={pagamentoLoading ? null : pagamento}
                 obrigacao={obrigacaoPagamento}
                 lugarEstado={minhaLinha?.estado}
+                pagamentoUiVariant={pagamentoUiPassageiro?.variant ?? null}
                 onUpdated={() => carregarPagamentoContactos(selected)}
                 layout={pagamentoUiPassageiro?.variant === 'S2' ? 'acoes' : 'completo'}
               />
@@ -2032,7 +2050,13 @@ const MyAgreements = () => {
         isOpen={leaveModalOpen}
         busy={leaveBusy}
         title="Sair só tu?"
-        message="Saída individual: o acordo mantém-se activo para os restantes. A tua quota deste mês não é reembolsada."
+        message={copyConfirmacaoSaidaPassageiro({
+          lugarEstado: (selected?.acordos_passageiros || []).find(
+            (p) => p.passenger_id === user?.id,
+          )?.estado,
+          pagamento,
+          pagamentoLoading,
+        })}
         confirmText="Sair"
         onConfirm={handleLeaveSolo}
         onCancel={() => {

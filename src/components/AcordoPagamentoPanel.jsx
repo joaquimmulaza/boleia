@@ -9,6 +9,8 @@ import {
 import {
   normalizeObrigacaoSnapshot,
   linhaProporcionalPagamento,
+  linhaValorAPagarResumo,
+  mostrarDesagregacaoProporcionalPagamento,
   linhaPrazoPagamento,
   linhaSecundariaExcessoPassageiro,
   labelEstadoPagamentoPassageiro,
@@ -36,6 +38,7 @@ import FeedbackAlert from './FeedbackAlert';
  *   } | null,
  *   obrigacao?: import('../utils/pagamentoObrigacaoCopy.js').ObrigacaoSnapshot | null,
  *   lugarEstado?: string | null,
+ *   pagamentoUiVariant?: 'S1' | 'S2' | 'S3' | 'S6a' | null,
  *   onUpdated?: () => void,
  *   layout?: 'completo' | 'acoes' | 'uploadButton',
  * }} props
@@ -44,6 +47,7 @@ function AcordoPagamentoPanel({
   pagamento,
   obrigacao = null,
   lugarEstado = null,
+  pagamentoUiVariant = null,
   onUpdated,
   layout = 'completo',
 }) {
@@ -69,7 +73,19 @@ function AcordoPagamentoPanel({
     && estadoNorm !== PAYMENT_STATES.ANULADO
     && !emExcesso
     && !obrigacaoValorZero;
-  const linhaProp = emExcesso ? null : linhaProporcionalPagamento(obrigacaoNorm);
+  const mostrarDesagregacao = mostrarDesagregacaoProporcionalPagamento(
+    lugarEstado,
+    pagamentoUiVariant,
+  );
+  const linhaProp = emExcesso || !mostrarDesagregacao
+    ? null
+    : linhaProporcionalPagamento(obrigacaoNorm, {
+      pagamentoEstado: pagamento.estado,
+      valorComprovativo: pagamento.valor_kz,
+    });
+  const linhaResumoActivo = !emExcesso && !mostrarDesagregacao && obrigacaoNorm
+    ? linhaValorAPagarResumo(obrigacaoNorm, pagamento)
+    : null;
   const linhaExcesso = emExcesso ? linhaSecundariaExcessoPassageiro(obrigacaoNorm) : null;
   const linhaPrazo = obrigacaoValorZero
     ? null
@@ -184,6 +200,11 @@ function AcordoPagamentoPanel({
               {linhaProp}
             </p>
           ) : null}
+          {linhaResumoActivo ? (
+            <p className="text-sm text-slate-600 dark:text-slate-300 text-pretty" data-testid="linha-valor-pagar-resumo">
+              {linhaResumoActivo}
+            </p>
+          ) : null}
 
           {linhaPrazo ? (
             <p className="text-xs text-amber-800 dark:text-amber-200" data-testid="linha-prazo-pagamento">
@@ -198,7 +219,7 @@ function AcordoPagamentoPanel({
                 {formatKwanza(valorEmDivida)} Kz
               </p>
             </div>
-          ) : (
+          ) : linhaResumoActivo ? null : (
             <p className="text-sm text-slate-600 dark:text-slate-300">
               {linhaProp ? 'Valor a pagar agora' : 'Valor acordado'}:{' '}
               <strong className="tabular-nums text-slate-900 dark:text-white">

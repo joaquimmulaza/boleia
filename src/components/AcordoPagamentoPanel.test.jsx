@@ -15,7 +15,7 @@ describe('AcordoPagamentoPanel', () => {
     vi.mocked(getPlatformIban).mockReturnValue('AO06004000000000000000000');
   });
 
-  it('mostra linha proporcional v1.4 quando obrigacao vem da RPC', () => {
+  it('acordo activo: resumo Valor a pagar sem desagregação proporcional', () => {
     render(
       <AcordoPagamentoPanel
         pagamento={{
@@ -23,6 +23,34 @@ describe('AcordoPagamentoPanel', () => {
           valor_kz: 15636,
           estado: 'pendente_pagamento',
         }}
+        lugarEstado="activo"
+        obrigacao={{
+          dias: 8,
+          dias_mes: 22,
+          mes: '2026-10-01',
+          quota: 43000,
+          proporcional: 15636,
+          pago: 0,
+          valor_em_divida: 15636,
+          prazo: '2026-10-12T12:00:00.000Z',
+        }}
+      />,
+    );
+    expect(screen.queryByTestId('linha-proporcional-pagamento')).not.toBeInTheDocument();
+    expect(screen.getByTestId('linha-valor-pagar-resumo')).toHaveTextContent(/Valor a pagar:/);
+    expect(screen.getByTestId('linha-prazo-pagamento')).toBeInTheDocument();
+  });
+
+  it('saída do acordo: mostra linha proporcional v1.4', () => {
+    render(
+      <AcordoPagamentoPanel
+        pagamento={{
+          id: 'pag-1',
+          valor_kz: 15636,
+          estado: 'pendente_pagamento',
+        }}
+        lugarEstado="saiu"
+        pagamentoUiVariant="S2"
         obrigacao={{
           dias: 8,
           dias_mes: 22,
@@ -36,7 +64,6 @@ describe('AcordoPagamentoPanel', () => {
       />,
     );
     expect(screen.getByTestId('linha-proporcional-pagamento')).toBeInTheDocument();
-    expect(screen.getByTestId('linha-prazo-pagamento')).toBeInTheDocument();
   });
 
   it('mostra valor do acordo e IBAN da plataforma', () => {

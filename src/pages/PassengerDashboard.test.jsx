@@ -1452,6 +1452,40 @@ describe('PassengerDashboard — marketplace', () => {
     });
   });
 
+  it('Guardar procura ignora double-submit enquanto o pedido está em curso', async () => {
+    let resolveCreate;
+    createProcura.mockImplementation(
+      () => new Promise((resolve) => {
+        resolveCreate = () => resolve({ ...procuraBase, id: 'pr-once' });
+      }),
+    );
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Criar procura/i }));
+    fireEvent.change(screen.getByLabelText(/^Origem$/i), {
+      target: { name: 'origin_name', value: 'Talatona' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Destino$/i), {
+      target: { name: 'destination_name', value: 'Miramar' },
+    });
+
+    const btn = screen.getByRole('button', { name: /Guardar procura/i });
+    fireEvent.click(btn);
+    fireEvent.click(btn);
+    expect(createProcura).toHaveBeenCalledTimes(1);
+    expect(btn).toBeDisabled();
+
+    resolveCreate();
+    await waitFor(() => {
+      expect(createProcura).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('formulário usa TimeInput 24h para hora preferida', async () => {
     render(
       <MemoryRouter>
@@ -2979,6 +3013,36 @@ describe('PassengerDashboard — marketplace', () => {
 
     expect(await screen.findByText('Explorar')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Editar procura/i })).not.toBeInTheDocument();
+  });
+
+  it('Guardar alterações ignora double-submit enquanto updateProcura está em curso', async () => {
+    listProcurasByOwner.mockResolvedValue([
+      { ...procuraBase, n_candidato: 1, teto_mensal_kz: 25000 },
+    ]);
+    let resolveUpdate;
+    updateProcura.mockImplementation(
+      () => new Promise((resolve) => {
+        resolveUpdate = () => resolve({ ...procuraBase, teto_mensal_kz: 18000 });
+      }),
+    );
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    await abrirMinhaProcura();
+    fireEvent.click(await screen.findByRole('button', { name: /Editar procura/i }));
+    const btn = screen.getByRole('button', { name: /Guardar alterações/i });
+    fireEvent.click(btn);
+    fireEvent.click(btn);
+    expect(updateProcura).toHaveBeenCalledTimes(1);
+    expect(btn).toBeDisabled();
+    resolveUpdate();
+    await waitFor(() => {
+      expect(updateProcura).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('editar teto grava sem modal e recarrega matching', async () => {
