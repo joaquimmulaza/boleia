@@ -272,11 +272,27 @@ BEGIN
     RAISE EXCEPTION 'FAIL: policy membros_update_self_pickup em falta';
   END IF;
 
-  IF EXISTS (
+  IF NOT EXISTS (
     SELECT 1 FROM pg_policies
     WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'comprovativos_update_own'
   ) THEN
-    RAISE EXCEPTION 'FAIL: policy comprovativos_update_own ainda existe';
+    RAISE EXCEPTION 'FAIL: policy comprovativos_update_own em falta (re-upload upsert)';
+  END IF;
+
+  IF NOT has_function_privilege(
+    'authenticated',
+    'public.storage_comprovativo_pagamento_id(text)',
+    'EXECUTE'
+  ) THEN
+    RAISE EXCEPTION 'FAIL: authenticated não pode EXECUTE storage_comprovativo_pagamento_id';
+  END IF;
+
+  IF NOT has_function_privilege(
+    'authenticated',
+    'public.can_access_comprovativo_storage(text)',
+    'EXECUTE'
+  ) THEN
+    RAISE EXCEPTION 'FAIL: authenticated não pode EXECUTE can_access_comprovativo_storage';
   END IF;
 
   IF NOT EXISTS (

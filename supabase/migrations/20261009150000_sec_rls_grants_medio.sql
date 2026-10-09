@@ -150,6 +150,7 @@ GRANT INSERT (
   estado
 ) ON TABLE public.membros_grupo TO authenticated;
 
+-- ordem_insercao: GrupoService.js insert/reabrir (não updateMembroRecolha); trigger bloqueia mudança só com pickup
 GRANT UPDATE (
   estado,
   pickup_name,
@@ -192,6 +193,11 @@ BEGIN
          AND lower(NEW.estado) = 'pendente'
        ) THEN
       RAISE EXCEPTION 'Não podes alterar o estado deste pedido.';
+    END IF;
+
+    IF lower(NEW.estado) IS NOT DISTINCT FROM lower(OLD.estado)
+       AND NEW.ordem_insercao IS DISTINCT FROM OLD.ordem_insercao THEN
+      RAISE EXCEPTION 'Não podes alterar a ordem de inserção neste pedido.';
     END IF;
   END IF;
 
@@ -251,7 +257,32 @@ $$;
 REVOKE EXECUTE ON FUNCTION public.storage_comprovativo_pagamento_id(text) FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.can_access_comprovativo_storage(text) FROM PUBLIC, anon, authenticated;
 
+GRANT EXECUTE ON FUNCTION public.storage_comprovativo_pagamento_id(text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.can_access_comprovativo_storage(text) TO authenticated;
+
 DROP POLICY IF EXISTS comprovativos_update_own ON storage.objects;
+CREATE POLICY comprovativos_update_own ON storage.objects
+  FOR UPDATE TO authenticated
+  USING (
+    bucket_id = 'comprovativos-pagamento'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+    AND EXISTS (
+      SELECT 1
+      FROM public.pagamentos_acordo pg
+      WHERE pg.id = public.storage_comprovativo_pagamento_id(name)
+        AND pg.passenger_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    bucket_id = 'comprovativos-pagamento'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+    AND EXISTS (
+      SELECT 1
+      FROM public.pagamentos_acordo pg
+      WHERE pg.id = public.storage_comprovativo_pagamento_id(name)
+        AND pg.passenger_id = auth.uid()
+    )
+  );
 
 DROP POLICY IF EXISTS comprovativos_insert_own ON storage.objects;
 CREATE POLICY comprovativos_insert_own ON storage.objects

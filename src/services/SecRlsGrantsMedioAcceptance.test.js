@@ -92,12 +92,26 @@ describe('fix(sec) — RLS/grants médios (contrato migração)', () => {
     expect(sql).toMatch(/DROP POLICY IF EXISTS "Users can update their own push subscriptions"/);
   });
 
-  it('storage comprovativos: remove UPDATE; INSERT/SELECT ligados ao pagamento', () => {
+  it('storage comprovativos: INSERT/UPDATE/SELECT ligados ao pagamento (mesma regra de path)', () => {
     const sql = readMigration(SEC_MIGRATION);
-    expect(sql).toMatch(/DROP POLICY IF EXISTS comprovativos_update_own/);
+    expect(sql).toMatch(/CREATE POLICY comprovativos_update_own ON storage\.objects/);
     expect(sql).toMatch(/comprovativos_insert_own/);
     expect(sql).toMatch(/comprovativos_select_partes_acordo/);
     expect(sql).toMatch(/can_access_comprovativo_storage/);
-    expect(sql).not.toMatch(/CREATE POLICY comprovativos_update_own/);
+    expect(sql).toMatch(/storage_comprovativo_pagamento_id\(name\)/);
+  });
+
+  it('helpers das policies storage: EXECUTE para authenticated após REVOKE de PUBLIC/anon', () => {
+    const sql = readMigration(SEC_MIGRATION);
+    const helpers = [
+      'public.storage_comprovativo_pagamento_id(text)',
+      'public.can_access_comprovativo_storage(text)',
+    ];
+    for (const fn of helpers) {
+      expect(sql).toMatch(new RegExp(`REVOKE EXECUTE ON FUNCTION ${fn.replace(/[()]/g, '\\$&')}`));
+      expect(sql).toMatch(
+        new RegExp(`GRANT EXECUTE ON FUNCTION ${fn.replace(/[()]/g, '\\$&')} TO authenticated`),
+      );
+    }
   });
 });
