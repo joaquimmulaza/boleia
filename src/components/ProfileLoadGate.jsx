@@ -40,20 +40,20 @@ export default function ProfileLoadGate({
     );
   }
 
-  if (profileLoadTimedOut) {
-    if (!session) {
-      const returnPath = `${location.pathname}${location.search}`;
-      const authUrl = buildAuthUrlWithNext('/auth', returnPath);
-      return <Navigate to={authUrl} replace />;
-    }
+  if (profileLoadTimedOut && !session) {
+    const returnPath = `${location.pathname}${location.search}`;
+    const authUrl = buildAuthUrlWithNext('/auth', returnPath);
+    return <Navigate to={authUrl} replace />;
+  }
 
+  if (profileLoadTimedOut) {
     return (
       <div className="flex h-dvh flex-col items-center justify-center gap-4 px-6 text-center">
         <p className="text-sm text-muted-foreground">
-          Não foi possível carregar o seu perfil. Verifique a ligação e tente outra vez.
+          Não foi possível carregar a tua conta. Tenta outra vez.
         </p>
         <Button type="button" onClick={() => retryProfileLoad()}>
-          Tentar novamente
+          Tentar outra vez
         </Button>
       </div>
     );

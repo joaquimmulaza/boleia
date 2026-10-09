@@ -1,19 +1,90 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { withLiveSessionAuthCall, ensureLiveSession } from './liveSession.js';
-import { resetAuthSessionRefreshState } from './authSessionRefresh.js';
+import {
+  withLiveSessionAuthCall,
+  refreshSessionOnceIfAllowed,
+  resetAuthSessionRefreshState,
+  AUTH_REFRESH_COOLDOWN_MS,
+} from './authSessionRefresh.js';
+import { profileFetchSessionKey } from './authProfileFetch.js';
 
-function makeSession(expiresAt) {
+function makeSession(expiresAt, accessToken = 'tok-old') {
   return {
-    access_token: 'tok-old',
+    access_token: accessToken,
     expires_at: expiresAt,
     user: { id: 'user-1' },
   };
 }
 
-describe('liveSession', () => {
+describe('authSessionRefresh — caminho único #255', () => {
   beforeEach(() => {
     resetAuthSessionRefreshState();
     vi.clearAllMocks();
+  });
+
+  it('refreshSessionOnceIfAllowed usa chave user.id:access_token', async () => {
+    const session = makeSession(Math.floor(Date.now() / 1000) + 3600, 'tok-a');
+    expect(profileFetchSessionKey(session)).toBe('user-1:tok-a');
+
+    const client = {
+      auth: {
+        refreshSession: vi.fn().mockResolvedValue({
+          data: { session: { ...session, access_token: 'tok-b' } },
+          error: null,
+        }),
+      },
+    };
+
+    await refreshSessionOnceIfAllowed(client, session);
+    expect(client.auth.refreshSession).toHaveBeenCalledTimes(1);
+
+    await refreshSessionOnceIfAllowed(client, session);
+    expect(client.auth.refreshSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('cooldown 60s bloqueia segundo refresh para o mesmo utilizador', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    const session = makeSession(Math.floor(1_000_000 / 1000) + 3600, 'tok-x');
+    const client = {
+      auth: {
+        refreshSession: vi.fn().mockResolvedValue({
+          data: { session: { ...session, access_token: 'tok-y' } },
+          error: null,
+        }),
+      },
+    };
+
+    await refreshSessionOnceIfAllowed(client, session);
+    const session2 = makeSession(Math.floor(1_000_000 / 1000) + 3600, 'tok-z');
+    await refreshSessionOnceIfAllowed(client, session2);
+
+    expect(client.auth.refreshSession).toHaveBeenCalledTimes(1);
+    expect(AUTH_REFRESH_COOLDOWN_MS).toBe(60_000);
+    vi.spyOn(Date, 'now').mockRestore();
+  });
+
+  it('apply_due e perfil partilham o mesmo refresh — segunda operação não refresca de novo', async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const expired = makeSession(now - 120, 'tok-shared');
+
+    const client = {
+      auth: {
+        getSession: vi.fn().mockResolvedValue({ data: { session: expired }, error: null }),
+        refreshSession: vi.fn().mockResolvedValue({
+          data: {
+            session: makeSession(now + 3600, 'tok-shared-new'),
+          },
+          error: null,
+        }),
+      },
+    };
+
+    const runA = vi.fn().mockResolvedValue({ data: 0, error: null });
+    const runB = vi.fn().mockResolvedValue({ data: 0, error: null });
+
+    await withLiveSessionAuthCall(client, runA);
+    await withLiveSessionAuthCall(client, runB);
+
+    expect(client.auth.refreshSession).toHaveBeenCalledTimes(1);
   });
 
   it('token expirado: refresh uma vez e a segunda chamada tem sucesso', async () => {
@@ -93,29 +164,5 @@ describe('liveSession', () => {
 
     expect(client.auth.refreshSession).toHaveBeenCalledTimes(1);
     expect(run).toHaveBeenCalledTimes(1);
-  });
-
-  it('ensureLiveSession refresca proactivamente quando expirado', async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const expired = makeSession(now - 10);
-    const fresh = makeSession(now + 3600);
-
-    const client = {
-      auth: {
-        getSession: vi
-          .fn()
-          .mockResolvedValueOnce({ data: { session: expired }, error: null })
-          .mockResolvedValue({ data: { session: fresh }, error: null }),
-        refreshSession: vi.fn().mockResolvedValue({
-          data: { session: { ...fresh, access_token: 'tok-refreshed' } },
-          error: null,
-        }),
-      },
-    };
-
-    const session = await ensureLiveSession(client);
-
-    expect(client.auth.refreshSession).toHaveBeenCalledTimes(1);
-    expect(session?.access_token).toBe('tok-refreshed');
   });
 });

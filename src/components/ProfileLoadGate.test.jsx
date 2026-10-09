@@ -32,7 +32,7 @@ describe('ProfileLoadGate', () => {
     vi.useRealTimers();
   });
 
-  it('mostra estado de timeout com botão Tentar novamente', () => {
+  it('mostra copy aprovada de timeout com botão Tentar outra vez', () => {
     useAuth.mockReturnValue({
       session: { user: { id: 'u1' } },
       loading: false,
@@ -47,11 +47,12 @@ describe('ProfileLoadGate', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText(/não foi possível carregar o seu perfil/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /tentar novamente/i })).toBeInTheDocument();
+    expect(screen.getByText('Não foi possível carregar a tua conta. Tenta outra vez.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /tentar outra vez/i })).toBeInTheDocument();
+    expect(screen.queryByText(/não foi possível carregar o seu perfil/i)).not.toBeInTheDocument();
   });
 
-  it('sem sessão após timeout redirecciona para /auth com next (openAcordoId)', () => {
+  it('sessão expirada após timeout redirecciona para /auth sem mensagem (openAcordoId)', () => {
     useAuth.mockReturnValue({
       session: null,
       loading: false,
@@ -78,6 +79,7 @@ describe('ProfileLoadGate', () => {
     );
 
     expect(screen.getByText('Página auth')).toBeInTheDocument();
+    expect(screen.queryByText(/não foi possível carregar a tua conta/i)).not.toBeInTheDocument();
   });
 
   it('retry chama retryProfileLoad', () => {
@@ -95,7 +97,7 @@ describe('ProfileLoadGate', () => {
       </MemoryRouter>,
     );
 
-    screen.getByRole('button', { name: /tentar novamente/i }).click();
+    screen.getByRole('button', { name: /tentar outra vez/i }).click();
     expect(retryProfileLoad).toHaveBeenCalledTimes(1);
   });
 });

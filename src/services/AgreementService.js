@@ -4,7 +4,7 @@ import {
   callRpcWithOfflineFallback,
   resolveIdempotencyKey,
 } from '../utils/callRpcWithOfflineFallback.js';
-import { withLiveSessionAuthCall } from '../utils/liveSession.js';
+import { withLiveSessionAuthCall } from '../utils/authSessionRefresh.js';
 
 /**
  * Listagens MyAgreements: `acordos.*` inclui encerramento_motivo (TABLE SELECT authenticated).

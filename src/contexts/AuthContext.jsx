@@ -4,10 +4,9 @@ import { PERFIL_COLUNAS_AUTH_CONTEXT_SELECT } from '../utils/perfisGrants.js';
 import {
   isAnonOrAuthPrivilegeError,
   isLiveAuthSession,
-  isAccessTokenExpiredOrNearExpiry,
 } from '../utils/authProfileFetch.js';
 import {
-  refreshSessionOnceIfAllowed,
+  withLiveSessionAuthCall,
   resetAuthSessionRefreshState,
 } from '../utils/authSessionRefresh.js';
 import { PROFILE_LOAD_TIMEOUT_MS } from '../utils/profileLoadTimeout.js';
@@ -76,17 +75,7 @@ export function AuthProvider({ children }) {
       return null;
     }
 
-    let didRefresh = false;
-    let liveSession = initialSession;
-    if (isAccessTokenExpiredOrNearExpiry(liveSession)) {
-      const refreshed = await refreshSessionOnceIfAllowed(supabase, liveSession);
-      didRefresh = Boolean(refreshed);
-      if (refreshed) {
-        liveSession = refreshed;
-      }
-    }
-
-    const userId = liveSession.user.id;
+    const userId = initialSession.user.id;
     if (isCurrentFetch()) {
       setProfileLoadTimedOut(false);
     }
@@ -105,31 +94,23 @@ export function AuthProvider({ children }) {
     };
 
     try {
-      let { perfisResult, contactoResult } = await loadProfile();
+      const loadResult = await withLiveSessionAuthCall(supabase, async () => {
+        const pair = await loadProfile();
+        const privilegeErr = isAnonOrAuthPrivilegeError(pair.perfisResult.error)
+          ? pair.perfisResult.error
+          : isAnonOrAuthPrivilegeError(pair.contactoResult.error)
+            ? pair.contactoResult.error
+            : null;
+        return { data: pair, error: privilegeErr };
+      });
+
       if (!isCurrentFetch()) {
         return null;
       }
 
-      let perfisError = perfisResult.error;
-      let contactoError = contactoResult.error;
-
-      const privilegeError =
-        isAnonOrAuthPrivilegeError(perfisError) || isAnonOrAuthPrivilegeError(contactoError);
-
-      if (privilegeError) {
-        if (!didRefresh) {
-          const { data: { session: beforeRefresh } } = await supabase.auth.getSession();
-          const refreshed = isLiveAuthSession(beforeRefresh)
-            ? await refreshSessionOnceIfAllowed(supabase, beforeRefresh)
-            : null;
-          didRefresh = Boolean(refreshed);
-        }
-        if (didRefresh) {
-          ({ perfisResult, contactoResult } = await loadProfile());
-          perfisError = perfisResult.error;
-          contactoError = contactoResult.error;
-        }
-      }
+      const { perfisResult, contactoResult } = loadResult.data;
+      const perfisError = perfisResult.error;
+      const contactoError = contactoResult.error;
 
       if (!isCurrentFetch()) {
         return null;
