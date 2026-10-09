@@ -6,7 +6,6 @@ describe('canReactivarOferta', () => {
     estado: 'inactiva',
     inactiva_motivo: 'motorista',
     is_test: false,
-    hidden_by_admin: false,
   };
 
   it('permite oferta inactiva despublicada pelo motorista', () => {
@@ -24,9 +23,5 @@ describe('canReactivarOferta', () => {
 
   it('bloqueia is_test', () => {
     expect(canReactivarOferta({ ...motoristaInactiva, is_test: true })).toBe(false);
-  });
-
-  it('bloqueia hidden_by_admin', () => {
-    expect(canReactivarOferta({ ...motoristaInactiva, hidden_by_admin: true })).toBe(false);
   });
 });

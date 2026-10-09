@@ -1,16 +1,20 @@
--- Reactivar oferta (motorista) — distingue despublicação vs admin/is_test.
+-- Reactivar oferta (motorista) — motivo inactiva + revoke UPDATE client.
 
 ALTER TABLE public.ofertas_capacidade
   ADD COLUMN IF NOT EXISTS inactiva_motivo text
     CHECK (inactiva_motivo IS NULL OR inactiva_motivo IN ('motorista', 'admin'));
 
 ALTER TABLE public.ofertas_capacidade
-  ADD COLUMN IF NOT EXISTS hidden_by_admin boolean NOT NULL DEFAULT false;
+  DROP COLUMN IF EXISTS hidden_by_admin;
 
 COMMENT ON COLUMN public.ofertas_capacidade.inactiva_motivo IS
   'Porque ficou inactiva: motorista (cancel_oferta) ou admin. NULL quando publicada.';
-COMMENT ON COLUMN public.ofertas_capacidade.hidden_by_admin IS
-  'Retirada manualmente pela equipa — não reactivável pelo motorista.';
+
+-- Cliente não faz UPDATE directo — só RPCs SECURITY DEFINER.
+REVOKE UPDATE ON TABLE public.ofertas_capacidade FROM authenticated;
+REVOKE UPDATE ON TABLE public.ofertas_capacidade FROM anon;
+
+DROP POLICY IF EXISTS ofertas_update_proprio ON public.ofertas_capacidade;
 
 -- cancel_oferta regista motivo motorista
 CREATE OR REPLACE FUNCTION public.cancel_oferta(p_oferta_id uuid)
@@ -96,7 +100,7 @@ BEGIN
     RAISE EXCEPTION 'Oferta de teste não pode ser reactivada.';
   END IF;
 
-  IF COALESCE(v_oferta.hidden_by_admin, false) THEN
+  IF lower(COALESCE(v_oferta.inactiva_motivo, '')) = 'admin' THEN
     RAISE EXCEPTION 'Esta oferta foi retirada pela equipa.';
   END IF;
 
@@ -114,15 +118,20 @@ BEGIN
 
   v_ocupadas := public.oferta_ocupacao(p_oferta_id);
 
-  IF v_ocupadas > v_vagas_veiculo THEN
+  IF v_ocupadas > v_oferta.vagas_totais THEN
     RAISE EXCEPTION
-      'Não há lugares suficientes no veículo (% lugares) para os acordos activos desta oferta (% ocupados).',
-      v_vagas_veiculo, v_ocupadas;
+      'Não há lugares suficientes na oferta (% lugares) para os acordos activos (% ocupados).',
+      v_oferta.vagas_totais, v_ocupadas;
+  END IF;
+
+  IF v_oferta.vagas_totais > v_vagas_veiculo THEN
+    RAISE EXCEPTION
+      'O veículo só tem % lugares — a oferta tinha % publicados.',
+      v_vagas_veiculo, v_oferta.vagas_totais;
   END IF;
 
   UPDATE public.ofertas_capacidade
   SET
-    vagas_totais = v_vagas_veiculo,
     estado = 'disponivel',
     inactiva_motivo = NULL,
     updated_at = now()

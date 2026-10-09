@@ -1092,7 +1092,6 @@ describe('DriverDashboard — marketplace', () => {
         estado: 'inactiva',
         inactiva_motivo: 'motorista',
         is_test: false,
-        hidden_by_admin: false,
       },
     ]);
 
@@ -1108,7 +1107,7 @@ describe('DriverDashboard — marketplace', () => {
     expect(screen.queryByRole('menuitem', { name: /Despublicar/i })).not.toBeInTheDocument();
   });
 
-  it('oculta Reactivar para is_test ou hidden_by_admin', async () => {
+  it('oculta Reactivar para is_test ou inactiva_motivo admin', async () => {
     listOfertasByDriver.mockResolvedValue([
       {
         ...ofertaFixa,
@@ -1121,8 +1120,7 @@ describe('DriverDashboard — marketplace', () => {
         ...ofertaFixa,
         id: 'of-admin',
         estado: 'inactiva',
-        inactiva_motivo: 'motorista',
-        hidden_by_admin: true,
+        inactiva_motivo: 'admin',
       },
     ]);
 
@@ -1183,6 +1181,33 @@ describe('DriverDashboard — marketplace', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: /^Reactivar$/i }));
 
     expect(await screen.findByText(/Não há lugares suficientes/i)).toBeInTheDocument();
+  });
+
+  it('reactivar no detail sheet chama reactivateOferta', async () => {
+    listOfertasByDriver.mockResolvedValue([
+      {
+        ...ofertaFixa,
+        estado: 'inactiva',
+        inactiva_motivo: 'motorista',
+      },
+    ]);
+    reactivateOferta.mockResolvedValue({ ...ofertaFixa, estado: 'parcial' });
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Inactiva');
+    fireEvent.click(screen.getByTestId('driver-oferta-detail-trigger'));
+    const sheet = await screen.findByTestId('oferta-detail-sheet');
+    fireEvent.click(within(sheet).getByRole('button', { name: /^Reactivar$/i }));
+
+    await waitFor(() => {
+      expect(reactivateOferta).toHaveBeenCalledWith('of-1');
+    });
+    expect(await screen.findByText(/Oferta reactivada/i)).toBeInTheDocument();
   });
 
   it('bloqueia despublicar com acordo activo na oferta', async () => {
