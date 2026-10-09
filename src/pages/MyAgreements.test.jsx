@@ -105,9 +105,15 @@ function setupPagamentosDefault(emCustodia = true) {
   ));
 }
 
-/** @param {object} [acordo] @param {string} [viewerId] @param {boolean} [emCustodia] */
-function mockPagamentosGate(acordo, viewerId, emCustodia = true) {
-  const estado = emCustodia ? 'em_custodia' : 'pendente_pagamento';
+/**
+ * @param {object} [acordo]
+ * @param {string} [viewerId]
+ * @param {boolean} [emCustodia]
+ * @param {string} [estadoPagamentoOverride]
+ */
+function mockPagamentosGate(acordo, viewerId, emCustodia = true, estadoPagamentoOverride) {
+  const estado = estadoPagamentoOverride
+    ?? (emCustodia ? 'em_custodia' : 'pendente_pagamento');
   const mesReferencia = getMesReferenciaAtual();
   const noAcordo = (acordo?.acordos_passageiros || []).filter((p) => {
     const e = String(p.estado || '').toLowerCase();
@@ -699,6 +705,35 @@ describe('MyAgreements — marketplace 1:N', () => {
     openAcordoKebab(dialog);
     expect(screen.queryByRole('menuitem', { name: /Registar falta/i })).not.toBeInTheDocument();
     expectNoUserFacingJargon(dialog.textContent);
+  });
+
+  it('passageiro reservado com comprovativo_enviado: não vê hint de próximo passo', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    const acordoReservado = {
+      ...acordoPassageiro,
+      acordos_passageiros: [
+        {
+          id: 'ap-1',
+          passenger_id: 'pax-viewer',
+          estado: 'reservado',
+          quota_mensal_kz: 40000,
+          perfis: { nome_completo: 'Tu Mesmo' },
+        },
+      ],
+    };
+    getAgreementsForPassenger.mockResolvedValue([acordoReservado]);
+    mockPagamentosGate(acordoReservado, 'pax-viewer', false, 'comprovativo_enviado');
+    getAcordoContactos.mockResolvedValue({
+      bloqueado: true,
+      motivo: 'Disponíveis após pagamento em custódia.',
+      motorista: { nome_completo: 'Motorista Teste', telefone: null },
+    });
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).queryByTestId('contactos-proximo-passo')).not.toBeInTheDocument();
   });
 
   it('passageiro reservado com contactos bloqueados: vê próximo passo do comprovativo', async () => {

@@ -46,6 +46,7 @@ import AcordoPagamentoPanel from '../components/AcordoPagamentoPanel';
 import AcordoPagamentosHistorico from '../components/AcordoPagamentosHistorico';
 import AcordoPagamentosMotoristaPanel from '../components/AcordoPagamentosMotoristaPanel';
 import AcordoContactosPanel from '../components/AcordoContactosPanel';
+import { mostrarProximoPassoComprovativoPassageiro } from '../utils/contactosProximoPassoPagamento';
 import {
   acordoTemRescisaoConsensualPendenteParaUser,
   copyCancelamentoPendente,
@@ -1455,7 +1456,10 @@ const MyAgreements = () => {
             <AcordoContactosPanel
               contactos={contactos}
               loading={contactosLoading}
-              mostrarProximoPassoPagamento={Boolean(isPassageiro && minhaReservada)}
+              mostrarProximoPassoPagamento={Boolean(
+                isPassageiro
+                  && mostrarProximoPassoComprovativoPassageiro(minhaReservada, pagamento?.estado),
+              )}
               passageirosAguardarPagamento={passageirosReservadosAguardar}
             />
           ) : null}

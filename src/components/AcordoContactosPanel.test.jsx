@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import AcordoContactosPanel from './AcordoContactosPanel.jsx';
 
 describe('AcordoContactosPanel', () => {
-  it('passageiro reservado: mostra próximo passo quando contactos bloqueados', () => {
+  it('passageiro reservado + pendente: mostra próximo passo quando contactos bloqueados', () => {
     render(
       <AcordoContactosPanel
         contactos={{
@@ -20,6 +20,19 @@ describe('AcordoContactosPanel', () => {
       /envia o comprovativo/i,
     );
     expect(screen.queryByTestId('contactos-aguardar-pagamento')).not.toBeInTheDocument();
+  });
+
+  it('passageiro: prop false (ex. comprovativo já enviado) — sem próximo passo', () => {
+    render(
+      <AcordoContactosPanel
+        contactos={{
+          bloqueado: true,
+          motivo: 'Aguarda validação do comprovativo.',
+        }}
+        mostrarProximoPassoPagamento={false}
+      />,
+    );
+    expect(screen.queryByTestId('contactos-proximo-passo')).not.toBeInTheDocument();
   });
 
   it('motorista: aguardar pagamento por passageiro reservado, sem próximo passo', () => {
