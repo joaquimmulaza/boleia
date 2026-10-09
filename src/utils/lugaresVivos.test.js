@@ -6,7 +6,7 @@ import {
   filterMotoristaPagamentosLugaresVivos,
   filterContactosPassageirosVivos,
   labelChipEstadoPassageiro,
-  estadoPassageiroParaChip,
+  isLugarVivoPassageiro,
 } from './estadoPassageiro.js';
 import { getMesReferenciaAtual } from '../services/PaymentService.js';
 
@@ -67,18 +67,35 @@ describe('lugares vivos — acordo 104aa236', () => {
     expect(lugaresVivos(acordo, ctx)).toHaveLength(1);
   });
 
-  it('2 — quem saiu nunca chip Reservado (estado saiu e legacy reservado+anulado)', () => {
+  it('2 — estado saiu → chip Saiu (nunca Reservado)', () => {
     expect(labelChipEstadoPassageiro('saiu')).toBe('Saiu');
-    expect(
-      labelChipEstadoPassageiro('reservado', {
-        estado: 'anulado',
-        anulacao_motivo: ANULACAO_MOTIVO.SAISTE_ANTES_ACTIVACAO,
-      }),
-    ).toBe('Saiu');
-    expect(estadoPassageiroParaChip('reservado', {
+    expect(isLugarVivoPassageiro('saiu')).toBe(false);
+  });
+
+  it('inconsistência reservado + pagamento anulado → Reservado e conta como vivo', () => {
+    const pagamentoAnulado = {
       estado: 'anulado',
       anulacao_motivo: ANULACAO_MOTIVO.SAISTE_ANTES_ACTIVACAO,
-    })).toBe('saiu');
+    };
+    expect(
+      labelChipEstadoPassageiro('reservado', pagamentoAnulado),
+    ).toBe('Reservado');
+    expect(isLugarVivoPassageiro('reservado')).toBe(true);
+    expect(contagemLugaresVivos([{ estado: 'reservado' }])).toEqual({
+      total: 1,
+      confirmados: 0,
+      reservados: 1,
+    });
+    const rpcRows = [
+      {
+        pagamento_id: 'pg-x',
+        passenger_id: 'pax-inconsistente',
+        estado: 'anulado',
+        valor: 43000,
+      },
+    ];
+    const linhas = [{ passenger_id: 'pax-inconsistente', estado: 'reservado' }];
+    expect(filterMotoristaPagamentosLugaresVivos(rpcRows, { linhas })).toHaveLength(1);
   });
 
   it('3 — passageiro: N do cabeçalho = linhas vivas visíveis (RLS omite co-passageiro)', () => {
@@ -104,7 +121,7 @@ describe('lugares vivos — acordo 104aa236', () => {
     expect(contagemLugaresVivos(acordo.acordos_passageiros, ctx).total).toBe(1);
   });
 
-  it('4 — pagamentos motorista excluem seat2 anulado', () => {
+  it('4 — pagamentos motorista excluem seat2 com estado saiu (não por anulado)', () => {
     const acordo = acordo104aa236();
     const pagamentosAcordo = [
       { passenger_id: SEAT_RESERVADO, estado: 'pendente_pagamento', mes_referencia: mes },

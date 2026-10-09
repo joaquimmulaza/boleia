@@ -5,7 +5,7 @@ Contagens e listas usam `n_passageiros_contrato` ou `estado` bruto em vez do chi
 
 ## Aceite
 1. Cabeçalho «Passageiros · N» e «Confirmados · Reservados» só lugares vivos (`activo`|`reservado` após chip).
-2. Quem saiu → chip «Saiu» (nunca «Reservado»), via `estadoPassageiro.js`.
+2. Quem saiu → chip «Saiu» (`estado` DB `saiu`). Legacy #249: `expirado` + motivo saída → «Saiu». **Sem** mapear `reservado`+pagamento anulado (inconsistência visível).
 3. Passageiro: N do cabeçalho = linhas vivas visíveis (não `N_contrato`).
 4. «Pagamentos do mês» motorista: sem linha para lugar não vivo / pagamento `anulado` no primeiro load.
 5. Contactos: só passageiros vivos.

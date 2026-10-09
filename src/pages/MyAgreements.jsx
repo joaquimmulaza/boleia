@@ -106,6 +106,7 @@ import {
 } from '../utils/ratingGates';
 import {
   isActivoPassageiro,
+  isReservadoPassageiro,
   isExpiradoPassageiro,
   contagemLugaresVivos,
   formatContagemPassageiros,
@@ -1277,15 +1278,8 @@ const MyAgreements = () => {
         : [];
 
     const passageirosReservadosAguardar = isMotorista
-      ? lugaresVivosFromLinhas(linhas, lugaresVivosCtx)
-        .filter((p) => {
-          const chipCtx = resolvePagamentoChipContexto(p, {
-            pagamentosAcordo,
-            mesReferencia: mesReferenciaDetalhe,
-            chipFromList: chipContextPorPassenger[String(p.passenger_id || '')],
-          });
-          return estadoPassageiroParaChip(p.estado, chipCtx) === 'reservado';
-        })
+      ? lugaresVivosFromLinhas(linhas)
+        .filter((p) => isReservadoPassageiro(p.estado))
         .map((p) => ({
           passenger_id: p.passenger_id,
           nome: String(p.perfis?.nome_completo || '').trim() || 'Passageiro',
@@ -1294,9 +1288,6 @@ const MyAgreements = () => {
 
     const motoristaPagamentosVivos = filterMotoristaPagamentosLugaresVivos(motoristaPagamentos, {
       linhas,
-      pagamentosAcordo,
-      mesReferencia: mesReferenciaDetalhe,
-      chipContextPorPassenger,
     });
 
     const idsPassageirosVivos = new Set(

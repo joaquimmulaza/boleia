@@ -7,9 +7,6 @@ import {
   isAnulacaoMotivoAcordoTerminadoAntesActivacao,
   isAnulacaoMotivoSaidaVoluntaria,
 } from './pagamentoAnulacaoMotivo.js';
-import { findPagamentoChipContexto, resolvePagamentoChipContexto } from './pagamentoMotivoLugar.js';
-import { PAYMENT_STATES } from './paymentStatus.js';
-
 /**
  * @param {string | null | undefined} estado
  * @returns {string}
@@ -27,15 +24,6 @@ export function normalizeEstadoPassageiroKey(estado) {
  */
 export function estadoPassageiroParaChip(estado, pagamento) {
   const e = normalizeEstadoPassageiroKey(estado);
-  const pgEst = String(pagamento?.estado || '').toLowerCase();
-  if (pgEst === PAYMENT_STATES.ANULADO) {
-    if (isAnulacaoMotivoSaidaVoluntaria(pagamento)) {
-      return 'saiu';
-    }
-    if (isAnulacaoMotivoAcordoTerminadoAntesActivacao(pagamento)) {
-      return 'terminado';
-    }
-  }
   if (e === 'expirado') {
     if (isAnulacaoMotivoAcordoTerminadoAntesActivacao(pagamento)) {
       return 'terminado';
@@ -64,23 +52,14 @@ export function isReservadoPassageiro(estado) {
 }
 
 /**
- * Lugar ocupa vaga no acordo (confirmado ou soft-hold), após normalização de chip.
+ * Lugar ocupa vaga no acordo — só `acordos_passageiros.estado` (`activo`|`reservado`).
  *
- * @param {string} chip — resultado de `estadoPassageiroParaChip`
- * @returns {boolean}
- */
-export function isLugarVivoChip(chip) {
-  const e = normalizeEstadoPassageiroKey(chip);
-  return e === 'activo' || e === 'reservado';
-}
-
-/**
  * @param {string | null | undefined} estado
- * @param {{ anulacao_motivo?: string | null, estado?: string | null } | null | undefined} [pagamento]
  * @returns {boolean}
  */
-export function isLugarVivoPassageiro(estado, pagamento) {
-  return isLugarVivoChip(estadoPassageiroParaChip(estado, pagamento));
+export function isLugarVivoPassageiro(estado) {
+  const e = normalizeEstadoPassageiroKey(estado);
+  return e === 'activo' || e === 'reservado';
 }
 
 /**
@@ -139,18 +118,9 @@ export function lugaresVivos(acordo, ctx = {}) {
  * @param {LugaresVivosContexto} [ctx]
  * @returns {Array<{ passenger_id?: string, estado?: string }>}
  */
-export function lugaresVivosFromLinhas(linhas, ctx = {}) {
+export function lugaresVivosFromLinhas(linhas, _ctx = {}) {
   const rows = Array.isArray(linhas) ? linhas : [];
-  return rows.filter((p) => {
-    const pagamento = resolvePagamentoChipContexto(p, {
-      pagamentosAcordo: ctx.pagamentosAcordo,
-      mesReferencia: ctx.mesReferencia,
-      pagamentoViewer: ctx.pagamentoViewer,
-      viewerPassengerId: ctx.viewerPassengerId,
-      chipFromList: ctx.chipContextPorPassenger?.[String(p.passenger_id || '')],
-    });
-    return isLugarVivoPassageiro(p.estado, pagamento);
-  });
+  return rows.filter((p) => isLugarVivoPassageiro(p.estado));
 }
 
 /**
@@ -163,16 +133,8 @@ export function contagemLugaresVivos(linhas, ctx = {}) {
   let confirmados = 0;
   let reservados = 0;
   vivos.forEach((p) => {
-    const pagamento = resolvePagamentoChipContexto(p, {
-      pagamentosAcordo: ctx.pagamentosAcordo,
-      mesReferencia: ctx.mesReferencia,
-      pagamentoViewer: ctx.pagamentoViewer,
-      viewerPassengerId: ctx.viewerPassengerId,
-      chipFromList: ctx.chipContextPorPassenger?.[String(p.passenger_id || '')],
-    });
-    const chip = estadoPassageiroParaChip(p.estado, pagamento);
-    if (chip === 'activo') confirmados += 1;
-    else if (chip === 'reservado') reservados += 1;
+    if (isActivoPassageiro(p.estado)) confirmados += 1;
+    else if (isReservadoPassageiro(p.estado)) reservados += 1;
   });
   return { total: vivos.length, confirmados, reservados };
 }
@@ -188,50 +150,24 @@ export function countPassageirosConfirmadosReservados(linhas, ctx = {}) {
 }
 
 /**
- * Pagamentos pendentes motorista — só lugares vivos (exclui `anulado` e quem saiu).
+ * Pagamentos pendentes motorista — só passageiros com lugar `activo`|`reservado`.
  *
  * @param {object[]} rows
- * @param {{
- *   linhas?: object[],
- *   pagamentosAcordo?: object[],
- *   mesReferencia?: string,
- *   chipContextPorPassenger?: Record<string, { anulacao_motivo?: string | null, estado?: string | null }>,
- * }} ctx
+ * @param {{ linhas?: object[] }} ctx
  * @returns {object[]}
  */
 export function filterMotoristaPagamentosLugaresVivos(rows, ctx = {}) {
   const list = Array.isArray(rows) ? rows : [];
   const linhas = ctx.linhas || [];
-  const mes = ctx.mesReferencia;
   const vivosIds = new Set(
-    lugaresVivosFromLinhas(linhas, {
-      pagamentosAcordo: ctx.pagamentosAcordo,
-      mesReferencia: mes,
-      chipContextPorPassenger: ctx.chipContextPorPassenger,
-    })
+    lugaresVivosFromLinhas(linhas)
       .map((p) => String(p.passenger_id || ''))
       .filter(Boolean),
   );
 
   return list.filter((row) => {
     const pid = String(row.passenger_id || '');
-    if (!pid || !vivosIds.has(pid)) return false;
-
-    const pgEst = String(
-      row.estado
-      ?? findPagamentoChipContexto(ctx.pagamentosAcordo, pid, mes)?.estado
-      ?? '',
-    ).toLowerCase();
-    if (pgEst === PAYMENT_STATES.ANULADO) return false;
-
-    const linha = linhas.find((p) => String(p.passenger_id || '') === pid);
-    if (!linha) return false;
-    const chipCtx = resolvePagamentoChipContexto(linha, {
-      pagamentosAcordo: ctx.pagamentosAcordo,
-      mesReferencia: mes,
-      chipFromList: ctx.chipContextPorPassenger?.[pid],
-    });
-    return isLugarVivoPassageiro(linha.estado, chipCtx);
+    return Boolean(pid && vivosIds.has(pid));
   });
 }
 
