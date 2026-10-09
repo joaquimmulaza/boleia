@@ -43,6 +43,9 @@ BEGIN
   IF has_function_privilege('authenticated', 'public._p0_assert_lazy_apply_due_scope(uuid)', 'EXECUTE') THEN
     RAISE EXCEPTION 'FAIL-on-old: authenticated EXECUTE _p0_assert_lazy_apply_due_scope';
   END IF;
+  IF has_function_privilege('authenticated', 'public._refresh_repasse_motorista(uuid, date, uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL-on-old: authenticated EXECUTE _refresh_repasse_motorista';
+  END IF;
   IF NOT has_function_privilege('authenticated', 'public.apply_due_reserva_expiry(uuid)', 'EXECUTE') THEN
     RAISE EXCEPTION 'FAIL-on-old: authenticated sem EXECUTE apply_due_reserva_expiry';
   END IF;
@@ -185,6 +188,15 @@ BEGIN
   PERFORM public._p0_pg_proof_expect_denied(
     'trg_acordos_passageiros_create_pagamento',
     'SELECT public.trg_acordos_passageiros_create_pagamento()'
+  );
+  PERFORM public._p0_pg_proof_expect_denied(
+    '_refresh_repasse_motorista (v_blocked)',
+    format(
+      'SELECT public._refresh_repasse_motorista(%L::uuid, %L::date, %L::uuid)',
+      v_driver,
+      v_mes,
+      v_pax
+    )
   );
 
   RESET ROLE;

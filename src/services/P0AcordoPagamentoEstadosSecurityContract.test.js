@@ -166,6 +166,21 @@ describe('P0 pagamento estados — contrato segurança (migração 180000)', () 
     expect(sql).toMatch(/LEAST\(valor_kz, v_devido\)/);
     expect(sql).toMatch(/SUM\(LEAST\(pg\.valor_kz, COALESCE\(pg\.valor_devido_kz, pg\.valor_kz\)\)\)/);
     expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\._refresh_repasse_motorista/);
+    expect(sql).not.toMatch(
+      /CREATE OR REPLACE FUNCTION public\.admin_liquidate_period/,
+    );
+  });
+
+  it('BL6: _refresh_repasse_motorista só service_role (sem EXECUTE authenticated)', () => {
+    expect(sql).toMatch(
+      /REVOKE EXECUTE ON FUNCTION public\._refresh_repasse_motorista\(uuid, date, uuid\) FROM PUBLIC, anon, authenticated/,
+    );
+    expect(sql).toMatch(
+      /GRANT EXECUTE ON FUNCTION public\._refresh_repasse_motorista\(uuid, date, uuid\) TO service_role/,
+    );
+    expect(sql).not.toMatch(
+      /GRANT EXECUTE ON FUNCTION public\._refresh_repasse_motorista\(uuid, date, uuid\) TO authenticated/,
+    );
   });
 
   it('BL3: caller global via auth.role() + postgres sem JWT', () => {
@@ -185,6 +200,7 @@ describe('P0 pagamento estados — contrato segurança (migração 180000)', () 
       '_p0_finalize_lugares_rescisao_imediata',
       '_p0_assert_lazy_apply_due_scope',
       'build_ui_obrigacao_snapshot',
+      '_refresh_repasse_motorista',
     ]) {
       expect(proof, `runtime negado → ${fn}`).toMatch(new RegExp(fn));
     }
@@ -199,6 +215,8 @@ describe('P0 pagamento estados — contrato segurança (migração 180000)', () 
     expect(proof).toMatch(/FAIL BL2:/);
     expect(proof).toMatch(/FAIL BL4a:/);
     expect(proof).toMatch(/FAIL BL4b:/);
+    expect(proof).toMatch(/FAIL-on-old: authenticated EXECUTE _refresh_repasse_motorista/);
+    expect(proof).toMatch(/_refresh_repasse_motorista \(v_blocked\)/);
     expect(proof).toMatch(/PASS BL3:/);
   });
 });
