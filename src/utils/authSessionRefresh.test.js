@@ -4,6 +4,7 @@ import {
   refreshSessionOnceIfAllowed,
   resetAuthSessionRefreshState,
   AUTH_REFRESH_COOLDOWN_MS,
+  AUTH_REFRESH_ATTEMPT_KEYS_MAX,
 } from './authSessionRefresh.js';
 import { profileFetchSessionKey } from './authProfileFetch.js';
 
@@ -142,6 +143,80 @@ describe('authSessionRefresh — caminho único #255', () => {
     expect(client.auth.refreshSession).toHaveBeenCalledTimes(1);
     expect(run).toHaveBeenCalledTimes(2);
     expect(result).toEqual({ data: 'ok', error: null });
+  });
+
+  it('42501 com token válido (não expirado) não chama refreshSession', async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const fresh = makeSession(now + 3600, 'tok-fresh-valid');
+
+    const client = {
+      auth: {
+        getSession: vi.fn().mockResolvedValue({ data: { session: fresh }, error: null }),
+        refreshSession: vi.fn(),
+      },
+    };
+
+    const run = vi.fn().mockResolvedValue({ data: null, error: { code: '42501', status: 401 } });
+
+    const result = await withLiveSessionAuthCall(client, run);
+
+    expect(client.auth.refreshSession).not.toHaveBeenCalled();
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ data: null, error: { code: '42501', status: 401 } });
+  });
+
+  it('resetAuthSessionRefreshState limpa tentativas e permite novo refresh', async () => {
+    const session = makeSession(Math.floor(Date.now() / 1000) + 3600, 'tok-reset');
+    const client = {
+      auth: {
+        refreshSession: vi.fn().mockResolvedValue({
+          data: { session: { ...session, access_token: 'tok-new' } },
+          error: null,
+        }),
+      },
+    };
+
+    await refreshSessionOnceIfAllowed(client, session);
+    expect(client.auth.refreshSession).toHaveBeenCalledTimes(1);
+
+    await refreshSessionOnceIfAllowed(client, session);
+    expect(client.auth.refreshSession).toHaveBeenCalledTimes(1);
+
+    resetAuthSessionRefreshState();
+
+    await refreshSessionOnceIfAllowed(client, session);
+    expect(client.auth.refreshSession).toHaveBeenCalledTimes(2);
+  });
+
+  it('cap do Set de tentativas: após limite global permite nova tentativa', async () => {
+    let nowMs = 1_000_000;
+    vi.spyOn(Date, 'now').mockImplementation(() => nowMs);
+
+    const nowSec = Math.floor(nowMs / 1000);
+    const client = {
+      auth: {
+        refreshSession: vi.fn().mockResolvedValue({
+          data: {
+            session: makeSession(nowSec + 3600, 'tok-cap-ok'),
+          },
+          error: null,
+        }),
+      },
+    };
+
+    for (let i = 0; i < AUTH_REFRESH_ATTEMPT_KEYS_MAX; i += 1) {
+      nowMs += AUTH_REFRESH_COOLDOWN_MS + 1;
+      const s = makeSession(Math.floor(nowMs / 1000) + 3600, `tok-cap-${i}`);
+      await refreshSessionOnceIfAllowed(client, s);
+    }
+
+    const callsBefore = client.auth.refreshSession.mock.calls.length;
+    nowMs += AUTH_REFRESH_COOLDOWN_MS + 1;
+    const extra = makeSession(Math.floor(nowMs / 1000) + 3600, 'tok-cap-extra');
+    await refreshSessionOnceIfAllowed(client, extra);
+
+    expect(client.auth.refreshSession.mock.calls.length).toBeGreaterThan(callsBefore);
+    vi.spyOn(Date, 'now').mockRestore();
   });
 
   it('refresh falha: não repete refresh (≤1 refreshSession)', async () => {

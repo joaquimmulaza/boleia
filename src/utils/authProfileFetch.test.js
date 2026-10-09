@@ -12,7 +12,20 @@ describe('authProfileFetch', () => {
       expect(isLiveAuthSession(null)).toBe(false);
       expect(isLiveAuthSession({ user: { id: 'u1' } })).toBe(false);
       expect(isLiveAuthSession({ access_token: 'tok' })).toBe(false);
-      expect(isLiveAuthSession({ access_token: 'tok', user: { id: 'u1' } })).toBe(true);
+      const now = Math.floor(Date.now() / 1000);
+      expect(
+        isLiveAuthSession({ access_token: 'tok', user: { id: 'u1' }, expires_at: now + 3600 }),
+      ).toBe(true);
+    });
+
+    it('rejeita token expirado (expires_at)', () => {
+      const now = Math.floor(Date.now() / 1000);
+      expect(
+        isLiveAuthSession({ access_token: 'tok', user: { id: 'u1' }, expires_at: now - 1 }),
+      ).toBe(false);
+      expect(
+        isLiveAuthSession({ access_token: 'tok', user: { id: 'u1' }, expires_at: now }),
+      ).toBe(false);
     });
   });
 

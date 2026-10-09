@@ -4,6 +4,7 @@ import { PERFIL_COLUNAS_AUTH_CONTEXT_SELECT } from '../utils/perfisGrants.js';
 import {
   isAnonOrAuthPrivilegeError,
   isLiveAuthSession,
+  hasAuthSessionShape,
 } from '../utils/authProfileFetch.js';
 import {
   withLiveSessionAuthCall,
@@ -66,7 +67,7 @@ export function AuthProvider({ children }) {
 
     const { data: { session: initialSession }, error: sessionError } =
       await supabase.auth.getSession();
-    if (sessionError || !isLiveAuthSession(initialSession)) {
+    if (sessionError || !hasAuthSessionShape(initialSession)) {
       if (isCurrentFetch()) {
         setProfile(null);
         setProfileLoading(false);
@@ -142,6 +143,7 @@ export function AuthProvider({ children }) {
       };
       if (isCurrentFetch()) {
         setProfile(profileData);
+        setProfileLoadTimedOut(false);
       }
       return profileData;
     } finally {
@@ -158,9 +160,7 @@ export function AuthProvider({ children }) {
     setProfileLoadTimedOut(false);
     const { data: { session: current } } = await supabase.auth.getSession();
     if (!isLiveAuthSession(current)) {
-      setSession(null);
-      setUser(null);
-      setProfile(null);
+      await supabase.auth.signOut({ scope: 'local' });
       setProfileLoading(false);
       return null;
     }
@@ -179,14 +179,10 @@ export function AuthProvider({ children }) {
 
     profileLoadTimeoutRef.current = setTimeout(async () => {
       profileLoadTimeoutRef.current = null;
-      fetchSeqRef.current += 1;
-      setProfileLoading(false);
       setProfileLoadTimedOut(true);
       const { data: { session: current } } = await supabase.auth.getSession();
       if (!isLiveAuthSession(current)) {
-        setSession(null);
-        setUser(null);
-        setProfile(null);
+        await supabase.auth.signOut({ scope: 'local' });
       }
     }, PROFILE_LOAD_TIMEOUT_MS);
 
@@ -208,7 +204,7 @@ export function AuthProvider({ children }) {
       setSession(initialSession);
       setUser(initialSession?.user || null);
 
-      if (isLiveAuthSession(initialSession)) {
+      if (hasAuthSessionShape(initialSession)) {
         lastUserIdRef.current = initialSession.user.id;
         setProfileLoading(true);
         setLoading(false);
@@ -260,7 +256,7 @@ export function AuthProvider({ children }) {
           if (event === 'TOKEN_REFRESHED') {
             return;
           }
-          if (isLiveAuthSession(nextSession)) {
+          if (hasAuthSessionShape(nextSession)) {
             void fetchProfile();
           } else {
             setProfile(null);

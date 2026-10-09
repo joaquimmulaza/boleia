@@ -7,16 +7,41 @@ import {
   isAccessTokenExpiredOrNearExpiry,
   isAnonOrAuthPrivilegeError,
   profileFetchSessionKey,
+  hasAuthSessionShape,
 } from './authProfileFetch.js';
 
 /** Cooldown mínimo entre `refreshSession` por utilizador (evita loop 401/TOKEN_REFRESHED). */
 export const AUTH_REFRESH_COOLDOWN_MS = 60_000;
+
+/** Limite de chaves `user.id:access_token` guardadas (evita crescimento ilimitado). */
+export const AUTH_REFRESH_ATTEMPT_KEYS_MAX = 64;
 
 /** @type {Set<string>} */
 const profileRefreshAttempted = new Set();
 
 /** @type {Record<string, number>} */
 const authRetryAt = {};
+
+/**
+ * @param {string} sessionKey
+ */
+function trackRefreshAttempt(sessionKey) {
+  if (profileRefreshAttempted.size >= AUTH_REFRESH_ATTEMPT_KEYS_MAX) {
+    profileRefreshAttempted.clear();
+  }
+  profileRefreshAttempted.add(sessionKey);
+}
+
+/**
+ * @param {string} userId
+ */
+function clearRefreshAttemptsForUser(userId) {
+  for (const key of profileRefreshAttempted) {
+    if (key.startsWith(`${userId}:`)) {
+      profileRefreshAttempted.delete(key);
+    }
+  }
+}
 
 /** Limpa estado partilhado (SIGNED_OUT / testes). */
 export function resetAuthSessionRefreshState() {
@@ -33,7 +58,7 @@ export function resetAuthSessionRefreshState() {
  * @returns {Promise<import('@supabase/supabase-js').Session | null>}
  */
 export async function refreshSessionOnceIfAllowed(client, session) {
-  if (!isLiveAuthSession(session)) return null;
+  if (!hasAuthSessionShape(session)) return null;
 
   const userId = session.user.id;
   const sessionKey = profileFetchSessionKey(session);
@@ -44,7 +69,7 @@ export async function refreshSessionOnceIfAllowed(client, session) {
     return null;
   }
 
-  profileRefreshAttempted.add(sessionKey);
+  trackRefreshAttempt(sessionKey);
   authRetryAt[userId] = Date.now();
 
   const { data: refreshed, error: refreshError } = await client.auth.refreshSession();
@@ -55,6 +80,7 @@ export async function refreshSessionOnceIfAllowed(client, session) {
   ) {
     return null;
   }
+  clearRefreshAttemptsForUser(userId);
   return refreshed.session;
 }
 
@@ -75,7 +101,7 @@ export async function withLiveSessionAuthCall(client, run) {
 
   const { data: { session: initial } } = await getSession();
   if (
-    isLiveAuthSession(initial)
+    hasAuthSessionShape(initial)
     && isAccessTokenExpiredOrNearExpiry(initial)
   ) {
     didRefresh = Boolean(await refreshSessionOnceIfAllowed(client, initial));
@@ -92,7 +118,10 @@ export async function withLiveSessionAuthCall(client, run) {
 
   if (!didRefresh) {
     const { data: { session: current } } = await getSession();
-    if (isLiveAuthSession(current)) {
+    if (
+      isLiveAuthSession(current)
+      && isAccessTokenExpiredOrNearExpiry(current)
+    ) {
       didRefresh = Boolean(await refreshSessionOnceIfAllowed(client, current));
     }
   }

@@ -69,16 +69,22 @@ describe('AuthContext fetchProfile — retry e concorrência', () => {
   });
 
   it('retry com refresh bem-sucedido carrega perfil na segunda carga', async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const expired = liveSession('user-retry', {
+      expiresAtSec: nowSec - 120,
+    });
     const refreshed = liveSession('user-retry', {
       accessToken: 'refreshed-token',
-      expiresAtSec: Math.floor(Date.now() / 1000) + 3600,
+      expiresAtSec: nowSec + 3600,
     });
 
+    let sessionAfterRefresh = expired;
     supabase.auth.getSession.mockImplementation(async () => ({
-      data: { session: refreshed },
+      data: { session: sessionAfterRefresh },
       error: null,
     }));
     supabase.auth.refreshSession.mockImplementation(async () => {
+      sessionAfterRefresh = refreshed;
       return { data: { session: refreshed }, error: null };
     });
 

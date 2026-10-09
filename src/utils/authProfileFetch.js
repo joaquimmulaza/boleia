@@ -14,11 +14,24 @@ export function isAnonOrAuthPrivilegeError(error) {
 }
 
 /**
+ * Sessão com forma mínima para refresh (inclui JWT expirado).
+ * @param {import('@supabase/supabase-js').Session | null | undefined} session
+ * @returns {boolean}
+ */
+export function hasAuthSessionShape(session) {
+  return Boolean(session?.access_token && session?.user?.id);
+}
+
+/**
  * @param {import('@supabase/supabase-js').Session | null | undefined} session
  * @returns {boolean}
  */
 export function isLiveAuthSession(session) {
-  return Boolean(session?.access_token && session?.user?.id);
+  if (!session?.access_token || !session?.user?.id) return false;
+  const exp = session.expires_at;
+  if (typeof exp !== 'number') return false;
+  const nowSec = Math.floor(Date.now() / 1000);
+  return exp > nowSec;
 }
 
 /**
