@@ -16,8 +16,10 @@ Contratos Vitest: `src/services/SecDefaultPrivilegesContract.test.js` (defaults,
 
 ## Prova local PostgreSQL
 
+Requer PostgreSQL 16+ (`apt install postgresql`). O script aplica **todas** as migrações (bootstrap Supabase-like + `localfix` só para `20260329161035_remote_schema.sql` em psql local).
+
 ```bash
-chmod +x scripts/run-sec-default-privileges-pg-proof.sh
+chmod +x scripts/run-sec-default-privileges-pg-proof.sh scripts/apply-all-migrations-local.sh
 ./scripts/run-sec-default-privileges-pg-proof.sh
 ```
 
