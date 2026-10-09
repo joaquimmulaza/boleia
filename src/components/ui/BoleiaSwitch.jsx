@@ -1,8 +1,10 @@
 import { Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { Switch } from './switch';
 
 /**
- * Switch acessível (Figma KIT — track 52×32, hit area 52×44).
+ * Wrapper fino sobre Switch shadcn — loading e ARIA de /perfil.
+ * Trilho 52×32 no span interior do Switch; Root h-11 (toque). Label só liga htmlFor.
  *
  * @param {{
  *   checked?: boolean;
@@ -26,53 +28,43 @@ export default function BoleiaSwitch({
   className,
 }) {
   const isDisabled = disabled || loading;
+  /** OFF track = bg-muted — spinner com foreground garante ≥3:1 em light/dark */
+  const spinnerClass = checked ? 'text-primary-foreground' : 'text-foreground';
 
   return (
-    <button
-      type="button"
-      role="switch"
-      id={id}
-      aria-checked={checked}
-      aria-disabled={isDisabled ? true : undefined}
-      aria-busy={loading ? true : undefined}
-      aria-labelledby={ariaLabelledBy}
-      aria-describedby={ariaDescribedBy}
-      disabled={isDisabled}
-      onClick={() => {
-        if (isDisabled) return;
-        onCheckedChange?.(!checked);
-      }}
+    <label
+      htmlFor={id}
+      data-testid="boleia-switch-hit"
       className={cn(
-        'relative inline-flex h-11 w-[52px] shrink-0 items-center justify-center rounded-full',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
-        'dark:focus-visible:ring-offset-slate-900',
-        isDisabled && 'cursor-not-allowed opacity-40',
+        'inline-flex min-h-[44px] min-w-[52px] shrink-0 cursor-pointer items-center justify-center',
+        isDisabled && 'cursor-not-allowed',
         className,
       )}
-      data-testid="boleia-switch"
     >
-      <span
-        className={cn(
-          'relative block h-8 w-[52px] rounded-full border transition-colors duration-200',
-          checked
-            ? 'border-primary bg-primary'
-            : 'border-slate-400 bg-slate-200 dark:border-slate-500 dark:bg-slate-700',
-        )}
-        aria-hidden="true"
+      <Switch
+        id={id}
+        checked={checked}
+        disabled={isDisabled}
+        aria-busy={loading ? true : undefined}
+        aria-disabled={isDisabled ? true : undefined}
+        aria-labelledby={ariaLabelledBy}
+        aria-describedby={ariaDescribedBy}
+        data-testid="boleia-switch"
+        onCheckedChange={(next) => {
+          if (isDisabled) return;
+          onCheckedChange?.(next);
+        }}
+        className={cn('relative', isDisabled && 'pointer-events-none')}
       >
-        <span
-          className={cn(
-            'absolute top-1/2 size-6 -translate-y-1/2 rounded-full bg-white shadow-sm transition-transform duration-200',
-            'border border-slate-400 dark:border-slate-500',
-            checked ? 'translate-x-[24px]' : 'translate-x-1',
-          )}
-        />
         {loading ? (
-          <span className="absolute inset-0 flex items-center justify-center">
-            <Loader2 className="size-4 animate-spin text-white" aria-hidden="true" />
+          <span
+            className="pointer-events-none absolute inset-0 flex items-center justify-center"
+            aria-hidden="true"
+          >
+            <Loader2 className={cn('size-4 animate-spin', spinnerClass)} />
           </span>
         ) : null}
-      </span>
-    </button>
+      </Switch>
+    </label>
   );
 }

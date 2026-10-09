@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import Auth from './pages/Auth';
@@ -35,6 +35,10 @@ import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { usePasswordRecoveryRouteRedirect } from './hooks/usePasswordRecoveryRouteRedirect';
 import { needsProfileSetup } from './utils/oauth';
 
+const LazyDevRoutes = import.meta.env.DEV
+  ? lazy(() => import('./dev/DevAppRoutes.jsx'))
+  : null;
+
 const RootRoute = () => {
   const { session, loading, profileLoading, profile, tipoPerfil, passwordRecoveryPending } = useAuth();
 
@@ -59,11 +63,14 @@ function AppShell() {
   usePasswordRecoveryRouteRedirect();
   const { isOffline } = useNetworkStatus();
   const { pathname } = useLocation();
+  const isDevPublicRoute = import.meta.env.DEV && pathname.startsWith('/__dev/');
+
   const isPublicRoute = pathname === '/'
     || pathname === '/auth'
     || pathname === '/explorar'
     || pathname === '/privacidade'
-    || pathname === '/eliminacao-de-dados';
+    || pathname === '/eliminacao-de-dados'
+    || isDevPublicRoute;
 
   const routes = (
     <Routes>
@@ -73,6 +80,16 @@ function AppShell() {
       <Route path="/explorar" element={<MarketplaceExplore />} />
       <Route path="/privacidade" element={<PublicLegalPage page="privacidade" />} />
       <Route path="/eliminacao-de-dados" element={<PublicLegalPage page="eliminacao" />} />
+      {import.meta.env.DEV && LazyDevRoutes ? (
+        <Route
+          path="/__dev/*"
+          element={(
+            <Suspense fallback={null}>
+              <LazyDevRoutes />
+            </Suspense>
+          )}
+        />
+      ) : null}
 
       {/* Rotas protegidas envolvidas pelo Layout global (com BottomBar) */}
       <Route element={<Layout />}>

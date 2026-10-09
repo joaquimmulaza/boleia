@@ -44,6 +44,9 @@ lerna-debug.log*
 coverage/
 .nyc_output/
 
+# Capturas locais (scripts/capture-*.mjs → ./artifacts por defeito)
+artifacts/
+
 # ===========================
 # Ficheiros de SO
 # ===========================

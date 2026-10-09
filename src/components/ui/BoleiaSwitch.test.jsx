@@ -1,0 +1,126 @@
+import React from 'react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+
+import BoleiaSwitch from './BoleiaSwitch';
+
+const VIEWPORT_WIDTHS = [320, 390, 430];
+
+function renderSwitch(overrides = {}) {
+  const props = {
+    checked: false,
+    disabled: false,
+    loading: false,
+    onCheckedChange: vi.fn(),
+    ...overrides,
+  };
+  return render(<BoleiaSwitch {...props} />);
+}
+
+function getThumb() {
+  const root = screen.getByRole('switch');
+  return root.querySelector('[data-state]');
+}
+
+describe('BoleiaSwitch — shadcn + geometria', () => {
+  it('OFF: thumb dentro do track em várias larguras', () => {
+    for (const width of VIEWPORT_WIDTHS) {
+      document.documentElement.style.width = `${width}px`;
+      const { unmount } = renderSwitch({ checked: false });
+      const track = screen.getByTestId('switch-track-visual');
+      const thumb = getThumb();
+      expect(track.className).toMatch(/overflow-hidden/);
+      expect(thumb).toHaveAttribute('data-state', 'unchecked');
+      expect(thumb?.className).toMatch(/data-\[state=unchecked\]:translate-x-0/);
+      expect(thumb?.className).toMatch(/data-\[state=checked\]:translate-x-\[1\.25rem\]/);
+      unmount();
+    }
+  });
+
+  it('ON: thumb dentro do track em várias larguras', () => {
+    for (const width of VIEWPORT_WIDTHS) {
+      document.documentElement.style.width = `${width}px`;
+      const { unmount } = renderSwitch({ checked: true });
+      const thumb = getThumb();
+      expect(thumb).toHaveAttribute('data-state', 'checked');
+      expect(thumb?.className).toMatch(/data-\[state=checked\]:translate-x-\[1\.25rem\]/);
+      unmount();
+    }
+  });
+
+  it('mantém aria-checked e focus ring no Switch', () => {
+    renderSwitch({ checked: true });
+    const sw = screen.getByRole('switch');
+    expect(sw).toHaveAttribute('aria-checked', 'true');
+    expect(sw.className).toMatch(/focus-visible:ring-2/);
+  });
+
+  it('activating: aria-busy, disabled e spinner', () => {
+    renderSwitch({ checked: true, loading: true });
+    const sw = screen.getByRole('switch');
+    expect(sw).toHaveAttribute('aria-busy', 'true');
+    expect(sw).toBeDisabled();
+    expect(document.querySelector('.animate-spin')).toBeTruthy();
+  });
+
+  it('blocked: aria-disabled e sem toggle', () => {
+    const onCheckedChange = vi.fn();
+    renderSwitch({ disabled: true, onCheckedChange });
+    const sw = screen.getByRole('switch');
+    expect(sw).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(sw);
+    expect(onCheckedChange).not.toHaveBeenCalled();
+  });
+
+  it('trilho visual 52×32: span interior h-8 (32px) e w-[52px]', () => {
+    renderSwitch({ id: 'boleia-switch-track' });
+    const track = screen.getByTestId('switch-track-visual');
+    expect(track.className).toMatch(/\bh-8\b/);
+    expect(track.className).toMatch(/\bw-\[52px\]/);
+    const root = screen.getByRole('switch');
+    expect(root.className).not.toMatch(/\bh-8\b/);
+  });
+
+  it('zona de toque ≥44px: Root h-11 (44px) e clique alterna', () => {
+    const onCheckedChange = vi.fn();
+    renderSwitch({ id: 'boleia-switch-test', onCheckedChange });
+    const root = screen.getByRole('switch');
+    expect(root.className).toMatch(/\bh-11\b/);
+    expect(root.className).toMatch(/min-h-\[44px\]/);
+    fireEvent.click(root);
+    expect(onCheckedChange).toHaveBeenCalledWith(true);
+  });
+
+  it('spinner OFF usa foreground (contraste no trilho muted)', () => {
+    renderSwitch({ checked: false, loading: true });
+    const spinner = document.querySelector('.animate-spin');
+    expect(spinner?.className).toMatch(/text-foreground/);
+    expect(spinner?.className).not.toMatch(/text-primary-foreground/);
+  });
+
+  describe('snapshot dos 6 estados push (DOM + classes thumb)', () => {
+    const states = [
+      { name: 'on', props: { checked: true } },
+      { name: 'off', props: { checked: false } },
+      { name: 'activating-on', props: { checked: true, loading: true } },
+      { name: 'activating-off', props: { checked: false, loading: true } },
+      { name: 'disabled-off', props: { checked: false, disabled: true } },
+      { name: 'disabled-on', props: { checked: true, disabled: true } },
+    ];
+
+    for (const { name, props } of states) {
+      it(`estado ${name}`, () => {
+        const { container } = renderSwitch(props);
+        expect(container).toMatchSnapshot();
+        const thumb = getThumb();
+        expect(thumb).toBeTruthy();
+        if (props.checked && !props.loading) {
+          expect(thumb?.className).toMatch(/translate-x-\[1\.25rem\]/);
+        }
+        if (!props.checked && !props.loading) {
+          expect(thumb?.className).toMatch(/translate-x-0/);
+        }
+      });
+    }
+  });
+});
