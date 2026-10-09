@@ -197,7 +197,7 @@ describe('buildAcordoIdPorOfertaMap', () => {
       expect(merged[0].id).toBe('ac-opt');
     });
 
-    it('optimista recente sobrevive quando fetch só traz acordo morto na mesma oferta', () => {
+    it('P1: descarta optimista quando fetch traz acordo terminado na mesma oferta (sem Ver acordo)', () => {
       const optimista = buildAcordoOptimistaPosAceite(
         { id: 'ac-opt', oferta_id: 'of-1' },
         passengerId,
@@ -206,12 +206,13 @@ describe('buildAcordoIdPorOfertaMap', () => {
       const morto = {
         id: 'ac-morto',
         oferta_id: 'of-1',
-        estado: 'activo',
-        acordos_passageiros: [{ passenger_id: passengerId, estado: 'expirado' }],
+        estado: 'cancelado',
+        acordos_passageiros: [{ passenger_id: passengerId, estado: 'saiu' }],
       };
       const merged = mergeAcordosPassageiro([optimista], [morto], passengerId, now);
-      expect(merged).toHaveLength(2);
-      expect(merged.map((a) => a.id)).toEqual(['ac-morto', 'ac-opt']);
+      expect(merged).toHaveLength(1);
+      expect(merged[0].id).toBe('ac-morto');
+      expect(buildAcordoIdPorOfertaMap(merged, passengerId, now).size).toBe(0);
     });
 
     it('optimista não sobrevive quando fetch traz acordo vivo na mesma oferta', () => {

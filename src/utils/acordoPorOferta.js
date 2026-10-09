@@ -127,7 +127,12 @@ export function mergeAcordosPassageiro(prev, fetched, passengerId, now = Date.no
   const result = [...fetchedList];
 
   const ofertasComVivo = new Set();
+  /** Ofertas com acordo no fetch (vivo ou terminado) — evita CTA optimista após encerramento. */
+  const ofertasComAcordoFetch = new Set();
   for (const acordo of fetchedList) {
+    if (acordo?.oferta_id) {
+      ofertasComAcordoFetch.add(acordo.oferta_id);
+    }
     if (isAcordoVivoParaPassageiro(acordo, passengerId, now) && acordo.oferta_id) {
       ofertasComVivo.add(acordo.oferta_id);
     }
@@ -136,6 +141,12 @@ export function mergeAcordosPassageiro(prev, fetched, passengerId, now = Date.no
   for (const acordo of prev || []) {
     if (!acordo?._optimista || !acordo?.oferta_id) continue;
     if (ofertasComVivo.has(acordo.oferta_id)) continue;
+    if (
+      ofertasComAcordoFetch.has(acordo.oferta_id)
+      && !ofertasComVivo.has(acordo.oferta_id)
+    ) {
+      continue;
+    }
     const desde = acordo._optimistaDesde ?? 0;
     if (now - desde < ACORDO_OPTIMISTA_TTL_MS) {
       result.push(acordo);
