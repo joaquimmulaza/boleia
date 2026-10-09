@@ -1212,34 +1212,28 @@ describe('MyAgreements — marketplace 1:N', () => {
       });
     });
 
-    it('focus=rescisao: um scroll, remove focus da URL e refresh não repete scroll', async () => {
+    it('focus=rescisao com pedido pendente: um scroll, remove focus da URL e refresh não repete scroll', async () => {
       const scrollSpy = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {});
-      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
-      getAgreementsForDriver.mockResolvedValue([
-        {
-          ...acordoMotorista,
-          rescisao_modo: 'consensual',
-          rescisao_solicitada_por: 'driver-1',
-          rescisao_vigencia: 'fim_ciclo',
-        },
-      ]);
+      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+      getAgreementsForPassenger.mockResolvedValue([acordoComPedidoMotorista]);
 
-      renderPage(['/acordos?openAcordoId=acordo-1&focus=rescisao']);
+      renderPage(['/acordos?openAcordoId=acordo-pax&focus=rescisao']);
 
       const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      expect(within(dialog).getByTestId('rescisao-consensual-pendente')).toBeInTheDocument();
       await waitFor(() => {
         expect(scrollSpy).toHaveBeenCalledTimes(1);
       });
       expect(mockNavigate).toHaveBeenCalledWith(
-        expect.objectContaining({ search: '?openAcordoId=acordo-1' }),
+        expect.objectContaining({ search: '?openAcordoId=acordo-pax' }),
         expect.objectContaining({ replace: true }),
       );
 
-      const callsBefore = getAgreementsForDriver.mock.calls.length;
+      const callsBefore = getAgreementsForPassenger.mock.calls.length;
       notifyMarketplaceHubRefresh();
       notifyMarketplaceHubRefresh();
       await waitFor(() => {
-        expect(getAgreementsForDriver.mock.calls.length).toBeGreaterThan(callsBefore);
+        expect(getAgreementsForPassenger.mock.calls.length).toBeGreaterThan(callsBefore);
       });
       expect(scrollSpy).toHaveBeenCalledTimes(1);
 
@@ -1247,6 +1241,32 @@ describe('MyAgreements — marketplace 1:N', () => {
       fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
       await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
       expect(scrollSpy).toHaveBeenCalledTimes(1);
+
+      scrollSpy.mockRestore();
+    });
+
+    it('focus=rescisao com pedido já respondido: consome focus sem scroll', async () => {
+      const scrollSpy = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {});
+      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+      getAgreementsForPassenger.mockResolvedValue([
+        {
+          ...acordoComPedidoMotorista,
+          estado: 'cancelamento_pendente',
+          rescisao_solicitada_por: null,
+          rescisao_effective_on: '2026-11-01',
+        },
+      ]);
+
+      renderPage(['/acordos?openAcordoId=acordo-pax&focus=rescisao']);
+
+      await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith(
+          expect.objectContaining({ search: '?openAcordoId=acordo-pax' }),
+          expect.objectContaining({ replace: true }),
+        );
+      });
+      expect(scrollSpy).not.toHaveBeenCalled();
 
       scrollSpy.mockRestore();
     });

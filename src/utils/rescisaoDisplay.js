@@ -40,6 +40,20 @@ export function lastDayOfRescisaoCycle(rescisaoEffectiveOn) {
  * @param {string | null | undefined} rescisaoEffectiveOn
  * @returns {{ titulo: string, corpo: string } | null}
  */
+/**
+ * A contraparte ainda pode confirmar ou recusar um pedido consensual (acordo activo).
+ * @param {{ estado?: string, rescisao_modo?: string, rescisao_solicitada_por?: string } | null | undefined} acordo
+ * @param {string | null | undefined} userId
+ * @returns {boolean}
+ */
+export function acordoTemRescisaoConsensualPendenteParaUser(acordo, userId) {
+  if (!acordo || !userId) return false;
+  if (String(acordo.estado || '').toLowerCase() !== 'activo') return false;
+  if (String(acordo.rescisao_modo || '').toLowerCase() !== 'consensual') return false;
+  if (!acordo.rescisao_solicitada_por) return false;
+  return String(acordo.rescisao_solicitada_por) !== String(userId);
+}
+
 export function copyCancelamentoPendente(rescisaoEffectiveOn) {
   const fimCiclo = lastDayOfRescisaoCycle(rescisaoEffectiveOn);
   const fimFormatado = formatDateLuandaPt(fimCiclo) || formatDateLuandaPt(rescisaoEffectiveOn);

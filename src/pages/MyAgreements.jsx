@@ -41,7 +41,10 @@ import AcordoContratoSnapshot from '../components/AcordoContratoSnapshot';
 import { isOfertaFlexivel } from '../services/OfertaService';
 import AcordoPagamentoPanel from '../components/AcordoPagamentoPanel';
 import AcordoContactosPanel from '../components/AcordoContactosPanel';
-import { copyCancelamentoPendente } from '../utils/rescisaoDisplay';
+import {
+  acordoTemRescisaoConsensualPendenteParaUser,
+  copyCancelamentoPendente,
+} from '../utils/rescisaoDisplay';
 import AcordoPrecoProximoMesPanel from '../components/precoProximoMes/AcordoPrecoProximoMesPanel';
 import {
   podeProporNovaPreco,
@@ -608,9 +611,15 @@ const MyAgreements = () => {
     if (focus === 'pagamento' && pagamentoLoading) return undefined;
 
     pendingFocusRef.current = null;
+    if (
+      focus === 'rescisao'
+      && !acordoTemRescisaoConsensualPendenteParaUser(selected, user?.id)
+    ) {
+      return undefined;
+    }
     scrollToAcordoFocus(focus);
     return undefined;
-  }, [selected, scrollToAcordoFocus, pagamentoLoading, pagamento]);
+  }, [selected, scrollToAcordoFocus, pagamentoLoading, pagamento, user?.id]);
 
   useEffect(() => {
     setRescisaoConfirmadaLocal(false);
