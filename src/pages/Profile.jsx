@@ -158,7 +158,7 @@ const Profile = () => {
   }
 
   return (
-    <PageShell className="pb-40">
+    <PageShell className="pb-[calc(var(--shell-bottom-inset)+4.5rem+env(safe-area-inset-bottom,0px))]">
       <PageHeader title="O Meu Perfil" subtitle={`Conta de ${profileData.tipo_perfil}`} />
 
       <form onSubmit={handleSubmit} className="space-y-8">
@@ -351,7 +351,11 @@ const Profile = () => {
           </button>
         </div>
 
-        <div data-testid="profile-sticky-spacer" className="h-6 shrink-0" aria-hidden="true" />
+        <div
+          data-testid="profile-sticky-spacer"
+          className="h-[calc(4.5rem+env(safe-area-inset-bottom,0px))] shrink-0"
+          aria-hidden="true"
+        />
 
         <div
           data-testid="profile-sticky-save"
@@ -361,7 +365,7 @@ const Profile = () => {
             <button
               type="submit"
               disabled={saving}
-              className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all duration-200 active:scale-[0.98] flex justify-center items-center gap-2 disabled:opacity-70"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all duration-200 active:scale-[0.98] flex justify-center items-center gap-2 disabled:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
             >
               {saving ? (
                 <>
