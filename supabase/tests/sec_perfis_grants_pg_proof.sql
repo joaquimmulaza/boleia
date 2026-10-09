@@ -13,9 +13,10 @@ BEGIN
   END IF;
 END $$;
 
-GRANT USAGE ON SCHEMA public TO authenticated, anon;
+GRANT USAGE ON SCHEMA public TO authenticated;
 
--- Estado pré-fix (simula prod): UPDATE à tabela inteira
+-- Setup alinhado a prod pré-fix: só authenticated com UPDATE/EXECUTE amplos (anon/PUBLIC não recebem grants extra).
+-- Na migração, REVOKE … FROM anon / FROM PUBLIC nos helpers é defensivo (prod já não expunha EXECUTE a anon).
 CREATE TABLE IF NOT EXISTS public.perfis (
   id uuid PRIMARY KEY,
   nome_completo text,

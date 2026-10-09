@@ -1,6 +1,6 @@
--- fix(sec): column grants em perfis/notificacoes; revogar EXECUTE de helpers internos;
--- default privileges para objectos futuros criados por postgres (migrações Supabase).
+-- fix(sec): column grants em perfis/notificacoes; revogar EXECUTE de helpers internos.
 -- Auditoria: boleia-rls-update-audit-2026-10-09 (item #1 perfis.is_admin, #2 RPCs internas).
+-- Não alterar default ACL de postgres: tabelas históricas (pagamentos_acordo, etc.) dependem dos defaults.
 
 -- === 1. perfis: UPDATE só colunas que o cliente escreve (rg src/ + supabase/functions) ===
 -- useAuthForm.js: nome_completo, telefone, tipo_perfil, perfil_completo
@@ -33,14 +33,7 @@ REVOKE EXECUTE ON FUNCTION public._refresh_repasse_motorista(uuid, date, uuid)
 REVOKE EXECUTE ON FUNCTION public.notify_domain_event(uuid, text, text, jsonb, uuid)
   FROM PUBLIC, anon, authenticated;
 
--- === 3. Default privileges (objectos novos nas migrações exigem GRANT explícito) ===
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
-  REVOKE ALL ON TABLES FROM anon, authenticated;
-
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
-  REVOKE EXECUTE ON FUNCTIONS FROM anon, authenticated, PUBLIC;
-
--- === 4. notificacoes: cliente só actualiza lida (useNotifications.js) ===
+-- === 3. notificacoes: cliente só actualiza lida (useNotifications.js) ===
 REVOKE UPDATE ON TABLE public.notificacoes FROM authenticated, anon;
 
 GRANT UPDATE (lida) ON TABLE public.notificacoes TO authenticated;

@@ -65,11 +65,9 @@ describe('fix(sec) — perfis/notificacoes grants (contrato migração)', () => 
     expect(sql).toMatch(/FROM PUBLIC, anon, authenticated/);
   });
 
-  it('ALTER DEFAULT PRIVILEGES revoga grants automáticos em tabelas e funções', () => {
+  it('não contém ALTER DEFAULT PRIVILEGES (defaults postgres mantêm-se para tabelas futuras)', () => {
     const sql = readMigration(SEC_MIGRATION);
-    expect(sql).toMatch(/ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public/);
-    expect(sql).toMatch(/REVOKE ALL ON TABLES FROM anon, authenticated/);
-    expect(sql).toMatch(/REVOKE EXECUTE ON FUNCTIONS FROM anon, authenticated, PUBLIC/);
+    expect(sql).not.toMatch(/ALTER DEFAULT PRIVILEGES/i);
   });
 
   it('notificacoes: UPDATE só coluna lida', () => {
