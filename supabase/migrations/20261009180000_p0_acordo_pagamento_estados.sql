@@ -265,20 +265,25 @@ BEGIN
     valor_devido_kz = v_devido,
     valor_kz = CASE
       WHEN lower(estado) = 'anulado' THEN valor_kz
-      WHEN v_excesso > 0 AND lower(estado) IN ('em_custodia', 'liquidado', 'comprovativo_enviado') THEN
-        GREATEST(0, v_devido)
-      ELSE v_restante
+      WHEN lower(estado) = 'pendente_pagamento' AND comprovativo_path IS NULL THEN v_restante
+      ELSE valor_kz
     END,
-    requer_resolucao_admin = (
-      v_excesso > 0
-      AND lower(estado) IN ('em_custodia', 'liquidado', 'comprovativo_enviado')
-    ),
-    resolucao_admin_motivo = CASE
-      WHEN v_excesso > 0 THEN
-        COALESCE(
-          resolucao_admin_motivo,
-          'Excesso de ' || v_excesso::text || ' Kz após fim do acordo'
+    valor_payout_liquido_kz = CASE
+      WHEN lower(estado) = 'pendente_pagamento' AND comprovativo_path IS NULL THEN
+        public.compute_payout_liquido_kz(
+          v_restante,
+          COALESCE(take_rate_pct, 0.10::numeric)
         )
+      ELSE valor_payout_liquido_kz
+    END,
+    requer_resolucao_admin = COALESCE(requer_resolucao_admin, false)
+      OR (
+        v_excesso > 0
+        AND lower(estado) IN ('comprovativo_enviado', 'em_custodia', 'liquidado')
+      ),
+    resolucao_admin_motivo = CASE
+      WHEN v_excesso > 0 AND COALESCE(btrim(resolucao_admin_motivo), '') = '' THEN
+        'Excesso de ' || v_excesso::text || ' Kz após fim do acordo'
       ELSE resolucao_admin_motivo
     END,
     updated_at = now()
@@ -373,10 +378,6 @@ BEGIN
 
   v_pago := public._valor_pago_efectivo_kz(v_pg);
   v_valor := GREATEST(0, v_proporcional - v_pago);
-
-  IF lower(v_pg.estado) IN ('pendente_pagamento', 'comprovativo_enviado') THEN
-    v_valor := GREATEST(0, COALESCE(v_pg.valor_kz, v_valor));
-  END IF;
 
   RETURN jsonb_build_object(
     'dias', v_dias,
@@ -626,7 +627,11 @@ STABLE
 SECURITY DEFINER
 SET search_path TO 'public'
 AS $$
-  SELECT nullif(current_setting('request.jwt.claim.role', true), '') = 'service_role'
+  SELECT auth.role() = 'service_role'
+    OR (
+      auth.uid() IS NULL
+      AND session_user IN ('postgres', 'supabase_admin')
+    )
     OR public.is_platform_admin();
 $$;
 
@@ -1679,3 +1684,7 @@ REVOKE EXECUTE ON FUNCTION public.terminate_agreement(uuid, text, text, uuid, te
 REVOKE ALL ON FUNCTION public.apply_due_agreement_non_renewals(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.apply_due_agreement_non_renewals(uuid) TO authenticated;
 REVOKE EXECUTE ON FUNCTION public.apply_due_agreement_non_renewals(uuid) FROM anon;
+
+-- Escritas directas em acordos / lugares só via RPC (cliente usa SELECT).
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON TABLE public.acordos FROM anon, authenticated;
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON TABLE public.acordos_passageiros FROM anon, authenticated;

@@ -91,6 +91,12 @@ BEGIN
     (v_out, 'p0-proof-out@test')
   ON CONFLICT DO NOTHING;
 
+  INSERT INTO public.perfis (id, nome_completo, telefone, tipo_perfil) VALUES
+    (v_driver, 'Proof Driver', '921000001', 'Motorista'),
+    (v_pax, 'Proof Pax', '921000002', 'Passageiro'),
+    (v_out, 'Proof Out', '921000003', 'Passageiro')
+  ON CONFLICT (id) DO NOTHING;
+
   INSERT INTO public.veiculos (id_motorista, marca_modelo, matricula, capacidade_total, vagas_passageiros)
   VALUES (v_driver, 'Proof', 'P0-001', 4, 3)
   RETURNING id INTO v_veiculo;
@@ -351,6 +357,7 @@ BEGIN
 
   PERFORM set_config('request.jwt.claim.sub', '', true);
   PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
   PERFORM set_config('session_replication_role', 'replica', true);
   v_n := public.apply_due_reserva_expiry(NULL);
   PERFORM set_config('session_replication_role', 'origin', true);
@@ -364,6 +371,241 @@ BEGIN
   END IF;
 
   RAISE NOTICE 'PASS B2: NULL scoped (A só A; outsider 0; foreign 42501; service_role global)';
+END $$;
+
+\echo '=== BL1/BL2: ajustar_obrigacao_pagamento_mes (valor_kz bloqueado + payout) ==='
+DO $$
+DECLARE
+  v_driver uuid := 'c1111111-1111-4111-8111-111111111111';
+  v_pax uuid := 'c2222222-2222-4222-8222-222222222222';
+  v_admin uuid := 'c3333333-3333-4333-8333-333333333333';
+  v_veiculo uuid;
+  v_oferta uuid;
+  v_procura uuid;
+  v_acordo uuid := 'c4444444-4444-4444-8444-444444444444';
+  v_pax_cust uuid := 'c5555555-5555-4555-8555-555555555555';
+  v_pax_pend uuid := 'c6666666-6666-4666-8666-666666666666';
+  v_pax_liq uuid := 'c9999999-9999-4999-8999-999999999999';
+  v_ap uuid := 'c7777777-7777-4777-8777-777777777777';
+  v_ap_cust uuid := 'c8888888-8888-4888-8888-888888888888';
+  v_ap_pend uuid := 'caaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  v_ap_liq uuid := 'cbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  v_pg_comp uuid := 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+  v_pg_pend uuid := 'cddddddd-dddd-4ddd-8ddd-dddddddddddd';
+  v_pg_cust uuid := 'ceeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+  v_pg_liq uuid := 'cfffffff-ffff-4fff-8fff-ffffffffffff';
+  v_fecho date := '2026-10-09';
+  v_mes date := '2026-10-01';
+  v_devido integer := 7000;
+  v_vk integer;
+  v_vd integer;
+  v_flag boolean;
+  v_conf integer;
+  v_payout integer;
+  v_exp_payout integer;
+  v_n_admin integer;
+BEGIN
+  PERFORM set_config('session_replication_role', 'replica', true);
+
+  INSERT INTO auth.users (id, email) VALUES
+    (v_driver, 'bl1-driver@test'),
+    (v_pax, 'bl1-pax@test'),
+    (v_pax_cust, 'bl1-pax-cust@test'),
+    (v_pax_pend, 'bl1-pax-pend@test'),
+    (v_pax_liq, 'bl1-pax-liq@test'),
+    (v_admin, 'bl1-admin@test')
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO public.perfis (id, nome_completo, telefone, tipo_perfil, is_admin) VALUES
+    (v_driver, 'BL Driver', '924000001', 'Motorista', false),
+    (v_pax, 'BL Pax', '924000002', 'Passageiro', false),
+    (v_pax_cust, 'BL Cust', '924000003', 'Passageiro', false),
+    (v_pax_pend, 'BL Pend', '924000004', 'Passageiro', false),
+    (v_pax_liq, 'BL Liq', '924000005', 'Passageiro', false),
+    (v_admin, 'BL Admin', '924000006', 'Passageiro', true)
+  ON CONFLICT (id) DO UPDATE SET is_admin = EXCLUDED.is_admin;
+
+  INSERT INTO public.veiculos (id_motorista, marca_modelo, matricula, capacidade_total, vagas_passageiros)
+  VALUES (v_driver, 'BL', 'BL-1', 4, 3) RETURNING id INTO v_veiculo;
+
+  INSERT INTO public.ofertas_capacidade (
+    driver_id, veiculo_id, flexibilidade_rota, departure_time, vagas_disponiveis, vagas_totais,
+    modo_preco, valor_mensal_ask_kz, estado
+  ) VALUES (v_driver, v_veiculo, true, '07:00', 3, 3, 'POR_PASSAGEIRO', 22000, 'disponivel')
+  RETURNING id INTO v_oferta;
+
+  INSERT INTO public.procuras (owner_id, preferred_time, n_candidato, estado)
+  VALUES (v_pax, '07:30', 1, 'activa') RETURNING id INTO v_procura;
+
+  INSERT INTO public.acordos (
+    id, oferta_id, procura_id, driver_id, modo_preco, n_passageiros_contrato,
+    valor_mensal_total_kz, valor_mensal_por_passageiro_kz, estado, dias_uteis_mes,
+    rescisao_effective_on
+  ) VALUES (
+    v_acordo, v_oferta, v_procura, v_driver, 'POR_PASSAGEIRO', 1, 22000, 22000, 'activo', 22,
+    v_fecho
+  );
+
+  INSERT INTO public.acordos_passageiros (
+    id, acordo_id, passenger_id, estado, quota_mensal_kz, ordem_insercao
+  ) VALUES
+    (v_ap, v_acordo, v_pax, 'activo', 22000, 0),
+    (v_ap_cust, v_acordo, v_pax_cust, 'activo', 22000, 1),
+    (v_ap_pend, v_acordo, v_pax_pend, 'activo', 22000, 2),
+    (v_ap_liq, v_acordo, v_pax_liq, 'activo', 22000, 3);
+
+  v_exp_payout := public.compute_payout_liquido_kz(v_devido, 0.10);
+
+  INSERT INTO public.pagamentos_acordo (
+    id, acordo_id, acordo_passageiro_id, passenger_id, driver_id,
+    valor_kz, valor_devido_kz, valor_quota_original_kz, take_rate_pct, valor_payout_liquido_kz,
+    estado, comprovativo_path, comprovativo_enviado_em, mes_referencia
+  ) VALUES (
+    v_pg_comp, v_acordo, v_ap, v_pax, v_driver,
+    22000, 22000, 22000, 0.10, 19800,
+    'comprovativo_enviado', 'proof/bl1.jpg', now(), v_mes
+  );
+
+  INSERT INTO public.pagamentos_acordo (
+    id, acordo_id, acordo_passageiro_id, passenger_id, driver_id,
+    valor_kz, valor_devido_kz, valor_quota_original_kz, take_rate_pct, valor_payout_liquido_kz,
+    estado, mes_referencia
+  ) VALUES (
+    v_pg_pend, v_acordo, v_ap_pend, v_pax_pend, v_driver,
+    22000, 22000, 22000, 0.10, 19800,
+    'pendente_pagamento', v_mes
+  );
+
+  INSERT INTO public.pagamentos_acordo (
+    id, acordo_id, acordo_passageiro_id, passenger_id, driver_id,
+    valor_kz, valor_devido_kz, valor_quota_original_kz, take_rate_pct, valor_payout_liquido_kz,
+    estado, valor_pago_confirmado_kz, mes_referencia
+  ) VALUES (
+    v_pg_cust, v_acordo, v_ap_cust, v_pax_cust, v_driver,
+    22000, 22000, 22000, 0.10, 19800,
+    'em_custodia', 22000, v_mes
+  );
+
+  INSERT INTO public.pagamentos_acordo (
+    id, acordo_id, acordo_passageiro_id, passenger_id, driver_id,
+    valor_kz, valor_devido_kz, valor_quota_original_kz, take_rate_pct, valor_payout_liquido_kz,
+    estado, valor_pago_confirmado_kz, liquidado_em, mes_referencia
+  ) VALUES (
+    v_pg_liq, v_acordo, v_ap_liq, v_pax_liq, v_driver,
+    22000, 22000, 22000, 0.10, 19800,
+    'liquidado', 22000, now(), v_mes
+  );
+
+  PERFORM set_config('session_replication_role', 'origin', true);
+
+  PERFORM public.ajustar_obrigacao_pagamento_mes(v_ap, v_fecho, false);
+
+  SELECT valor_kz, valor_devido_kz, requer_resolucao_admin
+  INTO v_vk, v_vd, v_flag
+  FROM public.pagamentos_acordo WHERE id = v_pg_comp;
+
+  IF v_vk <> 22000 THEN
+    RAISE EXCEPTION 'FAIL BL1a: valor_kz comprovativo devia 22000, obteve %', v_vk;
+  END IF;
+  IF v_vd <> v_devido THEN
+    RAISE EXCEPTION 'FAIL BL1a: valor_devido_kz devia %, obteve %', v_devido, v_vd;
+  END IF;
+  IF NOT v_flag THEN
+    RAISE EXCEPTION 'FAIL BL1a: requer_resolucao_admin devia true (excesso 15000)';
+  END IF;
+
+  PERFORM public.ajustar_obrigacao_pagamento_mes(v_ap, v_fecho, false);
+
+  SELECT valor_kz, valor_devido_kz, requer_resolucao_admin
+  INTO v_vk, v_vd, v_flag
+  FROM public.pagamentos_acordo WHERE id = v_pg_comp;
+
+  IF v_vk <> 22000 OR v_vd <> v_devido OR NOT v_flag THEN
+    RAISE EXCEPTION 'FAIL BL1d: segunda passagem idempotente falhou (% / % / %)', v_vk, v_vd, v_flag;
+  END IF;
+
+  PERFORM public.ajustar_obrigacao_pagamento_mes(v_ap_cust, v_fecho, false);
+  SELECT valor_kz INTO v_vk FROM public.pagamentos_acordo WHERE id = v_pg_cust;
+  IF v_vk <> 22000 THEN
+    RAISE EXCEPTION 'FAIL BL1c: em_custodia valor_kz devia 22000, obteve %', v_vk;
+  END IF;
+
+  PERFORM public.ajustar_obrigacao_pagamento_mes(v_ap_liq, v_fecho, false);
+  SELECT valor_kz INTO v_vk FROM public.pagamentos_acordo WHERE id = v_pg_liq;
+  IF v_vk <> 22000 THEN
+    RAISE EXCEPTION 'FAIL BL1c: liquidado valor_kz devia 22000, obteve %', v_vk;
+  END IF;
+
+  PERFORM public.ajustar_obrigacao_pagamento_mes(v_ap_pend, v_fecho, false);
+
+  SELECT valor_kz, valor_payout_liquido_kz
+  INTO v_vk, v_payout
+  FROM public.pagamentos_acordo WHERE id = v_pg_pend;
+
+  IF v_vk <> v_devido THEN
+    RAISE EXCEPTION 'FAIL BL2: pendente valor_kz devia %, obteve %', v_devido, v_vk;
+  END IF;
+  IF v_payout <> v_exp_payout THEN
+    RAISE EXCEPTION 'FAIL BL2: payout devia %, obteve %', v_exp_payout, v_payout;
+  END IF;
+
+  PERFORM set_config('request.jwt.claim.sub', v_admin::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+  PERFORM set_config('request.jwt.claims', format('{"role":"authenticated","sub":"%s"}', v_admin), true);
+  SET LOCAL ROLE authenticated;
+  PERFORM public.admin_validate_payment(v_pg_comp, true, NULL);
+  RESET ROLE;
+
+  SELECT valor_pago_confirmado_kz, requer_resolucao_admin, valor_kz
+  INTO v_conf, v_flag, v_vk
+  FROM public.pagamentos_acordo WHERE id = v_pg_comp;
+
+  IF v_conf <> 22000 THEN
+    RAISE EXCEPTION 'FAIL BL1b: confirmado devia 22000, obteve %', v_conf;
+  END IF;
+  IF NOT v_flag THEN
+    RAISE EXCEPTION 'FAIL BL1b: requer_resolucao_admin devia permanecer true após validação';
+  END IF;
+  IF v_vk <> 22000 THEN
+    RAISE EXCEPTION 'FAIL BL1b: valor_kz devia manter 22000 após validação, obteve %', v_vk;
+  END IF;
+
+  PERFORM set_config('request.jwt.claim.sub', v_admin::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+  SET LOCAL ROLE authenticated;
+  SELECT COUNT(*)::integer INTO v_n_admin
+  FROM public.list_pagamentos_resolucao_admin() WHERE id = v_pg_comp;
+  RESET ROLE;
+
+  IF v_n_admin <> 1 THEN
+    RAISE EXCEPTION 'FAIL BL1b: fila admin devia incluir pagamento, count=%', v_n_admin;
+  END IF;
+
+  RAISE NOTICE 'PASS BL1/BL2: valor_kz protegido, devido/payout/ admin OK';
+END $$;
+
+\echo '=== BL3: global caller (claims JSON service_role + sessão postgres) ==='
+DO $$
+DECLARE
+  v_n integer;
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', '', true);
+  PERFORM set_config('request.jwt.claim.role', '', true);
+  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  v_n := public.apply_due_reserva_expiry(NULL);
+  IF v_n IS NULL THEN
+    RAISE EXCEPTION 'FAIL BL3: service_role via claims devia executar (não 42501)';
+  END IF;
+
+  PERFORM set_config('request.jwt.claim.sub', '', true);
+  PERFORM set_config('request.jwt.claim.role', '', true);
+  PERFORM set_config('request.jwt.claims', '{}', true);
+  v_n := public.apply_due_reserva_expiry(NULL);
+  IF v_n IS NULL THEN
+    RAISE EXCEPTION 'FAIL BL3: sessão postgres NULL devia executar global';
+  END IF;
+
+  RAISE NOTICE 'PASS BL3: service_role (claims JSON) e postgres NULL global';
 END $$;
 
 DROP FUNCTION IF EXISTS public._p0_pg_proof_expect_denied(text, text);

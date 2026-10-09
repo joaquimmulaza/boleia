@@ -56,7 +56,14 @@ RETURNS text
 LANGUAGE sql
 STABLE
 AS $$
-  SELECT COALESCE(NULLIF(current_setting('request.jwt.claim.role', true), ''), 'anon');
+  SELECT COALESCE(
+    NULLIF(current_setting('request.jwt.claim.role', true), ''),
+    (
+      SELECT NULLIF(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role'
+      WHERE NULLIF(current_setting('request.jwt.claims', true), '') IS NOT NULL
+    ),
+    'anon'
+  );
 $$;
 
 CREATE SCHEMA IF NOT EXISTS storage;

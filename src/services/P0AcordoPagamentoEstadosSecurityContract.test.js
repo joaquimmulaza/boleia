@@ -155,6 +155,17 @@ describe('P0 pagamento estados — contrato segurança (migração 180000)', () 
     expect(sql).toMatch(/IF p_acordo_id IS NULL THEN[\s\S]*IF v_uid IS NULL THEN[\s\S]*RETURN;/);
   });
 
+  it('BL1/BL2: ajustar_obrigacao não sobrescreve valor_kz com comprovativo/custódia', () => {
+    expect(sql).toMatch(/WHEN lower\(estado\) = 'pendente_pagamento' AND comprovativo_path IS NULL THEN v_restante/);
+    expect(sql).toMatch(/requer_resolucao_admin = COALESCE\(requer_resolucao_admin, false\)/);
+    expect(sql).toMatch(/compute_payout_liquido_kz\(\s*\n?\s*v_restante/);
+  });
+
+  it('BL3: caller global via auth.role() + postgres sem JWT', () => {
+    expect(sql).toMatch(/auth\.role\(\) = 'service_role'/);
+    expect(sql).toMatch(/auth\.uid\(\) IS NULL[\s\S]*session_user IN \('postgres', 'supabase_admin'\)/);
+  });
+
   it('prova PG cobre helpers e apply_due mass/foreign (42501)', () => {
     const proof = readFileSync(PG_PROOF, 'utf8');
     expect(proof).toMatch(/FAIL-on-old: authenticated EXECUTE build_ui_obrigacao_snapshot/);
@@ -177,5 +188,8 @@ describe('P0 pagamento estados — contrato segurança (migração 180000)', () 
     expect(proof).toMatch(/apply_due_agreement_terminations\(foreign\)/);
     expect(proof).toMatch(/apply_due_agreement_non_renewals\(foreign\)/);
     expect(proof).toMatch(/apply_due_reserva_expiry\(v_acordo\)/);
+    expect(proof).toMatch(/FAIL BL1a:/);
+    expect(proof).toMatch(/FAIL BL2:/);
+    expect(proof).toMatch(/PASS BL3:/);
   });
 });

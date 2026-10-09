@@ -51,7 +51,8 @@ describe('P0 acordo pagamento estados — migração obrigatória', () => {
     expect(existsSync(PG_PROOF)).toBe(true);
     const sh = readFileSync(PG_PROOF, 'utf8');
     expect(sh).toMatch(/20261009180000_p0_acordo_pagamento_estados/);
-    expect(sh).toMatch(/sec-default-privileges/);
+    expect(sh).toMatch(/PGPORT/);
+    expect(sh).toMatch(/bootstrap_local_supabase\.sql/);
   });
 
   it('estado anulado no CHECK de pagamentos_acordo', () => {
