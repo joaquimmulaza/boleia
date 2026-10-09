@@ -272,3 +272,11 @@ export function useAuth() {
   }
   return context;
 }
+
+/**
+ * Provider DEV-only para capturas / fixtures (sobrepõe AuthContext).
+ * @param {{ children: React.ReactNode; value: Record<string, unknown> }} props
+ */
+export function DevAuthProvider({ children, value }) {
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}

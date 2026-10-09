@@ -26,6 +26,7 @@ import AcordoNaoRenovar from './pages/AcordoNaoRenovar';
 import VehicleSetup from './pages/VehicleSetup';
 import Profile from './pages/Profile';
 import DevPerfilPushPreview from './pages/DevPerfilPushPreview';
+import DevPerfilCaptureShell from './pages/DevPerfilCapture';
 import AdminPagamentos from './pages/AdminPagamentos';
 import AdminRoute from './components/AdminRoute';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -61,13 +62,15 @@ function AppShell() {
   const { isOffline } = useNetworkStatus();
   const { pathname } = useLocation();
   const isDevPerfilPushPreview = import.meta.env.DEV && pathname === '/__dev/perfil-push';
+  const isDevPerfilCapture = import.meta.env.DEV && pathname === '/__dev/perfil';
 
   const isPublicRoute = pathname === '/'
     || pathname === '/auth'
     || pathname === '/explorar'
     || pathname === '/privacidade'
     || pathname === '/eliminacao-de-dados'
-    || isDevPerfilPushPreview;
+    || isDevPerfilPushPreview
+    || isDevPerfilCapture;
 
   const routes = (
     <Routes>
@@ -78,7 +81,12 @@ function AppShell() {
       <Route path="/privacidade" element={<PublicLegalPage page="privacidade" />} />
       <Route path="/eliminacao-de-dados" element={<PublicLegalPage page="eliminacao" />} />
       {import.meta.env.DEV ? (
-        <Route path="/__dev/perfil-push" element={<DevPerfilPushPreview />} />
+        <>
+          <Route path="/__dev/perfil-push" element={<DevPerfilPushPreview />} />
+          <Route path="/__dev/perfil" element={<DevPerfilCaptureShell />}>
+            <Route index element={<Profile />} />
+          </Route>
+        </>
       ) : null}
 
       {/* Rotas protegidas envolvidas pelo Layout global (com BottomBar) */}
