@@ -2216,6 +2216,8 @@ const MyAgreements = () => {
           pagamentoLoading,
           lugaresVivosCount: leaveLugaresVivosCount,
           lugaresVivosLoading: leaveLugaresVivosLoading,
+          rescisao_modo: selected?.rescisao_modo,
+          rescisao_confirmada_em: selected?.rescisao_confirmada_em,
         })}
         confirmText="Sair"
         onConfirm={handleLeaveSolo}

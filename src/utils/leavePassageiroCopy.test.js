@@ -53,9 +53,7 @@ describe('leavePassageiroCopy — saída antes vs depois da activação', () => 
     ).not.toMatch(/cancelado — não/);
   });
 
-  it('confirmação último passageiro vivo acrescenta linha PM à copy de quota/pagamento', () => {
-    const prefix =
-      'Saída individual: o acordo mantém-se activo para os restantes. ';
+  it('último passageiro (activo): quota + linha PM, sem prefixo «mantém-se activo»', () => {
     expect(
       copyConfirmacaoSaidaPassageiro({
         lugarEstado: 'activo',
@@ -64,9 +62,12 @@ describe('leavePassageiroCopy — saída antes vs depois da activação', () => 
         lugaresVivosLoading: false,
       }),
     ).toBe(
-      `${prefix}A tua quota deste mês não é reembolsada. `
+      'A tua quota deste mês não é reembolsada. '
       + 'És o último passageiro. Ao saíres, o acordo é encerrado.',
     );
+  });
+
+  it('último passageiro (reservado + comprovativo): cancelamento pagamento + linha PM', () => {
     expect(
       copyConfirmacaoSaidaPassageiro({
         lugarEstado: 'reservado',
@@ -75,9 +76,42 @@ describe('leavePassageiroCopy — saída antes vs depois da activação', () => 
         lugaresVivosLoading: false,
       }),
     ).toBe(
-      `${prefix}O teu pagamento pendente será cancelado. Não tens nada a pagar. `
+      'O teu pagamento pendente será cancelado. Não tens nada a pagar. '
       + 'És o último passageiro. Ao saíres, o acordo é encerrado.',
     );
+  });
+
+  it('último passageiro (reservado + pendente_pagamento): mesma linha de pagamento + PM', () => {
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        lugarEstado: 'reservado',
+        pagamento: { estado: 'pendente_pagamento' },
+        lugaresVivosCount: 1,
+        lugaresVivosLoading: false,
+      }),
+    ).toMatch(/pagamento pendente será cancelado/);
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        lugarEstado: 'reservado',
+        pagamento: { estado: 'pendente_pagamento' },
+        lugaresVivosCount: 1,
+        lugaresVivosLoading: false,
+      }),
+    ).toMatch(/És o último passageiro/);
+  });
+
+  it('último passageiro com justa causa pendente: não promete «encerrado» (gate servidor)', () => {
+    const msg = copyConfirmacaoSaidaPassageiro({
+      lugarEstado: 'activo',
+      pagamento: { estado: 'em_custodia' },
+      lugaresVivosCount: 1,
+      lugaresVivosLoading: false,
+      rescisao_modo: 'justa_causa',
+      rescisao_confirmada_em: null,
+    });
+    expect(msg).toMatch(/Saída individual/);
+    expect(msg).toMatch(/quota deste mês não é reembolsada/);
+    expect(msg).not.toMatch(/És o último passageiro/);
   });
 
   it('confirmação com contagem > 1 mantém copy de saída individual', () => {

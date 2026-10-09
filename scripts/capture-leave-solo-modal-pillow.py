@@ -8,7 +8,10 @@ import textwrap
 from PIL import Image, ImageDraw, ImageFont
 
 OUT = os.environ.get('ARTIFACTS_DIR', '/opt/cursor/artifacts')
-ULTIMO = 'És o último passageiro. Ao saíres, o acordo é encerrado.'
+MSG_ULTIMO_ACTIVO = (
+    'A tua quota deste mês não é reembolsada. '
+    'És o último passageiro. Ao saíres, o acordo é encerrado.'
+)
 
 
 def draw_modal(path: str, dark: bool, message: str) -> None:
@@ -40,8 +43,8 @@ def draw_modal(path: str, dark: bool, message: str) -> None:
 
 def main() -> None:
     os.makedirs(OUT, exist_ok=True)
-    draw_modal(f'{OUT}/leave-solo-modal-ultimo-light-390.png', False, ULTIMO)
-    draw_modal(f'{OUT}/leave-solo-modal-ultimo-dark-390.png', True, ULTIMO)
+    draw_modal(f'{OUT}/leave-solo-modal-ultimo-light-390.png', False, MSG_ULTIMO_ACTIVO)
+    draw_modal(f'{OUT}/leave-solo-modal-ultimo-dark-390.png', True, MSG_ULTIMO_ACTIVO)
     print('OK', OUT)
 
 

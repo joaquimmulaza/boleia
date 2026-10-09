@@ -3,6 +3,7 @@ import { isActivoPassageiro } from './acordoPassageiroStatus';
 import { isLugarVivoPassageiro } from './estadoPassageiro.js';
 import { PAYMENT_STATES } from './paymentStatus';
 import { valorEmDividaParaExibir } from './pagamentoObrigacaoCopy';
+import { rescisaoPermiteEncerramentoMotivoSemLugares } from './acordoEstadoDisplay.js';
 
 /** Copy modal quando o servidor confirma um único lugar vivo. */
 export const COPY_CONFIRMACAO_ULTIMO_PASSAGEIRO =
@@ -57,23 +58,32 @@ function copyLinhaFinanceiraSaidaPassageiro(ctx) {
  *   pagamentoLoading?: boolean,
  *   lugaresVivosCount?: number | null,
  *   lugaresVivosLoading?: boolean,
+ *   rescisao_modo?: string | null,
+ *   rescisao_confirmada_em?: string | Date | null,
  * }} ctx
  * @returns {string}
  */
 export function copyConfirmacaoSaidaPassageiro(ctx) {
   const prefixoIndividual =
     'Saída individual: o acordo mantém-se activo para os restantes. ';
-  const copyBase = prefixoIndividual + copyLinhaFinanceiraSaidaPassageiro(ctx);
+  const linhaFinanceira = copyLinhaFinanceiraSaidaPassageiro(ctx);
 
-  if (
+  const ultimoPassageiroVivo =
     !ctx.lugaresVivosLoading
     && ctx.lugaresVivosCount === 1
-    && isLugarVivoPassageiro(ctx.lugarEstado)
-  ) {
-    return `${copyBase} ${COPY_CONFIRMACAO_ULTIMO_PASSAGEIRO}`;
+    && isLugarVivoPassageiro(ctx.lugarEstado);
+
+  const ultimoEncerraAcordo = ultimoPassageiroVivo
+    && rescisaoPermiteEncerramentoMotivoSemLugares(
+      ctx.rescisao_modo ?? null,
+      ctx.rescisao_confirmada_em ?? null,
+    );
+
+  if (ultimoEncerraAcordo) {
+    return `${linhaFinanceira} ${COPY_CONFIRMACAO_ULTIMO_PASSAGEIRO}`;
   }
 
-  return copyBase;
+  return prefixoIndividual + linhaFinanceira;
 }
 
 /**
