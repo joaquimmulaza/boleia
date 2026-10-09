@@ -8,7 +8,10 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PROOF_SQL="${ROOT}/supabase/tests/cancel_procura_membros_pg_proof.sql"
 ROLES_FIRST="${ROOT}/supabase/tests/bootstrap_roles_first.sql"
 SEC_BRANCH="${SEC_DEFAULT_PRIVILEGES_REF:-origin/cursor/sec-default-privileges}"
+SEC_FALLBACK_REF="${SEC_DEFAULT_PRIVILEGES_FALLBACK:-origin/main}"
 MIG_160000="20261009160000_sec_default_privileges.sql"
+MIG_170000="20261009170000_cancel_procura_membros_saiu.sql"
+SKIP_MIG_170000="${SKIP_MIG_170000:-0}"
 TMP_MIG_DIR=""
 
 if ! command -v psql >/dev/null 2>&1; then
@@ -33,15 +36,34 @@ cleanup_db() {
   fi
 }
 
+resolve_sec_ref() {
+  if git rev-parse --verify "${SEC_BRANCH}^{commit}" >/dev/null 2>&1; then
+    echo "${SEC_BRANCH}"
+    return 0
+  fi
+  echo "==> ${SEC_BRANCH} indisponível; fallback ${SEC_FALLBACK_REF}" >&2
+  echo "${SEC_FALLBACK_REF}"
+}
+
 fetch_bootstrap_and_apply() {
   local dest_bootstrap="$1"
   local dest_apply="$2"
   local dest_localfix="$3"
-  git show "${SEC_BRANCH}:supabase/tests/bootstrap_local_supabase.sql" >"${dest_bootstrap}"
-  git show "${SEC_BRANCH}:scripts/apply-all-migrations-local.sh" >"${dest_apply}"
-  git show "${SEC_BRANCH}:supabase/tests/localfix_migration_sql.pl" >"${dest_localfix}"
+  local ref
+  ref="$(resolve_sec_ref)"
+  git show "${ref}:supabase/tests/bootstrap_local_supabase.sql" >"${dest_bootstrap}"
+  git show "${ref}:scripts/apply-all-migrations-local.sh" >"${dest_apply}"
+  git show "${ref}:supabase/tests/localfix_migration_sql.pl" >"${dest_localfix}"
   chmod a+r "${dest_bootstrap}" "${dest_apply}" "${dest_localfix}"
   chmod +x "${dest_apply}"
+}
+
+fetch_mig_160000() {
+  local dest="$1"
+  local ref
+  ref="$(resolve_sec_ref)"
+  git show "${ref}:supabase/migrations/${MIG_160000}" >"${dest}"
+  chmod a+r "${dest}"
 }
 
 apply_migrations_to_db() {
@@ -66,6 +88,10 @@ apply_migrations_to_db() {
     base="$(basename "$f")"
     if [[ "${mode}" == "sem-160000" && "${base}" == "${MIG_160000}" ]]; then
       echo "       skip ${base}"
+      continue
+    fi
+    if [[ "${SKIP_MIG_170000}" == "1" && "${base}" == "${MIG_170000}" ]]; then
+      echo "       skip ${base} (SKIP_MIG_170000=1)"
       continue
     fi
     mig_src="$f"
@@ -110,10 +136,26 @@ APPLY_A="${TMP_MIG_DIR}/apply-all.sh"
 LOCALFIX="${TMP_MIG_DIR}/localfix.pl"
 MIG_160000_PATH="${TMP_MIG_DIR}/${MIG_160000}"
 
-echo "==> Obter bootstrap/apply/localfix de ${SEC_BRANCH}"
+echo "==> Obter bootstrap/apply/localfix (ref sec ou fallback main)"
 fetch_bootstrap_and_apply "${BOOT_A}" "${APPLY_A}" "${LOCALFIX}"
-git show "${SEC_BRANCH}:supabase/migrations/${MIG_160000}" >"${MIG_160000_PATH}"
-chmod a+r "${MIG_160000_PATH}"
+fetch_mig_160000 "${MIG_160000_PATH}"
+
+if [[ "${SKIP_MIG_170000}" == "1" ]]; then
+  DB_OLD="cancel_procura_proof_old_$$"
+  echo "==> (fail-on-old) sem ${MIG_170000} — base ${DB_OLD}"
+  sudo -u postgres psql -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"${DB_OLD}\";" postgres
+  if apply_migrations_to_db "${DB_OLD}" "sem-160000" "${BOOT_A}" "${APPLY_A}" "${LOCALFIX}" ""; then
+    echo "==> Prova SQL (sem 170000 — deve falhar cenários 1,2,4,5)"
+    if sudo -u postgres psql -v ON_ERROR_STOP=1 -d "${DB_OLD}" -f "${PROOF_SQL}" 2>&1; then
+      echo "ERRO: prova passou sem 170000 (esperado falhar)" >&2
+      exit 6
+    fi
+    echo "==> OK: prova falhou como esperado sem 170000"
+  fi
+  cleanup_db "${DB_OLD}"
+  unset DB_OLD
+  exit 0
+fi
 
 DB_A="cancel_procura_proof_a_$$"
 DB_B="cancel_procura_proof_b_$$"

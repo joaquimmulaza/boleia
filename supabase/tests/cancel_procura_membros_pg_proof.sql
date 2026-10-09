@@ -26,6 +26,7 @@ DECLARE
   v_n integer;
   v_estado text;
   v_tem_saiu_em boolean;
+  v_blocked boolean;
 BEGIN
   INSERT INTO auth.users (id, email) VALUES
     (v_owner, 'owner@test.local'),
@@ -145,15 +146,20 @@ BEGIN
   ) RETURNING id INTO v_acordo;
 
   PERFORM set_config('request.jwt.claim.sub', v_owner::text, true);
+  v_blocked := false;
   BEGIN
     PERFORM public.cancel_procura(v_procura);
-    RAISE EXCEPTION 'FAIL: cancel_procura deveria falhar com acordo activo';
   EXCEPTION
     WHEN OTHERS THEN
-      IF position('acordo' in lower(SQLERRM)) = 0 THEN
+      IF SQLERRM = 'Já existe um acordo para esta procura.' THEN
+        v_blocked := true;
+      ELSE
         RAISE;
       END IF;
   END;
+  IF NOT v_blocked THEN
+    RAISE EXCEPTION 'FAIL: cancel_procura deveria falhar com acordo activo';
+  END IF;
 
   SELECT COUNT(*)::integer INTO v_n FROM public.acordos WHERE id = v_acordo AND lower(estado) = 'activo';
   IF v_n <> 1 THEN
@@ -167,16 +173,21 @@ BEGIN
 
   INSERT INTO public.grupos (procura_id, estado) VALUES (v_procura, 'fechado') RETURNING id INTO v_grupo;
 
+  v_blocked := false;
   BEGIN
     INSERT INTO public.membros_grupo (grupo_id, passenger_id, estado)
     VALUES (v_grupo, v_pendente, 'pendente');
-    RAISE EXCEPTION 'FAIL: INSERT em grupo fechado deveria falhar';
   EXCEPTION
     WHEN OTHERS THEN
-      IF position('fechado' in lower(SQLERRM)) = 0 THEN
+      IF SQLERRM = 'Este grupo está fechado.' THEN
+        v_blocked := true;
+      ELSE
         RAISE;
       END IF;
   END;
+  IF NOT v_blocked THEN
+    RAISE EXCEPTION 'FAIL: INSERT em grupo fechado deveria falhar';
+  END IF;
 
   -- Cenário 5: saiu→activo recusado com procura cancelada
   INSERT INTO public.procuras (id, owner_id, estado, n_candidato, preferred_time)
@@ -194,18 +205,23 @@ BEGIN
   PERFORM set_config('request.jwt.claim.sub', v_other::text, true);
   PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
 
+  v_blocked := false;
   BEGIN
     SET LOCAL ROLE authenticated;
     UPDATE public.membros_grupo SET estado = 'activo' WHERE id = v_membro_saiu;
     RESET ROLE;
-    RAISE EXCEPTION 'FAIL: saiu→activo deveria ser recusado';
   EXCEPTION
     WHEN OTHERS THEN
       RESET ROLE;
-      IF position('activo' in lower(SQLERRM)) = 0 AND position('reactivar' in lower(SQLERRM)) = 0 THEN
+      IF SQLERRM = 'Não podes voltar a activo neste grupo.' THEN
+        v_blocked := true;
+      ELSE
         RAISE;
       END IF;
   END;
+  IF NOT v_blocked THEN
+    RAISE EXCEPTION 'FAIL: saiu→activo deveria ser recusado';
+  END IF;
 
   RAISE NOTICE 'OK: cancel_procura_membros_pg_proof passou';
 END $$;
