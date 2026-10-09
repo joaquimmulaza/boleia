@@ -3,7 +3,7 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import React from 'react';
 
 import { AuthProvider, useAuth } from './AuthContext';
-import { PERFIL_COLUNAS_SELECT } from '../services/ProfileService';
+import { PERFIL_COLUNAS_SELECT_SESSAO } from '../utils/perfisGrants.js';
 import { supabase } from '../lib/supabase';
 
 const mockSingle = vi.fn();
@@ -120,7 +120,8 @@ describe('AuthContext', () => {
     expect(screen.getByTestId('user')).toHaveTextContent('user-123');
     expect(screen.getByTestId('tipoPerfil')).toHaveTextContent('Motorista');
     expect(supabase.from).toHaveBeenCalledWith('perfis');
-    expect(mockSelect).toHaveBeenCalledWith(PERFIL_COLUNAS_SELECT);
+    expect(mockSelect).toHaveBeenCalledWith(PERFIL_COLUNAS_SELECT_SESSAO);
+    expect(PERFIL_COLUNAS_SELECT_SESSAO).not.toMatch(/\biban_titular\b/);
     expect(screen.getByTestId('admin')).toHaveTextContent('nao-admin');
   });
 
