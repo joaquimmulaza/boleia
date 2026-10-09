@@ -1270,7 +1270,8 @@ const MyAgreements = () => {
                 Detalhe do acordo
               </p>
             ) : null}
-            {minhaReservada ? (
+            {minhaReservada
+            && Number(obrigacaoPagamento?.valor ?? obrigacaoPagamento?.valor_em_divida ?? -1) !== 0 ? (
               <div
                 role="status"
                 data-testid="lugar-reservado-banner"

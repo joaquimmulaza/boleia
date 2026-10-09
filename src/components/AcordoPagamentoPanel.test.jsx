@@ -191,6 +191,27 @@ describe('AcordoPagamentoPanel', () => {
     expect(screen.queryByTestId('pagamento-estado-check')).not.toBeInTheDocument();
   });
 
+  it('S1-B: obrigação valor 0 oculta prazo 72h e CTA de upload', () => {
+    render(
+      <AcordoPagamentoPanel
+        pagamento={{
+          id: 'pag-zero',
+          valor_kz: 0,
+          estado: 'pendente_pagamento',
+          prazo_pagamento_em: '2026-10-12T12:00:00.000Z',
+        }}
+        obrigacao={{
+          valor: 0,
+          valor_em_divida: 0,
+          quota: 43000,
+          prazo: '2026-10-12T12:00:00.000Z',
+        }}
+      />,
+    );
+    expect(screen.queryByTestId('linha-prazo-pagamento')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('comprovativo-upload-btn')).not.toBeInTheDocument();
+  });
+
   it('v1.6 em custódia sem dívida: mostra check', () => {
     render(
       <AcordoPagamentoPanel

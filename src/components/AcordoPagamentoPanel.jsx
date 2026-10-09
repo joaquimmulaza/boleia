@@ -64,12 +64,16 @@ function AcordoPagamentoPanel({
   const ibanConfigurado = Boolean(platformIban);
   const estadoNorm = String(pagamento.estado || '').toLowerCase();
   const emExcesso = isPagamentoEmExcessoAnalise(pagamento);
+  const obrigacaoValorZero = obrigacaoNorm != null && Number(obrigacaoNorm.valor) === 0;
   const podeEnviar = ['pendente_pagamento', 'comprovativo_enviado'].includes(estadoNorm)
     && estadoNorm !== PAYMENT_STATES.ANULADO
-    && !emExcesso;
+    && !emExcesso
+    && !obrigacaoValorZero;
   const linhaProp = emExcesso ? null : linhaProporcionalPagamento(obrigacaoNorm);
   const linhaExcesso = emExcesso ? linhaSecundariaExcessoPassageiro(obrigacaoNorm) : null;
-  const linhaPrazo = linhaPrazoPagamento(obrigacaoNorm?.prazo ?? pagamento.prazo_pagamento_em);
+  const linhaPrazo = obrigacaoValorZero
+    ? null
+    : linhaPrazoPagamento(obrigacaoNorm?.prazo ?? pagamento.prazo_pagamento_em);
   const valorEmDivida = valorEmDividaParaExibir(obrigacaoNorm, pagamento);
   const destaqueSaiuPendente = isDestaqueValorEmDividaSaiuPendente(lugarEstado, pagamento);
   const comprovativoNome = basenameComprovativoPath(pagamento.comprovativo_path);
