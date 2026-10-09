@@ -8,7 +8,6 @@ import {
   labelChipEstadoPassageiro,
   isLugarVivoPassageiro,
 } from './estadoPassageiro.js';
-import { getMesReferenciaAtual } from '../services/PaymentService.js';
 
 const ACORDO_ID = '104aa236';
 const SEAT_RESERVADO = 'pax-seat1-reservado';
@@ -41,30 +40,14 @@ function acordo104aa236({ linhasPassageiro } = {}) {
 }
 
 describe('lugares vivos — acordo 104aa236', () => {
-  const mes = getMesReferenciaAtual();
-
   it('1 — contagens só lugares vivos (1 reservado, 0 confirmados)', () => {
     const acordo = acordo104aa236();
-    const pagamentosAcordo = [
-      {
-        passenger_id: SEAT_RESERVADO,
-        estado: 'pendente_pagamento',
-        mes_referencia: mes,
-      },
-      {
-        passenger_id: SEAT_SAIU,
-        estado: 'anulado',
-        anulacao_motivo: ANULACAO_MOTIVO.SAISTE_ANTES_ACTIVACAO,
-        mes_referencia: mes,
-      },
-    ];
-    const ctx = { pagamentosAcordo, mesReferencia: mes };
-    expect(contagemLugaresVivos(acordo.acordos_passageiros, ctx)).toEqual({
+    expect(contagemLugaresVivos(acordo.acordos_passageiros)).toEqual({
       total: 1,
       confirmados: 0,
       reservados: 1,
     });
-    expect(lugaresVivos(acordo, ctx)).toHaveLength(1);
+    expect(lugaresVivos(acordo)).toHaveLength(1);
   });
 
   it('2 — estado saiu → chip Saiu (nunca Reservado)', () => {
@@ -110,28 +93,12 @@ describe('lugares vivos — acordo 104aa236', () => {
         },
       ],
     });
-    const ctx = {
-      pagamentosAcordo: [
-        { passenger_id: SEAT_RESERVADO, estado: 'pendente_pagamento', mes_referencia: mes },
-      ],
-      mesReferencia: mes,
-      viewerPassengerId: SEAT_RESERVADO,
-    };
     expect(acordo.n_passageiros_contrato).toBe(2);
-    expect(contagemLugaresVivos(acordo.acordos_passageiros, ctx).total).toBe(1);
+    expect(contagemLugaresVivos(acordo.acordos_passageiros).total).toBe(1);
   });
 
-  it('4 — pagamentos motorista excluem seat2 com estado saiu (não por anulado)', () => {
+  it('4 — pagamentos motorista: lugar saiu + anulado fica oculto (opção B)', () => {
     const acordo = acordo104aa236();
-    const pagamentosAcordo = [
-      { passenger_id: SEAT_RESERVADO, estado: 'pendente_pagamento', mes_referencia: mes },
-      {
-        passenger_id: SEAT_SAIU,
-        estado: 'anulado',
-        anulacao_motivo: ANULACAO_MOTIVO.SAISTE_ANTES_ACTIVACAO,
-        mes_referencia: mes,
-      },
-    ];
     const rpcRows = [
       {
         pagamento_id: 'pg-1',
@@ -152,11 +119,48 @@ describe('lugares vivos — acordo 104aa236', () => {
     ];
     const filtrados = filterMotoristaPagamentosLugaresVivos(rpcRows, {
       linhas: acordo.acordos_passageiros,
-      pagamentosAcordo,
-      mesReferencia: mes,
     });
     expect(filtrados).toHaveLength(1);
     expect(filtrados[0].passenger_id).toBe(SEAT_RESERVADO);
+  });
+
+  it('4b — acordo terminado: lugar saiu com dívida/custódia mantém linha de pagamento', () => {
+    const linhas = [
+      { passenger_id: SEAT_RESERVADO, estado: 'activo' },
+      { passenger_id: SEAT_SAIU, estado: 'saiu' },
+    ];
+    const rpcRows = [
+      {
+        pagamento_id: 'pg-vivo',
+        passenger_id: SEAT_RESERVADO,
+        estado: 'em_custodia',
+        valor: 43000,
+      },
+      {
+        pagamento_id: 'pg-divida',
+        passenger_id: SEAT_SAIU,
+        estado: 'pendente_pagamento',
+        valor: 43000,
+      },
+    ];
+    const filtrados = filterMotoristaPagamentosLugaresVivos(rpcRows, { linhas });
+    expect(filtrados).toHaveLength(2);
+    expect(filtrados.map((r) => r.passenger_id).sort()).toEqual(
+      [SEAT_RESERVADO, SEAT_SAIU].sort(),
+    );
+  });
+
+  it('4c — lugar saiu com pagamento pago mantém histórico visível', () => {
+    const linhas = [{ passenger_id: SEAT_SAIU, estado: 'saiu' }];
+    const rpcRows = [
+      {
+        pagamento_id: 'pg-hist',
+        passenger_id: SEAT_SAIU,
+        estado: 'liquidado',
+        valor: 43000,
+      },
+    ];
+    expect(filterMotoristaPagamentosLugaresVivos(rpcRows, { linhas })).toHaveLength(1);
   });
 
   it('5 — contactos só passageiros vivos', () => {

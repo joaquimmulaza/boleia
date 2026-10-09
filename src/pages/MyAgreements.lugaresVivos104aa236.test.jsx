@@ -219,6 +219,96 @@ describe('MyAgreements — lugares vivos acordo 104aa236', () => {
     expect(within(dialog).getAllByTestId(/^passenger-row-/).length).toBe(1);
   });
 
+  it('motorista: cabeçalho Passageiros · 0 quando só há quem saiu', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoBase,
+        acordos_passageiros: [
+          {
+            id: 'ap-2',
+            passenger_id: SEAT2,
+            estado: 'saiu',
+            quota_mensal_kz: 43000,
+            perfis: { nome_completo: 'Passageiro B' },
+          },
+        ],
+      },
+    ]);
+    mockPagamentos104aa236();
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+    expect(within(dialog).getByText(/Passageiros · 0/i)).toBeInTheDocument();
+  });
+
+  it('passageiro: contactos do RPC não filtrados pelas linhas locais (RLS)', async () => {
+    mockAuth.mockReturnValue({ user: { id: SEAT1 }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([
+      {
+        ...acordoBase,
+        acordos_passageiros: [
+          {
+            id: 'ap-1',
+            passenger_id: SEAT1,
+            estado: 'reservado',
+            quota_mensal_kz: 43000,
+            perfis: { nome_completo: 'Tu' },
+          },
+        ],
+      },
+    ]);
+    mockPagamentos104aa236();
+    getObrigacaoPagamentoPassageiro.mockResolvedValue({
+      obrigacao: { valor_em_divida: 0, quota: 43000 },
+      pagamento: { estado: 'em_custodia', valor_kz: 43000 },
+    });
+    getAcordoContactos.mockResolvedValue({
+      bloqueado: false,
+      motorista: { nome_completo: 'Mot', telefone: '923000000' },
+      passageiros: [
+        { passenger_id: SEAT1, nome_completo: 'Tu', telefone: '923111111' },
+        { passenger_id: SEAT2, nome_completo: 'Co-passageiro', telefone: '923222222' },
+      ],
+    });
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+    await waitFor(() => {
+      expect(within(dialog).getByTestId('contactos-desbloqueados')).toBeInTheDocument();
+    });
+    expect(within(dialog).getByText(/Co-passageiro/)).toBeInTheDocument();
+    expect(within(dialog).getByText('923222222')).toBeInTheDocument();
+  });
+
+  it('motorista: contactos desbloqueados só passageiros vivos', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+    getAgreementsForDriver.mockResolvedValue([
+      { ...acordoBase, acordos_passageiros: linhasMotorista() },
+    ]);
+    mockPagamentos104aa236();
+    getAcordoContactos.mockResolvedValue({
+      bloqueado: false,
+      motorista: { nome_completo: 'Mot', telefone: '923000000' },
+      passageiros: [
+        { passenger_id: SEAT1, nome_completo: 'Passageiro A', telefone: '923111111' },
+        { passenger_id: SEAT2, nome_completo: 'Passageiro B', telefone: '923222222' },
+      ],
+    });
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+    const contactosSec = await within(dialog).findByTestId('contactos-desbloqueados');
+    expect(within(contactosSec).getByText(/Passageiro A/)).toBeInTheDocument();
+    expect(within(contactosSec).queryByText(/Passageiro B/)).not.toBeInTheDocument();
+  });
+
   it('contactos bloqueados: aguardar pagamento só do passageiro vivo', async () => {
     mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
     getAgreementsForDriver.mockResolvedValue([
