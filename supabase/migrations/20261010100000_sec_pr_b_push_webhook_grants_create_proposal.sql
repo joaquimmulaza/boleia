@@ -29,14 +29,14 @@ BEGIN
   LIMIT 1;
 
   IF v_push_secret IS NULL OR length(trim(v_push_secret)) = 0 THEN
-    RAISE LOG 'handle_new_notification_push: push_webhook_secret em falta no Vault — skip pg_net';
-    RETURN NEW;
+    RAISE LOG 'handle_new_notification_push: push_webhook_secret em falta — send-push legado (sem header secret)';
+    v_headers := jsonb_build_object('Content-Type', 'application/json');
+  ELSE
+    v_headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-boleia-push-secret', v_push_secret
+    );
   END IF;
-
-  v_headers := jsonb_build_object(
-    'Content-Type', 'application/json',
-    'x-boleia-push-secret', v_push_secret
-  );
 
   PERFORM net.http_post(
     url := 'https://fdclrbcgytnuqcrpsevw.supabase.co/functions/v1/send-push',

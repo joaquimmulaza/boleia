@@ -10,10 +10,10 @@
 
 ## Ops (Joaquim — ordem)
 
-1. Criar secret no Vault (`push_webhook_secret`) com o mesmo valor que `PUSH_WEBHOOK_SECRET` na Edge Function.
-2. Definir env `PUSH_WEBHOOK_SECRET` na função `send-push`.
-3. Redeploy `send-push` (não automatizado neste PR).
-4. Aplicar migração (trigger já tolera secret em falta).
+1. Aplicar migração **a qualquer momento** (push continua: trigger chama send-push legado sem header se Vault vazio).
+2. Criar secret no Vault (`push_webhook_secret`) = valor de `PUSH_WEBHOOK_SECRET`.
+3. Definir env `PUSH_WEBHOOK_SECRET` na Edge Function `send-push`.
+4. Redeploy `send-push` (só após 2+3 o secret passa a ser exigido).
 
 ## Provas
 

@@ -8,7 +8,8 @@
 + SET search_path TO 'public', 'vault', 'extensions'
 + DECLARE v_push_secret text; v_headers jsonb;
 + SELECT ds.decrypted_secret FROM vault.decrypted_secrets WHERE name = 'push_webhook_secret'
-+ IF secret missing → RAISE LOG + RETURN NEW (sem pg_net)
++ IF secret missing → headers só Content-Type + PERFORM net.http_post (legado v7)
++ IF secret present → header x-boleia-push-secret
 + headers incluem x-boleia-push-secret
 + EXCEPTION WHEN OTHERS → RAISE LOG, RETURN NEW
 + REVOKE EXECUTE FROM PUBLIC, anon, authenticated

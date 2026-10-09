@@ -40,11 +40,13 @@ describe('Security PR B — contrato', () => {
     expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\.create_proposal\(/);
   });
 
-  it('trigger push lê vault e envia x-boleia-push-secret', () => {
+  it('trigger push: sem vault chama send-push legado; com secret envia header', () => {
     const sql = readMigration();
     expect(sql).toMatch(/vault\.decrypted_secrets/);
     expect(sql).toMatch(/push_webhook_secret/);
     expect(sql).toMatch(/x-boleia-push-secret/);
+    expect(sql).toMatch(/send-push legado \(sem header secret\)/);
+    expect(sql).toMatch(/PERFORM net\.http_post/);
     expect(sql).toMatch(/handle_new_notification_push/);
   });
 
