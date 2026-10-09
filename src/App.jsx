@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import Auth from './pages/Auth';
@@ -25,8 +25,6 @@ import AcordoRenovar from './pages/AcordoRenovar';
 import AcordoNaoRenovar from './pages/AcordoNaoRenovar';
 import VehicleSetup from './pages/VehicleSetup';
 import Profile from './pages/Profile';
-import DevPerfilPushPreview from './pages/DevPerfilPushPreview';
-import DevPerfilCaptureShell from './pages/DevPerfilCapture';
 import AdminPagamentos from './pages/AdminPagamentos';
 import AdminRoute from './components/AdminRoute';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -36,6 +34,10 @@ import OfflineBanner from './components/OfflineBanner';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { usePasswordRecoveryRouteRedirect } from './hooks/usePasswordRecoveryRouteRedirect';
 import { needsProfileSetup } from './utils/oauth';
+
+const DevAppRoutes = import.meta.env.DEV
+  ? lazy(() => import('./dev/DevAppRoutes.jsx'))
+  : null;
 
 const RootRoute = () => {
   const { session, loading, profileLoading, profile, tipoPerfil, passwordRecoveryPending } = useAuth();
@@ -61,16 +63,14 @@ function AppShell() {
   usePasswordRecoveryRouteRedirect();
   const { isOffline } = useNetworkStatus();
   const { pathname } = useLocation();
-  const isDevPerfilPushPreview = import.meta.env.DEV && pathname === '/__dev/perfil-push';
-  const isDevPerfilCapture = import.meta.env.DEV && pathname === '/__dev/perfil';
+  const isDevPublicRoute = import.meta.env.DEV && pathname.startsWith('/__dev/');
 
   const isPublicRoute = pathname === '/'
     || pathname === '/auth'
     || pathname === '/explorar'
     || pathname === '/privacidade'
     || pathname === '/eliminacao-de-dados'
-    || isDevPerfilPushPreview
-    || isDevPerfilCapture;
+    || isDevPublicRoute;
 
   const routes = (
     <Routes>
@@ -80,13 +80,10 @@ function AppShell() {
       <Route path="/explorar" element={<MarketplaceExplore />} />
       <Route path="/privacidade" element={<PublicLegalPage page="privacidade" />} />
       <Route path="/eliminacao-de-dados" element={<PublicLegalPage page="eliminacao" />} />
-      {import.meta.env.DEV ? (
-        <>
-          <Route path="/__dev/perfil-push" element={<DevPerfilPushPreview />} />
-          <Route path="/__dev/perfil" element={<DevPerfilCaptureShell />}>
-            <Route index element={<Profile />} />
-          </Route>
-        </>
+      {import.meta.env.DEV && DevAppRoutes ? (
+        <Suspense fallback={null}>
+          <DevAppRoutes />
+        </Suspense>
       ) : null}
 
       {/* Rotas protegidas envolvidas pelo Layout global (com BottomBar) */}

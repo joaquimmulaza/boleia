@@ -1,5 +1,5 @@
 import React from 'react';
-import { DevAuthProvider } from '../contexts/AuthContext';
+import DevAuthProvider from '../dev/DevAuthProvider';
 import Layout from '../layouts/Layout';
 import { DEV_PERFIL_CAPTURE_AUTH } from '../dev/devPerfilCaptureAuth';
 
