@@ -133,9 +133,14 @@ BEGIN
     SET encerramento_motivo = 'sem_lugares_vivos'
     WHERE id = p_acordo_id
       AND lower(estado) = 'cancelado'
-      AND lower(coalesce(rescisao_modo, '')) <> 'justa_causa'
-      AND rescisao_confirmada_em IS NULL
-      AND encerramento_motivo IS NULL;
+      AND encerramento_motivo IS NULL
+      AND (
+        rescisao_modo IS NULL
+        OR (
+          lower(rescisao_modo) = 'consensual'
+          AND rescisao_confirmada_em IS NULL
+        )
+      );
   END IF;
 
   PERFORM public.recount_oferta_vagas(v_acordo.oferta_id);

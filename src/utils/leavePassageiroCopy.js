@@ -26,18 +26,6 @@ function pagamentoPendenteOuComprovativo(pagamentoEstado) {
 }
 
 /**
- * Mensagem do modal «Sair só tu?» (passageiro).
- *
- * @param {{
- *   lugarEstado?: string | null,
- *   pagamento?: { estado?: string } | null,
- *   pagamentoLoading?: boolean,
- *   lugaresVivosCount?: number | null,
- *   lugaresVivosLoading?: boolean,
- * }} ctx
- * @returns {string}
- */
-/**
  * Linha financeira do modal (sem prefixo de saída individual).
  *
  * @param {{
@@ -60,19 +48,32 @@ function copyLinhaFinanceiraSaidaPassageiro(ctx) {
   return 'Não tens nada a pagar neste acordo.';
 }
 
+/**
+ * Mensagem do modal «Sair só tu?» (passageiro).
+ *
+ * @param {{
+ *   lugarEstado?: string | null,
+ *   pagamento?: { estado?: string } | null,
+ *   pagamentoLoading?: boolean,
+ *   lugaresVivosCount?: number | null,
+ *   lugaresVivosLoading?: boolean,
+ * }} ctx
+ * @returns {string}
+ */
 export function copyConfirmacaoSaidaPassageiro(ctx) {
   const prefixoIndividual =
     'Saída individual: o acordo mantém-se activo para os restantes. ';
+  const copyBase = prefixoIndividual + copyLinhaFinanceiraSaidaPassageiro(ctx);
 
   if (
     !ctx.lugaresVivosLoading
     && ctx.lugaresVivosCount === 1
     && isLugarVivoPassageiro(ctx.lugarEstado)
   ) {
-    return `${COPY_CONFIRMACAO_ULTIMO_PASSAGEIRO} ${copyLinhaFinanceiraSaidaPassageiro(ctx)}`;
+    return `${copyBase} ${COPY_CONFIRMACAO_ULTIMO_PASSAGEIRO}`;
   }
 
-  return prefixoIndividual + copyLinhaFinanceiraSaidaPassageiro(ctx);
+  return copyBase;
 }
 
 /**

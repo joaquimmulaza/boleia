@@ -5,6 +5,8 @@ import {
   chipClassEstadoAcordoVariant,
   isAcordoEncerradoSemLugaresVivos,
   isChipEncerramentoPedidoConsensual,
+  rescisaoPermiteEncerramentoMotivoSemLugares,
+  rescisaoBloqueiaLabelEncerrado,
 } from './acordoEstadoDisplay';
 
 /** Fixture tipo cd4a92aa (prod QA #257). */
@@ -15,6 +17,18 @@ const ACORDO_CD4A92AA = {
   rescisao_confirmada_em: null,
   rescisao_solicitada_por: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
 };
+
+describe('rescisaoPermiteEncerramentoMotivoSemLugares', () => {
+  it('alinhado ao SQL leave_passenger (NULL ou consensual pendente)', () => {
+    expect(rescisaoPermiteEncerramentoMotivoSemLugares(null, null)).toBe(true);
+    expect(rescisaoPermiteEncerramentoMotivoSemLugares(undefined, null)).toBe(true);
+    expect(rescisaoPermiteEncerramentoMotivoSemLugares('consensual', null)).toBe(true);
+    expect(rescisaoPermiteEncerramentoMotivoSemLugares('consensual', '2026-10-01')).toBe(false);
+    expect(rescisaoPermiteEncerramentoMotivoSemLugares('justa_causa', null)).toBe(false);
+    expect(rescisaoBloqueiaLabelEncerrado('justa_causa', null)).toBe(true);
+    expect(rescisaoBloqueiaLabelEncerrado('consensual', '2026-10-01')).toBe(true);
+  });
+});
 
 describe('labelEstadoAcordo', () => {
   it('mapeia enums conhecidos para copy humana', () => {

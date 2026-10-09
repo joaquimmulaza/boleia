@@ -46,7 +46,8 @@ BEGIN
     (v_pax2, 'p1m-pax2@test'),
     (v_pax_solo, 'p1m-paxsolo@test'),
     (v_pax_cons, 'p1m-paxcons@test'),
-    (v_pax_jc, 'p1m-paxjc@test')
+    (v_pax_jc, 'p1m-paxjc@test'),
+    (v_pax_cp, 'p1m-paxcp@test')
   ON CONFLICT DO NOTHING;
 
   INSERT INTO public.perfis (id, nome_completo, telefone, tipo_perfil) VALUES
@@ -55,7 +56,8 @@ BEGIN
     (v_pax2, 'P1M Pax2', '932000003', 'Passageiro'),
     (v_pax_solo, 'P1M Solo', '932000004', 'Passageiro'),
     (v_pax_cons, 'P1M Cons', '932000005', 'Passageiro'),
-    (v_pax_jc, 'P1M JC', '932000006', 'Passageiro')
+    (v_pax_jc, 'P1M JC', '932000006', 'Passageiro'),
+    (v_pax_cp, 'P1M Cons Pend', '932000007', 'Passageiro')
   ON CONFLICT (id) DO NOTHING;
 
   INSERT INTO public.veiculos (id_motorista, marca_modelo, matricula, capacidade_total, vagas_passageiros)

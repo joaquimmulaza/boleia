@@ -38,17 +38,33 @@ function normalizeAcordoEstadoInput(estado, encerramentoMotivo, rescisaoModo) {
 }
 
 /**
- * Rescisão que impede label «Encerrado» (consensual só conta após confirmação).
+ * Mesma regra que leave_passenger ao gravar sem_lugares_vivos:
+ * rescisao_modo IS NULL OR (consensual AND rescisao_confirmada_em IS NULL).
+ *
+ * @param {string | null | undefined} rescisaoModo
+ * @param {string | Date | null | undefined} rescisaoConfirmadaEm
+ * @returns {boolean}
+ */
+export function rescisaoPermiteEncerramentoMotivoSemLugares(
+  rescisaoModo,
+  rescisaoConfirmadaEm,
+) {
+  const raw = rescisaoModo == null ? '' : String(rescisaoModo).trim();
+  if (!raw) return true;
+  const modo = raw.toLowerCase();
+  if (modo === 'consensual' && !rescisaoConfirmadaEm) return true;
+  return false;
+}
+
+/**
+ * Rescisão que impede label «Encerrado» (inverso de {@link rescisaoPermiteEncerramentoMotivoSemLugares}).
  *
  * @param {string | null | undefined} rescisaoModo
  * @param {string | Date | null | undefined} rescisaoConfirmadaEm
  * @returns {boolean}
  */
 export function rescisaoBloqueiaLabelEncerrado(rescisaoModo, rescisaoConfirmadaEm) {
-  const modo = String(rescisaoModo || '').trim().toLowerCase();
-  if (modo === 'justa_causa') return true;
-  if (rescisaoConfirmadaEm) return true;
-  return false;
+  return !rescisaoPermiteEncerramentoMotivoSemLugares(rescisaoModo, rescisaoConfirmadaEm);
 }
 
 /**

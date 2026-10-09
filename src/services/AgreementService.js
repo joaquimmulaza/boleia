@@ -195,17 +195,6 @@ export async function createAgreementFromProposal(propostaId, options = {}) {
 }
 
 /**
- * Passageiro sai via RPC atómica: marca `saiu`, reconta vagas da oferta,
- * promove waitlist (best-effort no servidor). Preços / quotas dos restantes
- * não são recalculados.
- * Em falha de rede, enfileira em IndexedDB com idempotency_key e devolve
- * `{ offlineQueued: true, … }` (sincroniza via Background Sync / online).
- *
- * @param {string} acordoId
- * @param {string} passengerId
- * @param {{ idempotencyKey?: string, forceQueue?: boolean }} [options]
- */
-/**
  * Contagem server-side de lugares vivos (activo|reservado) no acordo.
  * @param {string} acordoId
  * @returns {Promise<number>}
@@ -224,6 +213,18 @@ export async function countLugaresVivosAcordo(acordoId) {
   return data;
 }
 
+/**
+ * Passageiro sai via RPC atómica: marca `saiu`, reconta vagas da oferta,
+ * promove waitlist (best-effort no servidor). Preços / quotas dos restantes
+ * não são recalculados.
+ * Em falha de rede, enfileira em IndexedDB com idempotency_key e devolve
+ * `{ offlineQueued: true, … }` (sincroniza via Background Sync / online).
+ *
+ * @param {string} acordoId
+ * @param {string} passengerId
+ * @param {{ idempotencyKey?: string, forceQueue?: boolean }} [options]
+ * @returns {Promise<object>}
+ */
 export async function leavePassenger(acordoId, passengerId, options = {}) {
   if (!acordoId || !passengerId) {
     throw new Error('acordoId e passengerId são obrigatórios.');

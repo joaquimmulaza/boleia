@@ -57,10 +57,12 @@ describe('Acordo encerramento_motivo — contrato', () => {
       /_maybe_fechar_acordo_sem_lugares_vivos\(p_acordo_id\);\s*\n\s*IF v_ultimo_passageiro_saiu THEN[\s\S]*encerramento_motivo = 'sem_lugares_vivos'/,
     );
     expect(next).toMatch(/Último passageiro: supressão via tabela interna \+ txid/);
-    expect(next).toMatch(/rescisao_confirmada_em IS NULL/);
-    expect(next).toMatch(/justa_causa/);
+    expect(next).toMatch(/rescisao_modo IS NULL/);
+    expect(next).toMatch(
+      /rescisao_modo IS NULL[\s\S]*OR[\s\S]*lower\(rescisao_modo\) = 'consensual'[\s\S]*rescisao_confirmada_em IS NULL/,
+    );
     expect(next).not.toMatch(
-      /encerramento_motivo = 'sem_lugares_vivos'[\s\S]*AND rescisao_modo IS NULL/,
+      /encerramento_motivo = 'sem_lugares_vivos'[\s\S]*AND rescisao_modo IS NULL\s*AND encerramento_motivo IS NULL;/,
     );
   });
 
