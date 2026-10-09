@@ -623,6 +623,112 @@ describe('MyAgreements — marketplace 1:N', () => {
     expect(await within(dialog).findByTestId('acordo-rating-mot-banner')).toBeInTheDocument();
   });
 
+  describe('estado lugar — saiu vs expirado', () => {
+    it('passageiro: chip «Saiu» no cartão e no cabeçalho do sheet', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+      getAgreementsForPassenger.mockResolvedValue([
+        {
+          ...acordoPassageiro,
+          estado: 'activo',
+          acordos_passageiros: [
+            {
+              id: 'ap-viewer',
+              passenger_id: 'pax-viewer',
+              estado: 'saiu',
+              quota_mensal_kz: 40000,
+              perfis: { nome_completo: 'Tu Mesmo' },
+            },
+          ],
+        },
+      ]);
+      mockPagamentosGate(
+        {
+          acordos_passageiros: [{ id: 'ap-viewer', passenger_id: 'pax-viewer', estado: 'saiu' }],
+        },
+        'pax-viewer',
+        false,
+        'anulado',
+      );
+
+      renderPage();
+
+      const chipCartao = await screen.findByTestId('acordo-lugar-saiu-chip-acordo-pax');
+      expect(chipCartao).toHaveTextContent('Saiu');
+      expect(chipCartao).not.toHaveTextContent('Expirado');
+      expect(chipCartao).not.toHaveTextContent('Activo');
+
+      fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      const chipSheet = within(dialog).getByTestId('acordo-lugar-saiu-chip-acordo-pax');
+      expect(chipSheet).toHaveTextContent('Saiu');
+    });
+
+    it('passageiro: chip «Expirado» quando reserva TTL (estado expirado)', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+      getAgreementsForPassenger.mockResolvedValue([
+        {
+          ...acordoPassageiro,
+          acordos_passageiros: [
+            {
+              id: 'ap-viewer',
+              passenger_id: 'pax-viewer',
+              estado: 'expirado',
+              quota_mensal_kz: 40000,
+              perfis: { nome_completo: 'Tu Mesmo' },
+            },
+          ],
+        },
+      ]);
+      getObrigacaoPagamentoPassageiro.mockResolvedValue({
+        obrigacao: { valor_em_divida: 0 },
+        pagamento: {
+          estado: 'anulado',
+          anulacao_motivo: 'Prazo de reserva expirado',
+        },
+      });
+
+      renderPage();
+
+      const chipCartao = await screen.findByTestId('acordo-lugar-expirado-chip-acordo-pax');
+      expect(chipCartao).toHaveTextContent('Expirado');
+      expect(chipCartao).not.toHaveTextContent('Saiu');
+    });
+
+    it('motorista: chips «Saiu» e «Expirado» na lista de passageiros', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver.mockResolvedValue([
+        {
+          ...acordoMotorista,
+          acordos_passageiros: [
+            {
+              id: 'ap-saiu',
+              passenger_id: 'pax-saiu',
+              estado: 'saiu',
+              quota_mensal_kz: 40000,
+              perfis: { nome_completo: 'Maria Saiu' },
+            },
+            {
+              id: 'ap-exp',
+              passenger_id: 'pax-exp',
+              estado: 'expirado',
+              quota_mensal_kz: 40000,
+              perfis: { nome_completo: 'Pedro Expirado' },
+            },
+          ],
+        },
+      ]);
+      setupPagamentosDefault(false);
+
+      renderPage();
+
+      fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+      expect(within(dialog).getByTestId('passageiro-estado-chip-pax-saiu')).toHaveTextContent('Saiu');
+      expect(within(dialog).getByTestId('passageiro-estado-chip-pax-exp')).toHaveTextContent('Expirado');
+    });
+  });
+
   it('passageiro que saiu: não mostra CTA Registar falta no detalhe do acordo inactivo', async () => {
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     getAgreementsForPassenger.mockResolvedValue([

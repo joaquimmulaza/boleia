@@ -10,7 +10,9 @@ import {
 import {
   labelChipEstadoPassageiro,
   chipClassEstadoPassageiro,
-} from '../utils/acordoPassageiroStatus';
+  mostrarChipEstadoLugarPassageiro,
+  estadoPassageiroParaChip,
+} from '../utils/estadoPassageiro';
 
 /**
  * @param {'activo' | 'pendente' | 'inactivo'} variant
@@ -31,7 +33,8 @@ function chipClassEstadoAcordo(variant) {
  * @param {{
  *   acordoId: string,
  *   estadoAcordo: string | null | undefined,
- *   minhaReservada?: boolean,
+ *   minhaLinhaEstado?: string | null,
+ *   minhaLinhaPagamento?: { anulacao_motivo?: string | null } | null,
  *   leavePending?: boolean,
  *   isBodyScrolled?: boolean,
  *   fecharRef?: import('react').RefObject<HTMLButtonElement | null>,
@@ -47,7 +50,8 @@ function chipClassEstadoAcordo(variant) {
 export default function AcordoDetalheSheetHeader({
   acordoId,
   estadoAcordo,
-  minhaReservada = false,
+  minhaLinhaEstado,
+  minhaLinhaPagamento = null,
   leavePending = false,
   isBodyScrolled = false,
   fecharRef,
@@ -59,6 +63,13 @@ export default function AcordoDetalheSheetHeader({
   titulo = 'Detalhe do acordo',
   onKebabTriggerRef,
 }) {
+  const minhaEstadoLugar = minhaLinhaEstado
+    ? estadoPassageiroParaChip(minhaLinhaEstado, minhaLinhaPagamento)
+    : null;
+  const mostrarChipLugar = Boolean(
+    minhaLinhaEstado && mostrarChipEstadoLugarPassageiro(minhaLinhaEstado, minhaLinhaPagamento),
+  );
+
   return (
     <header
       data-testid="acordo-detalhe-sheet-header"
@@ -101,12 +112,21 @@ export default function AcordoDetalheSheetHeader({
             >
               {labelEstadoAcordo(estadoAcordo)}
             </span>
-            {minhaReservada ? (
+            {mostrarChipLugar ? (
               <span
-                className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoPassageiro('reservado')}`}
-                data-testid={`acordo-lugar-chip-${acordoId}`}
+                className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoPassageiro(
+                  minhaLinhaEstado,
+                  minhaLinhaPagamento,
+                )}`}
+                data-testid={
+                  minhaEstadoLugar === 'expirado'
+                    ? `acordo-lugar-expirado-chip-${acordoId}`
+                    : minhaEstadoLugar === 'saiu'
+                      ? `acordo-lugar-saiu-chip-${acordoId}`
+                      : `acordo-lugar-chip-${acordoId}`
+                }
               >
-                {labelChipEstadoPassageiro('reservado')}
+                {labelChipEstadoPassageiro(minhaLinhaEstado, minhaLinhaPagamento)}
               </span>
             ) : null}
             {leavePending ? (

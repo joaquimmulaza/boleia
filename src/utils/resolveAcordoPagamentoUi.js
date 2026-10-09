@@ -7,6 +7,7 @@ import {
 } from './pagamentoObrigacaoCopy';
 import { PAYMENT_STATES } from './paymentStatus';
 import { isAnulacaoReservaExpiradaPorPagamento } from './pagamentoAnulacaoMotivo';
+import { estadoPassageiroParaChip } from './estadoPassageiro.js';
 
 /** @typedef {'S1' | 'S2' | 'S3' | 'S6a' | null} PassageiroPagamentoUiVariant */
 
@@ -39,7 +40,7 @@ function excessoKzFromObrigacao(obrigacao) {
  * }}
  */
 export function resolveAcordoPagamentoUiPassageiro(ctx) {
-  const lugar = String(ctx.minhaLinha?.estado || '').toLowerCase();
+  const lugar = estadoPassageiroParaChip(ctx.minhaLinha?.estado, ctx.pagamento);
   const pagamento = ctx.pagamento;
   const pgEst = String(pagamento?.estado || '').toLowerCase();
   const obrigacao = normalizeObrigacaoSnapshot(ctx.obrigacao);
