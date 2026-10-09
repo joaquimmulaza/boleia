@@ -298,6 +298,8 @@ const MyAgreements = () => {
   /** Bloqueia re-clique em Confirmar após sucesso local até refetch. */
   const [rescisaoConfirmadaLocal, setRescisaoConfirmadaLocal] = useState(false);
   const terminateInFlightRef = useRef(false);
+  /** Acordo cujo feedback «à espera da contraparte» deve sincronizar com cancelamento_pendente. */
+  const consensualAwaitFeedbackAcordoIdRef = useRef(/** @type {string | null} */ (null));
   const carregarGenerationRef = useRef(0);
   const [leaveModalOpen, setLeaveModalOpen] = useState(false);
   const [leaveBusy, setLeaveBusy] = useState(false);
@@ -495,15 +497,17 @@ const MyAgreements = () => {
   useEffect(() => {
     if (message.type !== 'success' || !message.text) return undefined;
     if (!/A outra parte precisa de confirmar/i.test(message.text)) return undefined;
+    const acordoId = consensualAwaitFeedbackAcordoIdRef.current;
+    if (!acordoId) return undefined;
     const confirmado = acordos.find(
-      (a) => String(a.estado || '').toLowerCase() === 'cancelamento_pendente',
+      (a) =>
+        a.id === acordoId
+        && String(a.estado || '').toLowerCase() === 'cancelamento_pendente',
     );
     if (!confirmado) return undefined;
     const copy = copyCancelamentoPendente(confirmado.rescisao_effective_on);
-    const text =
-      copy?.corpo
-      ?? (copyCancelamentoPendente(null)?.corpo
-        || 'Encerramento confirmado — termina em breve.');
+    const text = copy.corpo;
+    consensualAwaitFeedbackAcordoIdRef.current = null;
     setMessage((prev) => (prev.text === message.text ? { type: 'success', text } : prev));
     return undefined;
   }, [acordos, message.type, message.text]);
@@ -754,6 +758,7 @@ const MyAgreements = () => {
           vigenciaFinal === 'fim_ciclo'
             ? 'Pedido amigável (fim deste mês) enviado. A outra parte precisa de confirmar.'
             : 'Pedido amigável (agora, com ajuste proporcional) enviado. A outra parte precisa de confirmar.';
+        consensualAwaitFeedbackAcordoIdRef.current = acordoId;
       } else if (modo === 'consensual' && estado === 'cancelado') {
         text = 'Acordo encerrado de forma amigável com ajuste proporcional.';
       } else if (modo === 'consensual' && estado === 'cancelamento_pendente') {
