@@ -24,6 +24,30 @@ describe('fix(sec) — RLS/grants médios (contrato migração)', () => {
     expect(existsSync(join(MIGRATIONS, SEC_MIGRATION))).toBe(true);
   });
 
+  it('não altera default privileges (PR dedicado; evita quebrar novas tabelas)', () => {
+    const sql = readMigration(SEC_MIGRATION);
+    expect(sql).not.toMatch(/ALTER DEFAULT PRIVILEGES/i);
+  });
+
+  it('após revokes de escrita, mantém GRANT SELECT explícito nas tabelas lidas pelo cliente', () => {
+    const sql = readMigration(SEC_MIGRATION);
+    for (const table of [
+      'pagamentos_acordo',
+      'propostas',
+      'faltas',
+      'procuras',
+      'lista_espera',
+      'grupos',
+      'membros_grupo',
+      'veiculos',
+      'push_subscriptions',
+    ]) {
+      expect(sql).toMatch(
+        new RegExp(`GRANT SELECT ON TABLE public\\.${table} TO authenticated`),
+      );
+    }
+  });
+
   it('revoga escrita directa em pagamentos_acordo, propostas e faltas', () => {
     const sql = readMigration(SEC_MIGRATION);
     expect(sql).toMatch(/REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON TABLE public\.pagamentos_acordo/);
@@ -62,7 +86,9 @@ describe('fix(sec) — RLS/grants médios (contrato migração)', () => {
     const sql = readMigration(SEC_MIGRATION);
     expect(sql).toMatch(/GRANT UPDATE \(\s*marca_modelo/);
     expect(sql).toMatch(/GRANT UPDATE \(nome, n_maximo\) ON TABLE public\.grupos/);
-    expect(sql).toMatch(/REVOKE UPDATE ON TABLE public\.push_subscriptions/);
+    expect(sql).toMatch(/GRANT INSERT \(procura_id, nome, n_maximo\) ON TABLE public\.grupos/);
+    expect(sql).toMatch(/REVOKE INSERT, UPDATE ON TABLE public\.push_subscriptions/);
+    expect(sql).toMatch(/GRANT INSERT \(user_id, subscription\) ON TABLE public\.push_subscriptions/);
     expect(sql).toMatch(/DROP POLICY IF EXISTS "Users can update their own push subscriptions"/);
   });
 

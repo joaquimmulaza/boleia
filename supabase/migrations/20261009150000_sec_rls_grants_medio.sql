@@ -2,11 +2,14 @@
 -- Âmbito: procuras, propostas, faltas, membros_grupo, pagamentos_acordo,
 -- veiculos, grupos, push_subscriptions, lista_espera, storage comprovativos.
 -- Fora de âmbito: perfis/notificacoes/RPCs internas (PR #239), ofertas_capacidade (PR #236).
+-- Sem hardening de default privileges (PR dedicado; evita quebrar novas tabelas em prod).
 
 -- =============================================================================
 -- pagamentos_acordo — só RPC (PaymentService.js: SELECT + rpc)
 -- =============================================================================
 REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON TABLE public.pagamentos_acordo FROM authenticated, anon;
+
+GRANT SELECT ON TABLE public.pagamentos_acordo TO authenticated;
 
 DROP POLICY IF EXISTS pagamentos_update_admin ON public.pagamentos_acordo;
 
@@ -15,6 +18,8 @@ DROP POLICY IF EXISTS pagamentos_update_admin ON public.pagamentos_acordo;
 -- =============================================================================
 REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON TABLE public.propostas FROM authenticated, anon;
 
+GRANT SELECT ON TABLE public.propostas TO authenticated;
+
 DROP POLICY IF EXISTS propostas_insert_envolvidos ON public.propostas;
 DROP POLICY IF EXISTS propostas_update_envolvidos ON public.propostas;
 
@@ -22,6 +27,8 @@ DROP POLICY IF EXISTS propostas_update_envolvidos ON public.propostas;
 -- faltas — só RPC log_falta (INSERT policy já removida em ENG#11)
 -- =============================================================================
 REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON TABLE public.faltas FROM authenticated, anon;
+
+GRANT SELECT ON TABLE public.faltas TO authenticated;
 
 DROP POLICY IF EXISTS faltas_update_envolvidos ON public.faltas;
 DROP POLICY IF EXISTS faltas_delete_envolvidos ON public.faltas;
@@ -49,12 +56,16 @@ GRANT INSERT (
 
 GRANT UPDATE (n_candidato, updated_at) ON TABLE public.procuras TO authenticated;
 
+GRANT SELECT ON TABLE public.procuras TO authenticated;
+
 -- =============================================================================
 -- lista_espera — INSERT colunas (WaitlistService); estado forçado activa
 -- =============================================================================
 REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON TABLE public.lista_espera FROM authenticated, anon;
 
 GRANT INSERT (oferta_id, procura_id, grupo_id) ON TABLE public.lista_espera TO authenticated;
+
+GRANT SELECT ON TABLE public.lista_espera TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.trg_lista_espera_force_estado_activa()
 RETURNS trigger
@@ -74,11 +85,17 @@ CREATE TRIGGER trg_lista_espera_force_estado_activa
   EXECUTE FUNCTION public.trg_lista_espera_force_estado_activa();
 
 -- =============================================================================
--- grupos — UPDATE nome/n_maximo; DELETE mantém-se (apagarGrupo)
+-- grupos — INSERT/UPDATE/DELETE/SELECT (GrupoService.js)
 -- =============================================================================
-REVOKE UPDATE ON TABLE public.grupos FROM authenticated, anon;
+REVOKE INSERT, UPDATE ON TABLE public.grupos FROM authenticated, anon;
+
+GRANT INSERT (procura_id, nome, n_maximo) ON TABLE public.grupos TO authenticated;
 
 GRANT UPDATE (nome, n_maximo) ON TABLE public.grupos TO authenticated;
+
+GRANT SELECT ON TABLE public.grupos TO authenticated;
+
+GRANT DELETE ON TABLE public.grupos TO authenticated;
 
 -- =============================================================================
 -- veiculos — UPDATE/INSERT colunas do cliente (VehicleSetup, ProfileService)
@@ -100,10 +117,18 @@ GRANT UPDATE (
   vagas_passageiros
 ) ON TABLE public.veiculos TO authenticated;
 
+GRANT SELECT ON TABLE public.veiculos TO authenticated;
+
 -- =============================================================================
--- push_subscriptions — INSERT/DELETE; sem UPDATE (usePushNotifications.js)
+-- push_subscriptions — INSERT/DELETE/SELECT; sem UPDATE (usePushNotifications.js)
 -- =============================================================================
-REVOKE UPDATE ON TABLE public.push_subscriptions FROM authenticated, anon;
+REVOKE INSERT, UPDATE ON TABLE public.push_subscriptions FROM authenticated, anon;
+
+GRANT INSERT (user_id, subscription) ON TABLE public.push_subscriptions TO authenticated;
+
+GRANT DELETE ON TABLE public.push_subscriptions TO authenticated;
+
+GRANT SELECT ON TABLE public.push_subscriptions TO authenticated;
 
 DROP POLICY IF EXISTS "Users can update their own push subscriptions" ON public.push_subscriptions;
 
@@ -135,6 +160,8 @@ GRANT UPDATE (
   dropoff_lng,
   ordem_insercao
 ) ON TABLE public.membros_grupo TO authenticated;
+
+GRANT SELECT ON TABLE public.membros_grupo TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.trg_membros_grupo_passenger_update_guard()
 RETURNS trigger

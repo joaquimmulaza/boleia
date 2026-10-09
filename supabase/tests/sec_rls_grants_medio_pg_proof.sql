@@ -205,6 +205,10 @@ CREATE POLICY comprovativos_select_own_or_admin ON storage.objects
 
 DO $$
 BEGIN
+  IF NOT has_table_privilege('authenticated', 'public.pagamentos_acordo', 'SELECT') THEN
+    RAISE EXCEPTION 'FAIL: falta GRANT SELECT em pagamentos_acordo';
+  END IF;
+
   IF has_table_privilege('authenticated', 'public.pagamentos_acordo', 'UPDATE') THEN
     RAISE EXCEPTION 'FAIL: authenticated ainda tem UPDATE em pagamentos_acordo';
   END IF;
@@ -243,6 +247,14 @@ BEGIN
 
   IF NOT has_column_privilege('authenticated', 'public.grupos', 'n_maximo', 'UPDATE') THEN
     RAISE EXCEPTION 'FAIL: falta GRANT UPDATE em grupos.n_maximo';
+  END IF;
+
+  IF NOT has_table_privilege('authenticated', 'public.grupos', 'DELETE') THEN
+    RAISE EXCEPTION 'FAIL: falta GRANT DELETE em grupos';
+  END IF;
+
+  IF NOT has_column_privilege('authenticated', 'public.push_subscriptions', 'subscription', 'INSERT') THEN
+    RAISE EXCEPTION 'FAIL: falta GRANT INSERT em push_subscriptions.subscription';
   END IF;
 
   IF has_column_privilege('authenticated', 'public.veiculos', 'id_motorista', 'UPDATE') THEN
