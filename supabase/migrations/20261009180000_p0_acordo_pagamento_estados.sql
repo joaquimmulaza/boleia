@@ -614,6 +614,53 @@ BEGIN
 END;
 $function$;
 
+-- === Escopo lazy apply_due_* (B2: mass run só service_role / admin) ===
+CREATE OR REPLACE FUNCTION public._p0_assert_lazy_apply_due_scope(p_acordo_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_role text := nullif(current_setting('request.jwt.claim.role', true), '');
+BEGIN
+  IF v_role = 'service_role' OR public.is_platform_admin() THEN
+    RETURN;
+  END IF;
+
+  IF p_acordo_id IS NULL THEN
+    RAISE EXCEPTION 'Sem permissão.'
+      USING ERRCODE = '42501';
+  END IF;
+
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'Sem permissão.'
+      USING ERRCODE = '42501';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.acordos a
+    WHERE a.id = p_acordo_id
+      AND (
+        a.driver_id = v_uid
+        OR EXISTS (
+          SELECT 1
+          FROM public.acordos_passageiros ap
+          WHERE ap.acordo_id = a.id
+            AND ap.passenger_id = v_uid
+        )
+      )
+  ) THEN
+    RETURN;
+  END IF;
+
+  RAISE EXCEPTION 'Sem permissão.'
+    USING ERRCODE = '42501';
+END;
+$function$;
+
 -- === apply_due_reserva_expiry ===
 CREATE OR REPLACE FUNCTION public.apply_due_reserva_expiry(p_acordo_id uuid DEFAULT NULL)
 RETURNS integer
@@ -627,6 +674,8 @@ DECLARE
   v_oferta_id uuid;
   v_count integer := 0;
 BEGIN
+  PERFORM public._p0_assert_lazy_apply_due_scope(p_acordo_id);
+
   FOR v_row IN
     SELECT ap.id, ap.acordo_id, ap.passenger_id, a.oferta_id, a.estado AS acordo_estado
     FROM public.acordos_passageiros ap
@@ -720,6 +769,8 @@ DECLARE
   v_applied integer := 0;
   r record;
 BEGIN
+  PERFORM public._p0_assert_lazy_apply_due_scope(p_acordo_id);
+
   FOR v_acordo IN
     SELECT *
     FROM public.acordos
@@ -1403,6 +1454,8 @@ DECLARE
   v_applied integer := 0;
   r record;
 BEGIN
+  PERFORM public._p0_assert_lazy_apply_due_scope(p_acordo_id);
+
   PERFORM public.apply_due_agreement_terminations(p_acordo_id);
 
   FOR v_acordo IN
@@ -1493,24 +1546,57 @@ BEGIN
 END;
 $function$;
 
+-- === B1/B3: helpers internos — só service_role (nunca authenticated/anon) ===
+REVOKE ALL ON FUNCTION public._valor_pago_efectivo_kz(public.pagamentos_acordo) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public._valor_pago_efectivo_kz(public.pagamentos_acordo) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._valor_pago_efectivo_kz(public.pagamentos_acordo) TO service_role;
+
+REVOKE ALL ON FUNCTION public._anular_pagamento_sem_divida(uuid, text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public._anular_pagamento_sem_divida(uuid, text) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._anular_pagamento_sem_divida(uuid, text) TO service_role;
+
+REVOKE ALL ON FUNCTION public._expirar_lugar_reservado_sem_divida(uuid, text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public._expirar_lugar_reservado_sem_divida(uuid, text) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._expirar_lugar_reservado_sem_divida(uuid, text) TO service_role;
+
+REVOKE ALL ON FUNCTION public.ajustar_obrigacao_pagamento_mes(uuid, date, boolean) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.ajustar_obrigacao_pagamento_mes(uuid, date, boolean) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.ajustar_obrigacao_pagamento_mes(uuid, date, boolean) TO service_role;
+
+REVOKE ALL ON FUNCTION public._maybe_fechar_acordo_sem_lugares_vivos(uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public._maybe_fechar_acordo_sem_lugares_vivos(uuid) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._maybe_fechar_acordo_sem_lugares_vivos(uuid) TO service_role;
+
+REVOKE ALL ON FUNCTION public._p0_finalize_lugares_rescisao_imediata(uuid, date) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public._p0_finalize_lugares_rescisao_imediata(uuid, date) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._p0_finalize_lugares_rescisao_imediata(uuid, date) TO service_role;
+
+REVOKE ALL ON FUNCTION public._p0_assert_lazy_apply_due_scope(uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public._p0_assert_lazy_apply_due_scope(uuid) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._p0_assert_lazy_apply_due_scope(uuid) TO service_role;
+
+REVOKE ALL ON FUNCTION public.build_ui_obrigacao_snapshot(uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.build_ui_obrigacao_snapshot(uuid) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.build_ui_obrigacao_snapshot(uuid) TO service_role;
+
+REVOKE ALL ON FUNCTION public.trg_acordos_passageiros_create_pagamento() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.trg_acordos_passageiros_create_pagamento() FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.trg_acordos_passageiros_create_pagamento() TO service_role;
+
 REVOKE ALL ON FUNCTION public.count_dias_uteis_decorridos_mes(date, date) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.calc_quota_proporcional_kz(integer, integer, date) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.build_ui_obrigacao_snapshot(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.get_obrigacao_pagamento_passageiro(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.list_pagamentos_pendentes_motorista_acordo(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.list_pagamentos_resolucao_admin() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public._p0_finalize_lugares_rescisao_imediata(uuid, date) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION public.count_dias_uteis_decorridos_mes(date, date) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.calc_quota_proporcional_kz(integer, integer, date) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.build_ui_obrigacao_snapshot(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_obrigacao_pagamento_passageiro(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.list_pagamentos_pendentes_motorista_acordo(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.list_pagamentos_resolucao_admin() TO authenticated;
 
 REVOKE EXECUTE ON FUNCTION public.count_dias_uteis_decorridos_mes(date, date) FROM anon;
 REVOKE EXECUTE ON FUNCTION public.calc_quota_proporcional_kz(integer, integer, date) FROM anon;
-REVOKE EXECUTE ON FUNCTION public.build_ui_obrigacao_snapshot(uuid) FROM anon;
 REVOKE EXECUTE ON FUNCTION public.get_obrigacao_pagamento_passageiro(uuid) FROM anon;
 REVOKE EXECUTE ON FUNCTION public.list_pagamentos_pendentes_motorista_acordo(uuid) FROM anon;
 REVOKE EXECUTE ON FUNCTION public.list_pagamentos_resolucao_admin() FROM anon;
