@@ -1,16 +1,6 @@
--- Prova: authenticated não tem UPDATE em ofertas_capacidade (pós-migração reactivar_oferta).
+-- Prova: authenticated não tem UPDATE em ofertas_capacidade após deploy da migração
+-- 20261009143000_reactivar_oferta_rpc.sql (não aplica REVOKE aqui — só assert).
 \set ON_ERROR_STOP on
-
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
-    CREATE ROLE authenticated NOLOGIN;
-  END IF;
-END $$;
-
--- Aplicar revokes da migração (espelho do deploy)
-REVOKE UPDATE ON TABLE public.ofertas_capacidade FROM authenticated;
-REVOKE UPDATE ON TABLE public.ofertas_capacidade FROM anon;
 
 DO $$
 BEGIN

@@ -96,10 +96,6 @@ BEGIN
     RAISE EXCEPTION 'Esta oferta já está publicada.';
   END IF;
 
-  IF COALESCE(v_oferta.is_test, false) THEN
-    RAISE EXCEPTION 'Oferta de teste não pode ser reactivada.';
-  END IF;
-
   IF lower(COALESCE(v_oferta.inactiva_motivo, '')) = 'admin' THEN
     RAISE EXCEPTION 'Esta oferta foi retirada pela equipa.';
   END IF;

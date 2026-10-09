@@ -1107,7 +1107,7 @@ describe('DriverDashboard — marketplace', () => {
     expect(screen.queryByRole('menuitem', { name: /Despublicar/i })).not.toBeInTheDocument();
   });
 
-  it('oculta Reactivar para is_test ou inactiva_motivo admin', async () => {
+  it('mostra Reactivar para is_test (motorista QA)', async () => {
     listOfertasByDriver.mockResolvedValue([
       {
         ...ofertaFixa,
@@ -1116,6 +1116,21 @@ describe('DriverDashboard — marketplace', () => {
         inactiva_motivo: 'motorista',
         is_test: true,
       },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <DriverDashboard />
+      </MemoryRouter>,
+    );
+
+    await screen.findByTestId('driver-oferta-card-of-test');
+    abrirKebabOferta();
+    expect(screen.getByRole('menuitem', { name: /^Reactivar$/i })).toBeInTheDocument();
+  });
+
+  it('oculta Reactivar para inactiva_motivo admin', async () => {
+    listOfertasByDriver.mockResolvedValue([
       {
         ...ofertaFixa,
         id: 'of-admin',
@@ -1130,7 +1145,7 @@ describe('DriverDashboard — marketplace', () => {
       </MemoryRouter>,
     );
 
-    await screen.findByTestId('driver-oferta-card-of-test');
+    await screen.findByTestId('driver-oferta-card-of-admin');
     expect(screen.queryByRole('button', { name: /Mais acções/i })).not.toBeInTheDocument();
   });
 
