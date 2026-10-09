@@ -97,32 +97,6 @@ describe('P0 acordo pagamento estados — migração obrigatória', () => {
     expect(sql).toMatch(/reservado_expira_em/);
   });
 
-  it('fail-on-old: REVOKE helpers internos + build_ui_obrigacao_snapshot de authenticated', () => {
-    expect(sql).toMatch(
-      /REVOKE EXECUTE ON FUNCTION public\._anular_pagamento_sem_divida\(uuid, text\) FROM anon, authenticated/,
-    );
-    expect(sql).toMatch(
-      /REVOKE EXECUTE ON FUNCTION public\.build_ui_obrigacao_snapshot\(uuid\) FROM anon, authenticated/,
-    );
-    expect(sql).not.toMatch(
-      /GRANT EXECUTE ON FUNCTION public\.build_ui_obrigacao_snapshot\(uuid\) TO authenticated/,
-    );
-  });
-
-  it('fail-on-old: escopo lazy apply_due_* via _p0_assert_lazy_apply_due_scope', () => {
-    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\._p0_assert_lazy_apply_due_scope/);
-    expect(sql).toMatch(/PERFORM public\._p0_assert_lazy_apply_due_scope\(p_acordo_id\)/);
-    expect(sql).toMatch(/ERRCODE = '42501'/);
-  });
-
-  it('prova PG inclui asserções fail-on-old de segurança', () => {
-    const proof = readFileSync(
-      join(ROOT, '../../supabase/tests/p0_acordo_pagamento_estados_pg_proof.sql'),
-      'utf8',
-    );
-    expect(proof).toMatch(/FAIL-on-old: authenticated EXECUTE build_ui_obrigacao_snapshot/);
-    expect(proof).toMatch(/apply_due_reserva_expiry\(NULL\)/);
-  });
 });
 
 describe('P0 acordo pagamento — PaymentService RPC', () => {

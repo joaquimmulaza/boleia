@@ -49,7 +49,25 @@ BEGIN
   RAISE NOTICE 'PASS: fail-on-old privilégios OK';
 END $$;
 
-\echo '=== B1/B3: helpers + snapshot negados como authenticated ==='
+\echo '=== B1/B2/B3: runtime authenticated → 42501 (helpers + apply_due mass/foreign) ==='
+CREATE OR REPLACE FUNCTION public._p0_pg_proof_expect_denied(p_label text, p_sql text)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path TO 'public'
+AS $fn$
+BEGIN
+  EXECUTE p_sql;
+  RAISE EXCEPTION 'FAIL %: devia negar (42501)', p_label;
+EXCEPTION
+  WHEN OTHERS THEN
+    IF SQLSTATE IS DISTINCT FROM '42501' THEN
+      RAISE EXCEPTION 'FAIL %: esperava 42501, obteve % — %', p_label, SQLSTATE, SQLERRM;
+    END IF;
+END;
+$fn$;
+
+GRANT EXECUTE ON FUNCTION public._p0_pg_proof_expect_denied(text, text) TO authenticated;
+
 DO $$
 DECLARE
   v_driver uuid := 'a1111111-1111-4111-8111-111111111111';
@@ -61,8 +79,9 @@ DECLARE
   v_acordo uuid := 'a4444444-4444-4444-8444-444444444444';
   v_ap uuid := 'a5555555-5555-4555-8555-555555555555';
   v_pg uuid := 'a6666666-6666-4666-8666-666666666666';
-  v_err text;
-  v_sqlstate text;
+  v_pg_row public.pagamentos_acordo%ROWTYPE;
+  v_mes date := date_trunc('month', current_date)::date;
+
 BEGIN
   PERFORM set_config('session_replication_role', 'replica', true);
 
@@ -106,37 +125,61 @@ BEGIN
     50000, 50000, 45000, 0.10, date_trunc('month', current_date)::date, 'pendente_pagamento'
   );
 
+  SELECT * INTO v_pg_row FROM public.pagamentos_acordo WHERE id = v_pg;
+
   PERFORM set_config('session_replication_role', 'origin', true);
 
   PERFORM set_config('request.jwt.claim.sub', v_pax::text, true);
   PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
   SET LOCAL ROLE authenticated;
 
-  BEGIN
-    PERFORM public._anular_pagamento_sem_divida(v_ap, 'proof');
-    RAISE EXCEPTION 'FAIL: _anular_pagamento_sem_divida devia negar';
-  EXCEPTION
-    WHEN insufficient_privilege THEN
-      NULL;
-    WHEN OTHERS THEN
-      GET STACKED DIAGNOSTICS v_sqlstate = RETURNED_SQLSTATE;
-      IF v_sqlstate IS DISTINCT FROM '42501' THEN
-        RAISE;
-      END IF;
-  END;
-
-  BEGIN
-    PERFORM public.build_ui_obrigacao_snapshot(v_pg);
-    RAISE EXCEPTION 'FAIL: build_ui_obrigacao_snapshot devia negar';
-  EXCEPTION
-    WHEN insufficient_privilege THEN
-      NULL;
-    WHEN OTHERS THEN
-      GET STACKED DIAGNOSTICS v_sqlstate = RETURNED_SQLSTATE;
-      IF v_sqlstate IS DISTINCT FROM '42501' THEN
-        RAISE;
-      END IF;
-  END;
+  PERFORM public._p0_pg_proof_expect_denied(
+    '_valor_pago_efectivo_kz',
+    format(
+      'SELECT public._valor_pago_efectivo_kz(p) FROM public.pagamentos_acordo p WHERE p.id = %L',
+      v_pg
+    )
+  );
+  PERFORM public._p0_pg_proof_expect_denied(
+    '_anular_pagamento_sem_divida',
+    format('SELECT public._anular_pagamento_sem_divida(%L::uuid, %L)', v_ap, 'proof')
+  );
+  PERFORM public._p0_pg_proof_expect_denied(
+    '_expirar_lugar_reservado_sem_divida',
+    format('SELECT public._expirar_lugar_reservado_sem_divida(%L::uuid, %L)', v_ap, 'proof')
+  );
+  PERFORM public._p0_pg_proof_expect_denied(
+    'ajustar_obrigacao_pagamento_mes',
+    format(
+      'SELECT public.ajustar_obrigacao_pagamento_mes(%L::uuid, %L::date, false)',
+      v_ap,
+      v_mes
+    )
+  );
+  PERFORM public._p0_pg_proof_expect_denied(
+    '_maybe_fechar_acordo_sem_lugares_vivos',
+    format('SELECT public._maybe_fechar_acordo_sem_lugares_vivos(%L::uuid)', v_acordo)
+  );
+  PERFORM public._p0_pg_proof_expect_denied(
+    '_p0_finalize_lugares_rescisao_imediata',
+    format(
+      'SELECT public._p0_finalize_lugares_rescisao_imediata(%L::uuid, %L::date)',
+      v_acordo,
+      current_date
+    )
+  );
+  PERFORM public._p0_pg_proof_expect_denied(
+    '_p0_assert_lazy_apply_due_scope',
+    format('SELECT public._p0_assert_lazy_apply_due_scope(%L::uuid)', v_acordo)
+  );
+  PERFORM public._p0_pg_proof_expect_denied(
+    'build_ui_obrigacao_snapshot',
+    format('SELECT public.build_ui_obrigacao_snapshot(%L::uuid)', v_pg)
+  );
+  PERFORM public._p0_pg_proof_expect_denied(
+    'trg_acordos_passageiros_create_pagamento',
+    'SELECT public.trg_acordos_passageiros_create_pagamento()'
+  );
 
   RESET ROLE;
 
@@ -144,47 +187,40 @@ BEGIN
   PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
   SET LOCAL ROLE authenticated;
 
-  BEGIN
-    PERFORM public.apply_due_reserva_expiry(NULL);
-    RAISE EXCEPTION 'FAIL: apply_due_reserva_expiry(NULL) devia negar (non-admin)';
-  EXCEPTION
-    WHEN OTHERS THEN
-      GET STACKED DIAGNOSTICS v_sqlstate = RETURNED_SQLSTATE, v_err = MESSAGE_TEXT;
-      IF v_sqlstate IS DISTINCT FROM '42501' THEN
-        RAISE EXCEPTION 'FAIL: apply_due NULL scope sqlstate=% msg=%', v_sqlstate, v_err;
-      END IF;
-  END;
-
-  BEGIN
-    PERFORM public.apply_due_agreement_terminations(v_acordo);
-    RAISE EXCEPTION 'FAIL: apply_due_terminations acordo alheio devia negar';
-  EXCEPTION
-    WHEN OTHERS THEN
-      GET STACKED DIAGNOSTICS v_sqlstate = RETURNED_SQLSTATE;
-      IF v_sqlstate IS DISTINCT FROM '42501' THEN
-        RAISE;
-      END IF;
-  END;
-
-  BEGIN
-    PERFORM public.apply_due_agreement_non_renewals(v_acordo);
-    RAISE EXCEPTION 'FAIL: apply_due_non_renewals acordo alheio devia negar';
-  EXCEPTION
-    WHEN OTHERS THEN
-      GET STACKED DIAGNOSTICS v_sqlstate = RETURNED_SQLSTATE;
-      IF v_sqlstate IS DISTINCT FROM '42501' THEN
-        RAISE;
-      END IF;
-  END;
+  PERFORM public._p0_pg_proof_expect_denied(
+    'apply_due_reserva_expiry(NULL)',
+    'SELECT public.apply_due_reserva_expiry(NULL::uuid)'
+  );
+  PERFORM public._p0_pg_proof_expect_denied(
+    'apply_due_agreement_terminations(NULL)',
+    'SELECT public.apply_due_agreement_terminations(NULL::uuid)'
+  );
+  PERFORM public._p0_pg_proof_expect_denied(
+    'apply_due_agreement_non_renewals(NULL)',
+    'SELECT public.apply_due_agreement_non_renewals(NULL::uuid)'
+  );
+  PERFORM public._p0_pg_proof_expect_denied(
+    'apply_due_reserva_expiry(foreign)',
+    format('SELECT public.apply_due_reserva_expiry(%L::uuid)', v_acordo)
+  );
+  PERFORM public._p0_pg_proof_expect_denied(
+    'apply_due_agreement_terminations(foreign)',
+    format('SELECT public.apply_due_agreement_terminations(%L::uuid)', v_acordo)
+  );
+  PERFORM public._p0_pg_proof_expect_denied(
+    'apply_due_agreement_non_renewals(foreign)',
+    format('SELECT public.apply_due_agreement_non_renewals(%L::uuid)', v_acordo)
+  );
 
   RESET ROLE;
 
   PERFORM set_config('request.jwt.claim.sub', v_pax::text, true);
   PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
   SET LOCAL ROLE authenticated;
-
   PERFORM public.apply_due_reserva_expiry(v_acordo);
-
   RESET ROLE;
-  RAISE NOTICE 'PASS: B1/B2/B3 runtime (helpers, NULL scope, acordo alheio, scope próprio OK)';
+
+  RAISE NOTICE 'PASS: B1/B2/B3 runtime (todos helpers + apply_due mass/foreign → 42501; scope próprio OK)';
 END $$;
+
+DROP FUNCTION IF EXISTS public._p0_pg_proof_expect_denied(text, text);
