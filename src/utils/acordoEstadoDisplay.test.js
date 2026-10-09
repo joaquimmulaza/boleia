@@ -3,7 +3,18 @@ import {
   labelEstadoAcordo,
   variantChipEstadoAcordo,
   chipClassEstadoAcordoVariant,
+  isAcordoEncerradoSemLugaresVivos,
+  isChipEncerramentoPedidoConsensual,
 } from './acordoEstadoDisplay';
+
+/** Fixture tipo cd4a92aa (prod QA #257). */
+const ACORDO_CD4A92AA = {
+  estado: 'cancelado',
+  encerramento_motivo: 'sem_lugares_vivos',
+  rescisao_modo: 'consensual',
+  rescisao_confirmada_em: null,
+  rescisao_solicitada_por: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+};
 
 describe('labelEstadoAcordo', () => {
   it('mapeia enums conhecidos para copy humana', () => {
@@ -43,22 +54,44 @@ describe('labelEstadoAcordo', () => {
     ).toBe('Cancelado');
   });
 
-  it('consensual pendente (sem confirmação) com sem_lugares_vivos mostra Encerrado', () => {
+  it('cd4a92aa: consensual não confirmado + sem_lugares_vivos → Encerrado (não Encerramento pedido)', () => {
+    expect(labelEstadoAcordo(ACORDO_CD4A92AA)).toBe('Encerrado');
+    expect(labelEstadoAcordo(ACORDO_CD4A92AA)).not.toBe('Encerramento pedido');
+    expect(isAcordoEncerradoSemLugaresVivos(ACORDO_CD4A92AA)).toBe(true);
+    expect(isChipEncerramentoPedidoConsensual(ACORDO_CD4A92AA)).toBe(false);
+    expect(variantChipEstadoAcordo(ACORDO_CD4A92AA)).toBe('encerrado');
+  });
+
+  it('activo com pedido consensual aberto mostra Encerramento pedido', () => {
+    const acordo = {
+      estado: 'activo',
+      rescisao_modo: 'consensual',
+      rescisao_confirmada_em: null,
+      rescisao_solicitada_por: 'driver-1',
+    };
+    expect(labelEstadoAcordo(acordo)).toBe('Encerramento pedido');
+    expect(variantChipEstadoAcordo(acordo)).toBe('pendente');
+  });
+
+  it('cancelado com consensual pendente mas sem sem_lugares_vivos mantém Cancelado', () => {
     expect(
       labelEstadoAcordo({
         estado: 'cancelado',
-        encerramento_motivo: 'sem_lugares_vivos',
+        encerramento_motivo: null,
         rescisao_modo: 'consensual',
         rescisao_confirmada_em: null,
+        rescisao_solicitada_por: 'driver-1',
       }),
-    ).toBe('Encerrado');
+    ).toBe('Cancelado');
     expect(
-      variantChipEstadoAcordo({
+      labelEstadoAcordo({
         estado: 'cancelado',
-        encerramento_motivo: 'sem_lugares_vivos',
+        encerramento_motivo: null,
         rescisao_modo: 'consensual',
+        rescisao_confirmada_em: null,
+        rescisao_solicitada_por: 'driver-1',
       }),
-    ).toBe('encerrado');
+    ).not.toBe('Encerramento pedido');
   });
 
   it('não devolve snake_case cru', () => {

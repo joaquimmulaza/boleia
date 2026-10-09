@@ -1350,6 +1350,8 @@ const MyAgreements = () => {
             estadoAcordo={selected.estado}
             encerramentoMotivoAcordo={selected.encerramento_motivo}
             rescisaoModoAcordo={selected.rescisao_modo}
+            rescisaoConfirmadaEmAcordo={selected.rescisao_confirmada_em}
+            rescisaoSolicitadaPorAcordo={selected.rescisao_solicitada_por}
             minhaLinhaEstado={minhaLinha?.estado}
             minhaLinhaPagamento={pagamentoViewer}
             leavePending={leavePending}

@@ -2120,7 +2120,7 @@ describe('MyAgreements — marketplace 1:N', () => {
 
       const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
       expect(within(dialog).getByTestId('rescisao-consensual-enviada')).toBeInTheDocument();
-      expect(within(dialog).getByText(/^Activo$/i)).toBeInTheDocument();
+      expect(within(dialog).getByText(/^Encerramento pedido$/i)).toBeInTheDocument();
 
       const encerrado = {
         ...aguardandoConfirmacao,
@@ -2135,7 +2135,7 @@ describe('MyAgreements — marketplace 1:N', () => {
       await waitFor(() => {
         expect(within(dialog).queryByTestId('rescisao-consensual-enviada')).not.toBeInTheDocument();
         expect(within(dialog).getByText(/^cancelado$/i)).toBeInTheDocument();
-        expect(within(dialog).queryByText(/^Activo$/i)).not.toBeInTheDocument();
+        expect(within(dialog).queryByText(/^Encerramento pedido$/i)).not.toBeInTheDocument();
       });
       expect(screen.getByRole('dialog', { name: /Detalhe do acordo/i })).toBeInTheDocument();
     });

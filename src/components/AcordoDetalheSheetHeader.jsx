@@ -22,6 +22,8 @@ import {
  *   estadoAcordo: string | null | undefined,
  *   encerramentoMotivoAcordo?: string | null,
  *   rescisaoModoAcordo?: string | null,
+ *   rescisaoConfirmadaEmAcordo?: string | null,
+ *   rescisaoSolicitadaPorAcordo?: string | null,
  *   minhaLinhaEstado?: string | null,
  *   minhaLinhaPagamento?: { anulacao_motivo?: string | null } | null,
  *   leavePending?: boolean,
@@ -41,6 +43,8 @@ export default function AcordoDetalheSheetHeader({
   estadoAcordo,
   encerramentoMotivoAcordo,
   rescisaoModoAcordo,
+  rescisaoConfirmadaEmAcordo,
+  rescisaoSolicitadaPorAcordo,
   minhaLinhaEstado,
   minhaLinhaPagamento = null,
   leavePending = false,
@@ -60,6 +64,13 @@ export default function AcordoDetalheSheetHeader({
   const mostrarChipLugar = Boolean(
     minhaLinhaEstado && mostrarChipEstadoLugarPassageiro(minhaLinhaEstado, minhaLinhaPagamento),
   );
+  const acordoEstadoChip = {
+    estado: estadoAcordo,
+    encerramento_motivo: encerramentoMotivoAcordo,
+    rescisao_modo: rescisaoModoAcordo,
+    rescisao_confirmada_em: rescisaoConfirmadaEmAcordo,
+    rescisao_solicitada_por: rescisaoSolicitadaPorAcordo,
+  };
 
   return (
     <header
@@ -98,14 +109,10 @@ export default function AcordoDetalheSheetHeader({
           <div className="flex flex-wrap items-center gap-2">
             <span
               className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoAcordoVariant(
-                variantChipEstadoAcordo(
-                  estadoAcordo,
-                  encerramentoMotivoAcordo,
-                  rescisaoModoAcordo,
-                ),
+                variantChipEstadoAcordo(acordoEstadoChip),
               )}`}
             >
-              {labelEstadoAcordo(estadoAcordo, encerramentoMotivoAcordo, rescisaoModoAcordo)}
+              {labelEstadoAcordo(acordoEstadoChip)}
             </span>
             {mostrarChipLugar ? (
               <span
