@@ -701,6 +701,77 @@ describe('MyAgreements — marketplace 1:N', () => {
     expectNoUserFacingJargon(dialog.textContent);
   });
 
+  it('passageiro reservado com contactos bloqueados: vê próximo passo do comprovativo', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    const acordoReservado = {
+      ...acordoPassageiro,
+      acordos_passageiros: [
+        {
+          id: 'ap-1',
+          passenger_id: 'pax-viewer',
+          estado: 'reservado',
+          quota_mensal_kz: 40000,
+          perfis: { nome_completo: 'Tu Mesmo' },
+        },
+      ],
+    };
+    getAgreementsForPassenger.mockResolvedValue([acordoReservado]);
+    mockPagamentosGate(acordoReservado, 'pax-viewer', false);
+    getAcordoContactos.mockResolvedValue({
+      bloqueado: true,
+      motivo: 'Disponíveis após pagamento em custódia.',
+      motorista: { nome_completo: 'Motorista Teste', telefone: null },
+    });
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByTestId('contactos-proximo-passo')).toHaveTextContent(
+      /envia o comprovativo de transferência/i,
+    );
+    expect(within(dialog).queryByTestId('contactos-aguardar-pagamento')).not.toBeInTheDocument();
+  });
+
+  it('motorista com passageiro reservado: contactos bloqueados mostram aguardar pagamento', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+    const acordoMix = {
+      ...acordoMotorista,
+      acordos_passageiros: [
+        {
+          id: 'ap-1',
+          passenger_id: 'pax-1',
+          estado: 'activo',
+          quota_mensal_kz: 40000,
+          perfis: { nome_completo: 'Ana Costa' },
+        },
+        {
+          id: 'ap-2',
+          passenger_id: 'pax-2',
+          estado: 'reservado',
+          quota_mensal_kz: 40000,
+          perfis: { nome_completo: 'João Pedro' },
+        },
+      ],
+    };
+    getAgreementsForDriver.mockResolvedValue([acordoMix]);
+    mockPagamentosGate(acordoMix, undefined, false);
+    getAcordoContactos.mockResolvedValue({
+      bloqueado: true,
+      motivo: 'Disponíveis após pagamento em custódia.',
+      motorista: { nome_completo: 'Motorista Teste', telefone: null },
+    });
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).queryByTestId('contactos-proximo-passo')).not.toBeInTheDocument();
+    expect(within(dialog).getByTestId('contactos-aguardar-pagamento')).toHaveTextContent(
+      /A aguardar o pagamento de João Pedro\./,
+    );
+  });
+
   it('passageiro reservado: CTA pagamento faz scroll ao painel', async () => {
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     const acordoReservado = {

@@ -1099,6 +1099,15 @@ const MyAgreements = () => {
         })
         : [];
 
+    const passageirosReservadosAguardar = isMotorista
+      ? linhas
+        .filter((p) => isReservado(p.estado))
+        .map((p) => ({
+          passenger_id: p.passenger_id,
+          nome: String(p.perfis?.nome_completo || '').trim() || 'Passageiro',
+        }))
+      : [];
+
     return (
       <OverlayShell
         variant="bottom"
@@ -1372,7 +1381,12 @@ const MyAgreements = () => {
           ) : null}
 
           {podeCarregarContactos(selected.estado) ? (
-            <AcordoContactosPanel contactos={contactos} loading={contactosLoading} />
+            <AcordoContactosPanel
+              contactos={contactos}
+              loading={contactosLoading}
+              mostrarProximoPassoPagamento={Boolean(isPassageiro && minhaReservada)}
+              passageirosAguardarPagamento={passageirosReservadosAguardar}
+            />
           ) : null}
 
           <div className="border-t border-slate-100 dark:border-slate-800" role="separator" />
