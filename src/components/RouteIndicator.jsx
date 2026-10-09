@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 
 /**
  * Origem, linha e destino. A linha estica com o bloco (1 ou 2 linhas).
@@ -27,4 +27,4 @@ function RouteIndicator() {
   );
 }
 
-export default RouteIndicator;
+export default memo(RouteIndicator);
