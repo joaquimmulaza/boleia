@@ -142,6 +142,60 @@ describe('AcordoPagamentosMotoristaPanel — v1.6', () => {
     );
   });
 
+  it('primeiro mês — quota integral: sem linha «Referente a… dias úteis»', () => {
+    render(
+      <AcordoPagamentosMotoristaPanel
+        acordoTerminado={false}
+        rows={[
+          {
+            pagamento_id: 'pg-full',
+            passenger_id: 'pax-full',
+            passenger_nome: 'Pedro',
+            estado: 'pendente_pagamento',
+            valor: 16000,
+            valor_em_divida: 16000,
+            quota: 16000,
+            proporcional: 16000,
+            pago: 0,
+            dias: 7,
+            dias_mes: 22,
+            mes: '2026-10-01',
+          },
+        ]}
+      />,
+    );
+    const row = screen.getByTestId('motorista-pagamento-pax-full');
+    expect(row).toHaveTextContent(/Pedro · 16[\s\u00a0]?000 Kz/);
+    expect(screen.queryByTestId('motorista-linha-proporcional')).not.toBeInTheDocument();
+  });
+
+  it('saída/rescisão proporcional: mostra linha «Referente a… dias úteis»', () => {
+    render(
+      <AcordoPagamentosMotoristaPanel
+        acordoTerminado
+        rows={[
+          {
+            pagamento_id: 'pg-prop',
+            passenger_id: 'pax-prop',
+            passenger_nome: 'Sofia',
+            estado: 'pendente_pagamento',
+            valor: 5091,
+            valor_em_divida: 5091,
+            quota: 16000,
+            proporcional: 5091,
+            pago: 0,
+            dias: 7,
+            dias_mes: 22,
+            mes: '2026-10-01',
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByTestId('motorista-linha-proporcional')).toHaveTextContent(
+      /Referente a 7 de 22 dias úteis de outubro de 2026/,
+    );
+  });
+
   it('acordo terminado com várias secções: Pagamentos deste acordo', () => {
     render(
       <AcordoPagamentosMotoristaPanel

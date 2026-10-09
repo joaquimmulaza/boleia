@@ -253,13 +253,30 @@ export function linhaMotoristaValorEmDivida(nome, valorEmDivida) {
 }
 
 /**
- * Secundária motorista — dias úteis.
+ * O valor devido veio de cálculo proporcional (saída/rescisão), não quota mensal integral.
+ * @param {import('./pagamentoObrigacaoCopy.js').ObrigacaoSnapshot | null | undefined} snap
+ * @returns {boolean}
+ */
+export function obrigacaoMostraLinhaDiasUteisMotorista(snap) {
+  const norm = normalizeObrigacaoSnapshot(snap);
+  if (!norm) return false;
+  const quota = Number(norm.quota);
+  if (!Number.isFinite(quota) || quota <= 0) return false;
+  const proporcional = Number(norm.proporcional);
+  const valorEmDivida = Number(norm.valor_em_divida) || 0;
+  const pago = Number(norm.pago) || 0;
+  const devidoTotal = Number.isFinite(proporcional) ? proporcional : valorEmDivida + pago;
+  return devidoTotal < quota;
+}
+
+/**
+ * Secundária motorista — dias úteis (só quando o devido é proporcional, não quota integral).
  * @param {import('./pagamentoObrigacaoCopy.js').ObrigacaoSnapshot | null | undefined} snap
  * @returns {string | null}
  */
 export function linhaSecundariaMotoristaDias(snap) {
   const norm = normalizeObrigacaoSnapshot(snap);
-  if (!norm) return null;
+  if (!norm || !obrigacaoMostraLinhaDiasUteisMotorista(norm)) return null;
   const dias = Number(norm.dias);
   const diasMes = Number(norm.dias_mes);
   if (!Number.isFinite(diasMes) || diasMes < 1) return null;
