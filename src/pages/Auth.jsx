@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuthForm } from '../hooks/useAuthForm';
 import { useSocialAuth } from '../hooks/useSocialAuth';
@@ -10,6 +11,9 @@ import SocialAuthButtons from '../components/SocialAuthButtons';
  */
 
 const Auth = () => {
+  const location = useLocation();
+  const showSessionEndedBanner = new URLSearchParams(location.search).get('sessionEnded') === '1';
+
   const {
     isLogin,
     isForgot,
@@ -84,6 +88,15 @@ const Auth = () => {
                   : 'Mobilidade urbana limpa e partilhada.'}
           </p>
         </div>
+
+        {showSessionEndedBanner && isEntryScreen && (
+          <p
+            role="status"
+            className="px-8 mb-4 text-sm text-center text-muted-foreground text-pretty"
+          >
+            A tua sessão terminou. Entra outra vez para continuar.
+          </p>
+        )}
 
         {showSocial && (
           <div className="px-8 mb-2 flex flex-col gap-4">

@@ -43,6 +43,24 @@ describe('Auth Component', () => {
     mockNavigate.mockClear();
   });
 
+  it('com sessionEnded=1 mostra aviso acima do formulário', () => {
+    mockSearch = `?sessionEnded=1&openAcordoId=3f42eca2-03c9-8153-b9ea-c6e621e03656`;
+    render(<Auth />);
+
+    expect(
+      screen.getByText('A tua sessão terminou. Entra outra vez para continuar.'),
+    ).toBeInTheDocument();
+  });
+
+  it('sem sessionEnded não mostra aviso de sessão terminada', () => {
+    mockSearch = '';
+    render(<Auth />);
+
+    expect(
+      screen.queryByText('A tua sessão terminou. Entra outra vez para continuar.'),
+    ).not.toBeInTheDocument();
+  });
+
   it('renders correctly in Login mode by default', () => {
     render(<Auth />);
 

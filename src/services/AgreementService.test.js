@@ -19,8 +19,15 @@ vi.mock('../lib/supabase', () => ({
     rpc: vi.fn(),
     auth: {
       getSession: vi.fn().mockResolvedValue({
-        data: { session: { access_token: 'jwt-test' } },
+        data: {
+          session: {
+            access_token: 'jwt-test',
+            user: { id: 'user-1' },
+            expires_at: Math.floor(Date.now() / 1000) + 3600,
+          },
+        },
       }),
+      refreshSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
     },
   },
 }));
@@ -823,6 +830,42 @@ describe('AgreementService', () => {
       expect(supabase.rpc).toHaveBeenCalledWith('apply_due_agreement_non_renewals', {
         p_acordo_id: null,
       });
+    });
+
+    it('42501 no RPC lazy: refresh uma vez e repete o RPC', async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const expired = {
+        access_token: 'old',
+        user: { id: 'user-1' },
+        expires_at: now - 30,
+      };
+      const fresh = {
+        access_token: 'new',
+        user: { id: 'user-1' },
+        expires_at: now + 3600,
+      };
+      supabase.auth.getSession
+        .mockResolvedValueOnce({ data: { session: expired }, error: null })
+        .mockResolvedValue({ data: { session: fresh }, error: null });
+      supabase.auth.refreshSession.mockResolvedValue({ data: { session: fresh }, error: null });
+
+      supabase.rpc
+        .mockResolvedValueOnce({ data: 0, error: { code: '42501', status: 401 } })
+        .mockResolvedValue({ data: 0, error: null });
+
+      supabase.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+        }),
+      });
+
+      await getAgreementsForDriver('driver-1');
+
+      expect(supabase.auth.refreshSession).toHaveBeenCalledTimes(1);
+      expect(supabase.rpc.mock.calls.filter((c) => c[0] === 'apply_due_agreement_adendas').length)
+        .toBeGreaterThanOrEqual(2);
     });
 
     it('lazy apply_due com null: cliente não trata 42501 como caminho esperado', async () => {

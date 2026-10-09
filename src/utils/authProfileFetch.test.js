@@ -3,6 +3,8 @@ import {
   isAnonOrAuthPrivilegeError,
   isLiveAuthSession,
   isAccessTokenExpiredOrNearExpiry,
+  isJwtSessionError,
+  shouldRefreshSessionForAuthError,
   profileFetchSessionKey,
 } from './authProfileFetch.js';
 
@@ -12,7 +14,20 @@ describe('authProfileFetch', () => {
       expect(isLiveAuthSession(null)).toBe(false);
       expect(isLiveAuthSession({ user: { id: 'u1' } })).toBe(false);
       expect(isLiveAuthSession({ access_token: 'tok' })).toBe(false);
-      expect(isLiveAuthSession({ access_token: 'tok', user: { id: 'u1' } })).toBe(true);
+      const now = Math.floor(Date.now() / 1000);
+      expect(
+        isLiveAuthSession({ access_token: 'tok', user: { id: 'u1' }, expires_at: now + 3600 }),
+      ).toBe(true);
+    });
+
+    it('rejeita token expirado (expires_at)', () => {
+      const now = Math.floor(Date.now() / 1000);
+      expect(
+        isLiveAuthSession({ access_token: 'tok', user: { id: 'u1' }, expires_at: now - 1 }),
+      ).toBe(false);
+      expect(
+        isLiveAuthSession({ access_token: 'tok', user: { id: 'u1' }, expires_at: now }),
+      ).toBe(false);
     });
   });
 
@@ -36,6 +51,25 @@ describe('authProfileFetch', () => {
       expect(isAccessTokenExpiredOrNearExpiry({ access_token: 't', expires_at: now + 3600 }, 90)).toBe(
         false,
       );
+    });
+  });
+
+  describe('isJwtSessionError', () => {
+    it('PGRST301 e mensagem jwt expirado; 42501 não conta como JWT', () => {
+      expect(isJwtSessionError({ code: 'PGRST301' })).toBe(true);
+      expect(isJwtSessionError({ message: 'JWT expired' })).toBe(true);
+      expect(isJwtSessionError({ code: '42501', status: 401 })).toBe(false);
+    });
+  });
+
+  describe('shouldRefreshSessionForAuthError', () => {
+    it('42501 com token válido não refresca; expirado sim', () => {
+      const now = Math.floor(Date.now() / 1000);
+      const fresh = { access_token: 't', user: { id: 'u' }, expires_at: now + 3600 };
+      const expired = { access_token: 't', user: { id: 'u' }, expires_at: now - 10 };
+      const err42501 = { code: '42501', status: 401 };
+      expect(shouldRefreshSessionForAuthError(err42501, fresh)).toBe(false);
+      expect(shouldRefreshSessionForAuthError(err42501, expired)).toBe(true);
     });
   });
 

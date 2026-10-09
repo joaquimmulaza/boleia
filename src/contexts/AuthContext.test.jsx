@@ -287,7 +287,7 @@ describe('AuthContext', () => {
     expect(sessionStorage.getItem('bc_password_recovery')).toBe('1');
   });
 
-  it('42501 com token válido não chama refreshSession mas avisa com sessão viva', async () => {
+  it('42501 com token válido não chama refreshSession (#255) e avisa se persistir', async () => {
     mockSingle.mockImplementation(() =>
       Promise.resolve({ data: null, error: PRIVILEGE_PERFIS_ERROR }),
     );
@@ -420,6 +420,45 @@ describe('AuthContext', () => {
     });
 
     expect(supabase.from).not.toHaveBeenCalled();
+  });
+
+  it('SIGNED_OUT com sessão activa marca sessionEndedForAuthRedirect', async () => {
+    supabase.auth.getSession.mockResolvedValue({
+      data: {
+        session: liveSession('user-signout-flag', { tipo_perfil: 'Passageiro' }),
+      },
+      error: null,
+    });
+
+    let authChangeListener;
+    supabase.auth.onAuthStateChange.mockImplementation((callback) => {
+      authChangeListener = callback;
+      return { data: { subscription: { unsubscribe: vi.fn() } } };
+    });
+
+    function FlagProbe() {
+      const { sessionEndedForAuthRedirect } = useAuth();
+      return <div data-testid="ended">{sessionEndedForAuthRedirect ? 'sim' : 'nao'}</div>;
+    }
+
+    render(
+      <AuthProvider>
+        <FlagProbe />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('ended')).toHaveTextContent('nao');
+    });
+
+    await act(async () => {
+      authChangeListener('SIGNED_OUT', null);
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('ended')).toHaveTextContent('sim');
+    });
   });
 
   it('SIGNED_OUT limpa cache runtime do service worker', async () => {

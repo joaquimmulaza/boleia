@@ -3,6 +3,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { needsProfileSetup } from '../utils/oauth';
+import ProfileLoadGate from './ProfileLoadGate';
 
 /**
  * Rota reservada a administradores da plataforma.
@@ -10,11 +11,19 @@ import { needsProfileSetup } from '../utils/oauth';
  * Espera o perfil carregar — senão `profile=null` redireccionava admins para `/acordos`.
  */
 const AdminRoute = () => {
-  const { session, loading, profileLoading, profile, passwordRecoveryPending } = useAuth();
+  const {
+    session,
+    loading,
+    profileLoading,
+    profileLoadTimedOut,
+    profile,
+    passwordRecoveryPending,
+  } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [resolvedUserId, setResolvedUserId] = useState(null);
 
-  const profileReady = !loading && !(session && profileLoading);
+  const profileGateActive = loading || (session && profileLoading) || profileLoadTimedOut;
+  const profileReady = !profileGateActive;
   const mustCheckAdmin = Boolean(session)
     && profileReady
     && !passwordRecoveryPending
@@ -37,10 +46,14 @@ const AdminRoute = () => {
     };
   }, [adminUserId]);
 
-  if (!profileReady || adminPending) {
+  if (profileGateActive) {
+    return <ProfileLoadGate />;
+  }
+
+  if (adminPending) {
     return (
-      <div className="flex h-dvh items-center justify-center text-gray-500">
-        {loading ? 'A verificar sessão...' : 'A carregar perfil...'}
+      <div className="flex h-dvh items-center justify-center text-muted-foreground">
+        A carregar perfil...
       </div>
     );
   }

@@ -34,16 +34,25 @@ import OfflineBanner from './components/OfflineBanner';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { usePasswordRecoveryRouteRedirect } from './hooks/usePasswordRecoveryRouteRedirect';
 import { needsProfileSetup } from './utils/oauth';
+import ProfileLoadGate from './components/ProfileLoadGate';
 
 const LazyDevRoutes = import.meta.env.DEV
   ? lazy(() => import('./dev/DevAppRoutes.jsx'))
   : null;
 
 const RootRoute = () => {
-  const { session, loading, profileLoading, profile, tipoPerfil, passwordRecoveryPending } = useAuth();
+  const {
+    session,
+    loading,
+    profileLoading,
+    profileLoadTimedOut,
+    profile,
+    tipoPerfil,
+    passwordRecoveryPending,
+  } = useAuth();
 
-  if (loading || (session && profileLoading)) {
-    return <div className="flex h-dvh items-center justify-center text-gray-500">A carregar...</div>;
+  if (loading || (session && profileLoading) || profileLoadTimedOut) {
+    return <ProfileLoadGate loadingLabel="A carregar..." profileLoadingLabel="A carregar..." />;
   }
   if (session && passwordRecoveryPending) {
     return <Navigate to="/auth?mode=update-password" replace />;

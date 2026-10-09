@@ -15,9 +15,13 @@ import {
 } from '../utils/oauth';
 import {
   AUTH_RETURN_STORAGE_KEY,
-  resolvePostLoginPath,
   resolveSafeReturnPath,
 } from '../utils/authReturnPath';
+import {
+  AUTH_OPEN_ACORDO_STORAGE_KEY,
+  resolvePostLoginPathWithOpenAcordo,
+  sanitizeOpenAcordoId,
+} from '../utils/authOpenAcordoRedirect.js';
 
 /**
  * Arranque OAuth, erros de callback e destino depois da sessão.
@@ -106,8 +110,16 @@ export function useSocialAuth({ enabled = true } = {}) {
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.removeItem(AUTH_RETURN_STORAGE_KEY);
     }
-    const destino = resolvePostLoginPath(
+    const storedOpenAcordo = typeof sessionStorage !== 'undefined'
+      ? sessionStorage.getItem(AUTH_OPEN_ACORDO_STORAGE_KEY)
+      : null;
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem(AUTH_OPEN_ACORDO_STORAGE_KEY);
+    }
+    const openAcordoId = params.get('openAcordoId') || storedOpenAcordo;
+    const destino = resolvePostLoginPathWithOpenAcordo(
       storedNext || params.get('next'),
+      openAcordoId,
       tipoPerfil,
     );
     navigate(destino, { replace: true });
@@ -133,9 +145,16 @@ export function useSocialAuth({ enabled = true } = {}) {
     setPendingProvider(provider);
     sessionStorage.removeItem(OAUTH_MESSAGE_KEY);
     setActionMessage('');
-    const next = resolveSafeReturnPath(new URLSearchParams(location.search).get('next'));
-    if (next) {
-      sessionStorage.setItem(AUTH_RETURN_STORAGE_KEY, next);
+    const searchParams = new URLSearchParams(location.search);
+    const openAcordoId = sanitizeOpenAcordoId(searchParams.get('openAcordoId'));
+    sessionStorage.removeItem(AUTH_OPEN_ACORDO_STORAGE_KEY);
+    if (openAcordoId) {
+      sessionStorage.setItem(AUTH_OPEN_ACORDO_STORAGE_KEY, openAcordoId);
+    } else {
+      const next = resolveSafeReturnPath(searchParams.get('next'));
+      if (next) {
+        sessionStorage.setItem(AUTH_RETURN_STORAGE_KEY, next);
+      }
     }
     const { error } = await startOAuthSignIn(supabase, provider, {
       tipoPerfil: role,
