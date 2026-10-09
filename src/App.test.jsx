@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AppShell } from './App';
@@ -39,6 +39,24 @@ vi.mock('./components/OfflineBanner', () => ({
 vi.mock('./hooks/useNetworkStatus', () => ({
   useNetworkStatus: () => ({ isOffline: false }),
 }));
+
+vi.mock('./hooks/usePasswordRecoveryRouteRedirect', () => ({
+  usePasswordRecoveryRouteRedirect: () => {},
+}));
+
+vi.mock('./dev/DevAppRoutes.jsx', async () => {
+  const { Routes, Route } = await import('react-router-dom');
+  return {
+    default: function MockDevAppRoutes() {
+      return (
+        <Routes>
+          <Route path="perfil-push" element={<div data-testid="dev-perfil-push-route">Push DEV</div>} />
+          <Route path="perfil" element={<div data-testid="dev-perfil-route">Perfil DEV</div>} />
+        </Routes>
+      );
+    },
+  };
+});
 
 vi.mock('./contexts/AuthContext', () => ({
   useAuth: vi.fn(),
@@ -141,6 +159,27 @@ describe('AppShell — scroll por tipo de rota', () => {
 
     expect(screen.getByTestId('auth-page')).toBeInTheDocument();
     expect(screen.queryByTestId('landing-page')).not.toBeInTheDocument();
+  });
+
+  (import.meta.env.DEV ? it : it.skip)('rotas DEV: / e /__dev/perfil montam sem substituir o router principal', async () => {
+    const landing = render(
+      <MemoryRouter initialEntries={['/']}>
+        <AppShell />
+      </MemoryRouter>,
+    );
+    expect(screen.getByTestId('landing-page')).toBeInTheDocument();
+    landing.unmount();
+
+    render(
+      <MemoryRouter initialEntries={['/__dev/perfil']}>
+        <AppShell />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dev-perfil-route')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('app-layout')).not.toBeInTheDocument();
   });
 
   it('sessão com passwordRecoveryPending em / redireciona para Auth', () => {

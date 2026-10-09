@@ -1,19 +1,20 @@
 import React from 'react';
-import { Route } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import Profile from '../pages/Profile';
 import DevPerfilPushPreview from '../pages/DevPerfilPushPreview';
 import DevPerfilCaptureShell from '../pages/DevPerfilCapture';
 
 /**
- * Rotas públicas DEV (`/__dev/*`) — import dinâmico só quando `import.meta.env.DEV`.
+ * Rotas relativas a `/__dev/*` (montadas via lazy + `<Route path="/__dev/*" />` em App.jsx).
+ * Só entra no bundle de produção se o import dinâmico não for eliminado — guard DEV em App.jsx.
  */
 export default function DevAppRoutes() {
   return (
-    <>
-      <Route path="/__dev/perfil-push" element={<DevPerfilPushPreview />} />
-      <Route path="/__dev/perfil" element={<DevPerfilCaptureShell />}>
+    <Routes>
+      <Route path="perfil-push" element={<DevPerfilPushPreview />} />
+      <Route path="perfil" element={<DevPerfilCaptureShell />}>
         <Route index element={<Profile />} />
       </Route>
-    </>
+    </Routes>
   );
 }

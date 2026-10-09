@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import Auth from './pages/Auth';
@@ -34,8 +34,10 @@ import OfflineBanner from './components/OfflineBanner';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { usePasswordRecoveryRouteRedirect } from './hooks/usePasswordRecoveryRouteRedirect';
 import { needsProfileSetup } from './utils/oauth';
-import DevPerfilCaptureShell from './pages/DevPerfilCapture.jsx';
-import DevPerfilPushPreview from './pages/DevPerfilPushPreview.jsx';
+
+const LazyDevRoutes = import.meta.env.DEV
+  ? lazy(() => import('./dev/DevAppRoutes.jsx'))
+  : null;
 
 const RootRoute = () => {
   const { session, loading, profileLoading, profile, tipoPerfil, passwordRecoveryPending } = useAuth();
@@ -78,13 +80,15 @@ function AppShell() {
         <Route path="/explorar" element={<MarketplaceExplore />} />
         <Route path="/privacidade" element={<PublicLegalPage page="privacidade" />} />
         <Route path="/eliminacao-de-dados" element={<PublicLegalPage page="eliminacao" />} />
-        {import.meta.env.DEV ? (
-          <>
-            <Route path="/__dev/perfil-push" element={<DevPerfilPushPreview />} />
-            <Route path="/__dev/perfil" element={<DevPerfilCaptureShell />}>
-              <Route index element={<Profile />} />
-            </Route>
-          </>
+        {import.meta.env.DEV && LazyDevRoutes ? (
+          <Route
+            path="/__dev/*"
+            element={(
+              <Suspense fallback={null}>
+                <LazyDevRoutes />
+              </Suspense>
+            )}
+          />
         ) : null}
 
       {/* Rotas protegidas envolvidas pelo Layout global (com BottomBar) */}
