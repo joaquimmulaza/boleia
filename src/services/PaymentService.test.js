@@ -8,6 +8,8 @@ import {
   listPagamentosPendentesValidacao,
   listPagamentosEmCustodia,
   listRepassesMotorista,
+  listAnulacaoMotivoLugarAcordos,
+  isListAnulacaoMotivoLugarRpcUnavailable,
 } from './PaymentService.js';
 import { supabase } from '../lib/supabase';
 
@@ -183,5 +185,31 @@ describe('PaymentService', () => {
     expect(select).toHaveBeenCalledWith(
       '*, perfis!repasses_motorista_driver_id_fkey(nome_completo)',
     );
+  });
+
+  describe('listAnulacaoMotivoLugarAcordos — degradação preview', () => {
+    it('isListAnulacaoMotivoLugarRpcUnavailable reconhece PGRST202 e 42883', () => {
+      expect(isListAnulacaoMotivoLugarRpcUnavailable({ code: 'PGRST202' })).toBe(true);
+      expect(isListAnulacaoMotivoLugarRpcUnavailable({ code: '42883' })).toBe(true);
+      expect(isListAnulacaoMotivoLugarRpcUnavailable({ status: 404 })).toBe(true);
+      expect(isListAnulacaoMotivoLugarRpcUnavailable({ message: 'Could not find the function' })).toBe(true);
+      expect(isListAnulacaoMotivoLugarRpcUnavailable({ code: '42501' })).toBe(false);
+    });
+
+    it('devolve [] sem throw quando RPC não existe (preview)', async () => {
+      supabase.rpc.mockResolvedValue({
+        data: null,
+        error: { code: 'PGRST202', message: 'Could not find the function public.list_anulacao_motivo_lugar_acordos' },
+      });
+      await expect(listAnulacaoMotivoLugarAcordos(['acordo-1'])).resolves.toEqual([]);
+    });
+
+    it('propaga erros que não são indisponibilidade da RPC', async () => {
+      supabase.rpc.mockResolvedValue({
+        data: null,
+        error: { code: '42501', message: 'permission denied' },
+      });
+      await expect(listAnulacaoMotivoLugarAcordos(['acordo-1'])).rejects.toMatchObject({ code: '42501' });
+    });
   });
 });

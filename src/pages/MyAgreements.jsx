@@ -75,7 +75,13 @@ import {
   getMesReferenciaAtual,
   getObrigacaoPagamentoPassageiro,
   listPagamentosPendentesMotoristaAcordo,
+  listAnulacaoMotivoLugarAcordos,
 } from '../services/PaymentService';
+import {
+  groupAnulacaoMotivoRowsByAcordo,
+  resolvePagamentoChipContexto,
+  mergePagamentoComChipContexto,
+} from '../utils/pagamentoMotivoLugar.js';
 import {
   labelRenovacaoEstado,
   podeRenovarPeriodo,
@@ -103,7 +109,9 @@ import {
   labelChipEstadoPassageiro,
   chipClassEstadoPassageiro,
   GLOSSARIO_ESTADOS_LUGAR,
-} from '../utils/acordoPassageiroStatus';
+  mostrarChipEstadoLugarPassageiro,
+  estadoPassageiroParaChip,
+} from '../utils/estadoPassageiro';
 import { formatPrimeiroNome } from '../utils/primeiroNome';
 
 /**
@@ -170,8 +178,12 @@ function isReservado(estado) {
  * @param {string | null | undefined} estado
  * @returns {boolean}
  */
-function isExpirado(estado) {
-  return isExpiradoPassageiro(estado);
+/**
+ * @param {string | null | undefined} estado
+ * @param {{ anulacao_motivo?: string | null } | null | undefined} [pagamento]
+ */
+function isExpirado(estado, pagamento) {
+  return isExpiradoPassageiro(estado, pagamento);
 }
 
 /**
@@ -194,14 +206,6 @@ function pickLinhaVivaPassageiro(linhas) {
   const viva = list.find((p) => isNoAcordo(p.estado));
   if (viva) return viva;
   return list[0] ?? null;
-}
-
-/**
- * @param {string | null | undefined} estado
- * @returns {string}
- */
-function estadoPassageiroLabel(estado) {
-  return labelChipEstadoPassageiro(estado);
 }
 
 /**
@@ -359,6 +363,17 @@ const MyAgreements = () => {
   const [pagamentoLoading, setPagamentoLoading] = useState(false);
   const [contactosLoading, setContactosLoading] = useState(false);
   const [avaliacoesAcordo, setAvaliacoesAcordo] = useState(/** @type {object[]} */ ([]));
+  const [chipContextPorAcordo, setChipContextPorAcordo] = useState(
+    /** @type {Record<string, Record<string, { anulacao_motivo?: string | null, estado?: string | null }>>} */ ({}),
+  );
+
+  const chipCtxForAcordoPassageiro = useCallback(
+    (acordoId, passengerId) => {
+      if (!acordoId || !passengerId) return null;
+      return chipContextPorAcordo[acordoId]?.[String(passengerId)] ?? null;
+    },
+    [chipContextPorAcordo],
+  );
 
   const carregarPagamentoContactos = useCallback(async (acordo) => {
     if (!acordo?.id || !user?.id) return;
@@ -580,6 +595,25 @@ const MyAgreements = () => {
       }
       const filtered = (data || []).filter((a) => !a.is_hidden_by_user);
       setAcordos(filtered);
+      try {
+        const acordoIds = filtered.map((a) => a.id).filter(Boolean);
+        if (acordoIds.length > 0) {
+          let rows = await listAnulacaoMotivoLugarAcordos(acordoIds);
+          if (tipoPerfil === 'Passageiro' && user?.id) {
+            const viewerId = String(user.id);
+            rows = (rows || []).filter((r) => String(r.passenger_id || '') === viewerId);
+          }
+          if (generation === carregarGenerationRef.current) {
+            setChipContextPorAcordo(groupAnulacaoMotivoRowsByAcordo(rows));
+          }
+        } else if (generation === carregarGenerationRef.current) {
+          setChipContextPorAcordo({});
+        }
+      } catch {
+        if (generation === carregarGenerationRef.current) {
+          setChipContextPorAcordo({});
+        }
+      }
       setSelected((prev) => {
         if (!prev?.id) return prev;
         const found = filtered.find((a) => a.id === prev.id);
@@ -989,8 +1023,15 @@ const MyAgreements = () => {
     const estadoLabel = labelEstadoAcordo(acordo.estado);
     const leavePending = Boolean(pendingLeaveIds[acordo.id]);
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
-    const minhaReservadaCard = Boolean(minhaLinha && isReservado(minhaLinha.estado));
-    const minhaExpiradaCard = Boolean(minhaLinha && isExpirado(minhaLinha.estado));
+    const minhaChipCtxCard = minhaLinha
+      ? chipCtxForAcordoPassageiro(acordo.id, minhaLinha.passenger_id)
+      : null;
+    const minhaEstadoLugarCard = minhaLinha
+      ? estadoPassageiroParaChip(minhaLinha.estado, minhaChipCtxCard)
+      : null;
+    const mostrarChipLugarCard = Boolean(
+      minhaLinha && mostrarChipEstadoLugarPassageiro(minhaLinha.estado, minhaChipCtxCard),
+    );
     const quotaCard =
       tipoPerfil === 'Passageiro'
         ? (minhaLinha?.quota_mensal_kz ?? acordo.valor_mensal_por_passageiro_kz)
@@ -1021,20 +1062,18 @@ const MyAgreements = () => {
             >
               {estadoLabel}
             </span>
-            {minhaReservadaCard ? (
+            {mostrarChipLugarCard ? (
               <span
-                className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoPassageiro('reservado')}`}
-                data-testid={`acordo-lugar-chip-${acordo.id}`}
+                className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoPassageiro(minhaLinha.estado, minhaChipCtxCard)}`}
+                data-testid={
+                  minhaEstadoLugarCard === 'expirado'
+                    ? `acordo-lugar-expirado-chip-${acordo.id}`
+                    : minhaEstadoLugarCard === 'saiu'
+                      ? `acordo-lugar-saiu-chip-${acordo.id}`
+                      : `acordo-lugar-chip-${acordo.id}`
+                }
               >
-                {labelChipEstadoPassageiro('reservado')}
-              </span>
-            ) : null}
-            {minhaExpiradaCard ? (
-              <span
-                className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoPassageiro('expirado')}`}
-                data-testid={`acordo-lugar-expirado-chip-${acordo.id}`}
-              >
-                {labelChipEstadoPassageiro('expirado')}
+                {labelChipEstadoPassageiro(minhaLinha.estado, minhaChipCtxCard)}
               </span>
             ) : null}
             {leavePending && (
@@ -1088,12 +1127,21 @@ const MyAgreements = () => {
     const isPassageiro = tipoPerfil === 'Passageiro';
     const isMotorista = tipoPerfil === 'Motorista';
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
+    const minhaChipCtxSheet = minhaLinha
+      ? chipCtxForAcordoPassageiro(selected.id, minhaLinha.passenger_id)
+      : null;
+    const pagamentoViewer = mergePagamentoComChipContexto(pagamento, minhaChipCtxSheet);
     const quotaDestaque =
       minhaLinha?.quota_mensal_kz ?? selected.valor_mensal_por_passageiro_kz;
     const podeSair =
       isPassageiro && activo && (!minhaLinha || isNoAcordo(minhaLinha.estado));
-    const minhaReservada = Boolean(minhaLinha && isReservado(minhaLinha.estado));
-    const minhaExpirada = Boolean(minhaLinha && isExpirado(minhaLinha.estado));
+    const minhaEstadoLugar = minhaLinha
+      ? estadoPassageiroParaChip(minhaLinha.estado, pagamentoViewer)
+      : null;
+    const minhaReservada = minhaEstadoLugar === 'reservado';
+    const minhaExpirada = Boolean(
+      minhaLinha && isExpirado(minhaLinha.estado, pagamentoViewer),
+    );
     const { confirmados: nConfirmados, reservados: nReservados } =
       countPassageirosConfirmadosReservados(linhas);
     const contagemPassageiros = formatContagemPassageiros(nConfirmados, nReservados);
@@ -1194,14 +1242,14 @@ const MyAgreements = () => {
     const pagamentoUiPassageiro = isPassageiro
       ? resolveAcordoPagamentoUiPassageiro({
         minhaLinha,
-        pagamento,
+        pagamento: pagamentoViewer,
         obrigacao: obrigacaoPagamento,
       })
       : null;
     const cartaoEstadoPagamento =
       pagamentoUiPassageiro?.mostrarCartaoEstado && pagamentoUiPassageiro.variant
         ? copyCartaoEstadoPagamentoPassageiro(pagamentoUiPassageiro.variant, {
-          pagamento,
+          pagamento: pagamentoViewer,
           obrigacao: obrigacaoPagamento,
         })
         : null;
@@ -1230,7 +1278,8 @@ const MyAgreements = () => {
           <AcordoDetalheSheetHeader
             acordoId={selected.id}
             estadoAcordo={selected.estado}
-            minhaReservada={minhaReservada}
+            minhaLinhaEstado={minhaLinha?.estado}
+            minhaLinhaPagamento={pagamentoViewer}
             leavePending={leavePending}
             isBodyScrolled={acordoSheetHeaderScrolled}
             fecharRef={acordoSheetFecharRef}
@@ -1598,7 +1647,15 @@ const MyAgreements = () => {
                 {linhas.map((p) => {
                   const nome = nomePassageiroUi(p, { motorista: isMotorista });
                   const highlighted = isPassageiro && p.passenger_id === user?.id;
-                  const saiu = String(p.estado || '').toLowerCase() === 'saiu';
+                  const chipCtxLinha = resolvePagamentoChipContexto(p, {
+                    pagamentosAcordo,
+                    mesReferencia: getMesReferenciaAtual(),
+                    pagamentoViewer,
+                    viewerPassengerId: user?.id,
+                    chipFromList: chipCtxForAcordoPassageiro(selected.id, p.passenger_id),
+                  });
+                  const chipLugar = estadoPassageiroParaChip(p.estado, chipCtxLinha);
+                  const saiu = chipLugar === 'saiu' || chipLugar === 'terminado';
                   return (
                     <li
                       key={p.id || p.passenger_id}
@@ -1622,16 +1679,14 @@ const MyAgreements = () => {
                         <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                           {nome}
                         </p>
-                        {!saiu ? (
+                        {isActivo(p.estado) || mostrarChipEstadoLugarPassageiro(p.estado, chipCtxLinha) ? (
                           <span
-                            className={`inline-flex text-xs font-bold px-2 py-0.5 rounded-full mt-0.5 ${chipClassEstadoPassageiro(p.estado)}`}
+                            className={`inline-flex text-xs font-bold px-2 py-0.5 rounded-full mt-0.5 ${chipClassEstadoPassageiro(p.estado, chipCtxLinha)}`}
                             data-testid={`passageiro-estado-chip-${p.passenger_id}`}
                           >
-                            {estadoPassageiroLabel(p.estado)}
+                            {labelChipEstadoPassageiro(p.estado, chipCtxLinha)}
                           </span>
-                        ) : (
-                          <p className="text-xs text-slate-400">{estadoPassageiroLabel(p.estado)}</p>
-                        )}
+                        ) : null}
                       </div>
                       <strong
                         className={`tabular-nums text-sm shrink-0 ${

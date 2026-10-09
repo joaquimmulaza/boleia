@@ -61,6 +61,47 @@ export async function listPagamentosByAcordo(acordoId) {
 }
 
 /**
+ * Preview/prod sem migração aplicada — degradar sem crash (sem toast).
+ *
+ * @param {{ code?: string, message?: string, status?: number, statusCode?: number } | null | undefined} error
+ * @returns {boolean}
+ */
+export function isListAnulacaoMotivoLugarRpcUnavailable(error) {
+  if (!error) return false;
+  const code = String(error.code || '');
+  if (code === 'PGRST202' || code === '42883') return true;
+  const status = error.status ?? error.statusCode;
+  if (status === 404) return true;
+  const msg = String(error.message || '').toLowerCase();
+  if (msg.includes('could not find the function')
+    || msg.includes('function public.list_anulacao_motivo_lugar_acordos')
+    || msg.includes('404')) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Motivos de anulação do mês corrente por lugar (chips Saiu vs Expirado) — RPC estreita.
+ * @param {string[]} acordoIds
+ * @returns {Promise<Array<{ acordo_id: string, acordo_passageiro_id: string, passenger_id: string, pagamento_estado: string | null, anulacao_motivo: string | null }>>}
+ */
+export async function listAnulacaoMotivoLugarAcordos(acordoIds) {
+  const ids = (acordoIds || []).filter(Boolean);
+  if (ids.length === 0) return [];
+  const { data, error } = await supabase.rpc('list_anulacao_motivo_lugar_acordos', {
+    p_acordo_ids: ids,
+  });
+  if (error) {
+    if (isListAnulacaoMotivoLugarRpcUnavailable(error)) {
+      return [];
+    }
+    throw error;
+  }
+  return data || [];
+}
+
+/**
  * Admin: fila de comprovativos à espera de validação.
  * @returns {Promise<object[]>}
  */
