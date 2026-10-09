@@ -4,6 +4,8 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import ProfileLoadGate, { PROFILE_LOAD_TIMEOUT_MS } from './ProfileLoadGate';
 
+const VALID_ACORDO_ID = '3f42eca2-03c9-8153-b9ea-c6e621e03656';
+
 const retryProfileLoad = vi.fn();
 
 vi.mock('../contexts/AuthContext', () => ({
@@ -52,7 +54,7 @@ describe('ProfileLoadGate', () => {
     expect(screen.queryByText(/não foi possível carregar o seu perfil/i)).not.toBeInTheDocument();
   });
 
-  it('sessão expirada após timeout redirecciona para /auth sem mensagem (openAcordoId)', () => {
+  it('sessão expirada após timeout redirecciona para /auth?openAcordoId&sessionEnded=1', () => {
     useAuth.mockReturnValue({
       session: null,
       loading: false,
@@ -62,7 +64,7 @@ describe('ProfileLoadGate', () => {
     });
 
     render(
-      <MemoryRouter initialEntries={['/acordos?openAcordoId=abc-123']}>
+      <MemoryRouter initialEntries={[`/acordos?openAcordoId=${VALID_ACORDO_ID}`]}>
         <Routes>
           <Route
             path="/acordos"
@@ -73,13 +75,36 @@ describe('ProfileLoadGate', () => {
               </>
             }
           />
-          <Route path="/auth" element={<div>Página auth</div>} />
+          <Route path="/auth" element={<LocationProbe />} />
         </Routes>
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('Página auth')).toBeInTheDocument();
+    expect(screen.getByTestId('loc')).toHaveTextContent(
+      `/auth?openAcordoId=${VALID_ACORDO_ID}&sessionEnded=1`,
+    );
     expect(screen.queryByText(/não foi possível carregar a tua conta/i)).not.toBeInTheDocument();
+  });
+
+  it('openAcordoId inválido na URL de auth omite o parâmetro', () => {
+    useAuth.mockReturnValue({
+      session: null,
+      loading: false,
+      profileLoading: false,
+      profileLoadTimedOut: true,
+      retryProfileLoad,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/acordos?openAcordoId=../../evil']}>
+        <Routes>
+          <Route path="/acordos" element={<ProfileLoadGate />} />
+          <Route path="/auth" element={<LocationProbe />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('loc')).toHaveTextContent('/auth?sessionEnded=1');
   });
 
   it('retry chama retryProfileLoad', () => {

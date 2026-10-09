@@ -1,6 +1,9 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { buildAuthUrlWithNext } from '../utils/authReturnPath';
+import {
+  buildAuthUrlWithOpenAcordo,
+  parseOpenAcordoIdFromSearch,
+} from '../utils/authOpenAcordoRedirect.js';
 import { useAuth } from '../contexts/AuthContext';
 import { needsProfileSetup } from '../utils/oauth';
 import ProfileLoadGate from './ProfileLoadGate';
@@ -28,10 +31,10 @@ const ProtectedRoute = ({ allowedRole }) => {
     return <ProfileLoadGate />;
   }
 
-  // 1. Sem sessão → redireciona para login (preserva destino, ex. openAcordoId)
+  // 1. Sem sessão → login com openAcordoId validado (UUID), nunca path completo
   if (!session) {
-    const returnPath = `${location.pathname}${location.search}`;
-    return <Navigate to={buildAuthUrlWithNext('/auth', returnPath)} replace />;
+    const openAcordoId = parseOpenAcordoIdFromSearch(location.search);
+    return <Navigate to={buildAuthUrlWithOpenAcordo({ openAcordoId })} replace />;
   }
 
   // 1b. Sessão de recovery → obrigar a definir nova palavra-passe

@@ -1,7 +1,10 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { buildAuthUrlWithNext } from '../utils/authReturnPath';
+import {
+  buildAuthUrlWithOpenAcordo,
+  parseOpenAcordoIdFromSearch,
+} from '../utils/authOpenAcordoRedirect.js';
 import { Button } from './ui/button';
 import { PROFILE_LOAD_TIMEOUT_MS } from '../utils/profileLoadTimeout.js';
 
@@ -41,8 +44,8 @@ export default function ProfileLoadGate({
   }
 
   if (profileLoadTimedOut && !session) {
-    const returnPath = `${location.pathname}${location.search}`;
-    const authUrl = buildAuthUrlWithNext('/auth', returnPath);
+    const openAcordoId = parseOpenAcordoIdFromSearch(location.search);
+    const authUrl = buildAuthUrlWithOpenAcordo({ openAcordoId, sessionEnded: true });
     return <Navigate to={authUrl} replace />;
   }
 

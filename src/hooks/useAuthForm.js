@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { validateTelefone, validatePassword, MIN_PASSWORD_LENGTH } from '../utils/validation';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import { getEmailConfirmRedirectUrl, getPasswordRecoveryRedirectUrl } from '../utils/appOrigin';
-import { resolvePostLoginPath } from '../utils/authReturnPath';
+import { resolvePostLoginPathWithOpenAcordo } from '../utils/authOpenAcordoRedirect.js';
 import { useAuth } from '../contexts/AuthContext';
 
 /**
@@ -99,7 +99,11 @@ export const useAuthForm = () => {
         : 'register';
 
   const navigateToHub = (role) => {
-    const destino = resolvePostLoginPath(queryParams.get('next'), role);
+    const destino = resolvePostLoginPathWithOpenAcordo(
+      queryParams.get('next'),
+      queryParams.get('openAcordoId'),
+      role,
+    );
     setTimeout(() => navigate(destino), 1000);
   };
 
