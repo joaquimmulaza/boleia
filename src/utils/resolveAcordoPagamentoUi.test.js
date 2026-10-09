@@ -5,6 +5,7 @@ import {
   copyCartaoEstadoPagamentoPassageiro,
   linhaSecundariaCartaoS2,
   linhaMotoristaComprovativoValidacao,
+  linhaSecundariaMotoristaDias,
   linhaJaConfirmadoRescisaoConsensual,
 } from './resolveAcordoPagamentoUi.js';
 
@@ -158,5 +159,31 @@ describe('resolveAcordoPagamentoUi — P0 Figma', () => {
   it('S5 copy já confirmado', () => {
     const linha = linhaJaConfirmadoRescisaoConsensual('2026-10-01T12:00:00.000Z');
     expect(linha).toMatch(/^Já tinhas confirmado a /);
+  });
+
+  it('motorista — quota mensal integral: não mostra dias úteis (mesmo com dias parciais no snapshot)', () => {
+    const linha = linhaSecundariaMotoristaDias({
+      dias: 7,
+      dias_mes: 22,
+      mes: '2026-10-01',
+      quota: 16000,
+      proporcional: 16000,
+      pago: 0,
+      valor_em_divida: 16000,
+    });
+    expect(linha).toBeNull();
+  });
+
+  it('motorista — valor devido proporcional: mostra dias úteis', () => {
+    const linha = linhaSecundariaMotoristaDias({
+      dias: 7,
+      dias_mes: 22,
+      mes: '2026-10-01',
+      quota: 16000,
+      proporcional: 5091,
+      pago: 0,
+      valor_em_divida: 5091,
+    });
+    expect(linha).toMatch(/Referente a 7 de 22 dias úteis de outubro de 2026/);
   });
 });
