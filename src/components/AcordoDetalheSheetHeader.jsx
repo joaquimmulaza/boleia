@@ -40,6 +40,7 @@ function chipClassEstadoAcordo(variant) {
  *   podeEncerrar: boolean,
  *   onRegistarFalta: () => void,
  *   onEncerrar: () => void,
+ *   onKebabTriggerRef?: (node: HTMLButtonElement | null) => void,
  * }} props
  */
 export default function AcordoDetalheSheetHeader({
@@ -54,6 +55,7 @@ export default function AcordoDetalheSheetHeader({
   podeEncerrar,
   onRegistarFalta,
   onEncerrar,
+  onKebabTriggerRef,
 }) {
   return (
     <header
@@ -83,6 +85,7 @@ export default function AcordoDetalheSheetHeader({
           podeEncerrar={podeEncerrar}
           onRegistarFalta={onRegistarFalta}
           onEncerrar={onEncerrar}
+          onTriggerRef={onKebabTriggerRef}
         />
       </div>
 

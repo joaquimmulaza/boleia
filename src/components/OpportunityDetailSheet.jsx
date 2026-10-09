@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useCallback, useLayoutEffect, useRef } from 'react';
 import OverlayShell from './OverlayShell';
 import SheetDragHandle from './SheetDragHandle';
 import RouteIndicator from './RouteIndicator';
 import { resolveOpportunityCard } from '../utils/opportunityCard';
+import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
+import { focusReturnableElement } from '../utils/focusTrap';
 
 const placeNameClass = 'min-w-0 break-words whitespace-normal text-lg font-semibold leading-6 text-slate-900 dark:text-white';
 
@@ -26,23 +28,56 @@ function OpportunityDetailSheet({ kind, item, onClose, onCta, ctaLabel, ctaDisab
   const disabled = ctaDisabled || card.ctaDisabled;
   const showCta = Boolean(rotuloCta && (onCta || disabled));
 
+  const dialogRef = useRef(/** @type {HTMLDivElement | null} */ (null));
+  const fecharRef = useRef(/** @type {HTMLButtonElement | null} */ (null));
+  const returnFocusRef = useRef(/** @type {HTMLElement | null} */ (null));
+
+  useLayoutEffect(() => {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement) {
+      returnFocusRef.current = active;
+    }
+  }, []);
+
+  useDialogFocusTrap({
+    containerRef: dialogRef,
+    initialFocusRef: fecharRef,
+    active: true,
+  });
+
+  const handleClose = useCallback(() => {
+    const returnTo = returnFocusRef.current;
+    onClose();
+    focusReturnableElement(returnTo);
+  }, [onClose]);
+
   return (
     <OverlayShell
       variant="bottom"
       overlayClassName="bg-black/45"
       panelClassName="bg-white dark:bg-slate-900 shadow-2xl px-4 pt-2.5"
       testId="opportunity-detail-sheet"
-      onDismiss={onClose}
+      onDismiss={handleClose}
     >
-      <div className="flex flex-col gap-4">
-        <SheetDragHandle onDismiss={onClose} />
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="opportunity-detail-title"
+        className="flex flex-col gap-4"
+      >
+        <SheetDragHandle onDismiss={handleClose} />
 
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{card.tipo}</h2>
+          <h2 id="opportunity-detail-title" className="text-lg font-semibold text-slate-900 dark:text-white">
+            {card.tipo}
+          </h2>
           <button
+            ref={fecharRef}
             type="button"
-            onClick={onClose}
-            className="text-[15px] font-medium text-slate-900 dark:text-white"
+            onClick={handleClose}
+            data-testid="opportunity-detail-fechar"
+            className="rounded-lg px-3 py-1.5 text-[15px] font-medium text-slate-900 dark:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
           >
             Fechar
           </button>

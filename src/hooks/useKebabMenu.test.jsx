@@ -65,6 +65,35 @@ describe('useKebabMenu', () => {
     expect(document.activeElement).toBe(trigger);
   });
 
+  it('Enter e Espaço no menuitem activam o clique', () => {
+    const onAction = vi.fn();
+
+    function TestKebabAction() {
+      const { open, toggle, rootRef, triggerRef, triggerAria, menuProps } = useKebabMenu();
+      return (
+        <div ref={rootRef}>
+          <button type="button" ref={triggerRef} {...triggerAria} onClick={toggle}>
+            Abrir
+          </button>
+          {open ? (
+            <div {...menuProps}>
+              <button type="button" role="menuitem" onClick={onAction}>
+                Acção
+              </button>
+            </div>
+          ) : null}
+        </div>
+      );
+    }
+
+    render(<TestKebabAction />);
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir' }));
+    const item = screen.getByRole('menuitem', { name: 'Acção' });
+    item.focus();
+    fireEvent.keyDown(item, { key: 'Enter' });
+    expect(onAction).toHaveBeenCalledTimes(1);
+  });
+
   it('Escape fecha só o menu e não a sheet por baixo', () => {
     const onSheetDismiss = vi.fn();
     render(<TestKebab onSheetDismiss={onSheetDismiss} />);

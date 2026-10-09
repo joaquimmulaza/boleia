@@ -5,7 +5,7 @@ import { popOverlay, pushOverlay } from '../utils/overlayStack';
  * Comportamento partilhado dos menus «Mais acções».
  * @returns {{
  *   open: boolean,
- *   close: () => void,
+ *   close: (options?: { returnFocus?: boolean }) => void,
  *   toggle: (event?: React.SyntheticEvent) => void,
  *   rootRef: React.RefObject<HTMLDivElement | null>,
  *   triggerRef: React.RefObject<HTMLButtonElement | null>,
@@ -18,6 +18,7 @@ import { popOverlay, pushOverlay } from '../utils/overlayStack';
  *   menuProps: {
  *     id: string,
  *     role: 'menu',
+ *     onKeyDown: (event: React.KeyboardEvent) => void,
  *   },
  * }}
  */
@@ -26,10 +27,15 @@ export function useKebabMenu() {
   const rootRef = useRef(/** @type {HTMLDivElement | null} */ (null));
   const triggerRef = useRef(/** @type {HTMLButtonElement | null} */ (null));
   const wasOpenRef = useRef(false);
+  const returnFocusOnCloseRef = useRef(true);
   const menuId = useId();
   const overlayId = useId();
 
-  const close = useCallback(() => {
+  /** @param {{ returnFocus?: boolean }} [options] */
+  const close = useCallback((options = {}) => {
+    if (options.returnFocus === false) {
+      returnFocusOnCloseRef.current = false;
+    }
     setOpen(false);
   }, []);
 
@@ -38,12 +44,23 @@ export function useKebabMenu() {
     setOpen((prev) => !prev);
   }, []);
 
+  const handleMenuKeyDown = useCallback((event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (target.getAttribute('role') !== 'menuitem') return;
+    event.preventDefault();
+    event.stopPropagation();
+    target.click();
+  }, []);
+
   useEffect(() => {
     if (!open) {
       popOverlay(overlayId);
-      if (wasOpenRef.current) {
+      if (wasOpenRef.current && returnFocusOnCloseRef.current) {
         triggerRef.current?.focus();
       }
+      returnFocusOnCloseRef.current = true;
       wasOpenRef.current = false;
       return undefined;
     }
@@ -88,6 +105,7 @@ export function useKebabMenu() {
     menuProps: {
       id: menuId,
       role: 'menu',
+      onKeyDown: handleMenuKeyDown,
     },
   };
 }

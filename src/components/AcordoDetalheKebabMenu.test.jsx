@@ -2,8 +2,17 @@ import React from 'react';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import AcordoDetalheKebabMenu from './AcordoDetalheKebabMenu';
+import { resetOverlayStackForTests } from '../utils/overlayStack';
+
+/** @param {HTMLElement} element @param {string} key */
+function activateMenuItemWithKey(element, key) {
+  fireEvent.keyDown(element, { key });
+}
 
 describe('AcordoDetalheKebabMenu', () => {
+  afterEach(() => {
+    resetOverlayStackForTests();
+  });
   afterEach(() => {
     cleanup();
   });
@@ -80,6 +89,33 @@ describe('AcordoDetalheKebabMenu', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     expect(document.activeElement).toBe(trigger);
+  });
+
+  it('Enter e Espaço em Encerrar acordo activam o callback', () => {
+    const onEncerrar = vi.fn();
+
+    render(
+      <AcordoDetalheKebabMenu
+        podeRegistarFaltas={false}
+        podeEncerrar
+        onRegistarFalta={vi.fn()}
+        onEncerrar={onEncerrar}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Mais acções do acordo/i }));
+    const item = screen.getByRole('menuitem', { name: /Encerrar acordo/i });
+    item.focus();
+
+    activateMenuItemWithKey(item, 'Enter');
+    expect(onEncerrar).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Mais acções do acordo/i }));
+    const item2 = screen.getByRole('menuitem', { name: /Encerrar acordo/i });
+    item2.focus();
+    activateMenuItemWithKey(item2, ' ');
+    expect(onEncerrar).toHaveBeenCalledTimes(2);
   });
 
   it('fecha com segundo toque no botão', () => {

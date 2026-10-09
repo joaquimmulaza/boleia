@@ -2235,6 +2235,63 @@ describe('MyAgreements — cabeçalho fixo do sheet Detalhe do acordo', () => {
     expect(document.activeElement).toBe(trigger);
   });
 
+  it('Escape no picker de modalidade devolve foco ao kebab; sheet aberto; sem RPC', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const detalhe = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const kebab = within(detalhe).getByTestId('acordo-detalhe-kebab-trigger');
+
+    openAcordoKebab(detalhe);
+    fireEvent.click(screen.getByRole('menuitem', { name: /Encerrar acordo/i }));
+    await screen.findByRole('dialog', { name: /Como queres encerrar o acordo/i });
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('terminate-modality-picker')).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole('dialog', { name: /Detalhe do acordo/i })).toBeInTheDocument();
+    expect(document.activeElement).toBe(kebab);
+    expect(terminateAgreement).not.toHaveBeenCalled();
+  });
+
+  it('Voltar no picker de modalidade devolve foco ao kebab', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const detalhe = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const kebab = within(detalhe).getByTestId('acordo-detalhe-kebab-trigger');
+
+    openAcordoKebab(detalhe);
+    fireEvent.click(screen.getByRole('menuitem', { name: /Encerrar acordo/i }));
+    const picker = await screen.findByRole('dialog', { name: /Como queres encerrar o acordo/i });
+    fireEvent.click(within(picker).getByRole('button', { name: /^Voltar$/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('terminate-modality-picker')).not.toBeInTheDocument();
+    });
+    expect(document.activeElement).toBe(kebab);
+    expect(terminateAgreement).not.toHaveBeenCalled();
+  });
+
+  it('Enter no menuitem Encerrar acordo abre o picker de modalidade', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const detalhe = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+    openAcordoKebab(detalhe);
+    const item = screen.getByRole('menuitem', { name: /Encerrar acordo/i });
+    item.focus();
+    fireEvent.keyDown(item, { key: 'Enter' });
+
+    expect(await screen.findByTestId('terminate-modality-picker')).toBeInTheDocument();
+  });
+
   it('Tab no picker Encerrar acordo mantém foco no overlay empilhado', async () => {
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     renderPage();

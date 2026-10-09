@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { handleFocusTrapTabKey } from '../utils/focusTrap';
+import { handleFocusTrapTabKey, isElementFocusReturnable } from '../utils/focusTrap';
 
 /**
  * Armadilha de foco mínima para dialogs (Tab/Shift+Tab + foco inicial).
@@ -8,6 +8,7 @@ import { handleFocusTrapTabKey } from '../utils/focusTrap';
  *   active: boolean,
  *   initialFocusRef?: import('react').RefObject<HTMLElement | null>,
  *   initialFocusSelector?: string,
+ *   restoreFocusRef?: import('react').RefObject<HTMLElement | null>,
  * }} options
  */
 export function useDialogFocusTrap({
@@ -15,6 +16,7 @@ export function useDialogFocusTrap({
   active,
   initialFocusRef,
   initialFocusSelector,
+  restoreFocusRef,
 }) {
   useEffect(() => {
     if (!active) return undefined;
@@ -22,6 +24,12 @@ export function useDialogFocusTrap({
     if (!container) return undefined;
 
     const focusInitial = () => {
+      const restoreTarget = restoreFocusRef?.current;
+      if (isElementFocusReturnable(restoreTarget)) {
+        restoreFocusRef.current = null;
+        restoreTarget.focus();
+        return;
+      }
       const target = initialFocusRef?.current
         ?? (initialFocusSelector
           ? container.querySelector(initialFocusSelector)
@@ -43,5 +51,5 @@ export function useDialogFocusTrap({
       cancelAnimationFrame(raf);
       document.removeEventListener('keydown', onKeyDown, true);
     };
-  }, [active, containerRef, initialFocusRef, initialFocusSelector]);
+  }, [active, containerRef, initialFocusRef, initialFocusSelector, restoreFocusRef]);
 }

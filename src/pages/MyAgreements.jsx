@@ -290,6 +290,8 @@ const MyAgreements = () => {
   const acordoSheetDialogRef = useRef(/** @type {HTMLDivElement | null} */ (null));
   const acordoSheetFecharRef = useRef(/** @type {HTMLButtonElement | null} */ (null));
   const acordoSheetReturnFocusRef = useRef(/** @type {HTMLElement | null} */ (null));
+  const acordoKebabTriggerRef = useRef(/** @type {HTMLButtonElement | null} */ (null));
+  const acordoSheetRestoreFocusRef = useRef(/** @type {HTMLElement | null} */ (null));
   const [terminatePickerOpen, setTerminatePickerOpen] = useState(false);
   const [terminateConfirmOpen, setTerminateConfirmOpen] = useState(false);
   const [terminateJustaPickerOpen, setTerminateJustaPickerOpen] = useState(false);
@@ -476,6 +478,7 @@ const MyAgreements = () => {
     containerRef: acordoSheetDialogRef,
     initialFocusRef: acordoSheetFecharRef,
     initialFocusSelector: '[data-testid="acordo-detalhe-fechar"]',
+    restoreFocusRef: acordoSheetRestoreFocusRef,
     active: Boolean(selected) && !acordoSheetNestedOverlayOpen,
   });
 
@@ -1124,7 +1127,15 @@ const MyAgreements = () => {
             podeRegistarFaltas={podeRegistarFaltas}
             podeEncerrar={podeEncerrar}
             onRegistarFalta={() => navigate(`/faltas/${selected.id}`)}
-            onEncerrar={() => setTerminatePickerOpen(true)}
+            onKebabTriggerRef={(node) => {
+              acordoKebabTriggerRef.current = node;
+            }}
+            onEncerrar={() => {
+              if (acordoKebabTriggerRef.current) {
+                acordoSheetRestoreFocusRef.current = acordoKebabTriggerRef.current;
+              }
+              setTerminatePickerOpen(true);
+            }}
           />
 
           <div

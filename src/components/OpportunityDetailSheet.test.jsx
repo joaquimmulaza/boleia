@@ -1,8 +1,9 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { describe, it, expect, afterEach } from 'vitest';
 import { formatKwanza } from '../utils/formatKwanza';
 import OpportunityDetailSheet from './OpportunityDetailSheet';
+import { resetOverlayStackForTests } from '../utils/overlayStack';
 
 function textoKz(valor) {
   return new RegExp(`${formatKwanza(valor).replace(/\s/g, '\\s')}\\sKz`);
@@ -22,6 +23,93 @@ const ofertaFlexTotal = {
 };
 
 describe('OpportunityDetailSheet', () => {
+  afterEach(() => {
+    cleanup();
+    resetOverlayStackForTests();
+  });
+
+  it('ao abrir, foco inicial no Fechar; Tab cicla dentro do sheet', async () => {
+    render(
+      <div>
+        <button type="button" data-testid="opener-card">
+          Cartão
+        </button>
+        <OpportunityDetailSheet kind="oferta" item={ofertaFlexTotal} onClose={() => {}} onCta={() => {}} />
+      </div>,
+    );
+
+    const fechar = screen.getByTestId('opportunity-detail-fechar');
+    await waitFor(() => {
+      expect(document.activeElement).toBe(fechar);
+    });
+
+    const { getFocusableElements } = await import('../utils/focusTrap');
+    const dialog = screen.getByRole('dialog');
+    const focusables = getFocusableElements(dialog);
+    const last = focusables[focusables.length - 1];
+    last.focus();
+    fireEvent.keyDown(document, { key: 'Tab', code: 'Tab', keyCode: 9 });
+    expect(document.activeElement).toBe(fechar);
+
+    fechar.focus();
+    fireEvent.keyDown(document, { key: 'Tab', code: 'Tab', keyCode: 9, shiftKey: true });
+    expect(document.activeElement).toBe(last);
+  });
+
+  it('Tab não escapa para o cartão por trás do overlay', async () => {
+    render(
+      <div>
+        <button type="button">Cartão atrás</button>
+        <OpportunityDetailSheet kind="oferta" item={ofertaFlexTotal} onClose={() => {}} onCta={() => {}} />
+      </div>,
+    );
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByTestId('opportunity-detail-fechar'));
+    });
+
+    const dialog = screen.getByRole('dialog');
+    fireEvent.keyDown(document, { key: 'Tab', code: 'Tab', keyCode: 9 });
+    expect(dialog).toContainElement(document.activeElement);
+  });
+
+  it('Escape fecha e devolve foco ao elemento que abriu', async () => {
+    function Harness() {
+      const [open, setOpen] = React.useState(false);
+      return (
+        <div>
+          <button type="button" data-testid="opener-card" onClick={() => setOpen(true)}>
+            Cartão
+          </button>
+          {open ? (
+            <OpportunityDetailSheet
+              kind="oferta"
+              item={ofertaFlexTotal}
+              onClose={() => setOpen(false)}
+              onCta={() => {}}
+            />
+          ) : null}
+        </div>
+      );
+    }
+
+    render(<Harness />);
+    const opener = screen.getByTestId('opener-card');
+    opener.focus();
+    fireEvent.click(opener);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('opportunity-detail-fechar')).toBeInTheDocument();
+    });
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('opportunity-detail-fechar')).not.toBeInTheDocument();
+    });
+    expect(document.activeElement).toBe(opener);
+  });
+
   it('flexível total do acordo mostra a frase, o horário e um preço, sem rota nem × N', () => {
     render(
       <OpportunityDetailSheet kind="oferta" item={ofertaFlexTotal} onClose={() => {}} onCta={() => {}} />,
