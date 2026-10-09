@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { PERFIS_EMBED_NOME_COMPLETO } from '../utils/perfisGrants.js';
 
 /**
  * Cria procura individual (N_candidato = 1).
@@ -160,7 +161,7 @@ export async function getPrimeiroNomeProcuraOwner(procuraId) {
 
   const { data, error } = await supabase
     .from('procuras')
-    .select('owner_id, perfis(nome_completo)')
+    .select(`owner_id, ${PERFIS_EMBED_NOME_COMPLETO}`)
     .eq('id', procuraId)
     .maybeSingle();
 

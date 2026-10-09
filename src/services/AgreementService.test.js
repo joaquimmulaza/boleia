@@ -8,6 +8,7 @@ import {
   terminateAgreement,
   rejectAgreementTermination,
   getAgreementsForDriver,
+  DRIVER_ACORDOS_SELECT,
   getAgreementsForPassenger,
 } from './AgreementService.js';
 import { resolveAgreementPricing } from '../utils/resolveAgreementPricing.js';
@@ -776,12 +777,15 @@ describe('AgreementService', () => {
     it('getAgreementsForDriver filtra por driver_id e aplica lazy RPCs', async () => {
       supabase.rpc.mockResolvedValue({ data: 0, error: null });
       const mockOrder = vi.fn().mockResolvedValue({ data: [{ id: 'a1' }], error: null });
+      const mockSelect = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({ order: mockOrder }),
+      });
       supabase.from.mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({ order: mockOrder }),
-        }),
+        select: mockSelect,
       });
       const result = await getAgreementsForDriver('driver-1');
+      expect(mockSelect).toHaveBeenCalledWith(DRIVER_ACORDOS_SELECT);
+      expect(DRIVER_ACORDOS_SELECT).not.toMatch(/\bperfis\s*\(/);
       expect(result).toHaveLength(1);
       expect(supabase.rpc).toHaveBeenCalledWith('apply_due_agreement_adendas', {
         p_acordo_id: null,
