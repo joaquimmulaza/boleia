@@ -287,3 +287,8 @@ export function useAuth() {
   return context;
 }
 
+/**
+ * @internal DEV — export raw só para `DevAuthProvider` / capturas em `src/dev/`.
+ * Produção: preferir `AuthProvider`, `useAuth` e `devValue` (DEV).
+ */
+export { AuthContext };

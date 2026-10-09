@@ -36,7 +36,7 @@ import { usePasswordRecoveryRouteRedirect } from './hooks/usePasswordRecoveryRou
 import { needsProfileSetup } from './utils/oauth';
 
 const LazyDevRoutes = import.meta.env.DEV
-  ? lazy(() => import('./dev/LazyDevRoutes.jsx'))
+  ? lazy(() => import('./dev/DevAppRoutes.jsx'))
   : null;
 
 const RootRoute = () => {

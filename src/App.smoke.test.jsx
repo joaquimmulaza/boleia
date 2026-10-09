@@ -53,10 +53,10 @@ vi.mock('./contexts/AuthContext', () => ({
   useAuth: vi.fn(),
 }));
 
-vi.mock('./dev/LazyDevRoutes.jsx', async () => {
+vi.mock('./dev/DevAppRoutes.jsx', async () => {
   const { Routes, Route } = await import('react-router-dom');
   return {
-    default: function MockLazyDevRoutes() {
+    default: function MockDevAppRoutes() {
       return (
         <Routes>
           <Route path="perfil" element={<div data-testid="dev-perfil-route">Perfil DEV</div>} />

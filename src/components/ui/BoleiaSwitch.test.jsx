@@ -27,9 +27,9 @@ describe('BoleiaSwitch — shadcn + geometria', () => {
     for (const width of VIEWPORT_WIDTHS) {
       document.documentElement.style.width = `${width}px`;
       const { unmount } = renderSwitch({ checked: false });
-      const root = screen.getByRole('switch');
+      const track = screen.getByTestId('switch-track-visual');
       const thumb = getThumb();
-      expect(root.className).toMatch(/overflow-hidden/);
+      expect(track.className).toMatch(/overflow-hidden/);
       expect(thumb).toHaveAttribute('data-state', 'unchecked');
       expect(thumb?.className).toMatch(/data-\[state=unchecked\]:translate-x-0/);
       expect(thumb?.className).toMatch(/data-\[state=checked\]:translate-x-\[1\.25rem\]/);
@@ -72,23 +72,22 @@ describe('BoleiaSwitch — shadcn + geometria', () => {
     expect(onCheckedChange).not.toHaveBeenCalled();
   });
 
-  it('trilho visual 52×32: classes h-8 (32px) e w-[52px] no Root', () => {
+  it('trilho visual 52×32: span interior h-8 (32px) e w-[52px]', () => {
     renderSwitch({ id: 'boleia-switch-track' });
-    const sw = screen.getByRole('switch');
-    expect(sw.className).toMatch(/\bh-8\b/);
-    expect(sw.className).toMatch(/\bw-\[52px\]/);
-    expect(sw.className).not.toMatch(/\bh-11\b/);
-    expect(sw.className).not.toMatch(/min-h-\[44px\]/);
+    const track = screen.getByTestId('switch-track-visual');
+    expect(track.className).toMatch(/\bh-8\b/);
+    expect(track.className).toMatch(/\bw-\[52px\]/);
+    const root = screen.getByRole('switch');
+    expect(root.className).not.toMatch(/\bh-8\b/);
   });
 
-  it('zona de toque ≥44px: label min-h-[44px] e clique fora do trilho alterna', () => {
+  it('zona de toque ≥44px: Root h-11 (44px) e clique alterna', () => {
     const onCheckedChange = vi.fn();
     renderSwitch({ id: 'boleia-switch-test', onCheckedChange });
-    const hit = screen.getByTestId('boleia-switch-hit');
-    expect(hit.className).toMatch(/min-h-\[44px\]/);
-    const sw = screen.getByRole('switch');
-    expect(sw.className).toMatch(/\bh-8\b/);
-    fireEvent.click(hit);
+    const root = screen.getByRole('switch');
+    expect(root.className).toMatch(/\bh-11\b/);
+    expect(root.className).toMatch(/min-h-\[44px\]/);
+    fireEvent.click(root);
     expect(onCheckedChange).toHaveBeenCalledWith(true);
   });
 

@@ -4,7 +4,7 @@ import { Switch } from './switch';
 
 /**
  * Wrapper fino sobre Switch shadcn — loading e ARIA de /perfil.
- * Trilho visual 52×32 no primitive; label ≥44px de altura para toque (WCAG).
+ * Trilho 52×32 no span interior do Switch; Root h-11 (toque). Label só liga htmlFor.
  *
  * @param {{
  *   checked?: boolean;

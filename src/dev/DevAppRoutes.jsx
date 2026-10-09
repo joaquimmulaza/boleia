@@ -7,7 +7,7 @@ import DevPerfilCaptureShell from '../pages/DevPerfilCapture';
 /**
  * Rotas relativas a `/__dev/*` (lazy + `<Route path="/__dev/*" />` em App.jsx).
  */
-export default function LazyDevRoutes() {
+export default function DevAppRoutes() {
   return (
     <Routes>
       <Route path="perfil-push" element={<DevPerfilPushPreview />} />
