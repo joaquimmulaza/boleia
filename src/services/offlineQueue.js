@@ -122,7 +122,7 @@ export async function executeQueuedRpc(item) {
  * Drena a fila sequencialmente. Remove item em 2xx ou 4xx de negócio.
  * Mantém item se falha de rede / 5xx.
  * @param {{ fetchRpc?: typeof executeQueuedRpc }} [opts]
- * @returns {Promise<{ processed: number, remaining: number, conflicts: object[] }>}
+ * @returns {Promise<{ processed: number, remaining: number, conflicts: object[], successes: object[] }>}
  */
 export async function drainQueue(opts = {}) {
   const fetchRpc = opts.fetchRpc || executeQueuedRpc;
@@ -134,12 +134,15 @@ export async function drainQueue(opts = {}) {
   let processed = 0;
   /** @type {object[]} */
   const conflicts = [];
+  /** @type {object[]} */
+  const successes = [];
 
   for (const item of sorted) {
     try {
       const result = await fetchRpc(item);
       if (result.ok) {
         await removeQueueItem(item.idempotency_key);
+        successes.push({ item, status: result.status, data: result.data });
         processed += 1;
         continue;
       }
@@ -160,7 +163,7 @@ export async function drainQueue(opts = {}) {
   }
 
   const remaining = (await listQueueItems()).length;
-  return { processed, remaining, conflicts };
+  return { processed, remaining, conflicts, successes };
 }
 
 export async function listPending() {

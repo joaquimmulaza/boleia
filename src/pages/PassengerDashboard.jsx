@@ -73,6 +73,14 @@ import { buildProcuraMinimaFromOferta, getPropostaBrowseGaps } from '../utils/pr
 import { labelRotaProcura } from '../utils/ofertaLabels';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { FEEDBACK_PROPOSTA_ENVIADA_MOTORISTA } from '../utils/propostaFeedback';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { drainQueue, listPending } from '../services/offlineQueue';
+import {
+  collectPendingAcceptPropostaIds,
+  COPY_ERRO_ACEITE_OFERTA_MUDOU,
+  mensagemErroAceiteInbox,
+  propostaIdFromAcceptQueueItem,
+} from '../utils/pendingAcceptProposta';
 
 const CAPACIDADES_GRUPO = [2, 3, 4, 5, 6, 7, 8];
 
@@ -146,15 +154,6 @@ function aplicarClearUiPosAceiteServidor({
   }
 }
 
-/** @param {unknown} err */
-function mensagemErroAceiteInbox(err) {
-  const msg = err instanceof Error ? err.message : String(err || '');
-  if (msg.includes('Sessão necessária')) {
-    return msg;
-  }
-  return 'Não foi possível aceitar — a oferta mudou.';
-}
-
 /**
  * Hub passageiro — procura, matches, inbox (B), enviadas + cancel, lista de espera.
  * Grupo = procura colectiva viva: N_proposto = N_actual no instante da proposta
@@ -222,10 +221,17 @@ const PassengerDashboard = () => {
   const [browseBusy, setBrowseBusy] = useState(false);
   /** @type {[Set<string>, Function]} */
   const [browseOfertasComProposta, setBrowseOfertasComProposta] = useState(() => new Set());
-  /** Propostas com accept_proposal enfileirado offline — chip «A enviar…» até sync. */
-  const [aceitesOfflinePendentes, setAceitesOfflinePendentes] = useState(
+  /** Propostas com `accept_proposal` na fila IndexedDB — chip «A enviar…». */
+  const [pendingAcceptPropostaIds, setPendingAcceptPropostaIds] = useState(
     () => new Set(),
   );
+  const pendingAcceptPropostaIdsRef = useRef(pendingAcceptPropostaIds);
+  const inboxReviewsRef = useRef(inboxReviews);
+  const procuraRef = useRef(procura);
+  pendingAcceptPropostaIdsRef.current = pendingAcceptPropostaIds;
+  inboxReviewsRef.current = inboxReviews;
+  procuraRef.current = procura;
+  const { isOnline } = useNetworkStatus();
   /** @type {[null | { oferta: object, gaps: Array<'time' | 'od'>, source: 'browse' | 'hub', form: object }, Function]} */
   const [proporSheet, setProporSheet] = useState(null);
   const [propostaOferta, setPropostaOferta] = useState(null);
@@ -431,6 +437,99 @@ const PassengerDashboard = () => {
       setLoadingInbox(false);
     }
   }, [user?.id]);
+
+  const syncPendingAcceptProposals = useCallback(async () => {
+    try {
+      const pending = await listPending();
+      setPendingAcceptPropostaIds(collectPendingAcceptPropostaIds(pending));
+    } catch {
+      /* fila indisponível — manter estado local */
+    }
+  }, []);
+
+  const carregarRef = useRef(carregar);
+  carregarRef.current = carregar;
+
+  const processOfflineSyncSummary = useCallback(
+    async (summary) => {
+      const before = new Set(pendingAcceptPropostaIdsRef.current);
+      /** @type {Set<string>} */
+      const conflictIds = new Set();
+      for (const conflict of summary?.conflicts || []) {
+        if (conflict?.item?.rpc !== 'accept_proposal') continue;
+        const pid = propostaIdFromAcceptQueueItem(conflict.item);
+        if (pid) conflictIds.add(pid);
+        setFeedback({ type: 'error', text: COPY_ERRO_ACEITE_OFERTA_MUDOU });
+      }
+
+      await syncPendingAcceptProposals();
+      await carregarRef.current({ silent: true });
+      await syncPendingAcceptProposals();
+
+      const after = pendingAcceptPropostaIdsRef.current;
+      for (const pid of before) {
+        if (after.has(pid) || conflictIds.has(pid)) continue;
+        const review = inboxReviewsRef.current.find((r) => r.proposta.id === pid);
+        if (review) {
+          aplicarClearUiPosAceiteServidor({
+            procuraId: review.proposta.procura_id ?? null,
+            ofertaId: review.proposta.oferta_id ?? null,
+            setInboxReviews,
+            setEnviadasReviews,
+            setBrowseOfertasComProposta,
+          });
+        }
+        const fechaProcura = shouldAvisarProcuraFecha(procuraRef.current?.estado);
+        setFeedback({
+          type: 'success',
+          text: fechaProcura
+            ? 'Procura fechada — tens acordo activo.'
+            : 'Proposta aceite. Acordo criado.',
+        });
+      }
+      notifyMarketplaceHubRefresh();
+    },
+    [syncPendingAcceptProposals],
+  );
+
+  useEffect(() => {
+    void syncPendingAcceptProposals();
+  }, [syncPendingAcceptProposals]);
+
+  const prevOnlineRef = useRef(isOnline);
+  useEffect(() => {
+    const cameOnline = isOnline && !prevOnlineRef.current;
+    prevOnlineRef.current = isOnline;
+    if (!cameOnline) return;
+    void drainQueue()
+      .then((summary) => processOfflineSyncSummary(summary))
+      .catch(() => {});
+  }, [isOnline, processOfflineSyncSummary]);
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
+      void drainQueue()
+        .then((summary) => processOfflineSyncSummary(summary))
+        .catch(() => {});
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [processOfflineSyncSummary]);
+
+  useEffect(() => {
+    const onSwMessage = (event) => {
+      const data = event.data;
+      if (data?.type === 'OFFLINE_SYNC_COMPLETE') {
+        void processOfflineSyncSummary(data.summary || {});
+      }
+    };
+    if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
+      navigator.serviceWorker.addEventListener('message', onSwMessage);
+      return () => navigator.serviceWorker.removeEventListener('message', onSwMessage);
+    }
+    return undefined;
+  }, [processOfflineSyncSummary]);
 
   useEffect(() => {
     carregar();
@@ -956,13 +1055,8 @@ const PassengerDashboard = () => {
       const offlineQueued = Boolean(result?.offlineQueued);
       const fechaProcura = !offlineQueued && shouldAvisarProcuraFecha(procura?.estado);
       if (offlineQueued) {
-        setAceitesOfflinePendentes((prev) => new Set(prev).add(propostaId));
+        await syncPendingAcceptProposals();
       } else if (result?.id) {
-        setAceitesOfflinePendentes((prev) => {
-          const next = new Set(prev);
-          next.delete(propostaId);
-          return next;
-        });
         const optimista = buildAcordoOptimistaPosAceite(
           { ...result, oferta_id: result.oferta_id ?? ofertaIdAceite },
           user.id,
@@ -1001,11 +1095,7 @@ const PassengerDashboard = () => {
       }
       notifyMarketplaceHubRefresh();
     } catch (err) {
-      setAceitesOfflinePendentes((prev) => {
-        const next = new Set(prev);
-        next.delete(propostaId);
-        return next;
-      });
+      await syncPendingAcceptProposals();
       setFeedback({ type: 'error', text: mensagemErroAceiteInbox(err) });
     } finally {
       setBusyId(null);
@@ -1017,7 +1107,7 @@ const PassengerDashboard = () => {
    * @returns {boolean}
    */
   const aceitePendenteConfirmacao = (propostaId) =>
-    busyId === propostaId || aceitesOfflinePendentes.has(propostaId);
+    pendingAcceptPropostaIds.has(propostaId);
 
   const handleRecusarInbox = async (propostaId) => {
     setBusyId(propostaId);

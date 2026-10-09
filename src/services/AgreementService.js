@@ -4,6 +4,7 @@ import {
   callRpcWithOfflineFallback,
   resolveIdempotencyKey,
 } from '../utils/callRpcWithOfflineFallback.js';
+import { isNetworkFailure } from './offlineQueue.js';
 
 /**
  * Normaliza acordo: expõe `adenda_pendente` (não aplicada / não supersedida).
@@ -153,7 +154,12 @@ export async function createAgreementFromProposal(propostaId, options = {}) {
         .select('*')
         .eq('id', acordoId)
         .single();
-      if (error) throw error;
+      if (error) {
+        if (isNetworkFailure(error)) {
+          throw error;
+        }
+        return { id: acordoId, estado: 'activo' };
+      }
       return data;
     },
   });
