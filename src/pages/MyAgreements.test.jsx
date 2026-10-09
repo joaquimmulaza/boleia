@@ -1576,6 +1576,82 @@ describe('MyAgreements — marketplace 1:N', () => {
       });
     });
 
+    it('sem rescisao_solicitada_em não mostra «Pedido feito a …»', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+      getAgreementsForPassenger.mockResolvedValue([
+        { ...acordoComPedidoMotorista, rescisao_solicitada_em: null },
+      ]);
+
+      renderPage(['/acordos?openAcordoId=acordo-pax&focus=rescisao']);
+
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      expect(within(dialog).queryByTestId('rescisao-pedido-feito-em')).not.toBeInTheDocument();
+    });
+
+    it('com rescisao_solicitada_em mostra «Pedido feito a …»', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver.mockResolvedValue([
+        {
+          ...acordoMotorista,
+          rescisao_modo: 'consensual',
+          rescisao_solicitada_por: 'driver-1',
+          rescisao_vigencia: 'imediato',
+          rescisao_solicitada_em: '2026-10-09T11:30:00.000Z',
+        },
+      ]);
+      getAgreementsForPassenger.mockResolvedValue([]);
+
+      renderPage(['/acordos?openAcordoId=acordo-1']);
+
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      expect(within(dialog).getByTestId('rescisao-pedido-feito-em')).toHaveTextContent(
+        /Pedido feito a/i,
+      );
+    });
+
+    it('focus=rescisao com secção abaixo da dobra faz scrollIntoView', async () => {
+      const scrollSpy = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {});
+      const rectSpy = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function rect() {
+        if (this instanceof HTMLElement && this.dataset?.testid === 'rescisao-consensual-section') {
+          return {
+            top: 900,
+            bottom: 1100,
+            left: 0,
+            right: 0,
+            width: 320,
+            height: 200,
+            x: 0,
+            y: 900,
+            toJSON: () => ({}),
+          };
+        }
+        return {
+          top: 0,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          width: 0,
+          height: 0,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
+        };
+      });
+
+      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+      getAgreementsForPassenger.mockResolvedValue([acordoComPedidoMotorista]);
+
+      renderPage(['/acordos?openAcordoId=acordo-pax&focus=rescisao']);
+
+      await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      await waitFor(() => {
+        expect(scrollSpy).toHaveBeenCalled();
+      });
+
+      scrollSpy.mockRestore();
+      rectSpy.mockRestore();
+    });
+
     it('focus=rescisao com pedido pendente: um scroll, remove focus da URL e refresh não repete scroll', async () => {
       const scrollSpy = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {});
       mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });

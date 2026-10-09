@@ -9,6 +9,15 @@ const luandaDateFormatter = new Intl.DateTimeFormat('pt-PT', {
   timeZone: ADENDA_TIMEZONE,
 });
 
+const luandaDateTimeFormatter = new Intl.DateTimeFormat('pt-PT', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: ADENDA_TIMEZONE,
+});
+
 /**
  * Formata data ISO (YYYY-MM-DD) em pt-PT com fuso Africa/Luanda.
  * @param {string | null | undefined} isoDate
@@ -19,6 +28,18 @@ export function formatDateLuandaPt(isoDate) {
   const d = new Date(`${String(isoDate).slice(0, 10)}T12:00:00`);
   if (Number.isNaN(d.getTime())) return null;
   return luandaDateFormatter.format(d);
+}
+
+/**
+ * Formata timestamp ISO em pt-PT (Africa/Luanda) para copy «Pedido feito a …».
+ * @param {string | null | undefined} isoTimestamp
+ * @returns {string | null}
+ */
+export function formatRescisaoSolicitadaEmPt(isoTimestamp) {
+  if (!isoTimestamp) return null;
+  const d = new Date(isoTimestamp);
+  if (Number.isNaN(d.getTime())) return null;
+  return luandaDateTimeFormatter.format(d);
 }
 
 /**

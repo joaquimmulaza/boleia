@@ -4,13 +4,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import NotificationBell from './NotificationBell';
 
+const mockNavigate = vi.fn();
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
 const deleteNotification = vi.fn();
 const markAsRead = vi.fn();
 const markAllAsRead = vi.fn();
 
-vi.mock('../hooks/useNotifications', () => ({
-  useNotifications: () => ({
-    notifications: [
+const mockNotifications = [
       {
         id: 'n1',
         mensagem: 'Nova proposta recebida',
@@ -25,7 +33,11 @@ vi.mock('../hooks/useNotifications', () => ({
         lida: true,
         created_at: new Date(Date.now() - 3600000).toISOString(),
       },
-    ],
+    ];
+
+vi.mock('../hooks/useNotifications', () => ({
+  useNotifications: () => ({
+    notifications: mockNotifications,
     unreadCount: 1,
     markAsRead,
     markAllAsRead,
@@ -72,6 +84,23 @@ const renderBell = () =>
 describe('NotificationBell', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockNotifications.length = 0;
+    mockNotifications.push(
+      {
+        id: 'n1',
+        mensagem: 'Nova proposta recebida',
+        tipo: 'info',
+        lida: false,
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'n2',
+        mensagem: 'Proposta aceite',
+        tipo: 'success',
+        lida: true,
+        created_at: new Date(Date.now() - 3600000).toISOString(),
+      },
+    );
   });
 
   it('renderiza bottom sheet F7 com handle e Fechar (não side drawer)', () => {
@@ -230,6 +259,38 @@ describe('NotificationBell', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
 
     expect(screen.queryByTestId('notification-panel')).not.toBeInTheDocument();
+  });
+
+  it('notificação consensual navega para openAcordoId com focus=rescisao', () => {
+    mockNotifications.unshift({
+      id: 'n-res',
+      mensagem: 'Pedido de encerramento amigável',
+      tipo: 'warning',
+      lida: false,
+      created_at: new Date().toISOString(),
+      metadata: {
+        type: 'agreement_update',
+        acordo_id: 'ac-res',
+        rescisao_modo: 'consensual',
+      },
+      link: '/acordos?openAcordoId=ac-res&focus=rescisao',
+    });
+
+    renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pedido de encerramento amigável' }));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/acordos?openAcordoId=ac-res&focus=rescisao');
+  });
+
+  it('botão Fechar outline usa text-foreground em dark mode', () => {
+    document.documentElement.classList.add('dark');
+    renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+
+    const fechar = screen.getByRole('button', { name: 'Fechar' });
+    expect(fechar.className).toMatch(/text-foreground/);
+    document.documentElement.classList.remove('dark');
   });
 
   it('mantém o painel aberto ao clicar dentro da lista', () => {

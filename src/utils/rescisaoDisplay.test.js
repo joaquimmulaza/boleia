@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   acordoTemRescisaoConsensualPendenteParaUser,
   formatDateLuandaPt,
+  formatRescisaoSolicitadaEmPt,
   lastDayOfRescisaoCycle,
   copyCancelamentoPendente,
 } from './rescisaoDisplay.js';
@@ -13,6 +14,17 @@ describe('rescisaoDisplay', () => {
 
   it('formatDateLuandaPt formata data legível', () => {
     expect(formatDateLuandaPt('2026-09-30')).toMatch(/30 de setembro de 2026/i);
+  });
+
+  it('formatRescisaoSolicitadaEmPt devolve null sem timestamp', () => {
+    expect(formatRescisaoSolicitadaEmPt(null)).toBeNull();
+    expect(formatRescisaoSolicitadaEmPt('')).toBeNull();
+  });
+
+  it('formatRescisaoSolicitadaEmPt formata data e hora em Luanda', () => {
+    const formatted = formatRescisaoSolicitadaEmPt('2026-10-09T11:30:00.000Z');
+    expect(formatted).toMatch(/9 de outubro de 2026/i);
+    expect(formatted).toMatch(/\d{1,2}:\d{2}/);
   });
 
   it('acordoTemRescisaoConsensualPendenteParaUser só para contraparte com pedido activo', () => {

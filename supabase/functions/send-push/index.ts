@@ -26,7 +26,7 @@ serve(async (req) => {
     }
 
     const { record } = payload;
-    const { user_id, mensagem, tipo, metadata } = record;
+    const { user_id, mensagem, tipo, metadata, link } = record;
 
     if (!user_id || !mensagem) {
       return new Response(JSON.stringify({ error: "Missing user_id or mensagem in record" }), {
@@ -96,7 +96,7 @@ serve(async (req) => {
       icon: "/pwa-192x192.png", // Ícone PWA
       badge: "/pwa-512x512.png",
       data: {
-        url: "/", // Fallback URL
+        url: link || "/",
         notificationId: record.id,
         metadata: metadata || {},
         unreadCount: unreadCount ?? 1,
