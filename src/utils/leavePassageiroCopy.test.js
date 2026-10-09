@@ -3,6 +3,8 @@ import {
   copyConfirmacaoSaidaPassageiro,
   copyToastSaidaPassageiro,
   isLugarActivadoParaQuota,
+  countLugaresVivosAcordo,
+  isUltimoPassageiroVivoNoAcordo,
 } from './leavePassageiroCopy.js';
 
 describe('leavePassageiroCopy — saída antes vs depois da activação', () => {
@@ -10,6 +12,41 @@ describe('leavePassageiroCopy — saída antes vs depois da activação', () => 
     expect(isLugarActivadoParaQuota('activo')).toBe(true);
     expect(isLugarActivadoParaQuota('reservado')).toBe(false);
     expect(isLugarActivadoParaQuota('saiu')).toBe(false);
+  });
+
+  it('countLugaresVivosAcordo — reservado e activo', () => {
+    expect(
+      countLugaresVivosAcordo([
+        { estado: 'activo' },
+        { estado: 'reservado' },
+        { estado: 'saiu' },
+      ]),
+    ).toBe(2);
+    expect(countLugaresVivosAcordo([{ estado: 'saiu' }])).toBe(0);
+  });
+
+  it('isUltimoPassageiroVivoNoAcordo quando só resta um lugar vivo', () => {
+    expect(
+      isUltimoPassageiroVivoNoAcordo([
+        { passenger_id: 'p1', estado: 'activo' },
+        { passenger_id: 'p2', estado: 'saiu' },
+      ], 'p1'),
+    ).toBe(true);
+    expect(
+      isUltimoPassageiroVivoNoAcordo([
+        { passenger_id: 'p1', estado: 'activo' },
+        { passenger_id: 'p2', estado: 'reservado' },
+      ], 'p1'),
+    ).toBe(false);
+  });
+
+  it('confirmação último passageiro vivo — encerra acordo', () => {
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        ultimoPassageiroVivo: true,
+        lugarEstado: 'activo',
+      }),
+    ).toBe('És o último passageiro. Ao saíres, o acordo é encerrado.');
   });
 
   it('confirmação reservado enquanto pagamento carrega — neutro', () => {

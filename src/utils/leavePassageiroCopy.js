@@ -1,7 +1,37 @@
 import { formatKwanza } from './formatKwanza';
-import { isActivoPassageiro } from './acordoPassageiroStatus';
+import { isActivoPassageiro, isReservadoPassageiro } from './acordoPassageiroStatus';
 import { PAYMENT_STATES } from './paymentStatus';
 import { valorEmDividaParaExibir } from './pagamentoObrigacaoCopy';
+
+/**
+ * Lugar vivo = reservado ou activo (contagem para último passageiro).
+ * @param {string | null | undefined} estado
+ * @returns {boolean}
+ */
+export function isLugarVivoPassageiro(estado) {
+  return isActivoPassageiro(estado) || isReservadoPassageiro(estado);
+}
+
+/**
+ * @param {Array<{ estado?: string | null }> | null | undefined} linhas
+ * @returns {number}
+ */
+export function countLugaresVivosAcordo(linhas) {
+  return (linhas || []).filter((p) => isLugarVivoPassageiro(p.estado)).length;
+}
+
+/**
+ * @param {Array<{ passenger_id?: string, estado?: string | null }> | null | undefined} linhas
+ * @param {string | null | undefined} passengerId
+ * @returns {boolean}
+ */
+export function isUltimoPassageiroVivoNoAcordo(linhas, passengerId) {
+  if (!passengerId || countLugaresVivosAcordo(linhas) !== 1) {
+    return false;
+  }
+  const mine = (linhas || []).find((p) => p.passenger_id === passengerId);
+  return Boolean(mine && isLugarVivoPassageiro(mine.estado));
+}
 
 /**
  * @param {string | null | undefined} lugarEstado
@@ -27,10 +57,14 @@ function pagamentoPendenteOuComprovativo(pagamentoEstado) {
  *   lugarEstado?: string | null,
  *   pagamento?: { estado?: string } | null,
  *   pagamentoLoading?: boolean,
+ *   ultimoPassageiroVivo?: boolean,
  * }} ctx
  * @returns {string}
  */
 export function copyConfirmacaoSaidaPassageiro(ctx) {
+  if (ctx.ultimoPassageiroVivo) {
+    return 'És o último passageiro. Ao saíres, o acordo é encerrado.';
+  }
   if (isLugarActivadoParaQuota(ctx.lugarEstado)) {
     return (
       'Saída individual: o acordo mantém-se activo para os restantes. '
