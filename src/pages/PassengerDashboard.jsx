@@ -73,6 +73,15 @@ import { buildProcuraMinimaFromOferta, getPropostaBrowseGaps } from '../utils/pr
 import { labelRotaProcura } from '../utils/ofertaLabels';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { FEEDBACK_PROPOSTA_ENVIADA_MOTORISTA } from '../utils/propostaFeedback';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { listPending } from '../services/offlineQueue';
+import { OFFLINE_QUEUE_DRAINED } from '../utils/offlineQueueDrain';
+import {
+  collectPendingAcceptPropostaIds,
+  COPY_ERRO_ACEITE_OFERTA_MUDOU,
+  mensagemErroAceiteInbox,
+  propostaIdFromAcceptQueueItem,
+} from '../utils/pendingAcceptProposta';
 
 const CAPACIDADES_GRUPO = [2, 3, 4, 5, 6, 7, 8];
 
@@ -113,6 +122,40 @@ function chipEstadoProcura(estado) {
 }
 
 /**
+ * Limpa inbox/enviadas/browse após aceite confirmado pelo servidor (não offline).
+ *
+ * @param {{
+ *   procuraId: string | null,
+ *   ofertaId: string | null,
+ *   setInboxReviews: React.Dispatch<React.SetStateAction<Array>>,
+ *   setEnviadasReviews: React.Dispatch<React.SetStateAction<Array>>,
+ *   setBrowseOfertasComProposta: React.Dispatch<React.SetStateAction<Set<string>>>,
+ * }} params
+ */
+function aplicarClearUiPosAceiteServidor({
+  procuraId,
+  ofertaId,
+  setInboxReviews,
+  setEnviadasReviews,
+  setBrowseOfertasComProposta,
+}) {
+  if (procuraId) {
+    setInboxReviews((prev) => prev.filter((r) => r.proposta.procura_id !== procuraId));
+    setEnviadasReviews((prev) => prev.filter((r) => r.proposta.procura_id !== procuraId));
+  } else if (ofertaId) {
+    setInboxReviews((prev) => prev.filter((r) => r.proposta.oferta_id !== ofertaId));
+    setEnviadasReviews((prev) => prev.filter((r) => r.proposta.oferta_id !== ofertaId));
+  }
+  if (ofertaId) {
+    setBrowseOfertasComProposta((prev) => {
+      const next = new Set(prev);
+      next.delete(ofertaId);
+      return next;
+    });
+  }
+}
+
+/**
  * Hub passageiro — procura, matches, inbox (B), enviadas + cancel, lista de espera.
  * Grupo = procura colectiva viva: N_proposto = N_actual no instante da proposta
  * (não exige «grupo completo» vs capacidade pretendida).
@@ -125,7 +168,7 @@ const PassengerDashboard = () => {
   const pendingPropostaDeepLinkRef = useRef(null);
   const propostaDeepLinkHandledRef = useRef(false);
   const propostaDeepLinkLoadStartedRef = useRef(false);
-  /** Ignora resultados de carregar() sobrepostos (browse/inbox stale após aceite). */
+  /** Ignora resultados de carregar() sobrepostos (refetch lento ou em corrida). */
   const carregarSeqRef = useRef(0);
   const [loading, setLoading] = useState(true);
   const [procura, setProcura] = useState(null);
@@ -179,6 +222,15 @@ const PassengerDashboard = () => {
   const [browseBusy, setBrowseBusy] = useState(false);
   /** @type {[Set<string>, Function]} */
   const [browseOfertasComProposta, setBrowseOfertasComProposta] = useState(() => new Set());
+  /** Propostas com `accept_proposal` na fila IndexedDB — chip «A enviar…». */
+  const [pendingAcceptPropostaIds, setPendingAcceptPropostaIds] = useState(
+    () => new Set(),
+  );
+  const inboxReviewsRef = useRef(inboxReviews);
+  const procuraRef = useRef(procura);
+  inboxReviewsRef.current = inboxReviews;
+  procuraRef.current = procura;
+  useNetworkStatus();
   /** @type {[null | { oferta: object, gaps: Array<'time' | 'od'>, source: 'browse' | 'hub', form: object }, Function]} */
   const [proporSheet, setProporSheet] = useState(null);
   const [propostaOferta, setPropostaOferta] = useState(null);
@@ -384,6 +436,86 @@ const PassengerDashboard = () => {
       setLoadingInbox(false);
     }
   }, [user?.id]);
+
+  const syncPendingAcceptProposals = useCallback(async () => {
+    try {
+      const pending = await listPending();
+      setPendingAcceptPropostaIds(collectPendingAcceptPropostaIds(pending));
+    } catch {
+      /* fila indisponível — manter estado local */
+    }
+  }, []);
+
+  const carregarRef = useRef(carregar);
+  carregarRef.current = carregar;
+
+  const processOfflineSyncSummary = useCallback(
+    async (summary) => {
+      const conflicts = summary?.conflicts || [];
+      const successes = summary?.successes || [];
+
+      for (const conflict of conflicts) {
+        if (conflict?.item?.rpc !== 'accept_proposal') continue;
+        setFeedback({ type: 'error', text: COPY_ERRO_ACEITE_OFERTA_MUDOU });
+      }
+
+      for (const success of successes) {
+        if (success?.item?.rpc !== 'accept_proposal') continue;
+        const pid = propostaIdFromAcceptQueueItem(success.item);
+        if (!pid) continue;
+        const review = inboxReviewsRef.current.find((r) => r.proposta.id === pid);
+        if (review) {
+          aplicarClearUiPosAceiteServidor({
+            procuraId: review.proposta.procura_id ?? null,
+            ofertaId: review.proposta.oferta_id ?? null,
+            setInboxReviews,
+            setEnviadasReviews,
+            setBrowseOfertasComProposta,
+          });
+        }
+        const fechaProcura = shouldAvisarProcuraFecha(procuraRef.current?.estado);
+        setFeedback({
+          type: 'success',
+          text: fechaProcura
+            ? 'Procura fechada — tens acordo activo.'
+            : 'Proposta aceite. Acordo criado.',
+        });
+      }
+
+      await syncPendingAcceptProposals();
+      await carregarRef.current({ silent: true });
+      await syncPendingAcceptProposals();
+      notifyMarketplaceHubRefresh();
+    },
+    [syncPendingAcceptProposals],
+  );
+
+  useEffect(() => {
+    void syncPendingAcceptProposals();
+  }, [syncPendingAcceptProposals]);
+
+  useEffect(() => {
+    /** @param {CustomEvent<{ summary?: object }>} event */
+    const onQueueDrained = (event) => {
+      void processOfflineSyncSummary(event.detail?.summary || {});
+    };
+    window.addEventListener(OFFLINE_QUEUE_DRAINED, onQueueDrained);
+    return () => window.removeEventListener(OFFLINE_QUEUE_DRAINED, onQueueDrained);
+  }, [processOfflineSyncSummary]);
+
+  useEffect(() => {
+    const onSwMessage = (event) => {
+      const data = event.data;
+      if (data?.type === 'OFFLINE_SYNC_COMPLETE') {
+        void processOfflineSyncSummary(data.summary || {});
+      }
+    };
+    if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
+      navigator.serviceWorker.addEventListener('message', onSwMessage);
+      return () => navigator.serviceWorker.removeEventListener('message', onSwMessage);
+    }
+    return undefined;
+  }, [processOfflineSyncSummary]);
 
   useEffect(() => {
     carregar();
@@ -908,7 +1040,9 @@ const PassengerDashboard = () => {
       }
       const offlineQueued = Boolean(result?.offlineQueued);
       const fechaProcura = !offlineQueued && shouldAvisarProcuraFecha(procura?.estado);
-      if (!offlineQueued && result?.id) {
+      if (offlineQueued) {
+        await syncPendingAcceptProposals();
+      } else if (result?.id) {
         const optimista = buildAcordoOptimistaPosAceite(
           { ...result, oferta_id: result.oferta_id ?? ofertaIdAceite },
           user.id,
@@ -919,65 +1053,47 @@ const PassengerDashboard = () => {
           setAcordosPassageiro((prev) => mergeAcordosPassageiro([optimista], prev || [], user.id));
         }
         const ofertaId = result.oferta_id ?? ofertaIdAceite;
-        if (procuraIdAceite) {
-          setInboxReviews((prev) =>
-            prev.filter((r) => r.proposta.procura_id !== procuraIdAceite),
-          );
-          setEnviadasReviews((prev) =>
-            prev.filter((r) => r.proposta.procura_id !== procuraIdAceite),
-          );
-        } else if (ofertaId) {
-          setInboxReviews((prev) => prev.filter((r) => r.proposta.oferta_id !== ofertaId));
-          setEnviadasReviews((prev) => prev.filter((r) => r.proposta.oferta_id !== ofertaId));
-        }
-        if (ofertaId) {
-          setBrowseOfertasComProposta((prev) => {
-            const next = new Set(prev);
-            next.delete(ofertaId);
-            return next;
-          });
-        }
+        aplicarClearUiPosAceiteServidor({
+          procuraId: procuraIdAceite,
+          ofertaId,
+          setInboxReviews,
+          setEnviadasReviews,
+          setBrowseOfertasComProposta,
+        });
       }
       setFeedback({
         type: 'success',
         text: fechaProcura
           ? 'Procura fechada — tens acordo activo.'
           : offlineQueued
-            ? 'Aceite guardado. Sincronizamos quando a rede voltar.'
+            ? 'Sem rede. O aceite vai ser enviado quando a rede voltar.'
             : 'Proposta aceite. Acordo criado.',
       });
       await carregar({ silent: true });
       if (!offlineQueued && result?.id) {
-        const ofertaId = result.oferta_id ?? ofertaIdAceite;
-        if (procuraIdAceite) {
-          setInboxReviews((prev) =>
-            prev.filter((r) => r.proposta.procura_id !== procuraIdAceite),
-          );
-          setEnviadasReviews((prev) =>
-            prev.filter((r) => r.proposta.procura_id !== procuraIdAceite),
-          );
-        } else if (ofertaId) {
-          setInboxReviews((prev) => prev.filter((r) => r.proposta.oferta_id !== ofertaId));
-          setEnviadasReviews((prev) => prev.filter((r) => r.proposta.oferta_id !== ofertaId));
-        }
-        if (user?.id) {
-          try {
-            const abertas = await listOpenPropostasByCreator(user.id);
-            setBrowseOfertasComProposta(
-              new Set(abertas.map((p) => p.oferta_id).filter(Boolean)),
-            );
-          } catch (refetchErr) {
-            console.warn('Refetch propostas abertas após aceite:', refetchErr);
-          }
-        }
+        aplicarClearUiPosAceiteServidor({
+          procuraId: procuraIdAceite,
+          ofertaId: result.oferta_id ?? ofertaIdAceite,
+          setInboxReviews,
+          setEnviadasReviews,
+          setBrowseOfertasComProposta,
+        });
       }
       notifyMarketplaceHubRefresh();
     } catch (err) {
-      setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+      await syncPendingAcceptProposals();
+      setFeedback({ type: 'error', text: mensagemErroAceiteInbox(err) });
     } finally {
       setBusyId(null);
     }
   };
+
+  /**
+   * @param {string} propostaId
+   * @returns {boolean}
+   */
+  const aceitePendenteConfirmacao = (propostaId) =>
+    pendingAcceptPropostaIds.has(propostaId);
 
   const handleRecusarInbox = async (propostaId) => {
     setBusyId(propostaId);
@@ -1424,6 +1540,7 @@ const PassengerDashboard = () => {
                   review={review}
                   secao="recebidas"
                   busy={busyId === review.proposta.id}
+                  aceitePendenteEnvio={aceitePendenteConfirmacao(review.proposta.id)}
                   precoPublicadoKz={ofertasById[review.proposta.oferta_id]?.valor_mensal_ask_kz ?? null}
                   procuraEstado={procura?.estado ?? null}
                   onAceitar={(memberIds) => handleAceitarInbox(review.proposta.id, memberIds)}
@@ -1877,6 +1994,7 @@ const PassengerDashboard = () => {
                   review={review}
                   secao="recebidas"
                   busy={busyId === review.proposta.id}
+                  aceitePendenteEnvio={aceitePendenteConfirmacao(review.proposta.id)}
                   precoPublicadoKz={ofertasById[review.proposta.oferta_id]?.valor_mensal_ask_kz ?? null}
                   acimaDoTeto={isPropostaAcimaDoTeto(
                     review.proposta,

@@ -91,6 +91,7 @@ function countMembrosComPickup(membros) {
  *   precoPublicadoKz?: number | null,
  *   acimaDoTeto?: boolean,
  *   procuraEstado?: string | null,
+ *   aceitePendenteEnvio?: boolean,
  * }} props
  */
 function PropostaReviewCard({
@@ -105,6 +106,7 @@ function PropostaReviewCard({
   precoPublicadoKz = null,
   acimaDoTeto = false,
   procuraEstado = null,
+  aceitePendenteEnvio = false,
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState(/** @type {string[]} */ ([]));
@@ -117,9 +119,14 @@ function PropostaReviewCard({
   const precoComparacao = isContraparte
     ? resolvePrecoPublicadoVsProposto(review.proposta.valor_mensal_ask_kz, precoPublicadoKz)
     : null;
-  const estadoChip = chipEstadoProposta(review.proposta.estado, {
-    secao: isCriador ? 'enviadas' : secao,
-  });
+  const estadoChip = aceitePendenteEnvio
+    ? {
+        label: 'A enviar…',
+        className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+      }
+    : chipEstadoProposta(review.proposta.estado, {
+        secao: isCriador ? 'enviadas' : secao,
+      });
 
   const modoLabel =
     review.proposta.modo_preco === 'TOTAL_ACORDO' ? 'Total do acordo' : 'Por passageiro';
@@ -135,7 +142,7 @@ function PropostaReviewCard({
   const comPickup = countMembrosComPickup(membros);
   const mostraNotaParcial = totalMembros > 0 && comPickup > 0 && comPickup < totalMembros;
   const selectionOk = !needsPicker || selectedIds.length === nProposto;
-  const canAceitar = Boolean(onAceitar) && selectionOk && !busy;
+  const canAceitar = Boolean(onAceitar) && selectionOk && !busy && !aceitePendenteEnvio;
   const contratoSnapshot = buildContratoSnapshotFromProposta({
     modo_preco: review.proposta.modo_preco,
     n_passageiros_propostos: nProposto,
@@ -374,7 +381,7 @@ function PropostaReviewCard({
           {onContraProposta ? (
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || aceitePendenteEnvio}
               onClick={onContraProposta}
               className="w-full min-h-12 border border-primary/30 bg-primary/5 text-primary font-semibold py-3 rounded-lg disabled:opacity-60"
             >
@@ -383,7 +390,7 @@ function PropostaReviewCard({
           ) : null}
           <button
             type="button"
-            disabled={busy || !onRecusar}
+            disabled={busy || aceitePendenteEnvio || !onRecusar}
             onClick={onRecusar}
             className="w-full min-h-12 border border-slate-300 dark:border-slate-600 bg-transparent text-slate-700 dark:text-slate-200 font-semibold py-3 rounded-lg disabled:opacity-60"
           >
