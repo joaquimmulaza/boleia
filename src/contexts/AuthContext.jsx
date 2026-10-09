@@ -160,7 +160,9 @@ export function AuthProvider({ children }) {
   }, [user, fetchProfile]);
 
   const retryProfileLoad = useCallback(async () => {
-    setProfileLoading(true);
+    flushSync(() => {
+      setProfileLoading(true);
+    });
     setProfileLoadTimedOut(false);
     const { data: { session: current } } = await supabase.auth.getSession();
     if (!isLiveAuthSession(current)) {

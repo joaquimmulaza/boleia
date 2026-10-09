@@ -10,6 +10,19 @@ import { resetAuthSessionRefreshState } from '../utils/authSessionRefresh.js';
 
 const ACORDO_ID = '3f42eca2-03c9-8153-b9ea-c6e621e03656';
 
+const { flushSyncSpy } = vi.hoisted(() => ({
+  flushSyncSpy: vi.fn(),
+}));
+
+vi.mock('react-dom', async (importOriginal) => {
+  const actual = await importOriginal();
+  flushSyncSpy.mockImplementation(actual.flushSync);
+  return {
+    ...actual,
+    flushSync: flushSyncSpy,
+  };
+});
+
 vi.mock('../lib/supabase', () => ({
   supabase: {
     from: vi.fn(),
@@ -54,6 +67,7 @@ describe('AuthContext retryProfileLoad — deep link (B1)', () => {
     vi.useFakeTimers();
     resetAuthSessionRefreshState();
     vi.clearAllMocks();
+    flushSyncSpy.mockClear();
   });
 
   afterEach(() => {
@@ -116,6 +130,9 @@ describe('AuthContext retryProfileLoad — deep link (B1)', () => {
       screen.getByRole('button', { name: /tentar outra vez/i }).click();
       await Promise.resolve();
     });
+
+    expect(flushSyncSpy).toHaveBeenCalled();
+    expect(screen.getByText(/a carregar perfil/i)).toBeInTheDocument();
 
     expect(screen.getByTestId('loc')).toHaveTextContent(
       `/motorista?openAcordoId=${ACORDO_ID}`,
@@ -202,6 +219,10 @@ describe('AuthContext retryProfileLoad — deep link (B1)', () => {
       screen.getByRole('button', { name: /tentar outra vez/i }).click();
       await Promise.resolve();
     });
+
+    expect(flushSyncSpy).toHaveBeenCalled();
+    expect(screen.getByText(/a carregar perfil/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /tentar outra vez/i })).not.toBeInTheDocument();
 
     expect(screen.getByTestId('loc').textContent).toMatch(
       new RegExp(`^/motorista\\?openAcordoId=${ACORDO_ID}`),
