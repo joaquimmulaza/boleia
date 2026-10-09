@@ -71,8 +71,7 @@ function AppShell() {
     || isDevPublicRoute;
 
   const routes = (
-    <Suspense fallback={null}>
-      <Routes>
+    <Routes>
         {/* Rotas públicas */}
         <Route path="/" element={<RootRoute />} />
         <Route path="/auth" element={<Auth />} />
@@ -127,10 +126,9 @@ function AppShell() {
         </Route>
       </Route>
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 
   if (isPublicRoute) {
