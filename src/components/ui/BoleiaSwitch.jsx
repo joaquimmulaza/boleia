@@ -3,7 +3,8 @@ import { cn } from '../../lib/utils';
 import { Switch } from './switch';
 
 /**
- * Wrapper fino sobre Switch shadcn — loading, hit area 52×44, ARIA de /perfil.
+ * Wrapper fino sobre Switch shadcn — loading e ARIA de /perfil.
+ * Zona de toque: 52×44px (root Radix h-11; trilho visual ~52×32 centrado com items-center).
  *
  * @param {{
  *   checked?: boolean;
@@ -27,37 +28,37 @@ export default function BoleiaSwitch({
   className,
 }) {
   const isDisabled = disabled || loading;
+  /** OFF track = bg-muted — spinner com foreground garante ≥3:1 em light/dark */
+  const spinnerClass = checked ? 'text-primary-foreground' : 'text-foreground';
 
   return (
-    <div
+    <Switch
+      id={id}
+      checked={checked}
+      disabled={isDisabled}
+      aria-busy={loading ? true : undefined}
+      aria-disabled={isDisabled ? true : undefined}
+      aria-labelledby={ariaLabelledBy}
+      aria-describedby={ariaDescribedBy}
+      data-testid="boleia-switch"
+      onCheckedChange={(next) => {
+        if (isDisabled) return;
+        onCheckedChange?.(next);
+      }}
       className={cn(
-        'relative inline-flex h-11 w-[52px] shrink-0 items-center justify-center',
+        'relative',
+        isDisabled && 'pointer-events-none',
         className,
       )}
-      data-testid="boleia-switch"
     >
-      <Switch
-        id={id}
-        checked={checked}
-        disabled={isDisabled}
-        aria-busy={loading ? true : undefined}
-        aria-disabled={isDisabled ? true : undefined}
-        aria-labelledby={ariaLabelledBy}
-        aria-describedby={ariaDescribedBy}
-        onCheckedChange={(next) => {
-          if (isDisabled) return;
-          onCheckedChange?.(next);
-        }}
-        className={cn(isDisabled && 'pointer-events-none')}
-      />
       {loading ? (
         <span
           className="pointer-events-none absolute inset-0 flex items-center justify-center"
           aria-hidden="true"
         >
-          <Loader2 className="size-4 animate-spin text-primary-foreground" />
+          <Loader2 className={cn('size-4 animate-spin', spinnerClass)} />
         </span>
       ) : null}
-    </div>
+    </Switch>
   );
 }

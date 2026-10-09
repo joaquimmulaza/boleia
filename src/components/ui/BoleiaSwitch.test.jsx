@@ -72,6 +72,24 @@ describe('BoleiaSwitch — shadcn + geometria', () => {
     expect(onCheckedChange).not.toHaveBeenCalled();
   });
 
+  it('zona de toque ≥44px: o root Switch é clicável na área inteira', () => {
+    const onCheckedChange = vi.fn();
+    renderSwitch({ onCheckedChange });
+    const root = screen.getByTestId('boleia-switch');
+    expect(root.className).toMatch(/h-11/);
+    expect(root.className).toMatch(/min-h-\[44px\]/);
+    expect(root).toHaveAttribute('role', 'switch');
+    fireEvent.click(root);
+    expect(onCheckedChange).toHaveBeenCalledWith(true);
+  });
+
+  it('spinner OFF usa foreground (contraste no trilho muted)', () => {
+    renderSwitch({ checked: false, loading: true });
+    const spinner = document.querySelector('.animate-spin');
+    expect(spinner?.className).toMatch(/text-foreground/);
+    expect(spinner?.className).not.toMatch(/text-primary-foreground/);
+  });
+
   describe('snapshot dos 6 estados push (DOM + classes thumb)', () => {
     const states = [
       { name: 'on', props: { checked: true } },

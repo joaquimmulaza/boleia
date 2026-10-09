@@ -2,10 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { ensureCaptureOutDir, resolveCaptureOutDir } from './captureOutDir.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-const OUT = '/opt/cursor/artifacts';
+const OUT = resolveCaptureOutDir();
 const BASE = process.env.VITE_URL || 'http://127.0.0.1:5173';
 
 const DEV_USER_ID = '00000000-0000-4000-a000-000000000001'; // alinhado a DevPerfilCapture
@@ -242,7 +243,7 @@ async function main() {
   const env = loadEnvLocal();
   const supabaseUrl = env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
 
-  fs.mkdirSync(OUT, { recursive: true });
+  ensureCaptureOutDir(OUT);
 
   const fullPageShots = [
     { width: 390, theme: 'light', file: 'perfil-full-390-light-bottom.png', pushOn: false },

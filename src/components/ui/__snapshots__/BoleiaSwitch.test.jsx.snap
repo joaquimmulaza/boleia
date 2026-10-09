@@ -2,35 +2,31 @@
 
 exports[`BoleiaSwitch — shadcn + geometria > snapshot dos 6 estados push (DOM + classes thumb) > estado activating-off 1`] = `
 <div>
-  <div
-    class="relative inline-flex h-11 w-[52px] shrink-0 items-center justify-center"
+  <button
+    aria-busy="true"
+    aria-checked="false"
+    aria-disabled="true"
+    class="peer inline-flex h-11 min-h-[44px] w-[52px] shrink-0 cursor-pointer items-center rounded-full border-2 p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=unchecked]:border-border data-[state=unchecked]:bg-muted overflow-hidden relative pointer-events-none"
+    data-disabled=""
+    data-state="unchecked"
     data-testid="boleia-switch"
+    disabled=""
+    role="switch"
+    type="button"
+    value="on"
   >
-    <button
-      aria-busy="true"
-      aria-checked="false"
-      aria-disabled="true"
-      class="peer inline-flex h-8 w-[52px] shrink-0 cursor-pointer items-center rounded-full border-2 p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=unchecked]:border-border data-[state=unchecked]:bg-muted overflow-hidden pointer-events-none"
+    <span
+      class="pointer-events-none block size-6 rounded-full bg-background shadow-md ring-0 transition-transform duration-200 data-[state=unchecked]:translate-x-0 data-[state=checked]:translate-x-[1.25rem]"
       data-disabled=""
       data-state="unchecked"
-      disabled=""
-      role="switch"
-      type="button"
-      value="on"
-    >
-      <span
-        class="pointer-events-none block size-6 rounded-full bg-background shadow-md ring-0 transition-transform duration-200 data-[state=unchecked]:translate-x-0 data-[state=checked]:translate-x-[1.25rem]"
-        data-disabled=""
-        data-state="unchecked"
-      />
-    </button>
+    />
     <span
       aria-hidden="true"
       class="pointer-events-none absolute inset-0 flex items-center justify-center"
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-loader-circle size-4 animate-spin text-primary-foreground"
+        class="lucide lucide-loader-circle size-4 animate-spin text-foreground"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -46,34 +42,30 @@ exports[`BoleiaSwitch — shadcn + geometria > snapshot dos 6 estados push (DOM 
         />
       </svg>
     </span>
-  </div>
+  </button>
 </div>
 `;
 
 exports[`BoleiaSwitch — shadcn + geometria > snapshot dos 6 estados push (DOM + classes thumb) > estado activating-on 1`] = `
 <div>
-  <div
-    class="relative inline-flex h-11 w-[52px] shrink-0 items-center justify-center"
+  <button
+    aria-busy="true"
+    aria-checked="true"
+    aria-disabled="true"
+    class="peer inline-flex h-11 min-h-[44px] w-[52px] shrink-0 cursor-pointer items-center rounded-full border-2 p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=unchecked]:border-border data-[state=unchecked]:bg-muted overflow-hidden relative pointer-events-none"
+    data-disabled=""
+    data-state="checked"
     data-testid="boleia-switch"
+    disabled=""
+    role="switch"
+    type="button"
+    value="on"
   >
-    <button
-      aria-busy="true"
-      aria-checked="true"
-      aria-disabled="true"
-      class="peer inline-flex h-8 w-[52px] shrink-0 cursor-pointer items-center rounded-full border-2 p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=unchecked]:border-border data-[state=unchecked]:bg-muted overflow-hidden pointer-events-none"
+    <span
+      class="pointer-events-none block size-6 rounded-full bg-background shadow-md ring-0 transition-transform duration-200 data-[state=unchecked]:translate-x-0 data-[state=checked]:translate-x-[1.25rem]"
       data-disabled=""
       data-state="checked"
-      disabled=""
-      role="switch"
-      type="button"
-      value="on"
-    >
-      <span
-        class="pointer-events-none block size-6 rounded-full bg-background shadow-md ring-0 transition-transform duration-200 data-[state=unchecked]:translate-x-0 data-[state=checked]:translate-x-[1.25rem]"
-        data-disabled=""
-        data-state="checked"
-      />
-    </button>
+    />
     <span
       aria-hidden="true"
       class="pointer-events-none absolute inset-0 flex items-center justify-center"
@@ -96,106 +88,90 @@ exports[`BoleiaSwitch — shadcn + geometria > snapshot dos 6 estados push (DOM 
         />
       </svg>
     </span>
-  </div>
+  </button>
 </div>
 `;
 
 exports[`BoleiaSwitch — shadcn + geometria > snapshot dos 6 estados push (DOM + classes thumb) > estado disabled-off 1`] = `
 <div>
-  <div
-    class="relative inline-flex h-11 w-[52px] shrink-0 items-center justify-center"
+  <button
+    aria-checked="false"
+    aria-disabled="true"
+    class="peer inline-flex h-11 min-h-[44px] w-[52px] shrink-0 cursor-pointer items-center rounded-full border-2 p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=unchecked]:border-border data-[state=unchecked]:bg-muted overflow-hidden relative pointer-events-none"
+    data-disabled=""
+    data-state="unchecked"
     data-testid="boleia-switch"
+    disabled=""
+    role="switch"
+    type="button"
+    value="on"
   >
-    <button
-      aria-checked="false"
-      aria-disabled="true"
-      class="peer inline-flex h-8 w-[52px] shrink-0 cursor-pointer items-center rounded-full border-2 p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=unchecked]:border-border data-[state=unchecked]:bg-muted overflow-hidden pointer-events-none"
+    <span
+      class="pointer-events-none block size-6 rounded-full bg-background shadow-md ring-0 transition-transform duration-200 data-[state=unchecked]:translate-x-0 data-[state=checked]:translate-x-[1.25rem]"
       data-disabled=""
       data-state="unchecked"
-      disabled=""
-      role="switch"
-      type="button"
-      value="on"
-    >
-      <span
-        class="pointer-events-none block size-6 rounded-full bg-background shadow-md ring-0 transition-transform duration-200 data-[state=unchecked]:translate-x-0 data-[state=checked]:translate-x-[1.25rem]"
-        data-disabled=""
-        data-state="unchecked"
-      />
-    </button>
-  </div>
+    />
+  </button>
 </div>
 `;
 
 exports[`BoleiaSwitch — shadcn + geometria > snapshot dos 6 estados push (DOM + classes thumb) > estado disabled-on 1`] = `
 <div>
-  <div
-    class="relative inline-flex h-11 w-[52px] shrink-0 items-center justify-center"
+  <button
+    aria-checked="true"
+    aria-disabled="true"
+    class="peer inline-flex h-11 min-h-[44px] w-[52px] shrink-0 cursor-pointer items-center rounded-full border-2 p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=unchecked]:border-border data-[state=unchecked]:bg-muted overflow-hidden relative pointer-events-none"
+    data-disabled=""
+    data-state="checked"
     data-testid="boleia-switch"
+    disabled=""
+    role="switch"
+    type="button"
+    value="on"
   >
-    <button
-      aria-checked="true"
-      aria-disabled="true"
-      class="peer inline-flex h-8 w-[52px] shrink-0 cursor-pointer items-center rounded-full border-2 p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=unchecked]:border-border data-[state=unchecked]:bg-muted overflow-hidden pointer-events-none"
+    <span
+      class="pointer-events-none block size-6 rounded-full bg-background shadow-md ring-0 transition-transform duration-200 data-[state=unchecked]:translate-x-0 data-[state=checked]:translate-x-[1.25rem]"
       data-disabled=""
       data-state="checked"
-      disabled=""
-      role="switch"
-      type="button"
-      value="on"
-    >
-      <span
-        class="pointer-events-none block size-6 rounded-full bg-background shadow-md ring-0 transition-transform duration-200 data-[state=unchecked]:translate-x-0 data-[state=checked]:translate-x-[1.25rem]"
-        data-disabled=""
-        data-state="checked"
-      />
-    </button>
-  </div>
+    />
+  </button>
 </div>
 `;
 
 exports[`BoleiaSwitch — shadcn + geometria > snapshot dos 6 estados push (DOM + classes thumb) > estado off 1`] = `
 <div>
-  <div
-    class="relative inline-flex h-11 w-[52px] shrink-0 items-center justify-center"
+  <button
+    aria-checked="false"
+    class="peer inline-flex h-11 min-h-[44px] w-[52px] shrink-0 cursor-pointer items-center rounded-full border-2 p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=unchecked]:border-border data-[state=unchecked]:bg-muted overflow-hidden relative"
+    data-state="unchecked"
     data-testid="boleia-switch"
+    role="switch"
+    type="button"
+    value="on"
   >
-    <button
-      aria-checked="false"
-      class="peer inline-flex h-8 w-[52px] shrink-0 cursor-pointer items-center rounded-full border-2 p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=unchecked]:border-border data-[state=unchecked]:bg-muted overflow-hidden"
+    <span
+      class="pointer-events-none block size-6 rounded-full bg-background shadow-md ring-0 transition-transform duration-200 data-[state=unchecked]:translate-x-0 data-[state=checked]:translate-x-[1.25rem]"
       data-state="unchecked"
-      role="switch"
-      type="button"
-      value="on"
-    >
-      <span
-        class="pointer-events-none block size-6 rounded-full bg-background shadow-md ring-0 transition-transform duration-200 data-[state=unchecked]:translate-x-0 data-[state=checked]:translate-x-[1.25rem]"
-        data-state="unchecked"
-      />
-    </button>
-  </div>
+    />
+  </button>
 </div>
 `;
 
 exports[`BoleiaSwitch — shadcn + geometria > snapshot dos 6 estados push (DOM + classes thumb) > estado on 1`] = `
 <div>
-  <div
-    class="relative inline-flex h-11 w-[52px] shrink-0 items-center justify-center"
+  <button
+    aria-checked="true"
+    class="peer inline-flex h-11 min-h-[44px] w-[52px] shrink-0 cursor-pointer items-center rounded-full border-2 p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=unchecked]:border-border data-[state=unchecked]:bg-muted overflow-hidden relative"
+    data-state="checked"
     data-testid="boleia-switch"
+    role="switch"
+    type="button"
+    value="on"
   >
-    <button
-      aria-checked="true"
-      class="peer inline-flex h-8 w-[52px] shrink-0 cursor-pointer items-center rounded-full border-2 p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=unchecked]:border-border data-[state=unchecked]:bg-muted overflow-hidden"
+    <span
+      class="pointer-events-none block size-6 rounded-full bg-background shadow-md ring-0 transition-transform duration-200 data-[state=unchecked]:translate-x-0 data-[state=checked]:translate-x-[1.25rem]"
       data-state="checked"
-      role="switch"
-      type="button"
-      value="on"
-    >
-      <span
-        class="pointer-events-none block size-6 rounded-full bg-background shadow-md ring-0 transition-transform duration-200 data-[state=unchecked]:translate-x-0 data-[state=checked]:translate-x-[1.25rem]"
-        data-state="checked"
-      />
-    </button>
-  </div>
+    />
+  </button>
 </div>
 `;

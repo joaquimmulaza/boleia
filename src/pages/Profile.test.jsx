@@ -210,12 +210,16 @@ describe('Profile Component', () => {
         expect(screen.queryByText('Ainda sem dados bancários')).not.toBeInTheDocument();
       });
 
-      it('sticky Guardar tem espaço acima do CTA', async () => {
+      it('sticky Guardar tem espaço acima do CTA (uma vez barra + safe-area)', async () => {
         await renderComponent();
         await waitFor(() => {
           expect(screen.getByTestId('profile-sticky-save')).toBeInTheDocument();
         });
-        expect(screen.getByTestId('profile-sticky-spacer')).toBeInTheDocument();
+        const spacer = screen.getByTestId('profile-sticky-spacer');
+        expect(spacer).toBeInTheDocument();
+        expect(spacer.className).toMatch(/4\.5rem/);
+        const shell = document.querySelector('.pb-24');
+        expect(shell).toBeNull();
       });
   });
 

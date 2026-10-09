@@ -42,7 +42,7 @@ export default defineConfig([
   },
   {
     // Ficheiros de configuração correm em Node.
-    files: ['*.config.{js,jsx}', 'vite.config.js'],
+    files: ['*.config.{js,jsx}', 'vite.config.js', 'scripts/**/*.js'],
     languageOptions: {
       globals: globals.node,
     },

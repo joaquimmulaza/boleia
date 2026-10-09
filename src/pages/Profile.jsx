@@ -158,7 +158,7 @@ const Profile = () => {
   }
 
   return (
-    <PageShell className="pb-[calc(var(--shell-bottom-inset)+4.5rem+env(safe-area-inset-bottom,0px))]">
+    <PageShell className="pb-0">
       <PageHeader title="O Meu Perfil" subtitle={`Conta de ${profileData.tipo_perfil}`} />
 
       <form onSubmit={handleSubmit} className="space-y-8">
