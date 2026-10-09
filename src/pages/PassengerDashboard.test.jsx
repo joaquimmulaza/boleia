@@ -1667,11 +1667,58 @@ describe('PassengerDashboard — marketplace', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
 
     expect(await screen.findByTestId('passenger-feedback')).toHaveTextContent(
-      'Aceite guardado. Sincronizamos quando a rede voltar.',
+      'Sem rede. O aceite vai ser enviado quando a rede voltar.',
     );
     expect(screen.getByTestId('passenger-feedback')).not.toHaveTextContent(
       'Procura fechada — tens acordo activo.',
     );
+    expect(await screen.findByTestId('proposta-estado-chip')).toHaveTextContent('A enviar…');
+    expect(screen.queryByRole('button', { name: 'Ver acordo' })).not.toBeInTheDocument();
+  });
+
+  it('recusa do servidor ao aceitar mantém procura aberta e mostra copy de erro', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    listPropostasByProcura.mockResolvedValue([
+      {
+        id: 'prop-b',
+        estado: 'aberta',
+        created_by: 'driver-1',
+        modo_preco: 'TOTAL_ACORDO',
+        valor_mensal_ask_kz: 120000,
+        n_passageiros_propostos: 1,
+      },
+    ]);
+    enrichPropostasForReview.mockImplementation(async (lista) =>
+      (lista || []).map((p) => ({
+        proposta: p,
+        titulo: 'Individual',
+        membros: [{ passenger_id: 'pax-1', nome: 'Tu', quota_mensal_kz: 120000 }],
+        pricing: {
+          valor_mensal_total_kz: 120000,
+          valor_mensal_por_passageiro_kz: 120000,
+          quotas: [120000],
+          temResto: false,
+        },
+        avisoComposicao: null,
+      })),
+    );
+    createAgreementFromProposal.mockRejectedValue(new Error('Sem vagas'));
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    await abrirMinhaProcura();
+    fireEvent.click(await screen.findByRole('button', { name: /Aceitar proposta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Confirmar$/i }));
+
+    expect(await screen.findByTestId('passenger-feedback')).toHaveTextContent(
+      'Não foi possível aceitar — a oferta mudou.',
+    );
+    expect(await screen.findByRole('button', { name: /Aceitar proposta/i })).toBeInTheDocument();
+    expect(screen.getByText('Activa')).toBeInTheDocument();
   });
 
   it('após aceitar proposta actualiza inbox e CTA Ver acordo sem reload', async () => {
@@ -1836,10 +1883,10 @@ describe('PassengerDashboard — marketplace', () => {
     await waitFor(() => {
       expect(screen.queryByText('Aguarda resposta')).not.toBeInTheDocument();
     });
-    expect(listOpenPropostasByCreator.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(listOpenPropostasByCreator).toHaveBeenCalledTimes(2);
   });
 
-  it('aceitar contraproposta na mesma instância: Ver acordo com acordos stale no refetch pós-aceite', async () => {
+  it('aceitar contraproposta na mesma instância: Ver acordo quando refetch de acordos chega tarde', async () => {
     const ofertaBrowse = {
       id: 'of-browse',
       origin_name: 'Viana Municipality, Angola',
@@ -2012,7 +2059,7 @@ describe('PassengerDashboard — marketplace', () => {
     expect(screen.queryByRole('button', { name: 'Propor acordo' })).not.toBeInTheDocument();
   });
 
-  it('após aceitar contraproposta do motorista mantém CTA Ver acordo mesmo com browse stale', async () => {
+  it('após aceitar contraproposta mantém CTA Ver acordo com refetch de acordos em corrida', async () => {
     const ofertaBrowse = {
       id: 'of-browse',
       origin_name: 'Viana Municipality, Angola',
@@ -2051,9 +2098,9 @@ describe('PassengerDashboard — marketplace', () => {
     };
 
     /** @type {((value: unknown[]) => void) | null} */
-    let resolverBrowseStale = null;
-    const browseStaleGate = new Promise((resolve) => {
-      resolverBrowseStale = resolve;
+    let resolverRefetchAcordos = null;
+    const refetchAcordosGate = new Promise((resolve) => {
+      resolverRefetchAcordos = resolve;
     });
 
     listProcurasByOwner
@@ -2092,7 +2139,7 @@ describe('PassengerDashboard — marketplace', () => {
     getAgreementsForPassenger.mockImplementation(async () => {
       const callNum = getAgreementsForPassenger.mock.calls.length;
       if (callNum === 1) return [];
-      if (callNum === 2) return browseStaleGate;
+      if (callNum === 2) return refetchAcordosGate;
       return [acordoPosAceite];
     });
     createAgreementFromProposal.mockResolvedValue({
@@ -2127,7 +2174,7 @@ describe('PassengerDashboard — marketplace', () => {
     expect(await screen.findByRole('button', { name: 'Ver acordo' })).toBeInTheDocument();
 
     await act(async () => {
-      resolverBrowseStale?.([]);
+      resolverRefetchAcordos?.([]);
     });
 
     expect(screen.getByRole('button', { name: 'Ver acordo' })).toBeInTheDocument();
