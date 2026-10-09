@@ -29,6 +29,7 @@ vi.mock('../services/AgreementService', () => ({
   getAgreementsForDriver: vi.fn(),
   getAgreementsForPassenger: vi.fn(),
   leavePassenger: vi.fn(),
+  countLugaresVivosAcordo: vi.fn().mockResolvedValue(2),
   terminateAgreement: vi.fn(),
   rejectAgreementTermination: vi.fn(),
   listAdendaHistorico: vi.fn().mockResolvedValue([]),

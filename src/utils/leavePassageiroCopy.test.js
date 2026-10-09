@@ -45,6 +45,113 @@ describe('leavePassageiroCopy — saída antes vs depois da activação', () => 
         pagamento: { estado: 'comprovativo_enviado' },
       }),
     ).toMatch(/pagamento pendente será cancelado\. Não tens nada a pagar\./);
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        lugarEstado: 'reservado',
+        pagamento: { estado: 'comprovativo_enviado' },
+      }),
+    ).not.toMatch(/cancelado — não/);
+  });
+
+  it('último passageiro (activo): quota + linha PM, sem prefixo «mantém-se activo»', () => {
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        lugarEstado: 'activo',
+        pagamento: { estado: 'em_custodia' },
+        lugaresVivosCount: 1,
+        lugaresVivosLoading: false,
+      }),
+    ).toBe(
+      'A tua quota deste mês não é reembolsada. '
+      + 'És o último passageiro. Ao saíres, o acordo é encerrado.',
+    );
+  });
+
+  it('último passageiro (reservado + comprovativo): cancelamento pagamento + linha PM', () => {
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        lugarEstado: 'reservado',
+        pagamento: { estado: 'comprovativo_enviado' },
+        lugaresVivosCount: 1,
+        lugaresVivosLoading: false,
+      }),
+    ).toBe(
+      'O teu pagamento pendente será cancelado. Não tens nada a pagar. '
+      + 'És o último passageiro. Ao saíres, o acordo é encerrado.',
+    );
+  });
+
+  it('último passageiro (reservado + pendente_pagamento): mesma linha de pagamento + PM', () => {
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        lugarEstado: 'reservado',
+        pagamento: { estado: 'pendente_pagamento' },
+        lugaresVivosCount: 1,
+        lugaresVivosLoading: false,
+      }),
+    ).toMatch(/pagamento pendente será cancelado/);
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        lugarEstado: 'reservado',
+        pagamento: { estado: 'pendente_pagamento' },
+        lugaresVivosCount: 1,
+        lugaresVivosLoading: false,
+      }),
+    ).toMatch(/És o último passageiro/);
+  });
+
+  it('último passageiro com aviso prévio pendente: linha PM independente da rescisão', () => {
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        lugarEstado: 'activo',
+        pagamento: { estado: 'em_custodia' },
+        lugaresVivosCount: 1,
+        lugaresVivosLoading: false,
+        rescisao_modo: 'aviso_previo',
+        rescisao_confirmada_em: null,
+      }),
+    ).toBe(
+      'A tua quota deste mês não é reembolsada. '
+      + 'És o último passageiro. Ao saíres, o acordo é encerrado.',
+    );
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        lugarEstado: 'activo',
+        pagamento: { estado: 'em_custodia' },
+        lugaresVivosCount: 1,
+        lugaresVivosLoading: false,
+        rescisao_modo: 'aviso_previo',
+        rescisao_confirmada_em: null,
+      }),
+    ).not.toMatch(/mantém-se activo/);
+  });
+
+  it('confirmação com contagem > 1 mantém copy de saída individual', () => {
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        lugarEstado: 'activo',
+        pagamento: { estado: 'em_custodia' },
+        lugaresVivosCount: 2,
+        lugaresVivosLoading: false,
+      }),
+    ).toMatch(/A tua quota deste mês não é reembolsada/);
+  });
+
+  it('confirmação enquanto contagem carrega ou falhou — não mostra último passageiro', () => {
+    const base = {
+      lugarEstado: 'activo',
+      pagamento: { estado: 'em_custodia' },
+    };
+    expect(
+      copyConfirmacaoSaidaPassageiro({ ...base, lugaresVivosLoading: true }),
+    ).toMatch(/A tua quota deste mês não é reembolsada/);
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        ...base,
+        lugaresVivosLoading: false,
+        lugaresVivosCount: null,
+      }),
+    ).toMatch(/A tua quota deste mês não é reembolsada/);
   });
 
   it('confirmação após activação mantém regra de quota', () => {
@@ -76,5 +183,12 @@ describe('leavePassageiroCopy — saída antes vs depois da activação', () => 
         obrigacao: { valor_em_divida: 0 },
       }),
     ).toBe('Saíste do acordo. A quota do mês mantém-se.');
+    expect(
+      copyToastSaidaPassageiro({
+        lugarEstado: 'activo',
+        pagamento: { estado: 'pendente_pagamento', valor_kz: 8000 },
+        obrigacao: { valor_em_divida: 8000 },
+      }),
+    ).toMatch(/quota proporcional.*8[\s\u00a0]?000/);
   });
 });

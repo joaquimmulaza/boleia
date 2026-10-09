@@ -12,6 +12,7 @@ import { chipClassEstadoPagamento } from '../utils/paymentStatus';
  *   mostrarUploadNoCartao?: boolean,
  *   uploadSlot?: React.ReactNode,
  *   chipPagamento?: string | null,
+ *   aguardarMontante?: boolean,
  * }} props
  */
 function AcordoPagamentoEstadoCartao({
@@ -21,6 +22,7 @@ function AcordoPagamentoEstadoCartao({
   mostrarUploadNoCartao = false,
   uploadSlot = null,
   chipPagamento = null,
+  aguardarMontante = false,
 }) {
   const Icon = variant === 'S2' ? AlertTriangle : Info;
   const iconWrapClass =
@@ -50,9 +52,21 @@ function AcordoPagamentoEstadoCartao({
               {chipPagamento}
             </span>
           ) : null}
-          <p className="text-sm text-slate-800 dark:text-slate-100 text-pretty">
-            {corpo}
-          </p>
+          {aguardarMontante ? (
+            <div
+              className="space-y-2 animate-pulse"
+              data-testid="cartao-estado-montante-skeleton"
+              aria-busy="true"
+              aria-label="A carregar valor do pagamento"
+            >
+              <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-full max-w-[280px]" />
+              <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-4/5 max-w-[220px]" />
+            </div>
+          ) : (
+            <p className="text-sm text-slate-800 dark:text-slate-100 text-pretty">
+              {corpo}
+            </p>
+          )}
         </div>
       </div>
       {secundaria ? (

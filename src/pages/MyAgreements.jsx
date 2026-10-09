@@ -6,6 +6,7 @@ import {
   getAgreementsForDriver,
   getAgreementsForPassenger,
   leavePassenger,
+  countLugaresVivosAcordo,
   terminateAgreement,
   rejectAgreementTermination,
   listAdendaHistorico,
@@ -36,6 +37,7 @@ import {
 import {
   labelEstadoAcordo,
   variantChipEstadoAcordo,
+  chipClassEstadoAcordoVariant,
 } from '../utils/acordoEstadoDisplay';
 import {
   acordoPrecisaLiveRefresh,
@@ -146,20 +148,6 @@ function passageiroMostraPainelPagamento(minhaLinha, pagamento, obrigacao) {
   if (pgEst === 'pendente_pagamento' || pgEst === 'comprovativo_enviado') return true;
   const valor = Number(obrigacao?.valor_em_divida ?? obrigacao?.valor);
   return Number.isFinite(valor) && valor > 0;
-}
-
-/**
- * @param {'activo' | 'pendente' | 'inactivo'} variant
- * @returns {string}
- */
-function chipClassEstadoAcordo(variant) {
-  if (variant === 'activo') {
-    return 'bg-emerald-100 text-emerald-800';
-  }
-  if (variant === 'pendente') {
-    return 'bg-amber-100 text-amber-900';
-  }
-  return 'bg-slate-100 text-slate-600';
 }
 
 /**
@@ -352,6 +340,9 @@ const MyAgreements = () => {
   const consensualAwaitFeedbackAcordoIdRef = useRef(/** @type {string | null} */ (null));
   const carregarGenerationRef = useRef(0);
   const [leaveModalOpen, setLeaveModalOpen] = useState(false);
+  const [leaveLugaresVivosLoading, setLeaveLugaresVivosLoading] = useState(false);
+  /** @type {[number | null, React.Dispatch<React.SetStateAction<number | null>>]} */
+  const [leaveLugaresVivosCount, setLeaveLugaresVivosCount] = useState(null);
   const [leaveBusy, setLeaveBusy] = useState(false);
   /** @type {[Record<string, true>, React.Dispatch<React.SetStateAction<Record<string, true>>>]} */
   const [pendingLeaveIds, setPendingLeaveIds] = useState({});
@@ -785,6 +776,33 @@ const MyAgreements = () => {
     setRescisaoConfirmadaLocal(false);
   }, [selected?.id]);
 
+  useEffect(() => {
+    if (!leaveModalOpen || !selected?.id) {
+      setLeaveLugaresVivosLoading(false);
+      setLeaveLugaresVivosCount(null);
+      return undefined;
+    }
+    let cancelled = false;
+    setLeaveLugaresVivosLoading(true);
+    setLeaveLugaresVivosCount(null);
+    countLugaresVivosAcordo(selected.id)
+      .then((n) => {
+        if (!cancelled) {
+          setLeaveLugaresVivosCount(n);
+          setLeaveLugaresVivosLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLeaveLugaresVivosCount(null);
+          setLeaveLugaresVivosLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [leaveModalOpen, selected?.id]);
+
   const activos = acordos.filter((a) => isActivo(a.estado));
   const outros = acordos.filter((a) => !isActivo(a.estado));
 
@@ -1054,7 +1072,7 @@ const MyAgreements = () => {
     const oferta = acordo.ofertas_capacidade;
     const rota = labelRotaOferta(oferta || {});
     const activo = isActivo(acordo.estado);
-    const estadoVariant = variantChipEstadoAcordo(acordo.estado);
+    const estadoVariant = variantChipEstadoAcordo(acordo);
     const estadoLabel = labelEstadoAcordo(acordo);
     const leavePending = Boolean(pendingLeaveIds[acordo.id]);
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
@@ -1093,7 +1111,7 @@ const MyAgreements = () => {
         <div className="flex justify-between items-center gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoAcordo(estadoVariant)}`}
+              className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoAcordoVariant(estadoVariant)}`}
             >
               {estadoLabel}
             </span>
@@ -1302,6 +1320,7 @@ const MyAgreements = () => {
         ? copyCartaoEstadoPagamentoPassageiro(pagamentoUiPassageiro.variant, {
           pagamento: pagamentoViewer,
           obrigacao: obrigacaoPagamento,
+          pagamentoLoading,
         })
         : null;
     const sheetTitulo = pagamentoUiPassageiro?.sheetTitle || 'Detalhe do acordo';
@@ -1331,6 +1350,8 @@ const MyAgreements = () => {
             estadoAcordo={selected.estado}
             encerramentoMotivoAcordo={selected.encerramento_motivo}
             rescisaoModoAcordo={selected.rescisao_modo}
+            rescisaoConfirmadaEmAcordo={selected.rescisao_confirmada_em}
+            rescisaoSolicitadaPorAcordo={selected.rescisao_solicitada_por}
             minhaLinhaEstado={minhaLinha?.estado}
             minhaLinhaPagamento={pagamentoViewer}
             leavePending={leavePending}
@@ -1376,8 +1397,9 @@ const MyAgreements = () => {
                 variant={pagamentoUiPassageiro.variant}
                 corpo={cartaoEstadoPagamento.corpo}
                 secundaria={cartaoEstadoPagamento.secundaria}
+                aguardarMontante={Boolean(cartaoEstadoPagamento.aguardarMontante)}
                 chipPagamento={
-                  pagamentoUiPassageiro.variant === 'S3'
+                  pagamentoUiPassageiro.variant === 'S3' && !cartaoEstadoPagamento.aguardarMontante
                     ? labelEstadoPagamento(pagamento?.estado, { placement: 'cabecalho' })
                     : null
                 }
@@ -2185,12 +2207,17 @@ const MyAgreements = () => {
         isOpen={leaveModalOpen}
         busy={leaveBusy}
         title="Sair só tu?"
+        testId="leave-solo-modal"
         message={copyConfirmacaoSaidaPassageiro({
           lugarEstado: (selected?.acordos_passageiros || []).find(
             (p) => p.passenger_id === user?.id,
           )?.estado,
           pagamento,
           pagamentoLoading,
+          lugaresVivosCount: leaveLugaresVivosCount,
+          lugaresVivosLoading: leaveLugaresVivosLoading,
+          rescisao_modo: selected?.rescisao_modo,
+          rescisao_confirmada_em: selected?.rescisao_confirmada_em,
         })}
         confirmText="Sair"
         onConfirm={handleLeaveSolo}

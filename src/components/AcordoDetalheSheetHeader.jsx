@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import {
   labelEstadoAcordo,
   variantChipEstadoAcordo,
+  chipClassEstadoAcordoVariant,
 } from '../utils/acordoEstadoDisplay';
 import {
   labelChipEstadoPassageiro,
@@ -15,26 +16,14 @@ import {
 } from '../utils/estadoPassageiro';
 
 /**
- * @param {'activo' | 'pendente' | 'inactivo'} variant
- * @returns {string}
- */
-function chipClassEstadoAcordo(variant) {
-  if (variant === 'activo') {
-    return 'bg-emerald-100 text-emerald-800';
-  }
-  if (variant === 'pendente') {
-    return 'bg-amber-100 text-amber-900';
-  }
-  return 'bg-slate-100 text-slate-600';
-}
-
-/**
  * Cabeçalho fixo (sticky) do sheet «Detalhe do acordo» — puxador, Fechar, estado e título.
  * @param {{
  *   acordoId: string,
  *   estadoAcordo: string | null | undefined,
  *   encerramentoMotivoAcordo?: string | null,
  *   rescisaoModoAcordo?: string | null,
+ *   rescisaoConfirmadaEmAcordo?: string | null,
+ *   rescisaoSolicitadaPorAcordo?: string | null,
  *   minhaLinhaEstado?: string | null,
  *   minhaLinhaPagamento?: { anulacao_motivo?: string | null } | null,
  *   leavePending?: boolean,
@@ -54,6 +43,8 @@ export default function AcordoDetalheSheetHeader({
   estadoAcordo,
   encerramentoMotivoAcordo,
   rescisaoModoAcordo,
+  rescisaoConfirmadaEmAcordo,
+  rescisaoSolicitadaPorAcordo,
   minhaLinhaEstado,
   minhaLinhaPagamento = null,
   leavePending = false,
@@ -73,6 +64,13 @@ export default function AcordoDetalheSheetHeader({
   const mostrarChipLugar = Boolean(
     minhaLinhaEstado && mostrarChipEstadoLugarPassageiro(minhaLinhaEstado, minhaLinhaPagamento),
   );
+  const acordoEstadoChip = {
+    estado: estadoAcordo,
+    encerramento_motivo: encerramentoMotivoAcordo,
+    rescisao_modo: rescisaoModoAcordo,
+    rescisao_confirmada_em: rescisaoConfirmadaEmAcordo,
+    rescisao_solicitada_por: rescisaoSolicitadaPorAcordo,
+  };
 
   return (
     <header
@@ -110,11 +108,11 @@ export default function AcordoDetalheSheetHeader({
         <div className="flex items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoAcordo(
-                variantChipEstadoAcordo(estadoAcordo),
+              className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoAcordoVariant(
+                variantChipEstadoAcordo(acordoEstadoChip),
               )}`}
             >
-              {labelEstadoAcordo(estadoAcordo, encerramentoMotivoAcordo, rescisaoModoAcordo)}
+              {labelEstadoAcordo(acordoEstadoChip)}
             </span>
             {mostrarChipLugar ? (
               <span

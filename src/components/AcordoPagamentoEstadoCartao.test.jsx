@@ -25,6 +25,18 @@ describe('AcordoPagamentoEstadoCartao', () => {
     expect(screen.getByTestId('cartao-estado-chip-pagamento')).toHaveTextContent('Pagamento cancelado');
   });
 
+  it('S3 aguardarMontante mostra skeleton em vez de 0 Kz', () => {
+    render(
+      <AcordoPagamentoEstadoCartao
+        variant="S3"
+        corpo=""
+        aguardarMontante
+      />,
+    );
+    expect(screen.getByTestId('cartao-estado-montante-skeleton')).toBeInTheDocument();
+    expect(screen.queryByText(/0[\s\u00a0]?Kz/)).not.toBeInTheDocument();
+  });
+
   it('S2 pode montar slot de upload', () => {
     render(
       <AcordoPagamentoEstadoCartao

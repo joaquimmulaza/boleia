@@ -204,6 +204,25 @@ export async function createAgreementFromProposal(propostaId, options = {}) {
 }
 
 /**
+ * Contagem server-side de lugares vivos (activo|reservado) no acordo.
+ * @param {string} acordoId
+ * @returns {Promise<number>}
+ */
+export async function countLugaresVivosAcordo(acordoId) {
+  if (!acordoId) {
+    throw new Error('acordoId é obrigatório.');
+  }
+  const { data, error } = await supabase.rpc('count_lugares_vivos_acordo', {
+    p_acordo_id: acordoId,
+  });
+  if (error) throw error;
+  if (typeof data !== 'number' || Number.isNaN(data)) {
+    throw new Error('Resposta inválida ao contar lugares vivos.');
+  }
+  return data;
+}
+
+/**
  * Passageiro sai via RPC atómica: marca `saiu`, reconta vagas da oferta,
  * promove waitlist (best-effort no servidor). Preços / quotas dos restantes
  * não são recalculados.
@@ -213,6 +232,7 @@ export async function createAgreementFromProposal(propostaId, options = {}) {
  * @param {string} acordoId
  * @param {string} passengerId
  * @param {{ idempotencyKey?: string, forceQueue?: boolean }} [options]
+ * @returns {Promise<object>}
  */
 export async function leavePassenger(acordoId, passengerId, options = {}) {
   if (!acordoId || !passengerId) {

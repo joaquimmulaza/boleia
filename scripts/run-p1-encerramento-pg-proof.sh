@@ -13,6 +13,7 @@ PROOF_RESERVADO="${ROOT}/supabase/tests/p1_leave_passenger_reservado_saiu_pg_pro
 PROOF_JA_ENCERRADO="${ROOT}/supabase/tests/p1_terminate_ja_encerrado_pg_proof.sql"
 PROOF_DRIVER_NO_NOTIF="${ROOT}/supabase/tests/p1_leave_driver_caller_no_notif_pg_proof.sql"
 PROOF_ENCERRAMENTO_MOTIVO="${ROOT}/supabase/tests/p1_encerramento_motivo_pg_proof.sql"
+PROOF_COUNT_LUGARES="${ROOT}/supabase/tests/p1_count_lugares_vivos_acordo_pg_proof.sql"
 SKIP_MIG_P1="${SKIP_MIG_P1:-0}"
 
 if ! command -v psql >/dev/null 2>&1; then
@@ -96,5 +97,8 @@ sudo -u postgres psql -v ON_ERROR_STOP=1 -d "${DB}" -f "${PROOF_DRIVER_NO_NOTIF}
 
 echo "==> Prova encerramento_motivo (último leave vs parcial vs terminate)"
 sudo -u postgres psql -v ON_ERROR_STOP=1 -d "${DB}" -f "${PROOF_ENCERRAMENTO_MOTIVO}"
+
+echo "==> Prova count_lugares_vivos_acordo (RLS participante)"
+sudo -u postgres psql -v ON_ERROR_STOP=1 -d "${DB}" -f "${PROOF_COUNT_LUGARES}"
 
 echo "==> OK P1 encerramento PG proofs"

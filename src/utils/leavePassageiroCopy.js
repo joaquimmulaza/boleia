@@ -1,7 +1,12 @@
 import { formatKwanza } from './formatKwanza';
 import { isActivoPassageiro } from './acordoPassageiroStatus';
+import { isLugarVivoPassageiro } from './estadoPassageiro.js';
 import { PAYMENT_STATES } from './paymentStatus';
 import { valorEmDividaParaExibir } from './pagamentoObrigacaoCopy';
+
+/** Copy modal quando o servidor confirma um único lugar vivo. */
+export const COPY_CONFIRMACAO_ULTIMO_PASSAGEIRO =
+  'És o último passageiro. Ao saíres, o acordo é encerrado.';
 
 /**
  * @param {string | null | undefined} lugarEstado
@@ -21,7 +26,7 @@ function pagamentoPendenteOuComprovativo(pagamentoEstado) {
 }
 
 /**
- * Mensagem do modal «Sair só tu?» (passageiro).
+ * Linha financeira do modal (sem prefixo de saída individual).
  *
  * @param {{
  *   lugarEstado?: string | null,
@@ -30,29 +35,46 @@ function pagamentoPendenteOuComprovativo(pagamentoEstado) {
  * }} ctx
  * @returns {string}
  */
-export function copyConfirmacaoSaidaPassageiro(ctx) {
+function copyLinhaFinanceiraSaidaPassageiro(ctx) {
   if (isLugarActivadoParaQuota(ctx.lugarEstado)) {
-    return (
-      'Saída individual: o acordo mantém-se activo para os restantes. '
-      + 'A tua quota deste mês não é reembolsada.'
-    );
+    return 'A tua quota deste mês não é reembolsada.';
   }
   if (ctx.pagamentoLoading) {
-    return (
-      'Saída individual: o acordo mantém-se activo para os restantes. '
-      + 'A confirmar o estado do pagamento…'
-    );
+    return 'A confirmar o estado do pagamento…';
   }
   if (pagamentoPendenteOuComprovativo(ctx.pagamento?.estado)) {
-    return (
-      'Saída individual: o acordo mantém-se activo para os restantes. '
-      + 'O teu pagamento pendente será cancelado. Não tens nada a pagar.'
-    );
+    return 'O teu pagamento pendente será cancelado. Não tens nada a pagar.';
   }
-  return (
-    'Saída individual: o acordo mantém-se activo para os restantes. '
-    + 'Não tens nada a pagar neste acordo.'
-  );
+  return 'Não tens nada a pagar neste acordo.';
+}
+
+/**
+ * Mensagem do modal «Sair só tu?» (passageiro).
+ *
+ * @param {{
+ *   lugarEstado?: string | null,
+ *   pagamento?: { estado?: string } | null,
+ *   pagamentoLoading?: boolean,
+ *   lugaresVivosCount?: number | null,
+ *   lugaresVivosLoading?: boolean,
+ * }} ctx
+ * @returns {string}
+ */
+export function copyConfirmacaoSaidaPassageiro(ctx) {
+  const prefixoIndividual =
+    'Saída individual: o acordo mantém-se activo para os restantes. ';
+  const linhaFinanceira = copyLinhaFinanceiraSaidaPassageiro(ctx);
+
+  const ultimoPassageiroVivo =
+    !ctx.lugaresVivosLoading
+    && ctx.lugaresVivosCount === 1
+    && isLugarVivoPassageiro(ctx.lugarEstado);
+
+  if (ultimoPassageiroVivo) {
+    return `${linhaFinanceira} ${COPY_CONFIRMACAO_ULTIMO_PASSAGEIRO}`;
+  }
+
+  return prefixoIndividual + linhaFinanceira;
 }
 
 /**
