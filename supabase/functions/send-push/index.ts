@@ -3,19 +3,48 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import webpush from "https://esm.sh/web-push@3.6.7";
 import { resolvePushDataUrl } from "../_shared/safeNotificationLink.ts";
 
+/** Comparação timing-safe para segredos webhook. */
+function constantTimeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const ba = enc.encode(a);
+  const bb = enc.encode(b);
+  if (ba.length !== bb.length) {
+    return false;
+  }
+  let diff = 0;
+  for (let i = 0; i < ba.length; i++) {
+    diff |= ba[i] ^ bb[i];
+  }
+  return diff === 0;
+}
+
+function unauthorized(corsHeaders: Record<string, string>) {
+  return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    status: 401,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 serve(async (req) => {
-  // Configurar CORS
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-boleia-push-secret",
   };
 
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  const expectedSecret = Deno.env.get("PUSH_WEBHOOK_SECRET") ?? "";
+  const providedSecret = req.headers.get("x-boleia-push-secret") ?? "";
+
+  if (!expectedSecret || !constantTimeEqual(providedSecret, expectedSecret)) {
+    console.warn("send-push: pedido rejeitado — secret webhook inválido ou em falta");
+    return unauthorized(corsHeaders);
+  }
+
   try {
-    // Obter payload do webhook
     const payload = await req.json();
     console.log("Webhook payload received:", payload);
 
@@ -36,13 +65,11 @@ serve(async (req) => {
       });
     }
 
-    // Configurar cliente Supabase Admin
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Buscar as subscrições do utilizador
     const { data: subscriptions, error: subsError } = await supabaseAdmin
       .from("push_subscriptions")
       .select("subscription")
@@ -63,7 +90,6 @@ serve(async (req) => {
       });
     }
 
-    // Configurar Web Push
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
     const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");
 
@@ -94,7 +120,7 @@ serve(async (req) => {
     const notificationPayload = JSON.stringify({
       title: "Nova Notificação",
       body: mensagem,
-      icon: "/pwa-192x192.png", // Ícone PWA
+      icon: "/pwa-192x192.png",
       badge: "/pwa-512x512.png",
       data: {
         url: resolvePushDataUrl(link, metadata as Record<string, unknown> | null),
@@ -104,16 +130,11 @@ serve(async (req) => {
       }
     });
 
-    // Enviar notificações para todas as subscrições ativas
     const sendPromises = subscriptions.map((sub) => {
-      // The push_subscriptions table stores the full object from PushSubscription.toJSON()
-      // in the 'subscription' JSONB column.
       const subInfo = sub.subscription;
       return webpush.sendNotification(subInfo, notificationPayload).catch((err) => {
-        // Se a subscrição for inválida/expirada, podemos querer eliminá-la (Gane status 410)
         console.error("Error sending push notification to one device:", err);
         if (err.statusCode === 410 || err.statusCode === 404) {
-             // Limpeza assíncrona da subscrição inválida
              supabaseAdmin.from('push_subscriptions').delete().eq('subscription', JSON.stringify(subInfo));
         }
       });
