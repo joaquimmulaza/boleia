@@ -584,6 +584,203 @@ BEGIN
   RAISE NOTICE 'PASS BL1/BL2: valor_kz protegido, devido/payout/ admin OK';
 END $$;
 
+\echo '=== BL4: repasse proporcional (excesso pago não liquida mês inteiro) ==='
+DO $$
+DECLARE
+  v_driver uuid := 'd1111111-1111-4111-8111-111111111111';
+  v_pax uuid := 'd2222222-2222-4222-8222-222222222222';
+  v_admin uuid := 'd3333333-3333-4333-8333-333333333333';
+  v_veiculo uuid;
+  v_oferta uuid;
+  v_procura uuid;
+  v_acordo uuid := 'd4444444-4444-4444-8444-444444444444';
+  v_ap uuid := 'd7777777-7777-4777-8777-777777777777';
+  v_pg_cust uuid := 'deeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+  v_fecho date := '2026-10-09';
+  v_mes date := '2026-10-01';
+  v_devido integer := 7000;
+  v_repasse integer;
+  v_gmv integer;
+  v_payout integer;
+  v_repasse_id uuid;
+BEGIN
+  PERFORM set_config('session_replication_role', 'replica', true);
+
+  INSERT INTO auth.users (id, email) VALUES
+    (v_driver, 'bl4-driver@test'),
+    (v_pax, 'bl4-pax@test'),
+    (v_admin, 'bl4-admin@test')
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO public.perfis (id, nome_completo, telefone, tipo_perfil, is_admin, iban, iban_titular) VALUES
+    (v_driver, 'BL4 Driver', '925000001', 'Motorista', false, 'AO06000000000000000000001', 'Motorista BL4'),
+    (v_pax, 'BL4 Pax', '925000002', 'Passageiro', false, NULL, NULL),
+    (v_admin, 'BL4 Admin', '925000003', 'Passageiro', true, NULL, NULL)
+  ON CONFLICT (id) DO UPDATE SET
+    is_admin = EXCLUDED.is_admin,
+    iban = EXCLUDED.iban,
+    iban_titular = EXCLUDED.iban_titular;
+
+  INSERT INTO public.veiculos (id_motorista, marca_modelo, matricula, capacidade_total, vagas_passageiros)
+  VALUES (v_driver, 'BL4', 'BL4-1', 4, 3) RETURNING id INTO v_veiculo;
+
+  INSERT INTO public.ofertas_capacidade (
+    driver_id, veiculo_id, flexibilidade_rota, departure_time, vagas_disponiveis, vagas_totais,
+    modo_preco, valor_mensal_ask_kz, estado
+  ) VALUES (v_driver, v_veiculo, true, '07:00', 3, 3, 'POR_PASSAGEIRO', 22000, 'disponivel')
+  RETURNING id INTO v_oferta;
+
+  INSERT INTO public.procuras (owner_id, preferred_time, n_candidato, estado)
+  VALUES (v_pax, '07:30', 1, 'activa') RETURNING id INTO v_procura;
+
+  INSERT INTO public.acordos (
+    id, oferta_id, procura_id, driver_id, modo_preco, n_passageiros_contrato,
+    valor_mensal_total_kz, valor_mensal_por_passageiro_kz, estado, dias_uteis_mes,
+    rescisao_effective_on
+  ) VALUES (
+    v_acordo, v_oferta, v_procura, v_driver, 'POR_PASSAGEIRO', 1, 22000, 22000, 'activo', 22,
+    v_fecho
+  );
+
+  INSERT INTO public.acordos_passageiros (
+    id, acordo_id, passenger_id, estado, quota_mensal_kz, ordem_insercao
+  ) VALUES (v_ap, v_acordo, v_pax, 'activo', 22000, 0);
+
+  INSERT INTO public.pagamentos_acordo (
+    id, acordo_id, acordo_passageiro_id, passenger_id, driver_id,
+    valor_kz, valor_devido_kz, valor_quota_original_kz, take_rate_pct, valor_payout_liquido_kz,
+    estado, valor_pago_confirmado_kz, requer_resolucao_admin, mes_referencia
+  ) VALUES (
+    v_pg_cust, v_acordo, v_ap, v_pax, v_driver,
+    22000, 22000, 22000, 0.10, 19800,
+    'em_custodia', 22000, true, v_mes
+  );
+
+  PERFORM set_config('session_replication_role', 'origin', true);
+
+  PERFORM public.ajustar_obrigacao_pagamento_mes(v_ap, v_fecho, false);
+
+  SELECT valor_payout_liquido_kz INTO v_payout
+  FROM public.pagamentos_acordo WHERE id = v_pg_cust;
+  IF v_payout <> 6300 THEN
+    RAISE EXCEPTION 'FAIL BL4a: payout custódia devia 6300, obteve % (v_blocked)', v_payout;
+  END IF;
+
+  PERFORM set_config('request.jwt.claim.sub', v_admin::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+  SET LOCAL ROLE authenticated;
+  PERFORM public.admin_liquidate_payment(v_pg_cust, NULL);
+  RESET ROLE;
+
+  SELECT valor_repasse_kz INTO v_repasse FROM public.pagamentos_acordo WHERE id = v_pg_cust;
+  IF v_repasse <> 6300 THEN
+    RAISE EXCEPTION 'FAIL BL4a: valor_repasse_kz devia 6300, obteve % (v_blocked)', v_repasse;
+  END IF;
+
+  SELECT gmv_kz INTO v_gmv
+  FROM public.repasses_motorista
+  WHERE driver_id = v_driver AND mes_referencia = v_mes;
+  IF v_gmv <> v_devido THEN
+    RAISE EXCEPTION 'FAIL BL4a: receita GMV devia %, obteve % (v_blocked)', v_devido, v_gmv;
+  END IF;
+
+  RAISE NOTICE 'PASS BL4a: custódia flagada liquida repasse 6300 e GMV 7000';
+END $$;
+
+DO $$
+DECLARE
+  v_driver uuid := 'e1111111-1111-4111-8111-111111111111';
+  v_pax uuid := 'e2222222-2222-4222-8222-222222222222';
+  v_admin uuid := 'e3333333-3333-4333-8333-333333333333';
+  v_veiculo uuid;
+  v_oferta uuid;
+  v_procura uuid;
+  v_acordo uuid := 'e4444444-4444-4444-8444-444444444444';
+  v_ap uuid := 'e7777777-7777-4777-8777-777777777777';
+  v_pg_comp uuid := 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+  v_fecho date := '2026-10-09';
+  v_mes date := '2026-10-01';
+  v_devido integer := 7000;
+  v_repasse integer;
+  v_gmv integer;
+BEGIN
+  PERFORM set_config('session_replication_role', 'replica', true);
+
+  INSERT INTO auth.users (id, email) VALUES
+    (v_driver, 'bl4b-driver@test'),
+    (v_pax, 'bl4b-pax@test'),
+    (v_admin, 'bl4b-admin@test')
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO public.perfis (id, nome_completo, telefone, tipo_perfil, is_admin, iban, iban_titular) VALUES
+    (v_driver, 'BL4b Driver', '926000001', 'Motorista', false, 'AO06000000000000000000002', 'Motorista BL4b'),
+    (v_pax, 'BL4b Pax', '926000002', 'Passageiro', false, NULL, NULL),
+    (v_admin, 'BL4b Admin', '926000003', 'Passageiro', true, NULL, NULL)
+  ON CONFLICT (id) DO UPDATE SET
+    iban = EXCLUDED.iban,
+    iban_titular = EXCLUDED.iban_titular;
+
+  INSERT INTO public.veiculos (id_motorista, marca_modelo, matricula, capacidade_total, vagas_passageiros)
+  VALUES (v_driver, 'BL4b', 'BL4-2', 4, 3) RETURNING id INTO v_veiculo;
+
+  INSERT INTO public.ofertas_capacidade (
+    driver_id, veiculo_id, flexibilidade_rota, departure_time, vagas_disponiveis, vagas_totais,
+    modo_preco, valor_mensal_ask_kz, estado
+  ) VALUES (v_driver, v_veiculo, true, '07:00', 3, 3, 'POR_PASSAGEIRO', 22000, 'disponivel')
+  RETURNING id INTO v_oferta;
+
+  INSERT INTO public.procuras (owner_id, preferred_time, n_candidato, estado)
+  VALUES (v_pax, '07:30', 1, 'activa') RETURNING id INTO v_procura;
+
+  INSERT INTO public.acordos (
+    id, oferta_id, procura_id, driver_id, modo_preco, n_passageiros_contrato,
+    valor_mensal_total_kz, valor_mensal_por_passageiro_kz, estado, dias_uteis_mes,
+    rescisao_effective_on
+  ) VALUES (
+    v_acordo, v_oferta, v_procura, v_driver, 'POR_PASSAGEIRO', 1, 22000, 22000, 'activo', 22,
+    v_fecho
+  );
+
+  INSERT INTO public.acordos_passageiros (
+    id, acordo_id, passenger_id, estado, quota_mensal_kz, ordem_insercao
+  ) VALUES (v_ap, v_acordo, v_pax, 'activo', 22000, 0);
+
+  INSERT INTO public.pagamentos_acordo (
+    id, acordo_id, acordo_passageiro_id, passenger_id, driver_id,
+    valor_kz, valor_devido_kz, valor_quota_original_kz, take_rate_pct, valor_payout_liquido_kz,
+    estado, comprovativo_path, comprovativo_enviado_em, mes_referencia
+  ) VALUES (
+    v_pg_comp, v_acordo, v_ap, v_pax, v_driver,
+    22000, 22000, 22000, 0.10, 19800,
+    'comprovativo_enviado', 'proof/bl4b.jpg', now(), v_mes
+  );
+
+  PERFORM set_config('session_replication_role', 'origin', true);
+
+  PERFORM public.ajustar_obrigacao_pagamento_mes(v_ap, v_fecho, false);
+
+  PERFORM set_config('request.jwt.claim.sub', v_admin::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+  SET LOCAL ROLE authenticated;
+  PERFORM public.admin_validate_payment(v_pg_comp, true, NULL);
+  PERFORM public.admin_liquidate_payment(v_pg_comp, NULL);
+  RESET ROLE;
+
+  SELECT valor_repasse_kz INTO v_repasse FROM public.pagamentos_acordo WHERE id = v_pg_comp;
+  IF v_repasse <> 6300 THEN
+    RAISE EXCEPTION 'FAIL BL4b: valor_repasse_kz devia 6300, obteve % (v_blocked)', v_repasse;
+  END IF;
+
+  SELECT gmv_kz INTO v_gmv
+  FROM public.repasses_motorista
+  WHERE driver_id = v_driver AND mes_referencia = v_mes;
+  IF v_gmv <> v_devido THEN
+    RAISE EXCEPTION 'FAIL BL4b: receita GMV devia %, obteve % (v_blocked)', v_devido, v_gmv;
+  END IF;
+
+  RAISE NOTICE 'PASS BL4b: comprovativo→rescisão→validação→liquidação repasse 6300 GMV 7000';
+END $$;
+
 \echo '=== BL3: global caller (claims JSON service_role + sessão postgres) ==='
 DO $$
 DECLARE

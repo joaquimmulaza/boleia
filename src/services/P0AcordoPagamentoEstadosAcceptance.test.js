@@ -53,6 +53,7 @@ describe('P0 acordo pagamento estados — migração obrigatória', () => {
     expect(sh).toMatch(/20261009180000_p0_acordo_pagamento_estados/);
     expect(sh).toMatch(/PGPORT/);
     expect(sh).toMatch(/bootstrap_local_supabase\.sql/);
+    expect(sh).toMatch(/bootstrap_p0_auth_overrides\.sql/);
   });
 
   it('estado anulado no CHECK de pagamentos_acordo', () => {

@@ -5,6 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PROOF_SQL="${ROOT}/supabase/tests/p0_acordo_pagamento_estados_pg_proof.sql"
 ROLES_FIRST="${ROOT}/supabase/tests/bootstrap_roles_first.sql"
+P0_AUTH_OVERRIDES="${ROOT}/supabase/tests/bootstrap_p0_auth_overrides.sql"
 # Prefer ficheiros do repo; fallback git ref (main ou override).
 P0_PROOF_GIT_REF="${P0_PROOF_GIT_REF:-origin/main}"
 CANCEL_PROCURA_REF="${CANCEL_PROCURA_REF:-origin/cursor/cancel-procura-membros}"
@@ -77,6 +78,7 @@ apply_migrations_to_db() {
 
   sudo -u postgres psql -p "${PGPORT}" -v ON_ERROR_STOP=1 -d "${db_name}" -f "${ROLES_FIRST}"
   sudo -u postgres psql -p "${PGPORT}" -v ON_ERROR_STOP=1 -d "${db_name}" -f "${bootstrap_sql}"
+  sudo -u postgres psql -p "${PGPORT}" -v ON_ERROR_STOP=1 -d "${db_name}" -f "${P0_AUTH_OVERRIDES}"
 
   shopt -s nullglob
   for f in "${ROOT}"/supabase/migrations/*.sql; do
@@ -134,6 +136,8 @@ MIG_160000_PATH="${TMP_MIG_DIR}/${MIG_160000}"
 MIG_170000_PATH="${TMP_MIG_DIR}/${MIG_170000}"
 
 resolve_repo_file "supabase/tests/bootstrap_local_supabase.sql" "${BOOT}"
+resolve_repo_file "supabase/tests/bootstrap_p0_auth_overrides.sql" "${TMP_MIG_DIR}/bootstrap_p0_auth_overrides.sql"
+P0_AUTH_OVERRIDES="${TMP_MIG_DIR}/bootstrap_p0_auth_overrides.sql"
 resolve_repo_file "supabase/tests/localfix_migration_sql.pl" "${LOCALFIX}"
 resolve_migration_file "${MIG_160000}" "${MIG_160000_PATH}"
 resolve_migration_file "${MIG_170000}" "${MIG_170000_PATH}"

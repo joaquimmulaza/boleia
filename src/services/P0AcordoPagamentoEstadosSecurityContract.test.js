@@ -161,6 +161,13 @@ describe('P0 pagamento estados — contrato segurança (migração 180000)', () 
     expect(sql).toMatch(/compute_payout_liquido_kz\(\s*\n?\s*v_restante/);
   });
 
+  it('BL4: payout/repasse proporcional (LEAST valor_kz, valor_devido_kz)', () => {
+    expect(sql).toMatch(/WHEN lower\(estado\) IN \('comprovativo_enviado', 'em_custodia'\)/);
+    expect(sql).toMatch(/LEAST\(valor_kz, v_devido\)/);
+    expect(sql).toMatch(/SUM\(LEAST\(pg\.valor_kz, COALESCE\(pg\.valor_devido_kz, pg\.valor_kz\)\)\)/);
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\._refresh_repasse_motorista/);
+  });
+
   it('BL3: caller global via auth.role() + postgres sem JWT', () => {
     expect(sql).toMatch(/auth\.role\(\) = 'service_role'/);
     expect(sql).toMatch(/auth\.uid\(\) IS NULL[\s\S]*session_user IN \('postgres', 'supabase_admin'\)/);
@@ -190,6 +197,8 @@ describe('P0 pagamento estados — contrato segurança (migração 180000)', () 
     expect(proof).toMatch(/apply_due_reserva_expiry\(v_acordo\)/);
     expect(proof).toMatch(/FAIL BL1a:/);
     expect(proof).toMatch(/FAIL BL2:/);
+    expect(proof).toMatch(/FAIL BL4a:/);
+    expect(proof).toMatch(/FAIL BL4b:/);
     expect(proof).toMatch(/PASS BL3:/);
   });
 });
