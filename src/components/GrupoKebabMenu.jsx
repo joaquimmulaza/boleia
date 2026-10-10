@@ -42,7 +42,7 @@ function GrupoKebabMenu({
         aria-label="Mais acções do grupo"
         disabled={disabled}
         data-testid="grupo-kebab-trigger"
-        className="rounded-lg p-1.5 text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+        className="rounded-lg p-1.5 text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900"
       >
         <MoreHorizontal size={20} aria-hidden="true" />
       </button>
@@ -58,7 +58,7 @@ function GrupoKebabMenu({
             <button
               type="button"
               role="menuitem"
-              className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-slate-900 hover:bg-slate-50 dark:text-white dark:hover:bg-slate-800"
+              className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-slate-900 hover:bg-slate-50 focus:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:text-white dark:hover:bg-slate-800 dark:focus:bg-slate-800 dark:focus-visible:ring-offset-slate-900"
               onClick={() => fecharE(onEditar)}
             >
               <Pencil size={16} aria-hidden="true" />
@@ -69,7 +69,7 @@ function GrupoKebabMenu({
             <button
               type="button"
               role="menuitem"
-              className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-slate-900 hover:bg-slate-50 dark:text-white dark:hover:bg-slate-800"
+              className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-slate-900 hover:bg-slate-50 focus:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:text-white dark:hover:bg-slate-800 dark:focus:bg-slate-800 dark:focus-visible:ring-offset-slate-900"
               onClick={() => fecharE(onSair)}
             >
               <LogOut size={16} aria-hidden="true" />
@@ -80,7 +80,7 @@ function GrupoKebabMenu({
             <button
               type="button"
               role="menuitem"
-              className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+              className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-red-600 hover:bg-red-50 focus:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:text-red-400 dark:hover:bg-red-950/30 dark:focus:bg-red-950/30 dark:focus-visible:ring-offset-slate-900"
               onClick={() => fecharE(onApagar)}
             >
               <Trash2 size={16} aria-hidden="true" />
