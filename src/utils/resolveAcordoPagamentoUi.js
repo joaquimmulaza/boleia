@@ -305,6 +305,15 @@ export function linhaSecundariaMotoristaDias(snap) {
   return `Referente a ${diasTxt} de ${diasMes} dias úteis de ${mesLabel}.`;
 }
 
+// Caching the Intl.DateTimeFormat instance significantly improves performance
+// compared to calling .toLocaleDateString() on every invocation.
+const confirmadaEmFormatter = new Intl.DateTimeFormat('pt-PT', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'Africa/Luanda',
+});
+
 /**
  * S5 — confirmação consensual repetida.
  * @param {string | null | undefined} confirmadaEmIso
@@ -314,11 +323,6 @@ export function linhaJaConfirmadoRescisaoConsensual(confirmadaEmIso) {
   if (!confirmadaEmIso) return null;
   const d = new Date(confirmadaEmIso);
   if (Number.isNaN(d.getTime())) return null;
-  const data = d.toLocaleDateString('pt-PT', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'Africa/Luanda',
-  });
+  const data = confirmadaEmFormatter.format(d);
   return `Já tinhas confirmado a ${data}.`;
 }

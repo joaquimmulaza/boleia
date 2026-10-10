@@ -161,6 +161,15 @@ export function linhaProporcionalPagamento(obrigacao, options = {}) {
  * @param {string | null | undefined} prazoIso
  * @returns {string | null}
  */
+// Caching the Intl.DateTimeFormat instance significantly improves performance
+// compared to calling .toLocaleDateString() on every invocation.
+const prazoPagamentoFormatter = new Intl.DateTimeFormat('pt-PT', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'Africa/Luanda',
+});
+
 /**
  * Data legível para prazo (sem hora — Figma «até {data}»).
  * @param {string | null | undefined} prazoIso
@@ -170,12 +179,7 @@ export function formatDataPrazoPagamento(prazoIso) {
   if (!prazoIso) return null;
   const d = new Date(prazoIso);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleDateString('pt-PT', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'Africa/Luanda',
-  });
+  return prazoPagamentoFormatter.format(d);
 }
 
 /**
