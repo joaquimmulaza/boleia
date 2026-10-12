@@ -1,6 +1,6 @@
 -- Expiração do último lugar vivo: encerramento sem_lugares_vivos + card motorista v1.11 (sem notif passageiro).
 -- Motorista remove passageiro não-último: card estado v1.10 ao removido (sem CTA), supressão txid.
--- Reparação: só is_test; nunca acordo ac722c73-0000-4000-8000-000000000000.
+-- Reparação is_test/QA: supabase/scripts/expiry_close_sem_lugares_vivos_is_test_repair.sql (manual).
 
 CREATE OR REPLACE FUNCTION public._p0_encerrar_acordo_sem_lugares_vivos_pos_expiracao(
   p_acordo_id uuid,
@@ -527,36 +527,3 @@ $function$;
 REVOKE ALL ON FUNCTION public.leave_passenger(uuid, uuid, uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.leave_passenger(uuid, uuid, uuid) TO authenticated;
 REVOKE EXECUTE ON FUNCTION public.leave_passenger(uuid, uuid, uuid) FROM anon;
-
--- Reparação is_test (nunca ac722c73): motivo sem_lugares_vivos quando encerrado sem lugares vivos.
-UPDATE public.acordos a
-SET encerramento_motivo = 'sem_lugares_vivos'
-FROM public.ofertas_capacidade o
-WHERE a.oferta_id = o.id
-  AND o.is_test = true
-  AND a.id <> 'ac722c73-0000-4000-8000-000000000000'::uuid
-  AND lower(a.estado) = 'cancelado'
-  AND a.encerramento_motivo IS NULL
-  AND NOT EXISTS (
-    SELECT 1
-    FROM public.acordos_passageiros ap
-    WHERE ap.acordo_id = a.id
-      AND lower(ap.estado) IN ('activo', 'reservado')
-  );
-
-UPDATE public.acordos a
-SET
-  rescisao_modo = NULL,
-  rescisao_solicitada_por = NULL,
-  rescisao_vigencia = NULL,
-  rescisao_justificativa = NULL,
-  rescisao_effective_on = NULL,
-  rescisao_solicitada_em = NULL
-FROM public.ofertas_capacidade o
-WHERE a.oferta_id = o.id
-  AND o.is_test = true
-  AND a.id <> 'ac722c73-0000-4000-8000-000000000000'::uuid
-  AND lower(a.estado) = 'cancelado'
-  AND a.encerramento_motivo = 'sem_lugares_vivos'
-  AND lower(COALESCE(a.rescisao_modo, '')) = 'consensual'
-  AND a.rescisao_confirmada_em IS NULL;

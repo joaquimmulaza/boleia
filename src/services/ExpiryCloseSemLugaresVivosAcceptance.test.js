@@ -44,6 +44,10 @@ describe('expiry close sem_lugares_vivos — migração 20261012170000', () => {
     expect(body).toMatch(/_p0_encerrar_acordo_sem_lugares_vivos_pos_expiracao/);
     expect(body).toMatch(/IF NOT v_fechou THEN/);
     expect(body).toMatch(/recount_oferta_vagas/);
+    expect(sql).not.toMatch(
+      /-- Reparação is_test[\s\S]*UPDATE public\.acordos a\s+SET encerramento_motivo/s,
+    );
+    expect(sql).not.toMatch(/ac722c73-0000-4000-8000-000000000000/);
     expect(sql).toMatch(
       /CREATE OR REPLACE FUNCTION public\._p0_encerrar_acordo_sem_lugares_vivos_pos_expiracao[\s\S]*encerramento_motivo = 'sem_lugares_vivos'/,
     );
@@ -59,9 +63,14 @@ describe('expiry close sem_lugares_vivos — migração 20261012170000', () => {
     expect(body).toMatch(/origin_name/);
   });
 
-  it('reparação is_test exclui ac722c73', () => {
-    const sql = readFileSync(join(MIGRATIONS, MIGRATION_FIX), 'utf8');
-    expect(sql).toMatch(/ac722c73-/i);
+  it('reparação is_test vive em script manual (exclui ac722c73%)', () => {
+    const scriptPath = join(
+      ROOT,
+      '../../supabase/scripts/expiry_close_sem_lugares_vivos_is_test_repair.sql',
+    );
+    expect(existsSync(scriptPath)).toBe(true);
+    const sql = readFileSync(scriptPath, 'utf8');
+    expect(sql).toMatch(/id::text NOT LIKE 'ac722c73%'/);
     expect(sql).toMatch(/is_test = true/);
   });
 
@@ -93,6 +102,11 @@ describe('expiry close sem_lugares_vivos — prova PG', () => {
     ).toBe(true);
     expect(
       existsSync(join(ROOT, '../../scripts/run-expiry-close-sem-lugares-vivos-pg-proof.sh')),
+    ).toBe(true);
+    expect(
+      existsSync(
+        join(ROOT, '../../supabase/scripts/expiry_close_sem_lugares_vivos_is_test_repair.sql'),
+      ),
     ).toBe(true);
   });
 });

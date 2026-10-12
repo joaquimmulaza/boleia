@@ -16,8 +16,12 @@ Base `leave_passenger`: `20261010000000_encerramento_motivo_leave_passenger.sql`
 
 | Antes (prod) | Depois |
 |--------------|--------|
-| Após `_expirar`, **sempre** INSERT notif passageiro «A tua reserva expirou…» | Se `_p0_encerrar…` fechou acordo → **sem** notif passageiro |
+| Após `_expirar`, **sempre** INSERT notif passageiro «A tua reserva expirou…» | Se `_p0_encerrar…` fechou acordo → **sem** notif passageiro; senão passageiro (inalterado) |
 | Fim: `_maybe_fechar_acordo_sem_lugares_vivos(p_acordo_id)` só | Fim: `_p0_encerrar…` (motivo + v1.11 + limpar consensual) |
+
+## Dados (fora da migração)
+
+Reparação `encerramento_motivo` / limpar consensual pendente em ofertas `is_test` → `supabase/scripts/expiry_close_sem_lugares_vivos_is_test_repair.sql` (manual; exclui `id::text LIKE 'ac722c73%'`).
 
 ## `leave_passenger`
 
