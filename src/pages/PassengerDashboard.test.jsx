@@ -133,6 +133,7 @@ vi.mock('../components/AddressInput', async () => {
     label,
     value,
     onChange,
+    onBlur,
     onSelectCoordinates,
     allowFreeTextUse,
     onConfirmFreeText,
@@ -159,6 +160,7 @@ vi.mock('../components/AddressInput', async () => {
         name={name}
         value={value || ''}
         onChange={(e) => onChange?.(e)}
+        onBlur={() => onBlur?.()}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && e.currentTarget.form) {
             e.currentTarget.form.requestSubmit();
@@ -1569,6 +1571,29 @@ describe('PassengerDashboard — marketplace', () => {
     expect(createProcura).not.toHaveBeenCalled();
   });
 
+  it('criar procura: erro por resolver só após blur ou submit, não ao escrever', async () => {
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Criar procura/i }));
+
+    changeCampoProcura('origin_name', 'B');
+    expect(screen.queryByTestId('field-error-origin_name')).not.toBeInTheDocument();
+
+    changeCampoProcura('origin_name', 'Bairro inventado QA');
+    expect(screen.queryByTestId('field-error-origin_name')).not.toBeInTheDocument();
+
+    const originInput = getFormularioProcuraElement().querySelector('input[name="origin_name"]');
+    fireEvent.blur(originInput);
+
+    expect(screen.getByTestId('field-error-origin_name')).toHaveTextContent(
+      GEOCODER_FIELD_UNRESOLVED_PROVISIONAL,
+    );
+  });
+
   it('criar procura: submit bloqueado foca origem por resolver com copy v1.4', async () => {
     render(
       <MemoryRouter>
@@ -1610,12 +1635,13 @@ describe('PassengerDashboard — marketplace', () => {
     preencherCoordsOrigemDestino();
     changeCampoProcura('origin_name', 'Talatona (texto novo)');
 
-    expect(screen.getByTestId('field-error-origin_name')).toHaveTextContent(
-      GEOCODER_FIELD_UNRESOLVED_PROVISIONAL,
-    );
+    expect(screen.queryByTestId('field-error-origin_name')).not.toBeInTheDocument();
 
     fireEvent.click(form.getByRole('button', { name: /Guardar procura/i }));
     expect(createProcura).not.toHaveBeenCalled();
+    expect(screen.getByTestId('field-error-origin_name')).toHaveTextContent(
+      GEOCODER_FIELD_UNRESOLVED_PROVISIONAL,
+    );
   });
 
   it('editar procura: texto editado sem sugestão bloqueia submit (não envia lat/lng antigas)', async () => {
@@ -1633,13 +1659,14 @@ describe('PassengerDashboard — marketplace', () => {
     const form = withinFormularioProcura();
     changeCampoProcura('origin_name', 'Talatona (editado)');
 
-    expect(screen.getByTestId('field-error-origin_name')).toHaveTextContent(
-      GEOCODER_FIELD_UNRESOLVED_PROVISIONAL,
-    );
+    expect(screen.queryByTestId('field-error-origin_name')).not.toBeInTheDocument();
     expect(document.body.textContent).not.toContain('TODO(Copywriter)');
 
     fireEvent.click(form.getByRole('button', { name: /Guardar alterações/i }));
     expect(updateProcura).not.toHaveBeenCalled();
+    expect(screen.getByTestId('field-error-origin_name')).toHaveTextContent(
+      GEOCODER_FIELD_UNRESOLVED_PROVISIONAL,
+    );
   });
 
   it('editar procura: Enter com campo por resolver bloqueia submit', async () => {

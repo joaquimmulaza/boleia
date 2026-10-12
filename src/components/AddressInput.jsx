@@ -20,6 +20,7 @@ import {
  *   required?: boolean,
  *   fieldError?: string | null,
  *   submitBlockFocusToken?: number,
+ *   onBlur?: () => void,
  * }} props
  */
 const AddressInput = ({
@@ -34,6 +35,7 @@ const AddressInput = ({
   required = true,
   fieldError = null,
   submitBlockFocusToken = 0,
+  onBlur,
 }) => {
   const {
     suggestions,
@@ -233,6 +235,7 @@ const AddressInput = ({
             onFocus={() => {
               if (trimmedInputLength > 2) setShowDropdown(true);
             }}
+            onBlur={() => onBlur?.()}
             role="combobox"
             aria-expanded={listPanelOpen}
             aria-controls={listPanelOpen ? listboxId : undefined}

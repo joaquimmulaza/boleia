@@ -781,6 +781,10 @@ const PassengerDashboard = () => {
         : [...DIAS_UTEIS_DEFAULT],
       teto_mensal_kz: row.teto_mensal_kz != null ? String(row.teto_mensal_kz) : '',
     });
+    setProcuraOdFieldErrorRevealed({
+      origin_name: false,
+      destination_name: false,
+    });
   };
 
   const originOdResolution = useMemo(
@@ -813,17 +817,30 @@ const PassengerDashboard = () => {
     [form],
   );
 
-  const originFieldError = originOdResolution.unresolved
-    ? GEOCODER_FIELD_UNRESOLVED_PROVISIONAL
-    : null;
-  const destinationFieldError = destinationOdResolution.unresolved
-    ? GEOCODER_FIELD_UNRESOLVED_PROVISIONAL
-    : null;
+  const [procuraOdFieldErrorRevealed, setProcuraOdFieldErrorRevealed] = useState({
+    origin_name: false,
+    destination_name: false,
+  });
 
   const [procuraOdSubmitBlockFocus, setProcuraOdSubmitBlockFocus] = useState({
     token: 0,
     fieldName: null,
   });
+
+  /** @param {'origin_name' | 'destination_name'} fieldName */
+  const revealProcuraOdFieldError = (fieldName) => {
+    setProcuraOdFieldErrorRevealed((prev) =>
+      (prev[fieldName] ? prev : { ...prev, [fieldName]: true }),
+    );
+  };
+
+  const originFieldError = originOdResolution.unresolved && procuraOdFieldErrorRevealed.origin_name
+    ? GEOCODER_FIELD_UNRESOLVED_PROVISIONAL
+    : null;
+  const destinationFieldError = destinationOdResolution.unresolved
+    && procuraOdFieldErrorRevealed.destination_name
+    ? GEOCODER_FIELD_UNRESOLVED_PROVISIONAL
+    : null;
 
   const persistProcuraUpdate = async (payload) => {
     if (submitProcuraInFlightRef.current || savingProcura) {
@@ -859,6 +876,16 @@ const PassengerDashboard = () => {
     const built = buildProcuraPayload();
     if (!built.ok) {
       if (built.unresolvedOd && built.focusField) {
+        setProcuraOdFieldErrorRevealed((prev) => {
+          const next = { ...prev };
+          if (originOdResolution.unresolved) {
+            next.origin_name = true;
+          }
+          if (destinationOdResolution.unresolved) {
+            next.destination_name = true;
+          }
+          return next;
+        });
         setProcuraOdSubmitBlockFocus((prev) => ({
           token: prev.token + 1,
           fieldName: built.focusField,
@@ -1859,6 +1886,11 @@ const PassengerDashboard = () => {
             label="Origem"
             value={form.origin_name}
             onChange={handleProcuraOdNameChange('origin_name')}
+            onBlur={() => {
+              if (originOdResolution.unresolved) {
+                revealProcuraOdFieldError('origin_name');
+              }
+            }}
             allowFreeTextUse
             fieldError={originFieldError}
             submitBlockFocusToken={
@@ -1898,6 +1930,11 @@ const PassengerDashboard = () => {
             label="Destino"
             value={form.destination_name}
             onChange={handleProcuraOdNameChange('destination_name')}
+            onBlur={() => {
+              if (destinationOdResolution.unresolved) {
+                revealProcuraOdFieldError('destination_name');
+              }
+            }}
             allowFreeTextUse
             fieldError={destinationFieldError}
             submitBlockFocusToken={
