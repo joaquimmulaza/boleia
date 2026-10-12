@@ -1,3 +1,5 @@
+import { formatDateLuandaPt, lastDayOfRescisaoCycle } from './rescisaoDisplay.js';
+
 /** @typedef {'sem_lugares_vivos'} EncerramentoMotivoAcordo */
 
 /**
@@ -7,6 +9,7 @@
  *   rescisao_modo?: string | null,
  *   rescisao_confirmada_em?: string | null,
  *   rescisao_solicitada_por?: string | null,
+ *   rescisao_effective_on?: string | null,
  * }} AcordoEstadoChipInput
  */
 
@@ -24,6 +27,7 @@ function normalizeAcordoEstadoInput(estado, encerramentoMotivo, rescisaoModo) {
       rescisao_modo: estado.rescisao_modo ?? rescisaoModo,
       rescisao_confirmada_em: estado.rescisao_confirmada_em,
       rescisao_solicitada_por: estado.rescisao_solicitada_por,
+      rescisao_effective_on: estado.rescisao_effective_on,
       e: String(estado.estado || '').toLowerCase(),
     };
   }
@@ -33,6 +37,7 @@ function normalizeAcordoEstadoInput(estado, encerramentoMotivo, rescisaoModo) {
     rescisao_modo: rescisaoModo,
     rescisao_confirmada_em: undefined,
     rescisao_solicitada_por: undefined,
+    rescisao_effective_on: undefined,
     e: String(estado || '').toLowerCase(),
   };
 }
@@ -104,6 +109,55 @@ export function isChipEncerramentoPedidoConsensual(input) {
  * @param {string | null | undefined} [rescisaoModo]
  * @returns {string}
  */
+/**
+ * Chip da lista `/acordos` — distingue requerente vs contraparte em consensual pendente.
+ *
+ * @param {string | AcordoEstadoChipInput | null | undefined} acordo
+ * @param {string | null | undefined} userId
+ * @returns {string}
+ */
+export function labelChipListaEstadoAcordo(acordo, userId) {
+  const norm = normalizeAcordoEstadoInput(acordo);
+
+  if (norm.e === 'cancelamento_pendente') {
+    const fimCiclo = lastDayOfRescisaoCycle(norm.rescisao_effective_on);
+    const fimFormatado = formatDateLuandaPt(fimCiclo)
+      || formatDateLuandaPt(norm.rescisao_effective_on);
+    if (fimFormatado) return `Termina a ${fimFormatado}`;
+  }
+
+  if (isChipEncerramentoPedidoConsensual(norm)) {
+    if (userId && String(norm.rescisao_solicitada_por) === String(userId)) {
+      return 'Encerramento pedido';
+    }
+    if (userId && String(norm.rescisao_solicitada_por) !== String(userId)) {
+      return 'Falta a tua confirmação';
+    }
+    return 'Encerramento pedido';
+  }
+
+  return labelEstadoAcordo(norm);
+}
+
+/**
+ * Variante do chip na lista (contraparte consensual → aviso).
+ *
+ * @param {string | AcordoEstadoChipInput | null | undefined} acordo
+ * @param {string | null | undefined} userId
+ * @returns {'activo' | 'pendente' | 'encerrado' | 'inactivo' | 'aviso'}
+ */
+export function variantChipListaEstadoAcordo(acordo, userId) {
+  const norm = normalizeAcordoEstadoInput(acordo);
+  if (
+    isChipEncerramentoPedidoConsensual(norm)
+    && userId
+    && String(norm.rescisao_solicitada_por) !== String(userId)
+  ) {
+    return 'aviso';
+  }
+  return variantChipEstadoAcordo(norm);
+}
+
 export function labelEstadoAcordo(estado, encerramentoMotivo, rescisaoModo) {
   const norm = normalizeAcordoEstadoInput(estado, encerramentoMotivo, rescisaoModo);
   const { e } = norm;
@@ -125,7 +179,7 @@ export function labelEstadoAcordo(estado, encerramentoMotivo, rescisaoModo) {
  * @param {string | AcordoEstadoChipInput | null | undefined} estado
  * @param {EncerramentoMotivoAcordo | null | undefined} [encerramentoMotivo]
  * @param {string | null | undefined} [rescisaoModo]
- * @returns {'activo' | 'pendente' | 'encerrado' | 'inactivo'}
+ * @returns {'activo' | 'pendente' | 'encerrado' | 'inactivo' | 'aviso'}
  */
 export function variantChipEstadoAcordo(estado, encerramentoMotivo, rescisaoModo) {
   const norm = normalizeAcordoEstadoInput(estado, encerramentoMotivo, rescisaoModo);
@@ -139,12 +193,15 @@ export function variantChipEstadoAcordo(estado, encerramentoMotivo, rescisaoModo
 
 /**
  * Classes Tailwind do chip de estado do acordo.
- * @param {'activo' | 'pendente' | 'encerrado' | 'inactivo'} variant
+ * @param {'activo' | 'pendente' | 'encerrado' | 'inactivo' | 'aviso'} variant
  * @returns {string}
  */
 export function chipClassEstadoAcordoVariant(variant) {
   if (variant === 'activo') {
     return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200';
+  }
+  if (variant === 'aviso') {
+    return 'bg-amber-100 text-amber-950 dark:bg-amber-950/50 dark:text-amber-100 ring-1 ring-amber-300/80 dark:ring-amber-700/80';
   }
   if (variant === 'pendente') {
     return 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100';

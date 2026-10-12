@@ -1,6 +1,6 @@
 import { formatKwanza } from './formatKwanza';
 import { formatMesAdendaPt } from './adendaStatus';
-import { labelEstadoPagamento, PAYMENT_STATES } from './paymentStatus';
+import { labelEstadoPagamento, helpEstadoPagamento, PAYMENT_STATES } from './paymentStatus';
 
 /**
  * Snapshot de obrigação mensal (fonte: RPC `build_ui_obrigacao_snapshot` / `get_obrigacao_pagamento_passageiro`).
@@ -67,7 +67,31 @@ export function labelEstadoPagamentoPassageiro(pagamento, _obrigacao) {
   if (isPagamentoEmExcessoAnalise(pagamento)) {
     return 'Diferença em análise';
   }
+  const estado = String(pagamento?.estado || '').toLowerCase();
+  if (estado === PAYMENT_STATES.COMPROVATIVO) {
+    return helpEstadoPagamento(PAYMENT_STATES.COMPROVATIVO) || labelEstadoPagamento(estado);
+  }
   return labelEstadoPagamento(pagamento?.estado, { placement: 'painel' });
+}
+
+/**
+ * Texto de ajuda sob o chip — omitido quando o chip já traz a mesma copy (#251).
+ * @param {string | null | undefined} estado
+ * @returns {string | null}
+ */
+export function helpEstadoPagamentoPainelPassageiro(estado) {
+  const e = String(estado || '').toLowerCase();
+  if (e === PAYMENT_STATES.COMPROVATIVO) return null;
+  return helpEstadoPagamento(estado);
+}
+
+/**
+ * @param {{ estado?: string } | null | undefined} pagamento
+ * @returns {boolean}
+ */
+export function mostrarLinhaValorAPagarResumoPainel(pagamento) {
+  const e = String(pagamento?.estado || '').toLowerCase();
+  return e !== PAYMENT_STATES.COMPROVATIVO;
 }
 
 /**

@@ -2,7 +2,6 @@ import React, { useRef, useState } from 'react';
 import { Upload, Loader2, FileText, CheckCircle2 } from 'lucide-react';
 import { formatKwanza } from '../utils/formatKwanza';
 import {
-  helpEstadoPagamento,
   chipClassEstadoPagamento,
   PAYMENT_STATES,
 } from '../utils/paymentStatus';
@@ -14,6 +13,8 @@ import {
   linhaPrazoPagamento,
   linhaSecundariaExcessoPassageiro,
   labelEstadoPagamentoPassageiro,
+  helpEstadoPagamentoPainelPassageiro,
+  mostrarLinhaValorAPagarResumoPainel,
   mostrarIconeSucessoPagamento,
   valorEmDividaParaExibir,
   isDestaqueValorEmDividaSaiuPendente,
@@ -83,7 +84,8 @@ function AcordoPagamentoPanel({
       pagamentoEstado: pagamento.estado,
       valorComprovativo: pagamento.valor_kz,
     });
-  const linhaResumoActivo = !emExcesso && !mostrarDesagregacao && obrigacaoNorm
+  const ocultarValorAPagar = !mostrarLinhaValorAPagarResumoPainel(pagamento);
+  const linhaResumoActivo = !emExcesso && !mostrarDesagregacao && obrigacaoNorm && !ocultarValorAPagar
     ? linhaValorAPagarResumo(obrigacaoNorm, pagamento)
     : null;
   const linhaExcesso = emExcesso ? linhaSecundariaExcessoPassageiro(obrigacaoNorm) : null;
@@ -97,7 +99,7 @@ function AcordoPagamentoPanel({
   const labelUpload = temComprovativo ? 'Substituir comprovativo' : 'Enviar comprovativo';
   const helpEstado = emExcesso
     ? 'A plataforma está a analisar a diferença entre o valor pago e o devido neste mês.'
-    : helpEstadoPagamento(pagamento.estado);
+    : helpEstadoPagamentoPainelPassageiro(pagamento.estado);
   const labelEstado = labelEstadoPagamentoPassageiro(pagamento, obrigacaoNorm);
   const mostrarCheck = mostrarIconeSucessoPagamento({
     pagamento,
@@ -219,7 +221,7 @@ function AcordoPagamentoPanel({
                 {formatKwanza(valorEmDivida)} Kz
               </p>
             </div>
-          ) : linhaResumoActivo ? null : (
+          ) : linhaResumoActivo || ocultarValorAPagar ? null : (
             <p className="text-sm text-slate-600 dark:text-slate-300">
               {linhaProp ? 'Valor a pagar agora' : 'Valor acordado'}:{' '}
               <strong className="tabular-nums text-slate-900 dark:text-white">
