@@ -48,10 +48,6 @@ vi.mock('../services/PaymentService', async (importOriginal) => {
     listPagamentosByAcordo: vi.fn(),
     getPagamentoForPassageiro: vi.fn(),
     getAcordoContactos: vi.fn(),
-    getAcordoMotoristaDadosBancarios: vi.fn().mockResolvedValue({
-      iban: 'AO06004000000000000000000',
-      iban_titular: 'Motorista Teste',
-    }),
   };
 });
 

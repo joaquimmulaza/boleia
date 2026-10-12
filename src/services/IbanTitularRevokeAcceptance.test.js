@@ -42,24 +42,22 @@ describe('fix(sec) — iban_titular + renovação pagamentos', () => {
     expect(sql).not.toMatch(/get_own_perfil_contacto\(\) TO anon, authenticated/);
   });
 
-  it('get_acordo_motorista_dados_bancarios nega permissão com ERRCODE 42501', () => {
+  it('get_own_perfil_contacto nega não autenticado com ERRCODE 42501', () => {
     const sql = readMigration(MIG);
-    expect(sql).toMatch(/Sem permissão para ver dados bancários deste acordo/);
+    expect(sql).toMatch(/Não autenticado/);
     expect(sql).toMatch(/USING ERRCODE = '42501'/);
   });
 
-  it('get_acordo_motorista_dados_bancarios com GRANT authenticated', () => {
+  it('migração não inclui get_acordo_motorista_dados_bancarios (pagamento à plataforma)', () => {
     const sql = readMigration(MIG);
-    expect(sql).toMatch(/get_acordo_motorista_dados_bancarios/);
-    expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION public\.get_acordo_motorista_dados_bancarios\(uuid\) TO authenticated/);
-    expect(sql).toMatch(/REVOKE EXECUTE ON FUNCTION public\.get_acordo_motorista_dados_bancarios\(uuid\) FROM anon/);
+    expect(sql).not.toMatch(/get_acordo_motorista_dados_bancarios/);
   });
 
-  it('AcordoPagamentoPanel usa RPC getAcordoMotoristaDadosBancarios (não perfis)', () => {
+  it('AcordoPagamentoPanel usa IBAN da plataforma (getPlatformIban)', () => {
     const panel = readFileSync(join(ROOT, '../components/AcordoPagamentoPanel.jsx'), 'utf8');
-    expect(panel).toMatch(/getAcordoMotoristaDadosBancarios/);
-    expect(panel).not.toMatch(/getPlatformIban/);
-    expect(panel).toMatch(/reservado|motorista/i);
+    expect(panel).toMatch(/getPlatformIban/);
+    expect(panel).toMatch(/IBAN da plataforma/);
+    expect(panel).not.toMatch(/getAcordoMotoristaDadosBancarios/);
   });
 
   it('_create_pagamentos_periodo congela valor_devido_kz = quota', () => {

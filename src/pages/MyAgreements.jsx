@@ -1407,7 +1407,6 @@ const MyAgreements = () => {
                 uploadSlot={
                   pagamento && !pagamentoLoading ? (
                     <AcordoPagamentoPanel
-                      acordoId={selected.id}
                       layout="uploadButton"
                       pagamento={pagamento}
                       obrigacao={obrigacaoPagamento}
@@ -1670,7 +1669,6 @@ const MyAgreements = () => {
             && !pagamentoUiPassageiro?.ocultarPainelPagamento ? (
             <div data-testid="acordo-pagamento-section" className="scroll-mt-acordo-detalhe">
               <AcordoPagamentoPanel
-                acordoId={selected.id}
                 pagamento={pagamentoLoading ? null : pagamento}
                 obrigacao={obrigacaoPagamento}
                 lugarEstado={minhaLinha?.estado}

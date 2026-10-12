@@ -277,34 +277,6 @@ export async function adminValidatePayment(pagamentoId, aprovar, motivo = null) 
  *   passageiros?: Array<{ passenger_id: string, nome_completo?: string, telefone?: string | null }>,
  * }>}
  */
-/**
- * IBAN + titular do motorista do acordo (passageiro activo/reservado ou motorista).
- * @param {string} acordoId
- * @returns {Promise<{ iban: string | null, iban_titular: string | null, erro?: string }>}
- */
-export async function getAcordoMotoristaDadosBancarios(acordoId) {
-  const { data, error } = await supabase.rpc('get_acordo_motorista_dados_bancarios', {
-    p_acordo_id: acordoId,
-  });
-
-  if (error) {
-    if (error.code === '42501' || error.code === 'P0001') {
-      return {
-        iban: null,
-        iban_titular: null,
-        erro: error.message || 'Não foi possível carregar os dados bancários do motorista.',
-      };
-    }
-    throw error;
-  }
-
-  const payload = data && typeof data === 'object' ? data : {};
-  return {
-    iban: payload.iban ?? null,
-    iban_titular: payload.iban_titular ?? null,
-  };
-}
-
 export async function getAcordoContactos(acordoId) {
   const { data, error } = await supabase.rpc('get_acordo_contactos', {
     p_acordo_id: acordoId,

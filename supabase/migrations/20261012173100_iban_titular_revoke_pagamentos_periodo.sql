@@ -47,60 +47,7 @@ REVOKE ALL ON FUNCTION public.get_own_perfil_contacto() FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.get_own_perfil_contacto() FROM anon;
 GRANT EXECUTE ON FUNCTION public.get_own_perfil_contacto() TO authenticated;
 
--- === 3. Passageiro (ou motorista) no acordo: IBAN do motorista sem SELECT em perfis ===
-CREATE OR REPLACE FUNCTION public.get_acordo_motorista_dados_bancarios(p_acordo_id uuid)
- RETURNS jsonb
- LANGUAGE plpgsql
- STABLE SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-DECLARE
-  v_uid uuid := auth.uid();
-  v_acordo public.acordos%ROWTYPE;
-  v_is_driver boolean;
-  v_is_participant boolean;
-  v_iban text;
-  v_titular text;
-BEGIN
-  IF v_uid IS NULL OR p_acordo_id IS NULL THEN
-    RAISE EXCEPTION 'Não autenticado.'
-      USING ERRCODE = '42501';
-  END IF;
-
-  SELECT * INTO v_acordo FROM public.acordos WHERE id = p_acordo_id;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Acordo não encontrado.';
-  END IF;
-
-  v_is_driver := v_uid = v_acordo.driver_id;
-  -- reservado incluído de propósito: passageiro precisa do IBAN para pagar e activar o lugar.
-  SELECT EXISTS (
-    SELECT 1 FROM public.acordos_passageiros ap
-    WHERE ap.acordo_id = p_acordo_id
-      AND ap.passenger_id = v_uid
-      AND lower(ap.estado) IN ('activo', 'reservado')
-  ) INTO v_is_participant;
-
-  IF NOT v_is_driver AND NOT v_is_participant AND NOT public.is_platform_admin() THEN
-    RAISE EXCEPTION 'Sem permissão para ver dados bancários deste acordo.'
-      USING ERRCODE = '42501';
-  END IF;
-
-  SELECT NULLIF(btrim(COALESCE(p.iban, '')), ''),
-         NULLIF(btrim(COALESCE(p.iban_titular, '')), '')
-  INTO v_iban, v_titular
-  FROM public.perfis p
-  WHERE p.id = v_acordo.driver_id;
-
-  RETURN jsonb_build_object('iban', v_iban, 'iban_titular', v_titular);
-END;
-$function$;
-
-REVOKE ALL ON FUNCTION public.get_acordo_motorista_dados_bancarios(uuid) FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.get_acordo_motorista_dados_bancarios(uuid) FROM anon;
-GRANT EXECUTE ON FUNCTION public.get_acordo_motorista_dados_bancarios(uuid) TO authenticated;
-
--- === 4. Renovação: quota integral (valor_devido_kz = quota congelada) ===
+-- === 3. Renovação: quota integral (valor_devido_kz = quota congelada) ===
 CREATE OR REPLACE FUNCTION public._create_pagamentos_periodo(
   p_acordo_id uuid,
   p_mes_referencia date,
