@@ -20,6 +20,8 @@ Base `leave_passenger`: `20261010000000_encerramento_motivo_leave_passenger.sql`
 |--------------|--------|
 | Após `_expirar`, **sempre** INSERT notif passageiro «A tua reserva expirou…» | Se `_p0_encerrar…` fechou acordo → **sem** notif passageiro; senão passageiro (inalterado) |
 | Fim: `_maybe_fechar_acordo_sem_lugares_vivos(p_acordo_id)` só | Fim: `_p0_encerrar…` (motivo + v1.11 + limpar consensual) |
+| Cursor sem `ORDER BY`; várias reservas do mesmo acordo no mesmo lote → aviso «vaga libertada» aos primeiros expirados | Pré-cálculo `_apply_due_expiry_acordo_batch`: se **todos** os lugares vivos do acordo expiram neste lote → **nenhum** passageiro expirado recebe «vaga libertada»; encerramento + v1.11 **uma vez** no último lugar |
+| — | Cursor: `ORDER BY acordo_id, reservado_expira_em, id` |
 
 ## Dados (fora da migração)
 

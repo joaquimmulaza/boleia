@@ -141,8 +141,46 @@ DECLARE
   v_count integer := 0;
   v_vivos integer;
   v_fechou boolean;
+  v_fecha_todo_lote boolean;
 BEGIN
   PERFORM public._p0_assert_lazy_apply_due_scope(p_acordo_id);
+
+  CREATE TEMP TABLE IF NOT EXISTS _apply_due_expiry_acordo_batch (
+    acordo_id uuid PRIMARY KEY,
+    fecha_todo_lote boolean NOT NULL
+  ) ON COMMIT DROP;
+
+  TRUNCATE _apply_due_expiry_acordo_batch;
+
+  INSERT INTO _apply_due_expiry_acordo_batch (acordo_id, fecha_todo_lote)
+  SELECT
+    ap.acordo_id,
+    (
+      lower(max(a.estado)) IN ('activo', 'cancelamento_pendente')
+      AND (
+        SELECT COUNT(*)::integer
+        FROM public.acordos_passageiros ap_v
+        WHERE ap_v.acordo_id = ap.acordo_id
+          AND lower(ap_v.estado) IN ('activo', 'reservado')
+      ) = COUNT(*)::integer
+    ) AS fecha_todo_lote
+  FROM public.acordos_passageiros ap
+  JOIN public.acordos a ON a.id = ap.acordo_id
+  WHERE lower(ap.estado) = 'reservado'
+    AND ap.reservado_expira_em IS NOT NULL
+    AND ap.reservado_expira_em <= now()
+    AND (
+      (p_acordo_id IS NOT NULL AND ap.acordo_id = p_acordo_id)
+      OR (p_acordo_id IS NULL AND public._p0_acordo_in_lazy_apply_due_scope(ap.acordo_id))
+    )
+    AND lower(a.estado) IN ('activo', 'cancelamento_pendente', 'cancelado', 'cancelado_justificado')
+    AND NOT EXISTS (
+      SELECT 1
+      FROM public.pagamentos_acordo pg
+      WHERE pg.acordo_passageiro_id = ap.id
+        AND lower(pg.estado) IN ('comprovativo_enviado', 'em_custodia', 'liquidado')
+    )
+  GROUP BY ap.acordo_id;
 
   FOR v_row IN
     SELECT ap.id, ap.acordo_id, ap.passenger_id, a.oferta_id, a.driver_id, a.estado AS acordo_estado
@@ -162,8 +200,15 @@ BEGIN
         WHERE pg.acordo_passageiro_id = ap.id
           AND lower(pg.estado) IN ('comprovativo_enviado', 'em_custodia', 'liquidado')
       )
+    ORDER BY ap.acordo_id, ap.reservado_expira_em, ap.id
     FOR UPDATE OF ap
   LOOP
+    SELECT fecha_todo_lote INTO v_fecha_todo_lote
+    FROM _apply_due_expiry_acordo_batch
+    WHERE acordo_id = v_row.acordo_id;
+
+    v_fecha_todo_lote := COALESCE(v_fecha_todo_lote, false);
+
     PERFORM public._expirar_lugar_reservado_sem_divida(
       v_row.id,
       'Prazo de reserva expirado'
@@ -183,7 +228,7 @@ BEGIN
       );
     END IF;
 
-    IF NOT v_fechou THEN
+    IF NOT v_fecha_todo_lote AND NOT v_fechou THEN
       INSERT INTO public.notificacoes (user_id, mensagem, tipo, metadata)
       VALUES (
         v_row.passenger_id,

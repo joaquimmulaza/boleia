@@ -21,6 +21,12 @@ DECLARE
   v_pax_noname uuid := 'fbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
   v_acordo_noname uuid := 'fccccccc-cccc-4ccc-8ccc-cccccccccccc';
   v_ap_noname uuid := 'fddddddd-dddd-4ddd-8ddd-dddddddddddd';
+  v_pax_dual_a uuid := 'feeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+  v_pax_dual_b uuid := 'ffffffff-ffff-4fff-8fff-ffffffffffff';
+  v_acordo_dual uuid := 'f1010101-0101-4010-8010-010101010101';
+  v_ap_dual_a uuid := 'f2020202-0202-4020-8020-020202020202';
+  v_ap_dual_b uuid := 'f3030303-0303-4030-8030-030303030303';
+  v_oferta_dual uuid;
   v_oferta_noname uuid;
   v_mes date := date_trunc('month', timezone('Africa/Luanda', now()))::date;
   v_n integer;
@@ -38,7 +44,9 @@ BEGIN
     (v_pax_last, 'ecs-pax-last@test'),
     (v_pax_a, 'ecs-pax-a@test'),
     (v_pax_b, 'ecs-pax-b@test'),
-    (v_pax_noname, 'ecs-pax-noname@test')
+    (v_pax_noname, 'ecs-pax-noname@test'),
+    (v_pax_dual_a, 'ecs-pax-dual-a@test'),
+    (v_pax_dual_b, 'ecs-pax-dual-b@test')
   ON CONFLICT DO NOTHING;
 
   INSERT INTO public.perfis (id, nome_completo, telefone, tipo_perfil) VALUES
@@ -46,7 +54,9 @@ BEGIN
     (v_pax_last, 'ECS Last', '951000002', 'Passageiro'),
     (v_pax_a, 'ECS A', '951000003', 'Passageiro'),
     (v_pax_b, 'ECS B', '951000004', 'Passageiro'),
-    (v_pax_noname, NULL, '951000005', 'Passageiro')
+    (v_pax_noname, NULL, '951000005', 'Passageiro'),
+    (v_pax_dual_a, 'ECS Dual A', '951000006', 'Passageiro'),
+    (v_pax_dual_b, 'ECS Dual B', '951000007', 'Passageiro')
   ON CONFLICT (id) DO NOTHING;
 
   INSERT INTO public.veiculos (id_motorista, marca_modelo, matricula, capacidade_total, vagas_passageiros)
@@ -127,6 +137,30 @@ BEGIN
   VALUES
     (v_ap_a, v_acordo_partial, v_pax_a, 'activo', 20000, 0),
     (v_ap_b, v_acordo_partial, v_pax_b, 'activo', 20000, 1);
+
+  -- EC3: duas reservas expiram no mesmo apply_due → 1 encerramento, 0 avisos pax, 1 v1.11 motorista
+  INSERT INTO public.ofertas_capacidade (
+    driver_id, veiculo_id, flexibilidade_rota, departure_time, vagas_disponiveis, vagas_totais,
+    modo_preco, valor_mensal_ask_kz, estado
+  ) VALUES (v_driver, v_veiculo, true, '09:00', 2, 4, 'POR_PASSAGEIRO', 20000, 'parcial')
+  RETURNING id INTO v_oferta_dual;
+
+  INSERT INTO public.acordos (
+    id, oferta_id, procura_id, driver_id, modo_preco, n_passageiros_contrato,
+    valor_mensal_total_kz, valor_mensal_por_passageiro_kz, estado, dias_uteis_mes
+  ) VALUES (
+    v_acordo_dual, v_oferta_dual, v_procura, v_driver, 'POR_PASSAGEIRO', 2, 40000, 20000, 'activo', 22
+  );
+
+  INSERT INTO public.acordos_passageiros (
+    id, acordo_id, passenger_id, estado, quota_mensal_kz, ordem_insercao, reservado_expira_em
+  ) VALUES
+    (
+      v_ap_dual_a, v_acordo_dual, v_pax_dual_a, 'reservado', 20000, 0, now() - interval '3 hours'
+    ),
+    (
+      v_ap_dual_b, v_acordo_dual, v_pax_dual_b, 'reservado', 20000, 1, now() - interval '2 hours'
+    );
 
   PERFORM set_config('session_replication_role', 'origin', true);
   DELETE FROM public.notificacoes;
@@ -212,6 +246,40 @@ BEGIN
 
   DELETE FROM public.notificacoes;
 
+  PERFORM set_config('request.jwt.claim.sub', v_pax_dual_a::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+  SET LOCAL ROLE authenticated;
+  PERFORM public.apply_due_reserva_expiry(v_acordo_dual);
+  RESET ROLE;
+
+  SELECT lower(estado), encerramento_motivo
+  INTO v_estado, v_motivo
+  FROM public.acordos WHERE id = v_acordo_dual;
+
+  IF v_estado <> 'cancelado' OR v_motivo IS DISTINCT FROM 'sem_lugares_vivos' THEN
+    RAISE EXCEPTION 'FAIL EC3: acordo dual devia cancelado sem_lugares_vivos (estado=%, motivo=%)', v_estado, v_motivo;
+  END IF;
+
+  SELECT COUNT(*)::integer INTO v_n
+  FROM public.notificacoes
+  WHERE user_id IN (v_pax_dual_a, v_pax_dual_b);
+
+  IF v_n <> 0 THEN
+    RAISE EXCEPTION 'FAIL EC3: nenhum passageiro expirado devia receber aviso reserva (n=%)', v_n;
+  END IF;
+
+  SELECT COUNT(*)::integer INTO v_n
+  FROM public.notificacoes
+  WHERE user_id = v_driver
+    AND metadata->>'card' = 'v1.11'
+    AND metadata->>'titulo' = 'Acordo encerrado';
+
+  IF v_n <> 1 THEN
+    RAISE EXCEPTION 'FAIL EC3: motorista devia receber exactamente 1 card v1.11 (n=%)', v_n;
+  END IF;
+
+  DELETE FROM public.notificacoes;
+
   -- EC2: motorista remove v_pax_a
   PERFORM set_config('request.jwt.claim.sub', v_driver::text, true);
   PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
@@ -245,5 +313,5 @@ BEGIN
     RAISE EXCEPTION 'FAIL EC2: outro passageiro vivo não devia receber notificação (n=%)', v_n;
   END IF;
 
-  RAISE NOTICE 'PASS EC1+EC1b+EC2: expiry último lugar v1.11 + oferta Explorar + driver remove parcial v1.10';
+  RAISE NOTICE 'PASS EC1+EC1b+EC3+EC2: expiry último lugar v1.11 + lote dual + driver remove parcial v1.10';
 END $$;
