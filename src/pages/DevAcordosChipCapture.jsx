@@ -5,7 +5,8 @@ import { Button } from '../components/ui/button';
 import { acordoEstadoListaChipProps } from '../utils/acordoEstadoDisplay';
 
 /**
- * Pré-visualização DEV (390px) — chips lista/modal + kebab + #251.
+ * Pré-visualização DEV (390px) — chips lista/modal + kebab + #251 (light + dark).
+ * Registada via DevAppRoutes (`/__dev/acordos-chips`; vite dev ou preview allowlist).
  *
  * @typedef {Readonly<{}>} DevAcordosChipCaptureProps
  */

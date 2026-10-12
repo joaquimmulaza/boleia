@@ -4,7 +4,6 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 import PushNotificationsToggle from './PushNotificationsToggle';
 import {
-  PUSH_PROFILE_BLOCKED_HELP,
   PUSH_PROFILE_ERROR,
   PUSH_PROFILE_ERROR_DISABLE,
   PUSH_PROFILE_IPHONE_HELPER,
@@ -128,14 +127,13 @@ describe('PushNotificationsToggle — 6 estados /perfil', () => {
     expect(screen.getByRole('switch')).toHaveAttribute('aria-busy', 'true');
   });
 
-  it('estado 4 · Bloqueado: switch desactivado e painel com ajuda do navegador', () => {
+  it('estado 4 · Bloqueado: switch desactivado e linha única com opacity', () => {
     pushHookState = { ...pushHookState, permission: 'denied', isSubscribed: false };
     renderToggle();
     const sw = screen.getByRole('switch');
     expect(sw).toHaveAttribute('aria-checked', 'false');
     expect(sw).toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByTestId('push-profile-status-bloqueado')).toHaveTextContent(PUSH_PROFILE_STATE_BLOCKED);
-    expect(screen.getByTestId('push-profile-status-bloqueado')).toHaveTextContent(PUSH_PROFILE_BLOCKED_HELP);
+    expect(screen.getByTestId('push-profile-status-line')).toHaveTextContent(PUSH_PROFILE_STATE_BLOCKED);
   });
 
   it('estado 5 · Erro: mensagem inline após falha na activação', async () => {

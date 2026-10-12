@@ -284,6 +284,7 @@ describe('MyAgreements — marketplace 1:N', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllEnvs();
     resetOverlayStackForTests();
   });
 

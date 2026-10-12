@@ -18,6 +18,7 @@ import {
   clearPasswordRecoveryStorage,
 } from '../utils/passwordRecovery';
 import { clearSwRuntimeCache } from '../utils/swRuntimeCache';
+import { isDevCaptureRoutesEnabled } from '../utils/devCaptureAccess';
 
 const AuthContext = createContext(undefined);
 
@@ -313,10 +314,10 @@ function AuthProviderLive({ children }) {
 
 /**
  * @param {{ children: React.ReactNode; devValue?: Record<string, unknown> }} props
- * `devValue` — apenas DEV: injecta valor AuthContext (capturas `/__dev/*`).
+ * `devValue` — capturas `/__dev/*` (vite dev ou host preview allowlist).
  */
 export function AuthProvider({ children, devValue }) {
-  if (import.meta.env.DEV && devValue !== undefined) {
+  if (isDevCaptureRoutesEnabled() && devValue !== undefined) {
     return <AuthContext.Provider value={devValue}>{children}</AuthContext.Provider>;
   }
   return <AuthProviderLive>{children}</AuthProviderLive>;
