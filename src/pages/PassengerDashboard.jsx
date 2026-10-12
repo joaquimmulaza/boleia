@@ -3,7 +3,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, Clock, Users, Banknote } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AddressInput from '../components/AddressInput';
-import { FLEX_ONLY_FREE_TEXT_WARNING } from '../utils/addressGeocoderCopy';
+import {
+  FLEX_ONLY_FREE_TEXT_WARNING,
+  GEOCODER_FIELD_UNRESOLVED_PROVISIONAL,
+} from '../utils/addressGeocoderCopy';
 import { resolveProcuraOdFieldForPayload } from '../utils/procuraGeocodePayload';
 import TimeInput from '../components/TimeInput';
 import PageHeader from '../components/PageHeader';
@@ -210,10 +213,20 @@ const PassengerDashboard = () => {
     origin_lat: null,
     origin_lng: null,
     origin_free_text: false,
+    origin_saved_name: '',
+    origin_saved_lat: null,
+    origin_saved_lng: null,
+    origin_saved_free_text: false,
+    origin_last_selected_name: null,
     destination_name: '',
     destination_lat: null,
     destination_lng: null,
     destination_free_text: false,
+    destination_saved_name: '',
+    destination_saved_lat: null,
+    destination_saved_lng: null,
+    destination_saved_free_text: false,
+    destination_last_selected_name: null,
     dias_semana: [...DIAS_UTEIS_DEFAULT],
     teto_mensal_kz: '',
   });
@@ -626,6 +639,18 @@ const PassengerDashboard = () => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  /** @param {'origin_name' | 'destination_name'} fieldName */
+  const handleProcuraOdNameChange = (fieldName) => (e) => {
+    const value = e.target.value;
+    setForm((prev) => ({
+      ...prev,
+      [fieldName]: value,
+      ...(fieldName === 'origin_name'
+        ? { origin_free_text: false }
+        : { destination_free_text: false }),
+    }));
+  };
+
   /**
    * @param {number} valor
    */
@@ -652,35 +677,32 @@ const PassengerDashboard = () => {
       });
       return { ok: false };
     }
-    const storedOrigin = editing && procura
-      ? { lat: procura.origin_lat ?? null, lng: procura.origin_lng ?? null }
-      : null;
-    const storedDestination = editing && procura
-      ? { lat: procura.destination_lat ?? null, lng: procura.destination_lng ?? null }
-      : null;
-    const resolvedOrigin = resolveProcuraOdFieldForPayload(
-      {
-        lat: form.origin_lat ?? null,
-        lng: form.origin_lng ?? null,
-        freeText: Boolean(form.origin_free_text),
-      },
-      storedOrigin,
-    );
-    const resolvedDestination = resolveProcuraOdFieldForPayload(
-      {
-        lat: form.destination_lat ?? null,
-        lng: form.destination_lng ?? null,
-        freeText: Boolean(form.destination_free_text),
-      },
-      storedDestination,
-    );
-    const originOk =
-      form.origin_free_text
-      || (resolvedOrigin.lat != null && resolvedOrigin.lng != null);
-    const destinationOk =
-      form.destination_free_text
-      || (resolvedDestination.lat != null && resolvedDestination.lng != null);
-    if (!originOk || !destinationOk) {
+    const resolvedOrigin = resolveProcuraOdFieldForPayload({
+      name: originName,
+      lat: form.origin_lat ?? null,
+      lng: form.origin_lng ?? null,
+      freeText: Boolean(form.origin_free_text),
+      savedName: form.origin_saved_name,
+      savedLat: form.origin_saved_lat,
+      savedLng: form.origin_saved_lng,
+      savedFreeText: form.origin_saved_free_text,
+      lastSelectedName: form.origin_last_selected_name,
+    });
+    const resolvedDestination = resolveProcuraOdFieldForPayload({
+      name: destinationName,
+      lat: form.destination_lat ?? null,
+      lng: form.destination_lng ?? null,
+      freeText: Boolean(form.destination_free_text),
+      savedName: form.destination_saved_name,
+      savedLat: form.destination_saved_lat,
+      savedLng: form.destination_saved_lng,
+      savedFreeText: form.destination_saved_free_text,
+      lastSelectedName: form.destination_last_selected_name,
+    });
+    if (!resolvedOrigin.ok || !resolvedDestination.ok) {
+      if (resolvedOrigin.unresolved || resolvedDestination.unresolved) {
+        return { ok: false, unresolvedOd: true };
+      }
       setFeedback({
         type: 'error',
         text: 'Seleccione origem e destino na lista de sugestões.',
@@ -726,22 +748,73 @@ const PassengerDashboard = () => {
   const prefillFormFromProcura = (row) => {
     const originHasCoords = row.origin_lat != null && row.origin_lng != null;
     const destinationHasCoords = row.destination_lat != null && row.destination_lng != null;
+    const originFree = Boolean(row.origin_name?.trim()) && !originHasCoords;
+    const destinationFree = Boolean(row.destination_name?.trim()) && !destinationHasCoords;
+    const originName = row.origin_name || '';
+    const destinationName = row.destination_name || '';
     setForm({
       preferred_time: String(row.preferred_time || '07:15').slice(0, 5),
-      origin_name: row.origin_name || '',
+      origin_name: originName,
       origin_lat: row.origin_lat ?? null,
       origin_lng: row.origin_lng ?? null,
-      origin_free_text: Boolean(row.origin_name?.trim()) && !originHasCoords,
-      destination_name: row.destination_name || '',
+      origin_free_text: originFree,
+      origin_saved_name: originName,
+      origin_saved_lat: row.origin_lat ?? null,
+      origin_saved_lng: row.origin_lng ?? null,
+      origin_saved_free_text: originFree,
+      origin_last_selected_name: originHasCoords ? originName.trim() : null,
+      destination_name: destinationName,
       destination_lat: row.destination_lat ?? null,
       destination_lng: row.destination_lng ?? null,
-      destination_free_text: Boolean(row.destination_name?.trim()) && !destinationHasCoords,
+      destination_free_text: destinationFree,
+      destination_saved_name: destinationName,
+      destination_saved_lat: row.destination_lat ?? null,
+      destination_saved_lng: row.destination_lng ?? null,
+      destination_saved_free_text: destinationFree,
+      destination_last_selected_name: destinationHasCoords ? destinationName.trim() : null,
       dias_semana: Array.isArray(row.dias_semana) && row.dias_semana.length > 0
         ? row.dias_semana.map((d) => Number(d))
         : [...DIAS_UTEIS_DEFAULT],
       teto_mensal_kz: row.teto_mensal_kz != null ? String(row.teto_mensal_kz) : '',
     });
   };
+
+  const originOdResolution = useMemo(
+    () => resolveProcuraOdFieldForPayload({
+      name: form.origin_name,
+      lat: form.origin_lat ?? null,
+      lng: form.origin_lng ?? null,
+      freeText: Boolean(form.origin_free_text),
+      savedName: form.origin_saved_name,
+      savedLat: form.origin_saved_lat,
+      savedLng: form.origin_saved_lng,
+      savedFreeText: form.origin_saved_free_text,
+      lastSelectedName: form.origin_last_selected_name,
+    }),
+    [form],
+  );
+
+  const destinationOdResolution = useMemo(
+    () => resolveProcuraOdFieldForPayload({
+      name: form.destination_name,
+      lat: form.destination_lat ?? null,
+      lng: form.destination_lng ?? null,
+      freeText: Boolean(form.destination_free_text),
+      savedName: form.destination_saved_name,
+      savedLat: form.destination_saved_lat,
+      savedLng: form.destination_saved_lng,
+      savedFreeText: form.destination_saved_free_text,
+      lastSelectedName: form.destination_last_selected_name,
+    }),
+    [form],
+  );
+
+  const originFieldError = originOdResolution.unresolved
+    ? GEOCODER_FIELD_UNRESOLVED_PROVISIONAL
+    : null;
+  const destinationFieldError = destinationOdResolution.unresolved
+    ? GEOCODER_FIELD_UNRESOLVED_PROVISIONAL
+    : null;
 
   const persistProcuraUpdate = async (payload) => {
     if (submitProcuraInFlightRef.current || savingProcura) {
@@ -1768,36 +1841,68 @@ const PassengerDashboard = () => {
             name="origin_name"
             label="Origem"
             value={form.origin_name}
-            onChange={handleChange}
+            onChange={handleProcuraOdNameChange('origin_name')}
             allowFreeTextUse
+            fieldError={originFieldError}
             onConfirmFreeText={() =>
-              setForm((prev) => ({ ...prev, origin_free_text: true }))
-            }
-            onSelectCoordinates={(c) =>
               setForm((prev) => ({
                 ...prev,
-                origin_lat: c?.lat ?? null,
-                origin_lng: c?.lng ?? null,
-                ...(c ? { origin_free_text: false } : {}),
+                origin_free_text: true,
+                origin_lat: null,
+                origin_lng: null,
+                origin_last_selected_name: null,
               }))
+            }
+            onSelectCoordinates={(c) =>
+              setForm((prev) => {
+                if (c) {
+                  return {
+                    ...prev,
+                    origin_lat: c.lat ?? null,
+                    origin_lng: c.lng ?? null,
+                    origin_free_text: false,
+                    origin_last_selected_name: String(prev.origin_name || '').trim(),
+                  };
+                }
+                if (prev.origin_free_text) {
+                  return { ...prev, origin_lat: null, origin_lng: null };
+                }
+                return prev;
+              })
             }
           />
           <AddressInput
             name="destination_name"
             label="Destino"
             value={form.destination_name}
-            onChange={handleChange}
+            onChange={handleProcuraOdNameChange('destination_name')}
             allowFreeTextUse
+            fieldError={destinationFieldError}
             onConfirmFreeText={() =>
-              setForm((prev) => ({ ...prev, destination_free_text: true }))
-            }
-            onSelectCoordinates={(c) =>
               setForm((prev) => ({
                 ...prev,
-                destination_lat: c?.lat ?? null,
-                destination_lng: c?.lng ?? null,
-                ...(c ? { destination_free_text: false } : {}),
+                destination_free_text: true,
+                destination_lat: null,
+                destination_lng: null,
+                destination_last_selected_name: null,
               }))
+            }
+            onSelectCoordinates={(c) =>
+              setForm((prev) => {
+                if (c) {
+                  return {
+                    ...prev,
+                    destination_lat: c.lat ?? null,
+                    destination_lng: c.lng ?? null,
+                    destination_free_text: false,
+                    destination_last_selected_name: String(prev.destination_name || '').trim(),
+                  };
+                }
+                if (prev.destination_free_text) {
+                  return { ...prev, destination_lat: null, destination_lng: null };
+                }
+                return prev;
+              })
             }
           />
           <label className="flex flex-col gap-1.5 text-sm font-semibold">

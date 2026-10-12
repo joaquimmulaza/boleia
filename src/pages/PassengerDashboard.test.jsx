@@ -23,7 +23,11 @@ import {
 } from '../services/GrupoService';
 import { listWaitlistByProcura } from '../services/WaitlistService';
 import { expectNoUserFacingJargon } from '../test/jargonBan';
-import { FLEX_ONLY_FREE_TEXT_WARNING } from '../utils/addressGeocoderCopy';
+import {
+  FLEX_ONLY_FREE_TEXT_WARNING,
+  GEOCODER_FIELD_UNRESOLVED_PROVISIONAL,
+  GEOCODER_FIELD_UNRESOLVED_TODO,
+} from '../utils/addressGeocoderCopy';
 import { confirmPropostaSheet } from '../test/confirmPropostaSheet.js';
 import { formatKwanza } from '../utils/formatKwanza';
 import { COPY_N_FIXO } from '../utils/opportunityProposal';
@@ -130,6 +134,7 @@ vi.mock('../components/AddressInput', () => ({
     onSelectCoordinates,
     allowFreeTextUse,
     onConfirmFreeText,
+    fieldError,
   }) => (
     <label htmlFor={`mock-${name}`}>
       {label}
@@ -137,19 +142,18 @@ vi.mock('../components/AddressInput', () => ({
         id={`mock-${name}`}
         name={name}
         value={value || ''}
-        onChange={(e) => {
-          onChange?.(e);
-          // Simula perda de coords ao editar texto sem nova sugestão/Usar (regressão PM #276).
-          if (name === 'origin_name' || name === 'destination_name') {
-            onSelectCoordinates?.(null);
-          }
-        }}
+        onChange={(e) => onChange?.(e)}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && e.currentTarget.form) {
             e.currentTarget.form.requestSubmit();
           }
         }}
       />
+      {fieldError ? (
+        <div role="alert" data-testid={`field-error-${name}`}>
+          {fieldError}
+        </div>
+      ) : null}
       {allowFreeTextUse ? (
         <button
           type="button"
@@ -1500,8 +1504,11 @@ describe('PassengerDashboard — marketplace', () => {
 
     fireEvent.click(form.getByRole('button', { name: /Guardar procura/i }));
     expect(createProcura).not.toHaveBeenCalled();
-    expect(await screen.findByTestId('passenger-feedback')).toHaveTextContent(
-      /Seleccione origem e destino na lista de sugestões/i,
+    expect(screen.getByTestId('field-error-origin_name')).toHaveTextContent(
+      GEOCODER_FIELD_UNRESOLVED_PROVISIONAL,
+    );
+    expect(screen.getByTestId('field-error-destination_name')).toHaveTextContent(
+      GEOCODER_FIELD_UNRESOLVED_PROVISIONAL,
     );
 
     fireEvent.click(form.getByRole('button', { name: /Usar mock origin_name/i }));
@@ -1541,9 +1548,8 @@ describe('PassengerDashboard — marketplace', () => {
     expect(createProcura).not.toHaveBeenCalled();
   });
 
-  it('editar procura: alterar texto da origem não apaga coordenadas no payload', async () => {
+  it('editar procura: texto editado sem sugestão bloqueia submit (não envia lat/lng antigas)', async () => {
     listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
-    updateProcura.mockResolvedValue({ ...procuraBase, origin_name: 'Talatona (editado)' });
 
     render(
       <MemoryRouter>
@@ -1557,28 +1563,17 @@ describe('PassengerDashboard — marketplace', () => {
     const form = withinFormularioProcura();
     changeCampoProcura('origin_name', 'Talatona (editado)');
 
-    fireEvent.click(form.getByRole('button', { name: /Guardar alterações/i }));
+    expect(screen.getByTestId('field-error-origin_name')).toHaveTextContent(
+      GEOCODER_FIELD_UNRESOLVED_PROVISIONAL,
+    );
+    expect(screen.queryByText(GEOCODER_FIELD_UNRESOLVED_TODO)).not.toBeInTheDocument();
 
-    await waitFor(() => {
-      expect(updateProcura).toHaveBeenCalledWith(
-        'pr-1',
-        expect.objectContaining({
-          origin_name: 'Talatona (editado)',
-          origin_lat: -8.9,
-          origin_lng: 13.1,
-        }),
-      );
-    });
-    expect(
-      screen.queryByText(
-        'Como este local não está no mapa, só as ofertas sem percurso fixo aparecem como compatíveis. Para veres mais, escolhe uma sugestão da lista.',
-      ),
-    ).not.toBeInTheDocument();
+    fireEvent.click(form.getByRole('button', { name: /Guardar alterações/i }));
+    expect(updateProcura).not.toHaveBeenCalled();
   });
 
-  it('editar procura: Enter sem sugestão mantém origin_lat e origin_lng guardados', async () => {
+  it('editar procura: Enter com campo por resolver bloqueia submit', async () => {
     listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
-    updateProcura.mockResolvedValue({ ...procuraBase, origin_name: 'Talatona (Enter)' });
 
     render(
       <MemoryRouter>
@@ -1591,17 +1586,35 @@ describe('PassengerDashboard — marketplace', () => {
 
     const formEl = getFormularioProcuraElement();
     const originInput = formEl.querySelector('input[name="origin_name"]');
-    expect(originInput).toBeTruthy();
     fireEvent.change(originInput, {
       target: { name: 'origin_name', value: 'Talatona (Enter)' },
     });
     fireEvent.keyDown(originInput, { key: 'Enter', code: 'Enter' });
 
+    expect(updateProcura).not.toHaveBeenCalled();
+    expect(screen.getByTestId('field-error-origin_name')).toBeInTheDocument();
+  });
+
+  it('editar procura: sem mexer no texto mantém coordenadas no payload', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    updateProcura.mockResolvedValue({ ...procuraBase });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    await abrirMinhaProcura();
+    fireEvent.click(await screen.findByRole('button', { name: /Editar procura/i }));
+
+    fireEvent.click(withinFormularioProcura().getByRole('button', { name: /Guardar alterações/i }));
+
     await waitFor(() => {
       expect(updateProcura).toHaveBeenCalledWith(
         'pr-1',
         expect.objectContaining({
-          origin_name: 'Talatona (Enter)',
+          origin_name: 'Talatona',
           origin_lat: -8.9,
           origin_lng: 13.1,
           destination_lat: -8.8,

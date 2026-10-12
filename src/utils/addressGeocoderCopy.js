@@ -16,3 +16,10 @@ export const GEOCODER_NETWORK_ERROR_MESSAGE =
   'Não foi possível procurar locais. Verifica a ligação e tenta outra vez.';
 
 export const GEOCODER_RETRY_LABEL = 'Tentar outra vez';
+
+/** TODO(Copywriter): campo OD por resolver — escolher sugestão ou confirmar Usar. */
+export const GEOCODER_FIELD_UNRESOLVED_TODO =
+  'TODO(Copywriter): pedir sugestão da lista ou confirmar Usar quando o texto já não corresponde ao local escolhido.';
+
+/** Copy provisória mostrada na UI (B5: nunca expor TODO). */
+export const GEOCODER_FIELD_UNRESOLVED_PROVISIONAL = 'Escolhe um local da lista.';

@@ -1,26 +1,74 @@
 /**
- * @typedef {{ lat?: number | null, lng?: number | null }} StoredOdCoords
- * @typedef {{ lat: number | null, lng: number | null, freeText: boolean }} FormOdField
+ * @typedef {{
+ *   name: string,
+ *   lat: number | null,
+ *   lng: number | null,
+ *   freeText: boolean,
+ *   savedName?: string,
+ *   savedLat?: number | null,
+ *   savedLng?: number | null,
+ *   savedFreeText?: boolean,
+ *   lastSelectedName?: string | null,
+ * }} ProcuraOdFieldInput
  */
 
 /**
- * Origem/destino no payload: texto livre confirmado anula coords;
- * senão form; senão (edição) coords já guardados na procura.
- * @param {FormOdField} formField
- * @param {StoredOdCoords | null | undefined} storedRow
- * @returns {{ lat: number | null, lng: number | null }}
+ * @typedef {{
+ *   ok: boolean,
+ *   unresolved?: boolean,
+ *   lat: number | null,
+ *   lng: number | null,
+ * }} ProcuraOdFieldResolution
  */
-export function resolveProcuraOdFieldForPayload(formField, storedRow) {
-  if (formField.freeText) {
-    return { lat: null, lng: null };
+
+/**
+ * Resolve origem/destino para payload: nunca combina texto novo com lat/lng antigas;
+ * texto igual ao guardado reutiliza coords guardadas; Usar confirma texto livre (null).
+ * @param {ProcuraOdFieldInput} field
+ * @returns {ProcuraOdFieldResolution}
+ */
+export function resolveProcuraOdFieldForPayload(field) {
+  const name = String(field.name || '').trim();
+  const savedName = String(field.savedName || '').trim();
+  const lastSelectedName = String(field.lastSelectedName || '').trim();
+
+  if (field.freeText) {
+    return { ok: true, lat: null, lng: null };
   }
-  if (formField.lat != null && formField.lng != null) {
-    return { lat: formField.lat, lng: formField.lng };
+
+  if (savedName && name === savedName) {
+    const savedFree = Boolean(field.savedFreeText);
+    const savedLat = field.savedLat ?? null;
+    const savedLng = field.savedLng ?? null;
+    if (savedFree || (savedLat == null && savedLng == null)) {
+      return { ok: true, lat: null, lng: null };
+    }
+    if (savedLat != null && savedLng != null) {
+      return { ok: true, lat: savedLat, lng: savedLng };
+    }
   }
-  const storedLat = storedRow?.lat ?? null;
-  const storedLng = storedRow?.lng ?? null;
-  if (storedLat != null && storedLng != null) {
-    return { lat: storedLat, lng: storedLng };
+
+  if (
+    lastSelectedName
+    && name === lastSelectedName
+    && field.lat != null
+    && field.lng != null
+  ) {
+    return { ok: true, lat: field.lat, lng: field.lng };
   }
-  return { lat: formField.lat ?? null, lng: formField.lng ?? null };
+
+  if (!name) {
+    return { ok: false, unresolved: false, lat: null, lng: null };
+  }
+
+  return { ok: false, unresolved: true, lat: null, lng: null };
+}
+
+/**
+ * @param {ProcuraOdFieldInput} field
+ * @returns {boolean}
+ */
+export function isProcuraOdFieldUnresolved(field) {
+  const result = resolveProcuraOdFieldForPayload(field);
+  return Boolean(result.unresolved);
 }

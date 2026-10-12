@@ -18,6 +18,7 @@ import {
  *   onConfirmFreeText?: () => void,
  *   allowFreeTextUse?: boolean,
  *   required?: boolean,
+ *   fieldError?: string | null,
  * }} props
  */
 const AddressInput = ({
@@ -30,6 +31,7 @@ const AddressInput = ({
   onConfirmFreeText,
   allowFreeTextUse = false,
   required = true,
+  fieldError = null,
 }) => {
   const {
     suggestions,
@@ -209,7 +211,13 @@ const AddressInput = ({
         </div>
       </label>
 
-      {error && !listPanelOpen && !errorKind && (
+      {fieldError ? (
+        <div className="mt-1 ml-1 text-xs text-red-500 font-medium" role="alert">
+          {fieldError}
+        </div>
+      ) : null}
+
+      {error && !listPanelOpen && !errorKind && !fieldError && (
          <div className="mt-1 ml-1 text-xs text-red-500 font-medium">{error}</div>
       )}
 

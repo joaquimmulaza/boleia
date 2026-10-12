@@ -4,6 +4,8 @@ import {
   FLEX_ONLY_FREE_TEXT_WARNING,
   GEOCODER_NETWORK_ERROR_MESSAGE,
   GEOCODER_RETRY_LABEL,
+  GEOCODER_FIELD_UNRESOLVED_PROVISIONAL,
+  GEOCODER_FIELD_UNRESOLVED_TODO,
 } from './addressGeocoderCopy';
 
 describe('addressGeocoderCopy', () => {
@@ -22,5 +24,11 @@ describe('addressGeocoderCopy', () => {
       'Não foi possível procurar locais. Verifica a ligação e tenta outra vez.',
     );
     expect(GEOCODER_RETRY_LABEL).toBe('Tentar outra vez');
+  });
+
+  it('campo por resolver: TODO só em código, UI provisória', () => {
+    expect(GEOCODER_FIELD_UNRESOLVED_TODO).toMatch(/^TODO\(Copywriter\)/);
+    expect(GEOCODER_FIELD_UNRESOLVED_PROVISIONAL).toBe('Escolhe um local da lista.');
+    expect(GEOCODER_FIELD_UNRESOLVED_PROVISIONAL).not.toMatch(/TODO/);
   });
 });
