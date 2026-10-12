@@ -26,7 +26,6 @@ import { expectNoUserFacingJargon } from '../test/jargonBan';
 import {
   FLEX_ONLY_FREE_TEXT_WARNING,
   GEOCODER_FIELD_UNRESOLVED_PROVISIONAL,
-  GEOCODER_FIELD_UNRESOLVED_TODO,
 } from '../utils/addressGeocoderCopy';
 import { confirmPropostaSheet } from '../test/confirmPropostaSheet.js';
 import { formatKwanza } from '../utils/formatKwanza';
@@ -1566,7 +1565,7 @@ describe('PassengerDashboard — marketplace', () => {
     expect(screen.getByTestId('field-error-origin_name')).toHaveTextContent(
       GEOCODER_FIELD_UNRESOLVED_PROVISIONAL,
     );
-    expect(screen.queryByText(GEOCODER_FIELD_UNRESOLVED_TODO)).not.toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('TODO(Copywriter)');
 
     fireEvent.click(form.getByRole('button', { name: /Guardar alterações/i }));
     expect(updateProcura).not.toHaveBeenCalled();

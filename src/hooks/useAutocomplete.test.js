@@ -97,6 +97,33 @@ describe('useAutocomplete', () => {
     );
   });
 
+  it('expõe resolvedInput só após concluir pedido do valor actual', async () => {
+    let resolvePredictions;
+    getPlacePredictions.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolvePredictions = resolve;
+        }),
+    );
+
+    const { result } = renderHook(() => useAutocomplete());
+
+    await act(async () => {
+      void result.current.fetchPredictions('Talatona');
+    });
+    expect(result.current.resolvedInput).toBeNull();
+    expect(result.current.loading).toBe(true);
+
+    await act(async () => {
+      resolvePredictions([]);
+    });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+      expect(result.current.resolvedInput).toBe('Talatona');
+    });
+  });
+
   it('marca errorKind network quando getPlacePredictions falha', async () => {
     getPlacePredictions.mockRejectedValueOnce(new TypeError('Failed to fetch'));
 

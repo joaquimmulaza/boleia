@@ -17,9 +17,11 @@ export const GEOCODER_NETWORK_ERROR_MESSAGE =
 
 export const GEOCODER_RETRY_LABEL = 'Tentar outra vez';
 
-/** TODO(Copywriter): campo OD por resolver — escolher sugestão ou confirmar Usar. */
-export const GEOCODER_FIELD_UNRESOLVED_TODO =
-  'TODO(Copywriter): pedir sugestão da lista ou confirmar Usar quando o texto já não corresponde ao local escolhido.';
+/** Campo OD por resolver (inline submit bloqueado). */
+export const GEOCODER_FIELD_UNRESOLVED_TODO = 'Escolhe um local da lista.';
 
-/** Copy provisória mostrada na UI (B5: nunca expor TODO). */
-export const GEOCODER_FIELD_UNRESOLVED_PROVISIONAL = 'Escolhe um local da lista.';
+/** @deprecated alias — usar GEOCODER_FIELD_UNRESOLVED_TODO */
+export const GEOCODER_FIELD_UNRESOLVED_PROVISIONAL = GEOCODER_FIELD_UNRESOLVED_TODO;
+
+/** Alias histórico de spec — copy final = GEOCODER_NETWORK_ERROR_MESSAGE */
+export const GEOCODER_NETWORK_ERROR_TODO = GEOCODER_NETWORK_ERROR_MESSAGE;

@@ -10,6 +10,7 @@ export const useAutocomplete = () => {
   const abortRef = useRef(null);
   const requestSeqRef = useRef(0);
   const lastInputRef = useRef('');
+  const [resolvedInput, setResolvedInput] = useState(null);
 
   const fetchPredictions = useCallback(async (input) => {
     const seq = requestSeqRef.current + 1;
@@ -25,6 +26,7 @@ export const useAutocomplete = () => {
         setLoading(false);
         setError(null);
         setErrorKind(null);
+        setResolvedInput(null);
       }
       return;
     }
@@ -36,6 +38,7 @@ export const useAutocomplete = () => {
     setLoading(true);
     setError(null);
     setErrorKind(null);
+    setResolvedInput(null);
 
     try {
       const results = await getPlacePredictions(input, { signal: controller.signal });
@@ -43,6 +46,7 @@ export const useAutocomplete = () => {
         return;
       }
       setSuggestions(results);
+      setResolvedInput(input);
     } catch (err) {
       if (err?.name === 'AbortError') {
         return;
@@ -51,6 +55,7 @@ export const useAutocomplete = () => {
         setError(err.message || 'Erro ao obter sugestões.');
         setErrorKind('network');
         setSuggestions([]);
+        setResolvedInput(input);
       }
     } finally {
       if (requestSeqRef.current === seq) {
@@ -88,6 +93,7 @@ export const useAutocomplete = () => {
     setSuggestions([]);
     setError(null);
     setErrorKind(null);
+    setResolvedInput(null);
   }, []);
 
   return {
@@ -95,6 +101,7 @@ export const useAutocomplete = () => {
     loading,
     error,
     errorKind,
+    resolvedInput,
     fetchPredictions,
     retryLastFetch,
     selectPlace,

@@ -140,8 +140,10 @@ const fetchPhotonRaw = async (query, signal) => {
   const response = await fetch(url, { signal });
 
   if (!response.ok) {
-    console.warn(`[LocationService] Photon respondeu com status ${response.status}`);
-    return [];
+    const err = new Error(`Photon respondeu com status ${response.status}`);
+    err.status = response.status;
+    console.warn(`[LocationService] ${err.message}`);
+    throw err;
   }
 
   const data = await response.json();
@@ -167,12 +169,29 @@ export const getPlacePredictions = async (input, options = {}) => {
     : `bairro ${trimmed}`;
 
   try {
-    const [primaryFeatures, assistFeatures] = await Promise.all([
+    const [primarySettled, assistSettled] = await Promise.allSettled([
       fetchPhotonRaw(trimmed, options.signal),
       assistQuery
         ? fetchPhotonRaw(assistQuery, options.signal)
         : Promise.resolve([]),
     ]);
+
+    if (primarySettled.status === 'rejected') {
+      throw primarySettled.reason;
+    }
+    const primaryFeatures = primarySettled.value;
+
+    let assistFeatures = [];
+    if (assistSettled.status === 'fulfilled') {
+      assistFeatures = assistSettled.value;
+    } else if (assistSettled.reason?.name === 'AbortError') {
+      throw assistSettled.reason;
+    } else {
+      console.warn(
+        '[LocationService] Pesquisa assistida «bairro …» falhou:',
+        assistSettled.reason?.message ?? assistSettled.reason,
+      );
+    }
 
     const byId = new Map();
     for (const feature of [...primaryFeatures, ...assistFeatures]) {

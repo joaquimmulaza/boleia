@@ -42,6 +42,7 @@ const AddressInput = ({
     retryLastFetch,
     selectPlace,
     clearSuggestions,
+    resolvedInput,
   } = useAutocomplete();
 
   const [inputValue, setInputValue] = useState(value || '');
@@ -84,6 +85,7 @@ const AddressInput = ({
 
     if (newVal.trim().length > 2) {
       setShowDropdown(true);
+      clearSuggestions();
       debounceTimeoutRef.current = setTimeout(() => {
         fetchPredictions(newVal);
       }, 300);
@@ -126,15 +128,20 @@ const AddressInput = ({
     }
   }, [name, onChange, onSelectCoordinates, selectPlace]);
 
+  const inputMatchesResolved =
+    resolvedInput !== null && resolvedInput.trim() === inputValue.trim();
+
+  const predictionsSettled = !loading && inputMatchesResolved;
+
   const showFreeTextAction =
     allowFreeTextUse
-    && !loading
+    && predictionsSettled
     && trimmedInputLength > 2
     && (errorKind === null || errorKind === 'network');
 
   const emptyMessage =
     allowFreeTextUse
-    && !loading
+    && predictionsSettled
     && !errorKind
     && trimmedInputLength > 2
       ? EMPTY_GEOCODER_MESSAGE

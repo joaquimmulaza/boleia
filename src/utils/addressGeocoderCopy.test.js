@@ -6,6 +6,7 @@ import {
   GEOCODER_RETRY_LABEL,
   GEOCODER_FIELD_UNRESOLVED_PROVISIONAL,
   GEOCODER_FIELD_UNRESOLVED_TODO,
+  GEOCODER_NETWORK_ERROR_TODO,
 } from './addressGeocoderCopy';
 
 describe('addressGeocoderCopy', () => {
@@ -26,9 +27,11 @@ describe('addressGeocoderCopy', () => {
     expect(GEOCODER_RETRY_LABEL).toBe('Tentar outra vez');
   });
 
-  it('campo por resolver: TODO só em código, UI provisória', () => {
-    expect(GEOCODER_FIELD_UNRESOLVED_TODO).toMatch(/^TODO\(Copywriter\)/);
+  it('campo por resolver e erro de rede: copy final sem TODO na UI', () => {
+    expect(GEOCODER_FIELD_UNRESOLVED_TODO).toBe('Escolhe um local da lista.');
     expect(GEOCODER_FIELD_UNRESOLVED_PROVISIONAL).toBe('Escolhe um local da lista.');
-    expect(GEOCODER_FIELD_UNRESOLVED_PROVISIONAL).not.toMatch(/TODO/);
+    expect(GEOCODER_FIELD_UNRESOLVED_TODO).not.toMatch(/TODO/);
+    expect(GEOCODER_NETWORK_ERROR_TODO).toBe(GEOCODER_NETWORK_ERROR_MESSAGE);
+    expect(GEOCODER_NETWORK_ERROR_TODO).not.toMatch(/TODO/);
   });
 });

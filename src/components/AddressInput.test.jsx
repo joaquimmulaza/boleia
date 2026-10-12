@@ -13,6 +13,7 @@ const clearSuggestions = vi.fn();
 let mockSuggestions = [];
 let mockLoading = false;
 let mockErrorKind = null;
+let mockResolvedInput = null;
 const retryLastFetch = vi.fn();
 
 vi.mock('../hooks/useAutocomplete', () => ({
@@ -21,6 +22,7 @@ vi.mock('../hooks/useAutocomplete', () => ({
     loading: mockLoading,
     error: null,
     errorKind: mockErrorKind,
+    resolvedInput: mockResolvedInput,
     fetchPredictions,
     retryLastFetch,
     selectPlace,
@@ -34,6 +36,7 @@ describe('AddressInput', () => {
     mockSuggestions = [];
     mockLoading = false;
     mockErrorKind = null;
+    mockResolvedInput = null;
     selectPlace.mockResolvedValue({ lat: -8.838, lng: 13.234 });
   });
 
@@ -272,6 +275,7 @@ describe('AddressInput', () => {
   it('com allowFreeTextUse mostra copy e acção Usar quando a lista vem vazia', () => {
     mockSuggestions = [];
     mockLoading = false;
+    mockResolvedInput = 'XYZZZZ';
 
     render(
       <AddressInput
@@ -349,6 +353,7 @@ describe('AddressInput', () => {
   it('erro de rede mostra copy final, retry e Usar texto livre', () => {
     mockErrorKind = 'network';
     mockSuggestions = [];
+    mockResolvedInput = 'Talatona';
 
     render(
       <AddressInput
@@ -374,9 +379,64 @@ describe('AddressInput', () => {
     ).toBeInTheDocument();
   });
 
+  it('sem resultados e Usar só após pesquisa concluída do valor actual no campo', () => {
+    mockSuggestions = [];
+    mockLoading = false;
+    mockResolvedInput = 'Talatona';
+
+    const { rerender } = render(
+      <AddressInput
+        name="origin_name"
+        label="Origem"
+        value="Talatonax"
+        onChange={vi.fn()}
+        allowFreeTextUse
+      />,
+    );
+
+    fireEvent.focus(screen.getByLabelText(/^Origem$/i));
+    expect(screen.queryByText(EMPTY_GEOCODER_MESSAGE)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Usar/i })).not.toBeInTheDocument();
+
+    mockResolvedInput = 'Talatonax';
+    rerender(
+      <AddressInput
+        name="origin_name"
+        label="Origem"
+        value="Talatonax"
+        onChange={vi.fn()}
+        allowFreeTextUse
+      />,
+    );
+    fireEvent.focus(screen.getByLabelText(/^Origem$/i));
+    expect(screen.getByText(EMPTY_GEOCODER_MESSAGE)).toBeInTheDocument();
+  });
+
+  it('durante loading não mostra sem resultados nem Usar', () => {
+    mockSuggestions = [];
+    mockLoading = true;
+    mockResolvedInput = 'Talatona';
+
+    render(
+      <AddressInput
+        name="origin_name"
+        label="Origem"
+        value="Talatona"
+        onChange={vi.fn()}
+        allowFreeTextUse
+      />,
+    );
+
+    fireEvent.focus(screen.getByLabelText(/^Origem$/i));
+    expect(screen.queryByText(EMPTY_GEOCODER_MESSAGE)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Usar/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/A procurar/i)).toBeInTheDocument();
+  });
+
   it('Usar texto livre fecha sugestões, confirma free-text e mantém coordenadas nulas', () => {
     mockSuggestions = [];
     mockLoading = false;
+    mockResolvedInput = 'Bairro QA';
     const onSelectCoordinates = vi.fn();
     const onConfirmFreeText = vi.fn();
 

@@ -294,6 +294,56 @@ describe('LocationService (OpenStreetMap / Photon)', () => {
       await expect(getPlacePredictions('Mutamba')).rejects.toThrow(/Failed to fetch/);
     });
 
+    it('lança erro quando Photon responde 429 (não devolve lista vazia)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        json: async () => ({}),
+      });
+
+      await expect(getPlacePredictions('Talatona')).rejects.toThrow(/429/);
+    });
+
+    it('lança erro quando Photon responde 500 (não devolve lista vazia)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({}),
+      });
+
+      await expect(getPlacePredictions('Viana')).rejects.toThrow(/500/);
+    });
+
+    it('falha na pesquisa assistida «bairro …» não descarta resultados principais', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            features: [
+              makePhotonFeature({
+                osm_id: 1,
+                properties: {
+                  district: 'Talatona',
+                  county: 'Município do Talatona',
+                  state: 'Luanda',
+                  countrycode: 'AO',
+                  type: 'district',
+                },
+              }),
+            ],
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 503,
+          json: async () => ({}),
+        });
+
+      const result = await getPlacePredictions('Talatona');
+      expect(result).toHaveLength(1);
+      expect(result[0].place_id).toBe('photon-1');
+    });
+
     it('re-lança AbortError para o hook cancelar pedidos obsoletos', async () => {
       mockFetch.mockRejectedValueOnce(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
 
