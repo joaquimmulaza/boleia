@@ -1,5 +1,9 @@
 -- Justa causa imediata: suprimir cancelamento genérico antes de _p0_finalize;
 -- motivo canónico «Rescisão por justa causa» → chip Terminado (#249).
+-- Consensual imediato (confirmação): mesma ordem suppress → finalize (#267 S1).
+-- RLS na tabela interna (alinhado prod; idempotente se já activo).
+
+ALTER TABLE IF EXISTS public._acordo_cancel_notif_suppress ENABLE ROW LEVEL SECURITY;
 
 DROP FUNCTION IF EXISTS public._p0_finalize_lugares_rescisao_imediata(uuid, date);
 
@@ -287,13 +291,13 @@ BEGIN
         RAISE EXCEPTION 'Dias úteis do acordo inválidos para calcular a rescisão.';
       END IF;
 
-      PERFORM public._p0_finalize_lugares_rescisao_imediata(p_acordo_id, v_hoje);
-
       INSERT INTO public._acordo_cancel_notif_suppress (
         acordo_id, txid, reason, suppress_driver, suppress_passenger
       ) VALUES (
         p_acordo_id, txid_current(), 'terminate_consensual_immediate', true, true
       );
+
+      PERFORM public._p0_finalize_lugares_rescisao_imediata(p_acordo_id, v_hoje);
 
       UPDATE public.acordos
       SET

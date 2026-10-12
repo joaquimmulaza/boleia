@@ -139,8 +139,6 @@ BEGIN
   EXCEPTION
     WHEN insufficient_privilege THEN
       v_forge_ok := false;
-    WHEN OTHERS THEN
-      v_forge_ok := false;
   END;
 
   IF v_forge_ok THEN
@@ -212,4 +210,116 @@ BEGIN
   END IF;
 
   RAISE NOTICE 'PASS JC5: ja_encerrado intacto';
+END $$;
+
+-- Consensual imediato confirmado: suppress antes de finalize (actor 0 genéricas; contraparte 1 específica).
+DO $$
+DECLARE
+  v_driver uuid := '0e611111-1111-4111-8111-111111111111';
+  v_pax uuid := '0e622222-2222-4222-8222-222222222222';
+  v_veiculo uuid;
+  v_oferta uuid;
+  v_procura uuid;
+  v_acordo uuid := '0e644444-4444-4444-8444-444444444444';
+  v_ap uuid := '0e677777-7777-4777-8777-777777777777';
+  v_key1 uuid := '0e6aaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  v_key2 uuid := '0e6bbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  v_out jsonb;
+  v_n_driver_specific int;
+  v_n_driver_generic int;
+  v_n_pax_total int;
+  v_msg_specific constant text :=
+    'A rescisão consensual foi confirmada; o acordo está encerrado com ajuste proporcional.';
+BEGIN
+  PERFORM set_config('session_replication_role', 'replica', true);
+
+  INSERT INTO auth.users (id, email) VALUES
+    (v_driver, 'jc6-driver@test'),
+    (v_pax, 'jc6-pax@test')
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO public.perfis (id, nome_completo, telefone, tipo_perfil) VALUES
+    (v_driver, 'JC6 Driver', '936000001', 'Motorista'),
+    (v_pax, 'JC6 Pax', '936000002', 'Passageiro')
+  ON CONFLICT (id) DO NOTHING;
+
+  INSERT INTO public.veiculos (id_motorista, marca_modelo, matricula, capacidade_total, vagas_passageiros)
+  VALUES (v_driver, 'JC6', 'JC6-1', 4, 3) RETURNING id INTO v_veiculo;
+
+  INSERT INTO public.ofertas_capacidade (
+    driver_id, veiculo_id, flexibilidade_rota, departure_time, vagas_disponiveis, vagas_totais,
+    modo_preco, valor_mensal_ask_kz, estado
+  ) VALUES (v_driver, v_veiculo, true, '09:00', 2, 2, 'POR_PASSAGEIRO', 20000, 'disponivel')
+  RETURNING id INTO v_oferta;
+
+  INSERT INTO public.procuras (owner_id, preferred_time, n_candidato, estado)
+  VALUES (v_pax, '09:30', 1, 'activa') RETURNING id INTO v_procura;
+
+  INSERT INTO public.acordos (
+    id, oferta_id, procura_id, driver_id, modo_preco, n_passageiros_contrato,
+    valor_mensal_total_kz, valor_mensal_por_passageiro_kz, estado, dias_uteis_mes
+  ) VALUES (
+    v_acordo, v_oferta, v_procura, v_driver, 'POR_PASSAGEIRO', 1, 20000, 20000, 'activo', 22
+  );
+
+  INSERT INTO public.acordos_passageiros (id, acordo_id, passenger_id, estado, quota_mensal_kz, ordem_insercao)
+  VALUES (v_ap, v_acordo, v_pax, 'activo', 20000, 0);
+
+  DELETE FROM public.notificacoes
+  WHERE (metadata->>'acordo_id')::uuid = v_acordo;
+
+  PERFORM set_config('session_replication_role', 'origin', true);
+
+  PERFORM set_config('request.jwt.claim.sub', v_driver::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+  SET LOCAL ROLE authenticated;
+  v_out := public.terminate_agreement(v_acordo, 'consensual', NULL, v_key1, 'imediato');
+  RESET ROLE;
+
+  IF COALESCE(v_out->>'status', '') <> 'ok' THEN
+    RAISE EXCEPTION 'FAIL JC6: pedido consensual devia ok, obteve %', v_out;
+  END IF;
+
+  DELETE FROM public.notificacoes
+  WHERE (metadata->>'acordo_id')::uuid = v_acordo;
+
+  PERFORM set_config('request.jwt.claim.sub', v_pax::text, true);
+  SET LOCAL ROLE authenticated;
+  v_out := public.terminate_agreement(v_acordo, 'consensual', NULL, v_key2, 'imediato');
+  RESET ROLE;
+
+  IF COALESCE(v_out->>'status', '') <> 'ok' THEN
+    RAISE EXCEPTION 'FAIL JC6: confirmação consensual devia ok, obteve %', v_out;
+  END IF;
+
+  SELECT COUNT(*) INTO v_n_driver_specific
+  FROM public.notificacoes n
+  WHERE n.user_id = v_driver
+    AND (n.metadata->>'acordo_id')::uuid = v_acordo
+    AND n.mensagem = v_msg_specific;
+
+  IF v_n_driver_specific <> 1 THEN
+    RAISE EXCEPTION 'FAIL JC6: motorista devia receber 1 notif consensual específica (n=%)', v_n_driver_specific;
+  END IF;
+
+  SELECT COUNT(*) INTO v_n_driver_generic
+  FROM public.notificacoes n
+  WHERE n.user_id = v_driver
+    AND (n.metadata->>'acordo_id')::uuid = v_acordo
+    AND n.mensagem = 'Um acordo foi cancelado.';
+
+  IF v_n_driver_generic <> 0 THEN
+    RAISE EXCEPTION 'FAIL JC6: motorista não devia receber cancelamento genérico (n=%)', v_n_driver_generic;
+  END IF;
+
+  SELECT COUNT(*) INTO v_n_pax_total
+  FROM public.notificacoes n
+  WHERE n.user_id = v_pax
+    AND (n.metadata->>'acordo_id')::uuid = v_acordo;
+
+  IF v_n_pax_total <> 0 THEN
+    RAISE EXCEPTION 'FAIL JC6: actor (passageiro) devia ter 0 notificações (n=%)', v_n_pax_total;
+  END IF;
+
+  RAISE NOTICE 'PASS JC6: consensual imediato confirmado — suppress + notif';
 END $$;

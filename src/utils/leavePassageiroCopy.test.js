@@ -123,7 +123,7 @@ describe('leavePassageiroCopy — saída antes vs depois da activação', () => 
     ).not.toMatch(/o acordo é encerrado\./);
   });
 
-  it('último passageiro com justa causa pendente: acordo cancelado (alinhado ao chip)', () => {
+  it('último passageiro com rescisão justa causa já aplicada: copy cancelado (alinhado ao chip)', () => {
     expect(
       copyConfirmacaoSaidaPassageiro({
         lugarEstado: 'reservado',
@@ -131,7 +131,7 @@ describe('leavePassageiroCopy — saída antes vs depois da activação', () => 
         lugaresVivosCount: 1,
         lugaresVivosLoading: false,
         rescisao_modo: 'justa_causa',
-        rescisao_confirmada_em: null,
+        rescisao_confirmada_em: '2026-10-01T12:00:00Z',
       }),
     ).toMatch(/o acordo é cancelado\./);
   });

@@ -12,7 +12,8 @@ export const ANULACAO_MOTIVOS_SAIDA_VOLUNTARIA = Object.freeze([
  * @param {{ anulacao_motivo?: string | null } | null | undefined} pagamento
  * @returns {boolean}
  */
-export function isAnulacaoMotivoAcordoTerminadoAntesActivacao(pagamento) {
+/** Acordo terminado / rescisão justa causa antes da activação do lugar → chip «Terminado». */
+export function isAnulacaoMotivoLugarTerminadoAntesActivacao(pagamento) {
   const motivo = String(pagamento?.anulacao_motivo ?? '').trim();
   return (
     motivo === ANULACAO_MOTIVO.ACORDO_TERMINADO_ANTES_ACTIVACAO
