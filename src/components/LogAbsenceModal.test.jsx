@@ -125,11 +125,12 @@ describe('LogAbsenceModal — meia quota', () => {
     vi.useRealTimers();
   });
 
-  it('não monta o formulário sem tipoPerfil conhecido', () => {
+  it('desactiva Guardar sem tipoPerfil conhecido', () => {
     render(
       <LogAbsenceModal isOpen onClose={vi.fn()} onSubmit={vi.fn()} />,
     );
-    expect(screen.queryByTestId('modal-registar-falta')).not.toBeInTheDocument();
+    expect(screen.getByTestId('modal-registar-falta')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Guardar/i })).toBeDisabled();
   });
 
   it('limita data a hoje ou anterior (sem datas futuras)', () => {

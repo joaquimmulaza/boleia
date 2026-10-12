@@ -7,8 +7,19 @@ import {
   filterFaltasEsteMes,
   todayLuandaISO,
 } from '../utils/faltasDisplay';
+
 const mockNavigate = vi.fn();
 let mockAcordoId = 'acordo-uuid-001';
+
+const REF_MEIO_MES = new Date('2026-10-15T12:00:00Z');
+const FALTA_ONTEM = '2026-10-14';
+const FALTA_HOJE_OUT_1 = '2026-10-01';
+
+let mockAuth = {
+  user: { id: 'user-1' },
+  tipoPerfil: 'Passageiro',
+  profileLoading: false,
+};
 
 const {
   mockGetAbsences,
@@ -25,10 +36,7 @@ const {
 }));
 
 vi.mock('../contexts/AuthContext', () => ({
-  useAuth: () => ({
-    user: { id: 'user-1' },
-    tipoPerfil: 'Passageiro',
-  }),
+  useAuth: () => mockAuth,
 }));
 
 vi.mock('../services/AbsenceService', () => ({
@@ -58,7 +66,7 @@ vi.mock('../components/LogAbsenceModal', () => ({
           type="button"
           onClick={() =>
             onSubmit({
-              dataFalta: '2026-09-04',
+              dataFalta: FALTA_ONTEM,
               tipo: 'Passageiro',
               observacao: 'Consulta',
               viagem: 'ambas',
@@ -74,17 +82,20 @@ vi.mock('../components/LogAbsenceModal', () => ({
     ) : null,
 }));
 
-/** @param {number} offsetDays from today Luanda */
-function isoLuandaOffsetDays(offsetDays) {
-  const base = todayLuandaISO();
-  const [y, m, d] = base.split('-').map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d + offsetDays, 12, 0, 0));
-  return todayLuandaISO(dt);
+function useLuandaClock(isoDate) {
+  vi.useFakeTimers({ toFake: ['Date'], shouldAdvanceTime: true });
+  vi.setSystemTime(new Date(`${isoDate}T12:00:00Z`));
 }
 
 describe('AbsenceTracker — marketplace', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useLuandaClock('2026-10-15');
+    mockAuth = {
+      user: { id: 'user-1' },
+      tipoPerfil: 'Passageiro',
+      profileLoading: false,
+    };
     mockAcordoId = 'acordo-uuid-001';
     mockListPagamentosByAcordo.mockResolvedValue([
       { passenger_id: 'user-1', estado: 'em_custodia' },
@@ -93,7 +104,7 @@ describe('AbsenceTracker — marketplace', () => {
       {
         id: 'f1',
         id_acordo: 'acordo-uuid-001',
-        data_falta: isoLuandaOffsetDays(-1),
+        data_falta: FALTA_ONTEM,
         tipo: 'Passageiro',
         desconto_kz: 1363.64,
         viagem: 'ambas',
@@ -110,6 +121,7 @@ describe('AbsenceTracker — marketplace', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -123,14 +135,31 @@ describe('AbsenceTracker — marketplace', () => {
     expect(await screen.findByTestId('absence-card')).toBeInTheDocument();
   });
 
+  it('no dia 1 do mês em Luanda mostra falta registada nesse dia', async () => {
+    vi.setSystemTime(new Date('2026-10-01T12:00:00Z'));
+    mockGetAbsences.mockResolvedValue([
+      {
+        id: 'f1',
+        id_acordo: 'acordo-uuid-001',
+        data_falta: FALTA_HOJE_OUT_1,
+        tipo: 'Passageiro',
+        desconto_kz: 1363.64,
+        viagem: 'ambas',
+      },
+    ]);
+    render(<AbsenceTracker />);
+    expect(await screen.findByTestId('absence-card')).toBeInTheDocument();
+    expect(screen.getByTestId('desconto-falta-total')).toHaveTextContent('1363,64');
+  });
+
   it('apresenta desconto com sinal coerente entre total e histórico', async () => {
     mockGetAbsences.mockResolvedValue([
       {
         id: 'f1',
         id_acordo: 'acordo-uuid-001',
-        data_falta: isoLuandaOffsetDays(-1),
+        data_falta: FALTA_ONTEM,
         tipo: 'Passageiro',
-        desconto_kz: -1363.64,
+        desconto_kz: 1363.64,
         viagem: 'ambas',
       },
     ]);
@@ -149,12 +178,12 @@ describe('AbsenceTracker — marketplace', () => {
   });
 
   it('usa filtro «Este mês» no total e no histórico', async () => {
-    const hoje = todayLuandaISO();
-    const futuro = isoLuandaOffsetDays(10);
+    const hoje = todayLuandaISO(REF_MEIO_MES);
+    const futuro = '2026-10-25';
     expect(filterFaltasEsteMes([
       { data_falta: futuro, desconto_kz: 1272.73 },
       { data_falta: hoje, desconto_kz: 500 },
-    ]).map((f) => f.data_falta)).toEqual([hoje]);
+    ], REF_MEIO_MES).map((f) => f.data_falta)).toEqual([hoje]);
 
     mockGetAbsences.mockResolvedValue([
       {
@@ -181,6 +210,17 @@ describe('AbsenceTracker — marketplace', () => {
     expect(screen.getAllByTestId('absence-card')).toHaveLength(1);
     expect(screen.queryByText('1272,73')).not.toBeInTheDocument();
     expect(screen.getByTestId('desconto-falta-total')).toHaveTextContent('500');
+  });
+
+  it('desactiva Registar Falta enquanto o perfil carrega', async () => {
+    mockAuth = {
+      user: { id: 'user-1' },
+      tipoPerfil: undefined,
+      profileLoading: true,
+    };
+    render(<AbsenceTracker />);
+    const btn = await screen.findByRole('button', { name: /Registar Falta/i });
+    expect(btn).toBeDisabled();
   });
 
   it('mostra o vazio do mês sem faltas', async () => {

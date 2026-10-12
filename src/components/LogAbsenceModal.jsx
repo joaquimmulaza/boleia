@@ -61,47 +61,14 @@ const LogAbsenceModal = ({
   const tipoDefault = isPassageiro ? 'Passageiro' : isMotorista ? 'Motorista' : '';
   const tipoLocked = isPassageiro;
 
-  if (!isOpen) return null;
-
-  if (!tipoDefault) return null;
-
-  return (
-    <LogAbsenceForm
-      key={tipoDefault}
-      tipoDefault={tipoDefault}
-      tipoLocked={tipoLocked}
-      quotaMensalKz={quotaMensalKz}
-      diasUteisMes={diasUteisMes}
-      onClose={onClose}
-      onSubmit={onSubmit}
-    />
-  );
-};
-
-/**
- * @param {{
- *   tipoDefault: 'Passageiro' | 'Motorista',
- *   tipoLocked: boolean,
- *   quotaMensalKz?: number | null,
- *   diasUteisMes?: number | null,
- *   onClose: () => void,
- *   onSubmit: LogAbsenceModalProps['onSubmit'],
- * }} props
- */
-function LogAbsenceForm({
-  tipoDefault,
-  tipoLocked,
-  quotaMensalKz,
-  diasUteisMes,
-  onClose,
-  onSubmit,
-}) {
   const [formData, setFormData] = useState(() => ({
     dataFalta: '',
     tipo: tipoDefault,
     observacao: '',
     viagem: /** @type {ViagemFalta} */ ('ambas'),
   }));
+
+  if (!isOpen) return null;
 
   const minDataFalta = firstDayCurrentMonthLuanda();
   const maxDataFalta = todayLuandaISO();
@@ -123,8 +90,12 @@ function LogAbsenceForm({
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!tipoDefault) return;
     if (!isFaltaEsteMesAteHoje(formData.dataFalta)) return;
-    onSubmit(formData);
+    onSubmit({
+      ...formData,
+      tipo: tipoLocked ? tipoDefault : (formData.tipo || tipoDefault),
+    });
     resetForm();
   };
 
@@ -187,7 +158,7 @@ function LogAbsenceForm({
             <select
               id="tipoFalta"
               className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-1.5 pr-10 text-[15px] text-slate-900 outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-              value={formData.tipo}
+              value={formData.tipo || tipoDefault}
               onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
             >
               <option value="Motorista">Motorista</option>
@@ -272,7 +243,8 @@ function LogAbsenceForm({
           </button>
           <button
             type="submit"
-            className="flex-1 rounded-xl bg-primary py-1.5 text-[15px] font-semibold text-[#06130b]"
+            disabled={!tipoDefault}
+            className="flex-1 rounded-xl bg-primary py-1.5 text-[15px] font-semibold text-[#06130b] disabled:opacity-60"
             title="Guardar"
           >
             Guardar
@@ -281,8 +253,6 @@ function LogAbsenceForm({
       </form>
     </OverlayShell>
   );
-}
-
-/** @typedef {Parameters<typeof LogAbsenceModal>[0]} LogAbsenceModalProps */
+};
 
 export default LogAbsenceModal;

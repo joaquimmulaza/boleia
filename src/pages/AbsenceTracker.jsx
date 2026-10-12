@@ -16,7 +16,6 @@ import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import {
   DESCONTO_FALTA_AMOUNT_CLASS,
-  descontoFaltaMagnitudeKz,
   filterFaltasEsteMes,
   formatFaltaDiaCurto,
   resolveFaltasHubCard,
@@ -38,7 +37,8 @@ function labelViagemFalta(viagem) {
 const AbsenceTracker = () => {
   const { acordoId } = useParams();
   const navigate = useNavigate();
-  const { user, tipoPerfil } = useAuth();
+  const { user, tipoPerfil, profileLoading } = useAuth();
+  const perfilPronto = Boolean(tipoPerfil);
 
   const [faltas, setFaltas] = useState([]);
   const [acordosActivos, setAcordosActivos] = useState([]);
@@ -302,9 +302,9 @@ const AbsenceTracker = () => {
                 <p
                   data-testid="desconto-falta-amount"
                   className={`shrink-0 text-[15px] font-semibold ${DESCONTO_FALTA_AMOUNT_CLASS}`}
-                  aria-label={`Desconto de ${formatKwanza(descontoFaltaMagnitudeKz(falta.desconto_kz))} Kz`}
+                  aria-label={`Desconto de ${formatKwanza(falta.desconto_kz)} Kz`}
                 >
-                  {formatKwanza(descontoFaltaMagnitudeKz(falta.desconto_kz))} Kz
+                  {formatKwanza(falta.desconto_kz)} Kz
                 </p>
               </div>
             );
@@ -336,7 +336,8 @@ const AbsenceTracker = () => {
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
-            disabled={submitting || gateLoading}
+            disabled={submitting || gateLoading || profileLoading || !perfilPronto}
+            aria-busy={profileLoading || undefined}
             className="rounded-xl bg-primary px-4 py-3.5 text-[15px] font-semibold text-[#06130b] disabled:opacity-60"
           >
             Registar Falta
