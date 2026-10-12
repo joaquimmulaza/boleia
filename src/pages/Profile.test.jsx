@@ -118,6 +118,10 @@ describe('Profile v2', () => {
       'href',
       '/perfil/dados-bancarios',
     );
+    expect(screen.getByRole('link', { name: PROFILE_RECEIPTS })).toHaveAttribute(
+      'href',
+      '/perfil/recebimentos',
+    );
   });
 
   it('modo edição: descartar repõe valores e guardar com sucesso', async () => {

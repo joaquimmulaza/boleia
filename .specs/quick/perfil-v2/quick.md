@@ -5,7 +5,7 @@ Refazer `/perfil` alinhado aos frames P1–P12 (claro/escuro), copy aprovada, sh
 
 ## Requisitos
 - Dados pessoais: leitura + «Editar»; telefone +244; email read-only; guardar/sucesso/erro/descartar.
-- Motorista: tipo «Motorista», links Dados bancários + Recebimentos; sem veículo no perfil.
+- Motorista: tipo «Motorista», links Dados bancários + Recebimentos (ecrã recebimentos = UX 5/6, fora deste PR); sem veículo no perfil.
 - Passageiro: «Passageiro»; sem banco/recebimentos.
 - App no telemóvel: Instalar / iPhone Safari / ocultar se standalone.
 - Notificações: Switch shadcn; bloqueado opacity-50 + linha única.
