@@ -65,8 +65,13 @@ export default function DevAcordosChipCapture() {
               data-testid={`dev-acordos-chip-${key}`}
             >
               <p className="text-xs font-semibold text-slate-500">{title}</p>
+              {key === 'pax-informativo' ? (
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 text-pretty">
+                  Só informativo · estilo neutro (zinc) · sem botão nem CTA no chip
+                </p>
+              ) : null}
               <span
-                role="status"
+                role={variant === 'info' || variant === 'aviso' ? 'status' : undefined}
                 className={`inline-flex text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoAcordoVariant(variant)}`}
               >
                 {label}

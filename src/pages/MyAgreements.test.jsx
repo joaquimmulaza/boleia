@@ -1518,6 +1518,9 @@ describe('MyAgreements — marketplace 1:N', () => {
 
       expect(await screen.findByText('Encerramento pedido')).toBeInTheDocument();
       expect(screen.queryByText('Falta a tua confirmação')).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('status', { name: 'Encerramento pedido' }),
+      ).toHaveClass('bg-zinc-100');
     });
   });
 

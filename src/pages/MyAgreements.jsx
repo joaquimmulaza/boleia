@@ -1121,6 +1121,7 @@ const MyAgreements = () => {
           <div className="flex flex-wrap items-center gap-2">
             <span
               role={chipEstadoRole}
+              aria-label={chipEstadoRole === 'status' ? estadoLabel : undefined}
               className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoAcordoVariant(estadoVariant)}`}
             >
               {estadoLabel}
