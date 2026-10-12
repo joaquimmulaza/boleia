@@ -1,4 +1,8 @@
 import { useLayoutEffect, useState } from 'react';
+import {
+  GEOCODER_SHEET_BOUNDARY_SELECTOR,
+  GEOCODER_SHEET_HEADER_SELECTOR,
+} from '../utils/geocoderDismissChrome.js';
 
 const DEFAULT_LIST_MAX = 240;
 const MIN_LIST_MAX = 64;
@@ -8,7 +12,7 @@ const GAP_BELOW_INPUT = 8;
 const PANEL_CHROME_BELOW_LIST = 44;
 
 /**
- * Posição fixed do painel de sugestões — **sempre abaixo** do campo, sem sobrepor o header do sheet.
+ * Posição fixed do painel de sugestões — **sempre abaixo** do campo e **dentro** do sheet (abaixo do header).
  * @param {React.RefObject<HTMLElement | null>} anchorRef
  * @param {boolean} open
  * @returns {{ style: import('react').CSSProperties, maxListHeight: number } | null}
@@ -30,8 +34,30 @@ export function useFloatingGeocoderPanel(anchorRef, open) {
       const el = anchorRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_MARGIN;
-      const maxPanelHeight = Math.max(MIN_LIST_MAX + PANEL_CHROME_BELOW_LIST, spaceBelow - GAP_BELOW_INPUT);
+      let top = rect.bottom + GAP_BELOW_INPUT;
+      let maxBottom = window.innerHeight - VIEWPORT_MARGIN;
+
+      const sheet = el.closest(GEOCODER_SHEET_BOUNDARY_SELECTOR);
+      if (sheet instanceof HTMLElement) {
+        const sheetRect = sheet.getBoundingClientRect();
+        const header = sheet.querySelector(GEOCODER_SHEET_HEADER_SELECTOR);
+        const headerRect =
+          header instanceof HTMLElement ? header.getBoundingClientRect() : null;
+        const floorTop = Math.max(
+          sheetRect.top,
+          headerRect ? headerRect.bottom + GAP_BELOW_INPUT : sheetRect.top,
+        );
+        top = Math.max(top, floorTop);
+        maxBottom = Math.min(maxBottom, sheetRect.bottom - VIEWPORT_MARGIN);
+      } else {
+        const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_MARGIN;
+        maxBottom = rect.bottom + GAP_BELOW_INPUT + spaceBelow;
+      }
+
+      const maxPanelHeight = Math.max(
+        MIN_LIST_MAX + PANEL_CHROME_BELOW_LIST,
+        maxBottom - top,
+      );
       const maxListHeight = Math.min(
         DEFAULT_LIST_MAX,
         Math.max(MIN_LIST_MAX, maxPanelHeight - PANEL_CHROME_BELOW_LIST),
@@ -43,7 +69,7 @@ export function useFloatingGeocoderPanel(anchorRef, open) {
           position: 'fixed',
           left: rect.left,
           width: rect.width,
-          top: rect.bottom + GAP_BELOW_INPUT,
+          top,
           zIndex: 61,
         },
       });

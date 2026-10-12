@@ -354,6 +354,11 @@ describe('AddressInput', () => {
     const input = screen.getByRole('combobox', { name: /Origem/i });
     fireEvent.focus(input);
     fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(selectPlace).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.keyDown(input, { key: 'Enter' });
 
     expect(onSubmit).not.toHaveBeenCalled();
     await waitFor(() => {
@@ -378,6 +383,9 @@ describe('AddressInput', () => {
 
     const input = screen.getByRole('combobox', { name: /Origem/i });
     fireEvent.focus(input);
+    expect(input).not.toHaveAttribute('aria-activedescendant');
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
     expect(input).toHaveAttribute('aria-activedescendant', 'origin_name-geocoder-listbox-option-0');
 
     fireEvent.keyDown(input, { key: 'ArrowDown' });
@@ -385,6 +393,9 @@ describe('AddressInput', () => {
 
     fireEvent.keyDown(input, { key: 'ArrowUp' });
     expect(input).toHaveAttribute('aria-activedescendant', 'origin_name-geocoder-listbox-option-0');
+
+    fireEvent.keyDown(input, { key: 'ArrowUp' });
+    expect(input).not.toHaveAttribute('aria-activedescendant');
   });
 
   it('erro de rede mostra copy final, retry e Usar texto livre', () => {

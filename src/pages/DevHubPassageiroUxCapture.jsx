@@ -80,11 +80,12 @@ export default function DevHubPassageiroUxCapture() {
             aria-labelledby="editar-grupo-title"
             className="space-y-4 px-4 pb-sheet"
           >
-            <SheetDragHandle />
-            <div
-              className="flex items-center justify-between gap-3"
-              data-geocoder-dismiss-chrome
-            >
+            <div data-geocoder-sheet-header>
+              <SheetDragHandle />
+              <div
+                className="flex items-center justify-between gap-3"
+                data-geocoder-dismiss-chrome
+              >
               <h2
                 id="editar-grupo-title"
                 className="text-lg font-bold text-slate-900 dark:text-white"
@@ -92,6 +93,7 @@ export default function DevHubPassageiroUxCapture() {
                 Editar grupo
               </h2>
               <SheetFecharButton data-testid="editar-grupo-fechar" onClick={() => {}} />
+              </div>
             </div>
             {getGrupoEditSheetSubtitle() ? (
               <p className="text-sm text-slate-500 text-pretty" data-testid="editar-grupo-subtitle">

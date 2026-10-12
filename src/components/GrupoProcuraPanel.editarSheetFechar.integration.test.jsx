@@ -114,7 +114,14 @@ describe('GrupoProcuraPanel — sheet Editar grupo (integração real)', () => {
       { timeout: 3000 },
     );
 
+    expect(pickup).not.toHaveAttribute('aria-activedescendant');
+
     const fechar = screen.getByTestId('editar-grupo-fechar');
+    const listbox = screen.getByRole('listbox', { name: 'Sugestões de locais' });
+    const listRect = listbox.getBoundingClientRect();
+    const fecharRect = fechar.getBoundingClientRect();
+    expect(listRect.top).toBeGreaterThan(fecharRect.bottom - 1);
+
     fireEvent.pointerDown(fechar);
     fireEvent.click(fechar);
 
@@ -136,14 +143,24 @@ describe('GrupoProcuraPanel — sheet Editar grupo (integração real)', () => {
       { timeout: 3000 },
     );
 
+    expect(pickup).not.toHaveAttribute('aria-activedescendant');
+
+    const sheet = screen.getByTestId('editar-grupo-sheet');
+    const header = sheet.querySelector('[data-geocoder-sheet-header]');
+    expect(header).toBeTruthy();
+
     const fechar = screen.getByTestId('editar-grupo-fechar');
     const listbox = screen.getByRole('listbox', { name: 'Sugestões de locais' });
     const fecharRect = fechar.getBoundingClientRect();
     const listRect = listbox.getBoundingClientRect();
     const inputRect = pickup.getBoundingClientRect();
+    const sheetRect = sheet.getBoundingClientRect();
+    const headerRect = header.getBoundingClientRect();
 
     expect(listRect.top).toBeGreaterThanOrEqual(inputRect.bottom - 1);
     expect(listRect.top).toBeGreaterThan(fecharRect.bottom - 1);
+    expect(listRect.top).toBeGreaterThanOrEqual(sheetRect.top - 1);
+    expect(listRect.top).toBeGreaterThanOrEqual(headerRect.bottom - 1);
   });
 
   it('pointerdown no handle fecha a lista sem seleccionar sugestão', async () => {

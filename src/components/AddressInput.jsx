@@ -57,7 +57,7 @@ const AddressInput = ({
 
   const [inputValue, setInputValue] = useState(value || '');
   const [showDropdown, setShowDropdown] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const wrapperRef = useRef(null);
   const anchorRef = useRef(null);
   const dropdownPanelRef = useRef(null);
@@ -74,7 +74,7 @@ const AddressInput = ({
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setActiveIndex(0);
+    setActiveIndex(-1);
   }, [suggestions, errorKind, loading]);
 
   useEffect(() => {
@@ -216,7 +216,7 @@ const AddressInput = ({
 
     if (e.key === 'ArrowUp' && suggestions.length > 0) {
       e.preventDefault();
-      setActiveIndex((prev) => Math.max(prev - 1, 0));
+      setActiveIndex((prev) => Math.max(prev - 1, -1));
       return;
     }
 
@@ -233,9 +233,8 @@ const AddressInput = ({
       if (loading || errorKind === 'network') {
         return;
       }
-      if (suggestions.length > 0) {
-        const pick = suggestions[activeIndex] ?? suggestions[0];
-        void handleSelect(pick);
+      if (suggestions.length > 0 && activeIndex >= 0 && activeIndex < suggestions.length) {
+        void handleSelect(suggestions[activeIndex]);
       }
     }
   };
@@ -265,7 +264,7 @@ const AddressInput = ({
             role="combobox"
             aria-expanded={listPanelOpen}
             aria-controls={listPanelOpen ? listboxId : undefined}
-            aria-activedescendant={listPanelOpen ? activeOptionId : undefined}
+            aria-activedescendant={activeOptionId}
             aria-autocomplete="list"
             aria-invalid={fieldError ? true : undefined}
             aria-describedby={fieldError ? fieldErrorId : undefined}

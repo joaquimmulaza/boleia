@@ -77,6 +77,7 @@ function OverlayShell({
           <div
             ref={panelRef}
             data-testid={panelTestId}
+            data-geocoder-sheet-boundary
             className={`relative w-full max-w-md mx-auto max-h-[90dvh] overflow-y-auto overscroll-y-contain touch-pan-y rounded-[34px] ${panelClassName}`}
           >
             <div className="pb-sheet">{children}</div>
