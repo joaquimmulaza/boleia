@@ -1,0 +1,36 @@
+# Diff normalizado — funções vs corpo em produção (main pós-merge: até 20261012180500)
+
+Migração deste pacote: `20261012181000_expiry_close_sem_lugares_vivos.sql` (após `20261012180500`; sem colisão com #275).
+
+Base `apply_due_reserva_expiry`: `20261009180000_p0_acordo_pagamento_estados.sql`  
+Base `leave_passenger`: `20261010000000_encerramento_motivo_leave_passenger.sql`
+
+## Nova: `_p0_encerrar_acordo_sem_lugares_vivos_pos_expiracao(uuid, uuid DEFAULT NULL)`
+
+- Conta lugares `activo`/`reservado`; se > 0, return false.
+- `INSERT _acordo_cancel_notif_suppress` (`last_reservation_expired`, true, true).
+- `_maybe_fechar_acordo_sem_lugares_vivos` + `encerramento_motivo = sem_lugares_vivos` (gate consensual pendente igual leave).
+- Limpa colunas rescisão consensual pendente (`rescisao_confirmada_em IS NULL`).
+- Notificação motorista card **v1.11** (`titulo`: «Acordo encerrado»; corpo com/sem nome; **sem** `link`/CTA).
+- `apply_due_reserva_expiry` continua a chamar `recount_oferta_vagas` — oferta **não** passa a `inactiva`; repõe `disponivel`/`parcial`/`cheia` via trigger (visível em Explorar se `disponivel`|`parcial`).
+
+## `apply_due_reserva_expiry`
+
+| Antes (prod) | Depois |
+|--------------|--------|
+| Após `_expirar`, **sempre** INSERT notif passageiro «A tua reserva expirou…» | Se `_p0_encerrar…` fechou acordo → **sem** notif passageiro; senão passageiro (inalterado) |
+| Fim: `_maybe_fechar_acordo_sem_lugares_vivos(p_acordo_id)` só | Fim: `_p0_encerrar…` (motivo + v1.11 + limpar consensual) |
+| Cursor sem `ORDER BY`; várias reservas do mesmo acordo no mesmo lote → aviso «vaga libertada» aos primeiros expirados | Pré-cálculo `v_acordos_fecha_todo_lote` (`array_agg`): se **todos** os lugares vivos do acordo expiram neste lote → **nenhum** passageiro expirado recebe «vaga libertada»; encerramento + v1.11 **uma vez** no último lugar (**sem** temp table — evita OID stale com pooling) |
+| — | Cursor: `ORDER BY acordo_id, reservado_expira_em, id` |
+
+## Dados (fora da migração)
+
+Reparação `encerramento_motivo` / limpar consensual pendente em ofertas `is_test` → `supabase/scripts/expiry_close_sem_lugares_vivos_is_test_repair.sql` (manual; exclui `id::text LIKE 'ac722c73%'`).
+
+## `leave_passenger`
+
+| Antes (prod) | Depois |
+|--------------|--------|
+| Suppress só quando `v_ultimo_passageiro_saiu` | + `ELSIF v_uid = driver` parcial → suppress `driver_removed_passenger_partial` |
+| Motorista remove parcial: **sem** notif ao removido | INSERT v1.10 ao `v_target` (titulo metadata + corpo com OD ou flexível) |
+| Motorista caller parcial: já sem notif driver | Inalterado |

@@ -17,13 +17,29 @@ export function isStandalone() {
 }
 
 /**
- * @returns {InstallPlatform}
+ * iPadOS reporta «Macintosh» com ecrã táctil.
+ * @returns {boolean}
  */
+export function isIpadOsDesktopUa() {
+  if (typeof navigator === 'undefined') return false;
+  return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+}
+
+/**
+ * @returns {boolean}
+ */
+export function isIosSafariBrowser() {
+  if (detectInstallPlatform() !== 'ios') return false;
+  if (isInAppBrowser()) return false;
+  const ua = navigator.userAgent || '';
+  return !/(CriOS|FxiOS|EdgiOS|OPiOS|mercury|DuckDuckGo)/i.test(ua);
+}
+
 export function detectInstallPlatform() {
   if (typeof navigator === 'undefined') return 'unknown';
   const ua = navigator.userAgent || '';
 
-  if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) {
+  if (isIpadOsDesktopUa() || (/iPad|iPhone|iPod/.test(ua) && !window.MSStream)) {
     return 'ios';
   }
   if (/Android/i.test(ua)) {
@@ -45,7 +61,7 @@ export function detectInstallPlatform() {
 export function isInAppBrowser() {
   if (typeof navigator === 'undefined') return false;
   const ua = navigator.userAgent || '';
-  return /FBAN|FBAV|Instagram|Line\/|Twitter|LinkedInApp|MicroMessenger|Snapchat/i.test(ua);
+  return /FBAN|FBAV|Instagram|WhatsApp|Line\/|Twitter|LinkedInApp|MicroMessenger|Snapchat/i.test(ua);
 }
 
 /**
