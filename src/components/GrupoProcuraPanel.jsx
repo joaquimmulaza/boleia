@@ -4,6 +4,8 @@ import AddressInput from './AddressInput';
 import OverlayShell from './OverlayShell';
 import SheetDragHandle from './SheetDragHandle';
 import GrupoKebabMenu from './GrupoKebabMenu';
+import SheetFecharButton from './SheetFecharButton';
+import { getGrupoEditSheetSubtitle } from '../copy/grupoEditSheet';
 import {
   createGrupo,
   addMembroGrupo,
@@ -577,10 +579,19 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
         >
           <div className="space-y-4 px-4 pb-sheet">
             <SheetDragHandle />
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Editar grupo</h2>
-            <p className="text-sm text-slate-500 text-pretty">
-              Só capacidade desejada e ponto de recolha. Não reescreve propostas nem snapshots.
-            </p>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Editar grupo</h2>
+              <SheetFecharButton
+                disabled={busy}
+                data-testid="editar-grupo-fechar"
+                onClick={() => setEditarOpen(false)}
+              />
+            </div>
+            {getGrupoEditSheetSubtitle() ? (
+              <p className="text-sm text-slate-500 text-pretty" data-testid="editar-grupo-subtitle">
+                {getGrupoEditSheetSubtitle()}
+              </p>
+            ) : null}
             <fieldset className="space-y-2">
               <legend className="text-sm font-semibold">Tamanho desejado</legend>
               <div className="flex flex-wrap gap-2" role="group" aria-label="Tamanho desejado">

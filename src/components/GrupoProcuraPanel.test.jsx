@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import GrupoProcuraPanel from './GrupoProcuraPanel';
 import {
@@ -400,8 +400,7 @@ describe('GrupoProcuraPanel T31', () => {
       <GrupoProcuraPanel procura={procura} userId="pax-2" onGrupoChange={onGrupoChange} />,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Mais acções do grupo' }));
-    fireEvent.click(await screen.findByRole('menuitem', { name: /Sair do grupo/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Sair do grupo' }));
 
     await waitFor(() => {
       expect(sairDoGrupo).toHaveBeenCalledWith('g-1', 'pax-2');
@@ -644,7 +643,7 @@ describe('GrupoProcuraPanel T31', () => {
     expect(screen.queryByRole('menuitem', { name: 'Apagar grupo' })).not.toBeInTheDocument();
   });
 
-  it('membro: só Sair no kebab', async () => {
+  it('membro: acção Sair directa (sem kebab)', async () => {
     getGrupoByProcura.mockResolvedValue({ id: 'g-1', procura_id: 'pr-1', n_maximo: 4 });
     listMembrosGrupo.mockResolvedValue([
       {
@@ -667,13 +666,13 @@ describe('GrupoProcuraPanel T31', () => {
 
     expect(await screen.findByText('Tu')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Convidar por telefone' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Mais acções do grupo' }));
-    expect(screen.getByRole('menuitem', { name: /Sair do grupo/i })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Editar' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Apagar grupo' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sair do grupo' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mais acções do grupo' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Apagar grupo' })).not.toBeInTheDocument();
   });
 
-  it('acordo activo: dono sozinho só vê Editar', async () => {
+  it('acordo activo: dono sozinho só vê Editar (botão directo)', async () => {
     grupoTemAcordoActivo.mockResolvedValue(true);
     getGrupoByProcura.mockResolvedValue({ id: 'g-1', procura_id: 'pr-1', n_maximo: 4 });
     listMembrosGrupo.mockResolvedValue([
@@ -688,9 +687,32 @@ describe('GrupoProcuraPanel T31', () => {
 
     render(<GrupoProcuraPanel procura={procura} userId="pax-1" />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Mais acções do grupo' }));
-    expect(screen.getByRole('menuitem', { name: 'Editar' })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Apagar grupo' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Editar' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mais acções do grupo' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Apagar grupo' })).not.toBeInTheDocument();
+  });
+
+  it('sheet Editar grupo (H6a): Fechar shadcn e sem jargon snapshots', async () => {
+    getGrupoByProcura.mockResolvedValue({ id: 'g-1', procura_id: 'pr-1', n_maximo: 4 });
+    listMembrosGrupo.mockResolvedValue([
+      {
+        id: 'm-1',
+        passenger_id: 'pax-1',
+        estado: 'activo',
+        ordem_insercao: 0,
+        perfis: { nome_completo: 'Ana' },
+      },
+    ]);
+    grupoTemAcordoActivo.mockResolvedValue(true);
+
+    render(<GrupoProcuraPanel procura={procura} userId="pax-1" />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar' }));
+    const sheet = await screen.findByTestId('editar-grupo-sheet');
+    const fechar = within(sheet).getByTestId('editar-grupo-fechar');
+    expect(fechar).toHaveAccessibleName(/Fechar/i);
+    expect(fechar.className).toMatch(/inline-flex/);
+    expect(within(sheet).queryByText(/snapshots/i)).not.toBeInTheDocument();
   });
 
   it('editar capacidade abaixo dos membros fica desactivado e gravar não mexe em propostas', async () => {
