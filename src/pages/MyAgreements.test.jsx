@@ -437,6 +437,38 @@ describe('MyAgreements — marketplace 1:N', () => {
     expect(within(card).getByText('Individual')).toBeInTheDocument();
   });
 
+  it('aa66b9a6 — passageiro reservado sem IBAN: banner com CTA inactivo alinhado ao painel', async () => {
+    vi.stubEnv('VITE_PLATFORM_IBAN', '');
+    mockAuth.mockReturnValue({ user: { id: 'pax-aa66' }, tipoPerfil: 'Passageiro' });
+    const acordoReservado = {
+      ...acordoPassageiro,
+      id: 'aa66b9a6',
+      acordos_passageiros: [
+        {
+          id: 'ap-aa66',
+          passenger_id: 'pax-aa66',
+          estado: 'reservado',
+          quota_mensal_kz: 22000,
+          perfis: { nome_completo: 'Passageiro QA' },
+        },
+      ],
+    };
+    getAgreementsForPassenger.mockResolvedValue([acordoReservado]);
+    mockPagamentosGate(acordoReservado, 'pax-aa66', false);
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByTestId('lugar-reservado-banner')).toHaveTextContent(
+      /Lugar reservado — aguarda pagamento/i,
+    );
+    expect(within(dialog).getByTestId('iban-nao-configurado')).toBeInTheDocument();
+    const cta = within(dialog).getByTestId('lugar-reservado-pagamento-cta');
+    expect(cta).toHaveTextContent(/Pagamento ainda não disponível/i);
+    expect(cta).toBeDisabled();
+    expect(within(dialog).queryByRole('button', { name: /^Ir para pagamento$/i })).not.toBeInTheDocument();
+  });
+
   it('passageiro reservado sem pagamento RPC: não mostra CTA e indisponível em simultâneo', async () => {
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     const acordoReservado = {
@@ -993,6 +1025,7 @@ describe('MyAgreements — marketplace 1:N', () => {
   });
 
   it('passageiro reservado: chip âmbar, glossário, contagens e CTA pagamento', async () => {
+    vi.stubEnv('VITE_PLATFORM_IBAN', 'AO06004000000000000000000');
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     const acordoReservado = {
       ...acordoPassageiro,
@@ -1180,6 +1213,7 @@ describe('MyAgreements — marketplace 1:N', () => {
   });
 
   it('passageiro reservado: CTA pagamento faz scroll ao painel', async () => {
+    vi.stubEnv('VITE_PLATFORM_IBAN', 'AO06004000000000000000000');
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     const acordoReservado = {
       ...acordoPassageiro,

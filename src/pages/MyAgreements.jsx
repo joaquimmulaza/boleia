@@ -1439,9 +1439,10 @@ const MyAgreements = () => {
                   type="button"
                   className="w-full min-h-11"
                   data-testid="lugar-reservado-pagamento-cta"
+                  disabled={!reservaPagamentoUi.ctaReservaPagamentoAtivo}
                   onClick={() => scrollToAcordoFocus('pagamento')}
                 >
-                  Ir para pagamento
+                  {reservaPagamentoUi.ctaReservaPagamentoLabel}
                 </Button>
               </div>
             ) : null}

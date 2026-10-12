@@ -8,6 +8,12 @@ import {
 import { PAYMENT_STATES } from './paymentStatus';
 import { isAnulacaoReservaExpiradaPorPagamento } from './pagamentoAnulacaoMotivo';
 import { estadoPassageiroParaChip } from './estadoPassageiro.js';
+import { isTransferenciaPlataformaDisponivel } from '../services/PaymentService.js';
+
+/** @type {'Ir para pagamento'} */
+export const COPY_CTA_RESERVA_IR_PAGAMENTO = 'Ir para pagamento';
+/** @type {'Pagamento ainda não disponível'} */
+export const COPY_CTA_RESERVA_INDISPONIVEL = 'Pagamento ainda não disponível';
 
 /** @typedef {'S1' | 'S2' | 'S3' | 'S6a' | null} PassageiroPagamentoUiVariant */
 
@@ -336,6 +342,7 @@ const confirmadaEmFormatter = new Intl.DateTimeFormat('pt-PT', {
  *   pagamento?: object | null,
  *   pagamentoLoading?: boolean,
  *   obrigacao?: import('./pagamentoObrigacaoCopy.js').ObrigacaoSnapshot | null,
+ *   transferenciaDisponivel?: boolean,
  * }} ctx
  * @returns {{
  *   mostrarBannerReserva: boolean,
@@ -343,6 +350,8 @@ const confirmadaEmFormatter = new Intl.DateTimeFormat('pt-PT', {
  *   mostrarMensagemIndisponivel: boolean,
  *   aguardarCarregamentoPagamento: boolean,
  *   pagamentoParaPainel: object | null,
+ *   ctaReservaPagamentoAtivo: boolean,
+ *   ctaReservaPagamentoLabel: string,
  * }}
  */
 export function resolvePassageiroReservaPagamento(ctx) {
@@ -352,54 +361,67 @@ export function resolvePassageiroReservaPagamento(ctx) {
   const loading = Boolean(ctx.pagamentoLoading);
   const obrigacao = normalizeObrigacaoSnapshot(ctx.obrigacao);
   const valorObrigacao = Number(obrigacao?.valor ?? obrigacao?.valor_em_divida ?? -1);
+  const transferenciaDisponivel = ctx.transferenciaDisponivel ?? isTransferenciaPlataformaDisponivel();
+
+  /** @param {Partial<ReturnType<typeof resolvePassageiroReservaPagamento>>} base */
+  const withCta = (base) => ({
+    ctaReservaPagamentoAtivo: false,
+    ctaReservaPagamentoLabel: COPY_CTA_RESERVA_INDISPONIVEL,
+    ...base,
+  });
 
   if (!reservado) {
-    return {
+    return withCta({
       mostrarBannerReserva: false,
       mostrarPainelPagamentoMensal: true,
       mostrarMensagemIndisponivel: !loading && !pagamento,
       aguardarCarregamentoPagamento: loading,
       pagamentoParaPainel: loading ? null : pagamento,
-    };
+    });
   }
 
   if (valorObrigacao === 0) {
-    return {
+    return withCta({
       mostrarBannerReserva: false,
       mostrarPainelPagamentoMensal: true,
       mostrarMensagemIndisponivel: !loading && !pagamento,
       aguardarCarregamentoPagamento: loading,
       pagamentoParaPainel: loading ? null : pagamento,
-    };
+    });
   }
 
   if (loading) {
-    return {
+    return withCta({
       mostrarBannerReserva: false,
       mostrarPainelPagamentoMensal: true,
       mostrarMensagemIndisponivel: false,
       aguardarCarregamentoPagamento: true,
       pagamentoParaPainel: null,
-    };
+    });
   }
 
   if (!pagamento) {
-    return {
+    return withCta({
       mostrarBannerReserva: false,
       mostrarPainelPagamentoMensal: false,
       mostrarMensagemIndisponivel: false,
       aguardarCarregamentoPagamento: false,
       pagamentoParaPainel: null,
-    };
+    });
   }
 
-  return {
+  const ctaReservaPagamentoAtivo = transferenciaDisponivel;
+  return withCta({
     mostrarBannerReserva: true,
     mostrarPainelPagamentoMensal: true,
     mostrarMensagemIndisponivel: false,
     aguardarCarregamentoPagamento: false,
     pagamentoParaPainel: pagamento,
-  };
+    ctaReservaPagamentoAtivo,
+    ctaReservaPagamentoLabel: ctaReservaPagamentoAtivo
+      ? COPY_CTA_RESERVA_IR_PAGAMENTO
+      : COPY_CTA_RESERVA_INDISPONIVEL,
+  });
 }
 
 export function linhaJaConfirmadoRescisaoConsensual(confirmadaEmIso) {

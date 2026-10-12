@@ -36,9 +36,25 @@ describe('resolvePassageiroReservaPagamento — fonte única banner vs painel', 
       pagamento,
       pagamentoLoading: false,
       obrigacao: { valor: 22000, valor_em_divida: 22000 },
+      transferenciaDisponivel: true,
     });
     expect(ui.mostrarBannerReserva).toBe(true);
     expect(ui.mostrarPainelPagamentoMensal).toBe(true);
     expect(ui.pagamentoParaPainel).toBe(pagamento);
+    expect(ui.ctaReservaPagamentoAtivo).toBe(true);
+  });
+
+  it('aa66b9a6 — reservado com pagamento mas IBAN em falta: CTA inactivo', () => {
+    const pagamento = { id: 'pg-aa66', estado: 'pendente_pagamento', valor_kz: 22000 };
+    const ui = resolvePassageiroReservaPagamento({
+      minhaLinha: linhaReservada,
+      pagamento,
+      pagamentoLoading: false,
+      obrigacao: { valor: 22000, valor_em_divida: 22000 },
+      transferenciaDisponivel: false,
+    });
+    expect(ui.mostrarBannerReserva).toBe(true);
+    expect(ui.ctaReservaPagamentoAtivo).toBe(false);
+    expect(ui.ctaReservaPagamentoLabel).toMatch(/Pagamento ainda não disponível/i);
   });
 });

@@ -4,7 +4,12 @@ import AcordoContratoSnapshot from '../components/AcordoContratoSnapshot';
 import AcordoPagamentoEstadoCartao from '../components/AcordoPagamentoEstadoCartao';
 import { buildAcordoContratoSnapshot } from '../utils/buildAcordoContratoSnapshot';
 import { resolvePessoasAcordoUi } from '../utils/resolvePessoasAcordoUi';
-import { copyCartaoEstadoPagamentoPassageiro } from '../utils/resolveAcordoPagamentoUi';
+import {
+  copyCartaoEstadoPagamentoPassageiro,
+  resolvePassageiroReservaPagamento,
+} from '../utils/resolveAcordoPagamentoUi';
+import AcordoPagamentoPanel from '../components/AcordoPagamentoPanel';
+import { Button } from '../components/ui/button';
 import { ANULACAO_MOTIVO } from '../constants/anulacaoMotivos.js';
 
 /**
@@ -29,6 +34,20 @@ export default function DevHotfixProdQaCapture() {
   const pessoasB4010c7e = resolvePessoasAcordoUi(acordoB4010c7e, linhasEncerradoSaiu);
   const snapshotN1 = buildAcordoContratoSnapshot(acordoB4010c7e, {
     nLabel: pessoasB4010c7e.nLabel ?? undefined,
+  });
+
+  const pagamentoAa66 = {
+    id: 'pg-aa66',
+    estado: 'pendente_pagamento',
+    valor_kz: 22000,
+    valor_payout_liquido_kz: 19800,
+  };
+  const reservaSemIban = resolvePassageiroReservaPagamento({
+    minhaLinha: { estado: 'reservado', passenger_id: 'pax-aa66' },
+    pagamento: pagamentoAa66,
+    pagamentoLoading: false,
+    obrigacao: { valor: 22000, valor_em_divida: 22000, quota: 22000 },
+    transferenciaDisponivel: false,
   });
 
   const cartaoJustaCausa = copyCartaoEstadoPagamentoPassageiro('S3', {
@@ -97,6 +116,31 @@ export default function DevHotfixProdQaCapture() {
           <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
             Passageiros · {pessoasB4010c7e.nPassageirosVivos}
           </p>
+        </section>
+
+        <section data-testid="capture-reserva-iban-falta" className="space-y-2">
+          <p className="text-xs font-semibold text-slate-500">
+            5 — aa66b9a6 · reserva · IBAN em falta (CTA alinhado ao painel)
+          </p>
+          {reservaSemIban.mostrarBannerReserva ? (
+            <div
+              role="status"
+              className="rounded-xl border border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-100 px-3 py-3 space-y-2"
+            >
+              <p className="text-sm text-pretty">
+                Lugar reservado — aguarda pagamento em 72 h. O lugar confirma-se quando o comprovativo
+                for validado.
+              </p>
+              <Button
+                type="button"
+                className="w-full min-h-11"
+                disabled={!reservaSemIban.ctaReservaPagamentoAtivo}
+              >
+                {reservaSemIban.ctaReservaPagamentoLabel}
+              </Button>
+            </div>
+          ) : null}
+          <AcordoPagamentoPanel pagamento={pagamentoAa66} />
         </section>
       </div>
     </div>

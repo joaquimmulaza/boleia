@@ -11,6 +11,7 @@ const captures = [
   { id: '2-s3-justa-causa', testId: 'capture-s3-justa-causa' },
   { id: '3-reserva-alinhado', testId: 'capture-reserva-alinhado' },
   { id: '4-individual', testId: 'capture-individual' },
+  { id: '5-reserva-iban-falta', testId: 'capture-reserva-iban-falta' },
 ];
 
 async function md5(file) {
