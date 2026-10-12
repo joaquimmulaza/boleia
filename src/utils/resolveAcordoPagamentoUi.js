@@ -178,11 +178,20 @@ export function copyCartaoEstadoPagamentoPassageiro(variant, ctx) {
       pagamento?.valor_quota_original_kz ?? obrigacao?.quota ?? valorDivida,
     ) || 0;
     if (!ctx.pagamentoLoading && !quotaConhecida && valorCancelado <= 0) {
+      const motivoSemQuota = String(pagamento?.anulacao_motivo || '').trim();
+      if (motivoSemQuota) {
+        return {
+          corpo: '',
+          secundaria: `Motivo: ${motivoSemQuota}.`,
+          mostrarUploadNoCartao: false,
+          aguardarMontante: false,
+        };
+      }
       return {
         corpo: '',
         secundaria: null,
         mostrarUploadNoCartao: false,
-        aguardarMontante: true,
+        aguardarMontante: false,
       };
     }
     const motivo = String(pagamento?.anulacao_motivo || '').trim();
@@ -319,6 +328,80 @@ const confirmadaEmFormatter = new Intl.DateTimeFormat('pt-PT', {
  * @param {string | null | undefined} confirmadaEmIso
  * @returns {string | null}
  */
+/**
+ * Banner «Ir para pagamento» vs painel «Pagamento ainda não disponível» — uma só fonte.
+ *
+ * @param {{
+ *   minhaLinha?: { estado?: string } | null,
+ *   pagamento?: object | null,
+ *   pagamentoLoading?: boolean,
+ *   obrigacao?: import('./pagamentoObrigacaoCopy.js').ObrigacaoSnapshot | null,
+ * }} ctx
+ * @returns {{
+ *   mostrarBannerReserva: boolean,
+ *   mostrarPainelPagamentoMensal: boolean,
+ *   mostrarMensagemIndisponivel: boolean,
+ *   aguardarCarregamentoPagamento: boolean,
+ *   pagamentoParaPainel: object | null,
+ * }}
+ */
+export function resolvePassageiroReservaPagamento(ctx) {
+  const est = String(ctx.minhaLinha?.estado || '').toLowerCase();
+  const reservado = est === 'reservado';
+  const pagamento = ctx.pagamento ?? null;
+  const loading = Boolean(ctx.pagamentoLoading);
+  const obrigacao = normalizeObrigacaoSnapshot(ctx.obrigacao);
+  const valorObrigacao = Number(obrigacao?.valor ?? obrigacao?.valor_em_divida ?? -1);
+
+  if (!reservado) {
+    return {
+      mostrarBannerReserva: false,
+      mostrarPainelPagamentoMensal: true,
+      mostrarMensagemIndisponivel: !loading && !pagamento,
+      aguardarCarregamentoPagamento: loading,
+      pagamentoParaPainel: loading ? null : pagamento,
+    };
+  }
+
+  if (valorObrigacao === 0) {
+    return {
+      mostrarBannerReserva: false,
+      mostrarPainelPagamentoMensal: true,
+      mostrarMensagemIndisponivel: !loading && !pagamento,
+      aguardarCarregamentoPagamento: loading,
+      pagamentoParaPainel: loading ? null : pagamento,
+    };
+  }
+
+  if (loading) {
+    return {
+      mostrarBannerReserva: false,
+      mostrarPainelPagamentoMensal: true,
+      mostrarMensagemIndisponivel: false,
+      aguardarCarregamentoPagamento: true,
+      pagamentoParaPainel: null,
+    };
+  }
+
+  if (!pagamento) {
+    return {
+      mostrarBannerReserva: false,
+      mostrarPainelPagamentoMensal: false,
+      mostrarMensagemIndisponivel: false,
+      aguardarCarregamentoPagamento: false,
+      pagamentoParaPainel: null,
+    };
+  }
+
+  return {
+    mostrarBannerReserva: true,
+    mostrarPainelPagamentoMensal: true,
+    mostrarMensagemIndisponivel: false,
+    aguardarCarregamentoPagamento: false,
+    pagamentoParaPainel: pagamento,
+  };
+}
+
 export function linhaJaConfirmadoRescisaoConsensual(confirmadaEmIso) {
   if (!confirmadaEmIso) return null;
   const d = new Date(confirmadaEmIso);

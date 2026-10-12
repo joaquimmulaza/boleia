@@ -50,7 +50,7 @@ describe('buildAcordoContratoSnapshot', () => {
     expect(snap.nLabel).toBe('Individual');
   });
 
-  it('N=1 com primeiro nome do passageiro substitui Individual', () => {
+  it('N=1 mantém Individual mesmo com primeiro nome (Pessoas no acordo)', () => {
     const snap = buildAcordoContratoSnapshot(
       {
         modo_preco: 'POR_PASSAGEIRO',
@@ -61,7 +61,7 @@ describe('buildAcordoContratoSnapshot', () => {
       { primeiroNomePassageiro: 'Ana Costa' },
     );
 
-    expect(snap.nLabel).toBe('Ana');
+    expect(snap.nLabel).toBe('Individual');
   });
 
   it('campos em falta — incomplete sem inventar defaults', () => {

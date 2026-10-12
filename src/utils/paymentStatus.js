@@ -160,6 +160,50 @@ export function canTransitionPayment(from, to) {
  * @param {{ placement?: 'painel' | 'cabecalho' }} [options] v1.5 — chip «Cancelado» vs «Pagamento cancelado»
  * @returns {string}
  */
+/**
+ * Acordo fechado — o estado do acordo prevalece sobre pagamento pendente stale na UI motorista.
+ * @param {string | null | undefined} estado
+ * @returns {boolean}
+ */
+export function isAcordoEncerradoPagamentoUi(estado) {
+  const e = String(estado || '').toLowerCase();
+  return e === 'cancelado' || e === 'cancelado_justificado' || e === 'expirado';
+}
+
+/**
+ * Chip de pagamento na lista motorista (cabecalho).
+ * @param {string | null | undefined} estadoPagamento
+ * @param {{ acordoTerminado?: boolean }} [options]
+ * @returns {string}
+ */
+export function labelEstadoPagamentoMotoristaCabecalho(estadoPagamento, options = {}) {
+  const e = String(estadoPagamento || '').toLowerCase();
+  if (
+    options.acordoTerminado
+    && (e === PAYMENT_STATES.PENDENTE || e === PAYMENT_STATES.COMPROVATIVO)
+  ) {
+    return labelEstadoPagamento(PAYMENT_STATES.ANULADO, { placement: 'cabecalho' });
+  }
+  return labelEstadoPagamento(estadoPagamento, { placement: 'cabecalho' });
+}
+
+/**
+ * Classes do chip motorista — alinha com {@link labelEstadoPagamentoMotoristaCabecalho}.
+ * @param {string | null | undefined} estadoPagamento
+ * @param {{ acordoTerminado?: boolean }} [options]
+ * @returns {string}
+ */
+export function chipClassEstadoPagamentoMotoristaCabecalho(estadoPagamento, options = {}) {
+  const e = String(estadoPagamento || '').toLowerCase();
+  if (
+    options.acordoTerminado
+    && (e === PAYMENT_STATES.PENDENTE || e === PAYMENT_STATES.COMPROVATIVO)
+  ) {
+    return chipClassEstadoPagamento(PAYMENT_STATES.ANULADO);
+  }
+  return chipClassEstadoPagamento(estadoPagamento);
+}
+
 export function labelEstadoPagamento(estado, options = {}) {
   const e = String(estado || '').toLowerCase();
   const placement = options.placement === 'cabecalho' ? 'cabecalho' : 'painel';

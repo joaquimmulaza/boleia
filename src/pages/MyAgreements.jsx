@@ -53,6 +53,7 @@ import AcordoPagamentosHistorico from '../components/AcordoPagamentosHistorico';
 import AcordoPagamentosMotoristaPanel from '../components/AcordoPagamentosMotoristaPanel';
 import {
   resolveAcordoPagamentoUiPassageiro,
+  resolvePassageiroReservaPagamento,
   copyCartaoEstadoPagamentoPassageiro,
   linhaJaConfirmadoRescisaoConsensual,
 } from '../utils/resolveAcordoPagamentoUi';
@@ -176,18 +177,6 @@ function isExpirado(estado, pagamento) {
 function isNoAcordo(estado) {
   const e = String(estado || '').toLowerCase();
   return e === 'activo' || e === 'reservado';
-}
-
-/**
- * Linha activa/reservada para snapshot N=1; só linhas[0] se não houver viva.
- * @param {Array<{ estado?: string }>} linhas
- * @returns {object | null}
- */
-function pickLinhaVivaPassageiro(linhas) {
-  const vivos = lugaresVivosFromLinhas(linhas);
-  if (vivos[0]) return vivos[0];
-  const list = linhas || [];
-  return list[0] ?? null;
 }
 
 /**
@@ -758,7 +747,11 @@ const MyAgreements = () => {
     if (!selected || !pendingFocusRef.current) return undefined;
 
     const focus = pendingFocusRef.current;
-    if (focus === 'pagamento' && pagamentoLoading) return undefined;
+    if (focus === 'pagamento') {
+      if (pagamentoLoading) return undefined;
+      const section = document.querySelector('[data-testid="acordo-pagamento-section"]');
+      if (!section) return undefined;
+    }
 
     pendingFocusRef.current = null;
     // focus=rescisao: scroll só para a contraparte (quem confirma/recusa), nunca para o requerente.
@@ -1093,14 +1086,7 @@ const MyAgreements = () => {
       tipoPerfil === 'Passageiro'
         ? (minhaLinha?.quota_mensal_kz ?? acordo.valor_mensal_por_passageiro_kz)
         : acordo.valor_mensal_por_passageiro_kz;
-    const rotuloPessoas = (() => {
-      if (nPax === 1 && tipoPerfil === 'Motorista') {
-        const pax = pickLinhaVivaPassageiro(linhas);
-        return formatPrimeiroNome(nomePassageiro(pax));
-      }
-      if (nPax === 1) return 'Individual';
-      return `Grupo · ${nPax} pessoas`;
-    })();
+    const rotuloPessoas = nPax === 1 ? 'Individual' : `Grupo · ${nPax} pessoas`;
     return (
       <button
         type="button"
@@ -1314,6 +1300,14 @@ const MyAgreements = () => {
         obrigacao: obrigacaoPagamento,
       })
       : null;
+    const reservaPagamentoUi = isPassageiro
+      ? resolvePassageiroReservaPagamento({
+        minhaLinha,
+        pagamento: pagamentoViewer,
+        pagamentoLoading,
+        obrigacao: obrigacaoPagamento,
+      })
+      : null;
     const cartaoEstadoPagamento =
       pagamentoUiPassageiro?.mostrarCartaoEstado && pagamentoUiPassageiro.variant
         ? copyCartaoEstadoPagamentoPassageiro(pagamentoUiPassageiro.variant, {
@@ -1425,8 +1419,7 @@ const MyAgreements = () => {
                 Detalhe do acordo
               </p>
             ) : null}
-            {minhaReservada
-            && Number(obrigacaoPagamento?.valor ?? obrigacaoPagamento?.valor_em_divida ?? -1) !== 0 ? (
+            {reservaPagamentoUi?.mostrarBannerReserva ? (
               <div
                 role="status"
                 data-testid="lugar-reservado-banner"
@@ -1490,14 +1483,7 @@ const MyAgreements = () => {
             ) : null}
 
             <AcordoContratoSnapshot
-              snapshot={buildAcordoContratoSnapshot(selected, {
-                primeiroNomePassageiro: (() => {
-                  if (!isMotorista || selected.n_passageiros_contrato !== 1) return undefined;
-                  const pax = pickLinhaVivaPassageiro(linhas);
-                  const raw = nomePassageiro(pax);
-                  return raw === 'Passageiro' ? undefined : raw;
-                })(),
-              })}
+              snapshot={buildAcordoContratoSnapshot(selected)}
               highlightKz={isPassageiro ? quotaDestaque : null}
               className="border-0 bg-transparent dark:bg-transparent p-0"
             />
@@ -1669,16 +1655,26 @@ const MyAgreements = () => {
 
           {isPassageiro
             && passageiroMostraPainelPagamento(minhaLinha, pagamento, obrigacaoPagamento)
-            && !pagamentoUiPassageiro?.ocultarPainelPagamento ? (
+            && !pagamentoUiPassageiro?.ocultarPainelPagamento
+            && reservaPagamentoUi?.mostrarPainelPagamentoMensal !== false ? (
             <div data-testid="acordo-pagamento-section" className="scroll-mt-acordo-detalhe">
+              {reservaPagamentoUi?.aguardarCarregamentoPagamento ? (
+                <p
+                  className="text-sm text-slate-500"
+                  data-testid="pagamento-passageiro-loading"
+                >
+                  A carregar pagamento…
+                </p>
+              ) : (
               <AcordoPagamentoPanel
-                pagamento={pagamentoLoading ? null : pagamento}
+                pagamento={reservaPagamentoUi?.pagamentoParaPainel ?? pagamento}
                 obrigacao={obrigacaoPagamento}
                 lugarEstado={minhaLinha?.estado}
                 pagamentoUiVariant={pagamentoUiPassageiro?.variant ?? null}
                 onUpdated={() => carregarPagamentoContactos(selected)}
                 layout={pagamentoUiPassageiro?.variant === 'S2' ? 'acoes' : 'completo'}
               />
+              )}
               <AcordoPagamentosHistorico
                 pagamentos={pagamentosAcordo.filter((p) => p.passenger_id === user?.id)}
                 mesActual={getMesReferenciaAtual()}

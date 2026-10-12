@@ -323,13 +323,14 @@ describe('MyAgreements — marketplace 1:N', () => {
 
     renderPage();
 
-    fireEvent.click(await screen.findByRole('button', { name: /João/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
     const snapshot = within(dialog).getByTestId('acordo-contrato-snapshot');
-    expect(within(snapshot).getByText('João')).toBeInTheDocument();
+    expect(within(snapshot).getByText('Individual')).toBeInTheDocument();
     expect(within(snapshot).queryByText('Maria')).not.toBeInTheDocument();
-    expect(within(snapshot).queryByText('Individual')).not.toBeInTheDocument();
+    expect(within(dialog).getByTestId('passenger-row-pax-activo')).toHaveTextContent('João');
+    expect(within(dialog).getByTestId('passenger-row-pax-saiu')).toHaveTextContent('Maria');
   });
 
   it('actualiza lista quando hubRefresh notifica após aceite', async () => {
@@ -353,7 +354,7 @@ describe('MyAgreements — marketplace 1:N', () => {
     });
   });
 
-  it('motorista: detalhe N=1 mostra primeiro nome em Pessoas no acordo', async () => {
+  it('motorista: detalhe N=1 mostra Individual em Pessoas no acordo', async () => {
     getAgreementsForDriver.mockResolvedValue([
       {
         ...acordoMotorista,
@@ -372,17 +373,16 @@ describe('MyAgreements — marketplace 1:N', () => {
 
     renderPage();
 
-    fireEvent.click(await screen.findByRole('button', { name: /Ana/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
     const snapshot = within(dialog).getByTestId('acordo-contrato-snapshot');
-    expect(within(snapshot).getByText('Ana')).toBeInTheDocument();
-    expect(within(snapshot).queryByText('Individual')).not.toBeInTheDocument();
+    expect(within(snapshot).getByText('Individual')).toBeInTheDocument();
     expect(within(dialog).getByTestId('passenger-row-pax-1')).toHaveTextContent('Ana');
     expect(within(dialog).queryByText('Ana Costa')).not.toBeInTheDocument();
   });
 
-  it('motorista: acordo individual na lista mostra primeiro nome do passageiro', async () => {
+  it('motorista: acordo individual na lista mostra Individual no rotulo pessoas', async () => {
     getAgreementsForDriver.mockResolvedValue([
       {
         ...acordoMotorista,
@@ -401,8 +401,36 @@ describe('MyAgreements — marketplace 1:N', () => {
 
     renderPage();
 
-    expect(await screen.findByText('Ana')).toBeInTheDocument();
-    expect(screen.queryByText('Individual')).not.toBeInTheDocument();
+    const card = await screen.findByRole('button', { name: /Talatona/i });
+    expect(within(card).getByText('Individual')).toBeInTheDocument();
+  });
+
+  it('passageiro reservado sem pagamento RPC: não mostra CTA e indisponível em simultâneo', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    const acordoReservado = {
+      ...acordoPassageiro,
+      acordos_passageiros: [
+        {
+          id: 'ap-1',
+          passenger_id: 'pax-viewer',
+          estado: 'reservado',
+          quota_mensal_kz: 22000,
+          perfis: { nome_completo: 'Tu Mesmo' },
+        },
+      ],
+    };
+    getAgreementsForPassenger.mockResolvedValue([acordoReservado]);
+    mockPagamentosGate(acordoReservado, 'pax-viewer', false);
+    getObrigacaoPagamentoPassageiro.mockResolvedValue({
+      obrigacao: { valor: 22000, valor_em_divida: 22000, quota: 22000 },
+      pagamento: null,
+    });
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).queryByTestId('lugar-reservado-pagamento-cta')).not.toBeInTheDocument();
+    expect(within(dialog).queryByText(/Pagamento ainda não disponível/i)).not.toBeInTheDocument();
   });
 
   it('acordo com oferta flexível não mostra placeholders Origem/Destino', async () => {
