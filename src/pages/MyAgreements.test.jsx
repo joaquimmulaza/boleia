@@ -1379,6 +1379,79 @@ describe('MyAgreements — marketplace 1:N', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('justa causa passageiro: contagem a carregar — sem copy parcial nem CTA activo', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    /** @type {(n: number) => void} */
+    let resolveCount;
+    countLugaresVivosAcordo.mockImplementation(
+      () => new Promise((resolve) => {
+        resolveCount = resolve;
+      }),
+    );
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    openAcordoKebab(dialog);
+    await clickAcordoKebabItem(/Encerrar acordo/i);
+
+    const picker = await screen.findByTestId('terminate-modality-picker');
+    fireEvent.click(within(picker).getByText('Justa causa imediata'));
+
+    const justaPicker = await screen.findByTestId('terminate-justa-picker');
+    fireEvent.click(within(justaPicker).getByText('Motivo de segurança'));
+    fireEvent.click(within(justaPicker).getByRole('button', { name: /^Continuar$/i }));
+
+    const sheet = await screen.findByTestId('terminate-confirm-sheet');
+    expect(within(sheet).queryByText(/terminar o teu lugar/i)).not.toBeInTheDocument();
+    expect(
+      within(sheet).getByText(/A confirmar quantos passageiros ainda estão no acordo/i),
+    ).toBeInTheDocument();
+    const submit = within(sheet).getByTestId('terminate-confirm-submit');
+    expect(submit).toBeDisabled();
+
+    await act(async () => {
+      resolveCount(2);
+    });
+    await waitFor(() => {
+      expect(within(sheet).getByText(/terminar o teu lugar/i)).toBeInTheDocument();
+    });
+    expect(submit).not.toBeDisabled();
+  });
+
+  it('justa causa passageiro: falha na contagem — erro e CTA desactivado', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    countLugaresVivosAcordo.mockRejectedValue(new Error('Sem permissão'));
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    openAcordoKebab(dialog);
+    await clickAcordoKebabItem(/Encerrar acordo/i);
+
+    const picker = await screen.findByTestId('terminate-modality-picker');
+    fireEvent.click(within(picker).getByText('Justa causa imediata'));
+
+    const justaPicker = await screen.findByTestId('terminate-justa-picker');
+    fireEvent.click(within(justaPicker).getByText('Motivo de segurança'));
+    fireEvent.click(within(justaPicker).getByRole('button', { name: /^Continuar$/i }));
+
+    await waitFor(() => {
+      expect(countLugaresVivosAcordo).toHaveBeenCalledWith('acordo-pax');
+    });
+
+    const sheet = await screen.findByTestId('terminate-confirm-sheet');
+    expect(within(sheet).queryByText(/terminar o teu lugar/i)).not.toBeInTheDocument();
+    expect(
+      within(sheet).getByText(/Não foi possível confirmar quantos passageiros ainda estão no acordo/i),
+    ).toBeInTheDocument();
+    expect(within(sheet).getByTestId('terminate-confirm-submit')).toBeDisabled();
+  });
+
   it('justa causa passageiro (último): confirma encerramento do acordo', async () => {
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);

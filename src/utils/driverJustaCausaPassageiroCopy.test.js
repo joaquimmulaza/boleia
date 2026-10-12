@@ -73,7 +73,36 @@ describe('copy motorista — justa causa passageiro v1.10', () => {
     expect(alerts[0].corpo).toContain('oferta continua publicada');
   });
 
-  it('B2 só no lugar com lugar_rescisao_em mais recente quando acordo fechou', () => {
+  it('B2 só na saída globalmente mais recente (inclui saída voluntária posterior)', () => {
+    const alerts = resolveMotoristaJustaCausaPassageiroAlerts(
+      {
+        estado: 'cancelado',
+        encerramento_motivo: 'sem_lugares_vivos',
+      },
+      [
+        {
+          id: 'ap-jc',
+          passenger_id: 'p-jc',
+          estado: 'saiu',
+          lugar_rescisao_modo: 'justa_causa',
+          lugar_rescisao_em: '2026-10-12T10:00:00.000Z',
+          perfis: { nome_completo: 'Ana Costa' },
+        },
+        {
+          id: 'ap-vol',
+          passenger_id: 'p-vol',
+          estado: 'saiu',
+          updated_at: '2026-10-15T10:00:00.000Z',
+          perfis: { nome_completo: 'Bruno Voluntário' },
+        },
+      ],
+    );
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].variant).toBe('B');
+    expect(alerts[0].corpo).not.toMatch(/era o último passageiro/);
+  });
+
+  it('B2 só no lugar com lugar_rescisao_em mais recente entre JC quando acordo fechou', () => {
     const alerts = resolveMotoristaJustaCausaPassageiroAlerts(
       {
         estado: 'cancelado',

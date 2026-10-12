@@ -12,6 +12,7 @@ import { Button } from './ui/button';
  *   confirmText?: string,
  *   cancelText?: string,
  *   busy?: boolean,
+ *   confirmDisabled?: boolean,
  *   onConfirm: () => void,
  *   onCancel: () => void,
  * }} props
@@ -23,6 +24,7 @@ export default function TerminateConfirmSheet({
   confirmText = 'Encerrar acordo',
   cancelText = 'Cancelar',
   busy = false,
+  confirmDisabled = false,
   onConfirm,
   onCancel,
 }) {
@@ -77,7 +79,7 @@ export default function TerminateConfirmSheet({
             <Button
               type="button"
               className="w-full min-h-11 rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white"
-              disabled={busy}
+              disabled={busy || confirmDisabled}
               data-testid="terminate-confirm-submit"
               onClick={onConfirm}
             >

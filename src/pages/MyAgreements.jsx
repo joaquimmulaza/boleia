@@ -130,6 +130,7 @@ import {
   copyJustaCausaTerminateModoMessage,
   copyJustaCausaTerminateConfirmText,
   copyJustaCausaTerminateTitle,
+  isJustaCausaConfirmSubmitDisabled,
 } from '../utils/justaCausaTerminateConfirmCopy';
 
 /**
@@ -363,6 +364,7 @@ const MyAgreements = () => {
   const [leaveLugaresVivosCount, setLeaveLugaresVivosCount] = useState(null);
   const [leaveBusy, setLeaveBusy] = useState(false);
   const [terminateLugaresVivosLoading, setTerminateLugaresVivosLoading] = useState(false);
+  const [terminateLugaresVivosErro, setTerminateLugaresVivosErro] = useState(false);
   /** @type {[number | null, React.Dispatch<React.SetStateAction<number | null>>]} */
   const [terminateLugaresVivosCount, setTerminateLugaresVivosCount] = useState(null);
   /** @type {[Record<string, true>, React.Dispatch<React.SetStateAction<Record<string, true>>>]} */
@@ -832,23 +834,27 @@ const MyAgreements = () => {
       && selected?.id;
     if (!needsCount) {
       setTerminateLugaresVivosLoading(false);
+      setTerminateLugaresVivosErro(false);
       setTerminateLugaresVivosCount(null);
       return undefined;
     }
     let cancelled = false;
     setTerminateLugaresVivosLoading(true);
+    setTerminateLugaresVivosErro(false);
     setTerminateLugaresVivosCount(null);
     countLugaresVivosAcordo(selected.id)
       .then((n) => {
         if (!cancelled) {
           setTerminateLugaresVivosCount(n);
           setTerminateLugaresVivosLoading(false);
+          setTerminateLugaresVivosErro(false);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setTerminateLugaresVivosCount(null);
           setTerminateLugaresVivosLoading(false);
+          setTerminateLugaresVivosErro(true);
         }
       });
     return () => {
@@ -861,8 +867,23 @@ const MyAgreements = () => {
       tipoPerfil,
       lugaresVivosCount: terminateLugaresVivosCount,
       lugaresVivosLoading: terminateLugaresVivosLoading,
+      lugaresVivosErro: terminateLugaresVivosErro,
     }),
-    [tipoPerfil, terminateLugaresVivosCount, terminateLugaresVivosLoading],
+    [
+      tipoPerfil,
+      terminateLugaresVivosCount,
+      terminateLugaresVivosLoading,
+      terminateLugaresVivosErro,
+    ],
+  );
+
+  const justaCausaConfirmSubmitDisabled = useMemo(
+    () => (
+      terminateModo === 'justa_causa'
+      && tipoPerfil === 'Passageiro'
+      && isJustaCausaConfirmSubmitDisabled(justaCausaConfirmVariant)
+    ),
+    [terminateModo, tipoPerfil, justaCausaConfirmVariant],
   );
 
   const activos = acordos.filter((a) => isActivo(a.estado));
@@ -2287,6 +2308,7 @@ const MyAgreements = () => {
             ? copyJustaCausaTerminateConfirmText({ variant: justaCausaConfirmVariant })
             : 'Encerrar acordo'
         }
+        confirmDisabled={justaCausaConfirmSubmitDisabled}
         onConfirm={() => handleTerminate()}
         onCancel={() => {
           if (!terminateBusy) {

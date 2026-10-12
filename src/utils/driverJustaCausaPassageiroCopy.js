@@ -30,19 +30,38 @@ function dataRescisaoLugarFormatada(iso) {
 }
 
 /**
- * @param {object[]} jcLinhas
+ * Instantâneo da saída do lugar (justa causa ou saída voluntária).
+ *
+ * @param {object | null | undefined} p
+ * @returns {number | null} ms epoch ou null se lugar ainda vivo
+ */
+function timestampSaidaLugar(p) {
+  if (!p) return null;
+  const e = String(p.estado || '').toLowerCase();
+  if (e === 'activo' || e === 'reservado') return null;
+  if (p.lugar_rescisao_em) return new Date(p.lugar_rescisao_em).getTime();
+  if (p.updated_at) return new Date(p.updated_at).getTime();
+  return 0;
+}
+
+/**
+ * Saída mais recente entre todos os lugares (qualquer modo).
+ *
+ * @param {object[] | null | undefined} linhas
  * @returns {object | null}
  */
-function pickLugarRescisaoJustaCausaMaisRecente(jcLinhas) {
-  if (!jcLinhas.length) return null;
-  return jcLinhas.reduce((best, row) => {
-    const tBest = best?.lugar_rescisao_em
-      ? new Date(best.lugar_rescisao_em).getTime()
-      : 0;
-    const tRow = row?.lugar_rescisao_em ? new Date(row.lugar_rescisao_em).getTime() : 0;
-    if (!best || tRow >= tBest) return row;
-    return best;
-  }, null);
+function pickLinhaSaidaMaisRecente(linhas) {
+  let best = null;
+  let bestT = -1;
+  for (const row of linhas || []) {
+    const t = timestampSaidaLugar(row);
+    if (t == null) continue;
+    if (!best || t >= bestT) {
+      best = row;
+      bestT = t;
+    }
+  }
+  return best;
 }
 
 /**
@@ -74,11 +93,9 @@ export function resolveMotoristaJustaCausaPassageiroAlerts(acordo, linhas) {
   const jcLinhas = linhas.filter(
     (p) => String(p.lugar_rescisao_modo || '').toLowerCase() === 'justa_causa',
   );
-  const jcUltimoRow = ultimoEncerrado
-    ? pickLugarRescisaoJustaCausaMaisRecente(jcLinhas)
-    : null;
-  const jcUltimoId = jcUltimoRow
-    ? String(jcUltimoRow.id || jcUltimoRow.passenger_id || '')
+  const ultimaSaidaRow = ultimoEncerrado ? pickLinhaSaidaMaisRecente(linhas) : null;
+  const ultimaSaidaId = ultimaSaidaRow
+    ? String(ultimaSaidaRow.id || ultimaSaidaRow.passenger_id || '')
     : '';
 
   return jcLinhas
@@ -87,7 +104,7 @@ export function resolveMotoristaJustaCausaPassageiroAlerts(acordo, linhas) {
       const dataFormatada = dataRescisaoLugarFormatada(p.lugar_rescisao_em);
       const rowId = String(p.id || p.passenger_id);
       const variant =
-        ultimoEncerrado && rowId === jcUltimoId ? 'B2' : 'B';
+        ultimoEncerrado && rowId === ultimaSaidaId ? 'B2' : 'B';
       const corpo =
         variant === 'B2'
           ? copyMotoristaJustaCausaUltimoPassageiro({ nome, dataFormatada })

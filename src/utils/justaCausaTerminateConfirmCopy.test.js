@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   resolveJustaCausaConfirmVariant,
+  isJustaCausaConfirmSubmitDisabled,
   copyJustaCausaTerminateIntro,
   copyJustaCausaTerminateModoMessage,
   copyJustaCausaTerminateConfirmText,
@@ -33,6 +34,47 @@ describe('justa causa — confirmação terminate (v1.10 / P0 1:N)', () => {
         lugaresVivosCount: 1,
       }),
     ).toBe('passageiro_ultimo');
+  });
+
+  it('contagem pendente — não resolve parcial nem activa submit', () => {
+    const variant = resolveJustaCausaConfirmVariant({
+      tipoPerfil: 'Passageiro',
+      lugaresVivosLoading: true,
+    });
+    expect(variant).toBe('passageiro_contagem_pendente');
+    expect(isJustaCausaConfirmSubmitDisabled(variant)).toBe(true);
+    expect(
+      copyJustaCausaTerminateIntro({
+        variant,
+        counterparty: 'o motorista',
+        odSuffix: '',
+      }),
+    ).not.toMatch(/terminar o teu lugar/i);
+  });
+
+  it('contagem falhou — mensagem de erro e submit desactivado', () => {
+    const variant = resolveJustaCausaConfirmVariant({
+      tipoPerfil: 'Passageiro',
+      lugaresVivosLoading: false,
+      lugaresVivosErro: true,
+      lugaresVivosCount: null,
+    });
+    expect(variant).toBe('passageiro_contagem_erro');
+    expect(isJustaCausaConfirmSubmitDisabled(variant)).toBe(true);
+    expect(
+      copyJustaCausaTerminateIntro({
+        variant,
+        counterparty: 'o motorista',
+        odSuffix: '',
+      }),
+    ).toMatch(/Não foi possível confirmar quantos passageiros/i);
+    expect(
+      copyJustaCausaTerminateIntro({
+        variant,
+        counterparty: 'o motorista',
+        odSuffix: '',
+      }),
+    ).not.toMatch(/terminar o teu lugar/i);
   });
 
   it('passageiro parcial — intro não fala em encerrar o acordo', () => {
