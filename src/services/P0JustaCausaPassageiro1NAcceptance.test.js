@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS = join(ROOT, '../../supabase/migrations');
 const MIGRATION_FIX = '20261012210000_justa_causa_passageiro_1n.sql';
+const MIGRATION_COPY = '20261012213000_jc_passageiro_lugar_rescisao_copy.sql';
 const MIGRATION_OLD = '20261012180500_consensual_pending_block_reinit.sql';
 
 function readMigration(name) {
@@ -56,6 +57,19 @@ describe('P0 justa causa passageiro 1:N — terminate_agreement', () => {
     expect(sql).toMatch(
       /terminate_justa_causa[\s\S]{0,400}_p0_finalize_lugares_rescisao_imediata/,
     );
+  });
+});
+
+describe('P0 justa causa passageiro — UI copy v1.10 (lugar_rescisao)', () => {
+  it('migração lugar_rescisao_modo existe', () => {
+    expect(existsSync(join(MIGRATIONS, MIGRATION_COPY))).toBe(true);
+  });
+
+  it('terminate_agreement persiste justa_causa por lugar no ramo passageiro', () => {
+    const sql = readMigration(MIGRATION_COPY);
+    const paxBlock = extractJustaCausaPassengerBlock(sql);
+    expect(paxBlock).toContain("lugar_rescisao_modo = 'justa_causa'");
+    expect(paxBlock).toContain('lugar_rescisao_em = now()');
   });
 });
 

@@ -122,6 +122,8 @@ import {
   filterContactosPassageirosVivos,
 } from '../utils/estadoPassageiro';
 import { formatPrimeiroNome } from '../utils/primeiroNome';
+import { resolveMotoristaJustaCausaPassageiroAlerts } from '../utils/driverJustaCausaPassageiroCopy';
+import MotoristaJustaCausaPassageiroAlert from '../components/MotoristaJustaCausaPassageiroAlert';
 
 /**
  * @param {string | null | undefined} estado
@@ -1322,6 +1324,9 @@ const MyAgreements = () => {
           pagamentoLoading,
         })
         : null;
+    const motoristaJcPassageiroAlerts = isMotorista
+      ? resolveMotoristaJustaCausaPassageiroAlerts(selected, linhas)
+      : [];
     const sheetTitulo = pagamentoUiPassageiro?.sheetTitle || 'Detalhe do acordo';
     const linhaJaConfirmadoConsensual =
       rescisaoConsensualPendente
@@ -1501,6 +1506,14 @@ const MyAgreements = () => {
               highlightKz={isPassageiro ? quotaDestaque : null}
               className="border-0 bg-transparent dark:bg-transparent p-0"
             />
+
+            {motoristaJcPassageiroAlerts.map((alerta) => (
+              <MotoristaJustaCausaPassageiroAlert
+                key={alerta.id}
+                variant={alerta.variant}
+                corpo={alerta.corpo}
+              />
+            ))}
 
             {cancelamentoCopy ? (
               <div

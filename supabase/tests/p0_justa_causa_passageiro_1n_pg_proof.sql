@@ -34,6 +34,8 @@ DECLARE
   v_pg_estado text;
   v_pg_valor integer;
   v_n_driver int;
+  v_lugar_modo text;
+  v_oferta_estado text;
 BEGIN
   PERFORM set_config('session_replication_role', 'replica', true);
 
@@ -131,6 +133,18 @@ BEGIN
     RAISE EXCEPTION 'FAIL JC1N-1: passageiro A devia sair (=%)', v_estado;
   END IF;
 
+  SELECT lower(lugar_rescisao_modo) INTO v_lugar_modo
+  FROM public.acordos_passageiros WHERE id = v_ap_a;
+  IF v_lugar_modo IS DISTINCT FROM 'justa_causa' THEN
+    RAISE EXCEPTION 'FAIL JC1N-1: lugar_rescisao_modo devia justa_causa (=%)', v_lugar_modo;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.acordos_passageiros
+    WHERE id = v_ap_a AND lugar_rescisao_em IS NOT NULL
+  ) THEN
+    RAISE EXCEPTION 'FAIL JC1N-1: lugar_rescisao_em devia estar preenchido';
+  END IF;
+
   SELECT lower(estado), valor_kz INTO v_pg_estado, v_pg_valor
   FROM public.pagamentos_acordo WHERE id = v_pg_b;
   IF v_pg_estado <> 'em_custodia' OR v_pg_valor <> 20000 THEN
@@ -166,6 +180,18 @@ BEGIN
   IF v_estado <> 'cancelado' OR v_motivo IS DISTINCT FROM 'sem_lugares_vivos' THEN
     RAISE EXCEPTION 'FAIL JC1N-2: último pax JC devia cancelado + sem_lugares_vivos (est=%, mot=%)',
       v_estado, v_motivo;
+  END IF;
+
+  SELECT lower(lugar_rescisao_modo) INTO v_lugar_modo
+  FROM public.acordos_passageiros WHERE id = v_ap_solo;
+  IF v_lugar_modo IS DISTINCT FROM 'justa_causa' THEN
+    RAISE EXCEPTION 'FAIL JC1N-2: lugar_rescisao_modo solo devia justa_causa (=%)', v_lugar_modo;
+  END IF;
+
+  SELECT lower(estado) INTO v_oferta_estado
+  FROM public.ofertas_capacidade WHERE id = v_oferta_solo;
+  IF v_oferta_estado NOT IN ('disponivel', 'parcial') THEN
+    RAISE EXCEPTION 'FAIL JC1N-2: oferta solo devia continuar publicada (=%)', v_oferta_estado;
   END IF;
 
   -- Caso 3: motorista → encerra acordo inteiro (cancelado_justificado)

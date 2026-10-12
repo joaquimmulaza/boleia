@@ -705,6 +705,72 @@ describe('MyAgreements — marketplace 1:N', () => {
       expect(chipCartao).not.toHaveTextContent('Saiu');
     });
 
+    it('motorista v1.10 — B) justa causa de um passageiro com outros activos', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver.mockResolvedValue([
+        {
+          ...acordoMotorista,
+          acordos_passageiros: [
+            {
+              id: 'ap-jc',
+              passenger_id: 'pax-jc',
+              estado: 'saiu',
+              lugar_rescisao_modo: 'justa_causa',
+              lugar_rescisao_em: '2026-10-12T10:00:00.000Z',
+              quota_mensal_kz: 40000,
+              perfis: { nome_completo: 'Ana Costa' },
+            },
+            {
+              id: 'ap-2',
+              passenger_id: 'pax-2',
+              estado: 'activo',
+              quota_mensal_kz: 40000,
+              perfis: { nome_completo: 'João Pedro' },
+            },
+          ],
+        },
+      ]);
+
+      renderPage(['/acordos?openAcordoId=acordo-1']);
+
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      const banner = within(dialog).getByTestId('motorista-jc-passageiro-B');
+      expect(banner).toHaveTextContent(/Os outros passageiros continuam no acordo/i);
+      expect(banner).toHaveTextContent(/menos a comissão da Boleia Certa/i);
+      expect(banner).toHaveTextContent(/Ana/);
+    });
+
+    it('motorista v1.10 — B2) último passageiro por justa causa', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver.mockResolvedValue([
+        {
+          ...acordoMotorista,
+          n_passageiros_contrato: 1,
+          estado: 'cancelado',
+          encerramento_motivo: 'sem_lugares_vivos',
+          acordos_passageiros: [
+            {
+              id: 'ap-solo',
+              passenger_id: 'pax-solo',
+              estado: 'saiu',
+              lugar_rescisao_modo: 'justa_causa',
+              lugar_rescisao_em: '2026-10-12T10:00:00.000Z',
+              quota_mensal_kz: 40000,
+              perfis: { nome_completo: 'Ana Costa' },
+            },
+          ],
+        },
+      ]);
+
+      renderPage(['/acordos?openAcordoId=acordo-1']);
+
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      const banner = within(dialog).getByTestId('motorista-jc-passageiro-B2');
+      expect(banner).toHaveTextContent(/era o último passageiro/i);
+      expect(banner).toHaveTextContent(/oferta continua publicada/i);
+      expect(banner).toHaveTextContent(/não há penalização para ti/i);
+    });
+
     it('motorista: chips «Saiu» e «Expirado» na lista de passageiros', async () => {
       mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
       listAnulacaoMotivoLugarAcordos.mockResolvedValue([
