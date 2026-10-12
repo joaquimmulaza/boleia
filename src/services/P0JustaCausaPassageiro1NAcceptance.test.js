@@ -80,6 +80,13 @@ describe('P0 justa causa passageiro — UI copy v1.10 (lugar_rescisao)', () => {
     expect(paxBlock).toContain("lugar_rescisao_modo = 'justa_causa'");
     expect(paxBlock).toContain('lugar_rescisao_em = now()');
   });
+
+  it('ramo passageiro JC notifica invocador (tipo justa_causa_passageiro_invocador)', () => {
+    const sql = readMigration(MIGRATION_COPY);
+    const paxBlock = extractJustaCausaPassengerBlock(sql);
+    expect(paxBlock).toContain("'justa_causa_passageiro_invocador'");
+    expect(paxBlock).toMatch(/INSERT INTO public\.notificacoes[\s\S]*v_uid,/);
+  });
 });
 
 describe('P0 justa causa passageiro 1:N — prova PG', () => {

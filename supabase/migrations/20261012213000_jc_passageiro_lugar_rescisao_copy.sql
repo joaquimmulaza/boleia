@@ -46,6 +46,9 @@ DECLARE
   v_ultimo_passageiro_saiu boolean := false;
   v_pax_nome text;
   v_mensagem_motorista text;
+  v_jc_invocador_reservado boolean := false;
+  v_jc_invocador_variant text;
+  v_lugar_rescisao_em timestamptz;
   v_skip_rescisao_broadcast boolean := false;
 BEGIN
   IF v_uid IS NULL THEN
@@ -373,6 +376,8 @@ BEGIN
         RAISE EXCEPTION 'Passageiro não está activo neste acordo.';
       END IF;
 
+      v_jc_invocador_reservado := lower(v_ap_row.estado) = 'reservado';
+
       IF lower(v_ap_row.estado) = 'reservado' THEN
         PERFORM public._expirar_lugar_reservado_sem_divida(
           v_ap_row.id,
@@ -388,6 +393,10 @@ BEGIN
         lugar_rescisao_modo = 'justa_causa',
         lugar_rescisao_em = now()
       WHERE id = v_ap_row.id;
+
+      SELECT ap.lugar_rescisao_em INTO v_lugar_rescisao_em
+      FROM public.acordos_passageiros ap
+      WHERE ap.id = v_ap_row.id;
 
       SELECT COUNT(*)::integer INTO v_vivos_restantes
       FROM public.acordos_passageiros ap
@@ -469,6 +478,34 @@ BEGIN
       EXCEPTION
         WHEN OTHERS THEN
           RAISE WARNING 'Falha ao notificar motorista justa causa passageiro %: %',
+            p_acordo_id, SQLERRM;
+      END;
+
+      v_jc_invocador_variant := CASE
+        WHEN v_jc_invocador_reservado THEN 'reservado'
+        WHEN v_ultimo_passageiro_saiu THEN 'ultimo'
+        ELSE 'parcial'
+      END;
+
+      BEGIN
+        INSERT INTO public.notificacoes (user_id, mensagem, tipo, metadata, link)
+        VALUES (
+          v_uid,
+          '·',
+          'warning',
+          jsonb_build_object(
+            'type', 'justa_causa_passageiro_invocador',
+            'acordo_id', p_acordo_id,
+            'rescisao_modo', 'justa_causa',
+            'variant', v_jc_invocador_variant,
+            'lugar_rescisao_em', v_lugar_rescisao_em,
+            'acordo_estado', v_estado_final
+          ),
+          v_link
+        );
+      EXCEPTION
+        WHEN OTHERS THEN
+          RAISE WARNING 'Falha ao notificar invocador justa causa passageiro %: %',
             p_acordo_id, SQLERRM;
       END;
 

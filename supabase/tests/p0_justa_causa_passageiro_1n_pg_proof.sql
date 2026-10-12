@@ -49,6 +49,7 @@ DECLARE
   v_pg_estado text;
   v_pg_valor integer;
   v_n_driver int;
+  v_n_pax_a int;
   v_lugar_modo text;
   v_oferta_estado text;
 BEGIN
@@ -223,6 +224,15 @@ BEGIN
     RAISE EXCEPTION 'FAIL JC1N-1: passageiro B não devia receber notificações (n=%)', v_n_pax_b;
   END IF;
 
+  SELECT COUNT(*) INTO v_n_pax_a
+  FROM public.notificacoes n
+  WHERE n.user_id = v_pax_a
+    AND (n.metadata->>'acordo_id')::uuid = v_acordo
+    AND n.metadata->>'type' = 'justa_causa_passageiro_invocador';
+  IF v_n_pax_a <> 1 THEN
+    RAISE EXCEPTION 'FAIL JC1N-1: invocador devia receber exactamente 1 notificação (n=%)', v_n_pax_a;
+  END IF;
+
   -- Idempotência: segunda chamada com a mesma chave não altera estado
   PERFORM set_config('request.jwt.claim.sub', v_pax_a::text, true);
   SET LOCAL ROLE authenticated;
@@ -234,6 +244,15 @@ BEGIN
   WHERE ap.id = v_ap_a AND lower(ap.estado) = 'saiu';
   IF v_n_saiu <> 1 THEN
     RAISE EXCEPTION 'FAIL JC1N-1b: idempotência devia manter saída única do passageiro A';
+  END IF;
+
+  SELECT COUNT(*) INTO v_n_pax_a
+  FROM public.notificacoes n
+  WHERE n.user_id = v_pax_a
+    AND (n.metadata->>'acordo_id')::uuid = v_acordo
+    AND n.metadata->>'type' = 'justa_causa_passageiro_invocador';
+  IF v_n_pax_a <> 1 THEN
+    RAISE EXCEPTION 'FAIL JC1N-1c: idempotência invocador devia manter 1 notificação (n=%)', v_n_pax_a;
   END IF;
 
   -- Caso 2: último passageiro (solo) por justa causa → sem_lugares_vivos

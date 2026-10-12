@@ -8,15 +8,11 @@
 | Motorista JC → acordo inteiro | OK | PG JC1N-3 `cancelado_justificado`; sem activo/reservado |
 | Financeiro: pro-rata − comissão, só lugar invocador | OK | PG JC1N-1 `calc_quota_proporcional` + `compute_payout_liquido_kz` por `ap_a`; B intacto |
 | Oferta publicada | OK | PG JC1N-1/2 oferta `disponivel`/`parcial` |
-| Notificações: motorista sim; outros passageiros não | OK | PG JC1N-1/4 (B count=0); motorista ≥1 |
+| Notificações: invocador + motorista; outros passageiros não | OK | PG JC1N-1/1c/4 (invocador =1 idempotente; B count=0); motorista ≥1 |
 | Estados separados (lugar / acordo / pagamento) | OK | PG JC1N-4 reservado→`expirado` vs acordo `activo`; JC1N-1 pagamento A ajustado vs B |
 | Lugar reservado invocador | OK | PG JC1N-4 |
 | Idempotência mesma chamada | OK | PG JC1N-1b + Vitest migração |
 | UI copy B/B2 motorista | OK | Vitest `MyAgreements` + `driverJustaCausaPassageiroCopy` |
-
-## Nota (notificações ao invocador)
-
-No ramo passageiro JC, `v_skip_rescisao_broadcast` evita broadcast aos restantes; o motorista recebe notificação dedicada. **Não há INSERT de notificação para o passageiro invocador** — interpretação do critério «só invocador e motorista» = os únicos *destinatários possíveis* (excluir outros), não obrigar push ao invocador. Se o Maestro quiser notif explícita ao invocador, é follow-up separado.
 
 ## Financeiro
 
