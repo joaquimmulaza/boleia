@@ -1,6 +1,7 @@
 import React from 'react';
 import { CheckCircle, Info, AlertCircle } from 'lucide-react';
 import NotificationRowKebab from './NotificationRowKebab';
+import { resolveNotificationMensagem } from '../utils/notificationDisplayMensagem';
 
 /**
  * @param {{ type?: string }} props
@@ -46,6 +47,8 @@ export default function NotificationListItem({
   onDelete,
   showKebab = true,
 }) {
+  const mensagemVisivel = resolveNotificationMensagem(notif);
+
   let timeLabel = 'agora mesmo';
   if (notif.created_at) {
     const date = new Date(notif.created_at);
@@ -72,7 +75,7 @@ export default function NotificationListItem({
   return (
     <li
       role={onActivate ? 'button' : undefined}
-      aria-label={onActivate ? notif.mensagem : undefined}
+      aria-label={onActivate ? mensagemVisivel : undefined}
       tabIndex={onActivate ? 0 : undefined}
       onKeyDown={
         onActivate
@@ -101,7 +104,7 @@ export default function NotificationListItem({
               : 'text-gray-600 dark:text-gray-300'
           }`}
         >
-          {notif.mensagem}
+          {mensagemVisivel}
         </p>
         <p className="mt-1.5 text-xs font-medium text-gray-400 dark:text-gray-500">{timeLabel}</p>
       </div>
