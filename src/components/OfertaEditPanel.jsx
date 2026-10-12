@@ -279,7 +279,11 @@ const OfertaEditPanel = ({
             value={formData.origin_name}
             onChange={handleChange}
             onSelectCoordinates={(c) =>
-              setFormData((prev) => ({ ...prev, origin_lat: c.lat, origin_lng: c.lng }))
+              setFormData((prev) => ({
+                ...prev,
+                origin_lat: c?.lat ?? null,
+                origin_lng: c?.lng ?? null,
+              }))
             }
           />
           <AddressInput
@@ -290,8 +294,8 @@ const OfertaEditPanel = ({
             onSelectCoordinates={(c) =>
               setFormData((prev) => ({
                 ...prev,
-                destination_lat: c.lat,
-                destination_lng: c.lng,
+                destination_lat: c?.lat ?? null,
+                destination_lng: c?.lng ?? null,
               }))
             }
           />
