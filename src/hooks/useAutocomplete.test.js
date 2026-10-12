@@ -136,4 +136,22 @@ describe('useAutocomplete', () => {
     expect(result.current.errorKind).toBe('network');
     expect(result.current.suggestions).toEqual([]);
   });
+
+  it('marca errorKind network quando Photon responde 429', async () => {
+    getPlacePredictions.mockRejectedValueOnce(
+      Object.assign(new Error('Photon respondeu com status 429'), {
+        status: 429,
+        errorKind: 'network',
+      }),
+    );
+
+    const { result } = renderHook(() => useAutocomplete());
+
+    await act(async () => {
+      await result.current.fetchPredictions('Talatona');
+    });
+
+    expect(result.current.errorKind).toBe('network');
+    expect(result.current.resolvedInput).toBe('Talatona');
+  });
 });

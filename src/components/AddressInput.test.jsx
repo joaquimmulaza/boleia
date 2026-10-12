@@ -192,6 +192,37 @@ describe('AddressInput', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('Talatona: durante debounce 300 ms não mostra «Não encontrámos» nem Usar', async () => {
+    vi.useFakeTimers();
+    mockLoading = false;
+    mockResolvedInput = null;
+
+    render(
+      <AddressInput
+        name="origin_name"
+        label="Origem"
+        value=""
+        onChange={vi.fn()}
+        allowFreeTextUse
+      />,
+    );
+
+    const input = screen.getByLabelText(/^Origem$/i);
+    fireEvent.change(input, { target: { value: 'Talatona' } });
+    fireEvent.focus(input);
+
+    expect(fetchPredictions).not.toHaveBeenCalled();
+    expect(screen.queryByText(EMPTY_GEOCODER_MESSAGE)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Usar/i })).not.toBeInTheDocument();
+
+    await vi.advanceTimersByTimeAsync(299);
+    expect(fetchPredictions).not.toHaveBeenCalled();
+    expect(screen.queryByText(EMPTY_GEOCODER_MESSAGE)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Usar/i })).not.toBeInTheDocument();
+
+    vi.useRealTimers();
+  });
+
   it('debounce: várias alterações rápidas disparam um único fetchPredictions', async () => {
     vi.useFakeTimers();
     render(
