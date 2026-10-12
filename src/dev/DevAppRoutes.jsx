@@ -1,5 +1,6 @@
 import React from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { isDevCaptureRoutesEnabled } from '../utils/devCaptureAccess';
 import Profile from '../pages/Profile';
 import DevPerfilPushPreview from '../pages/DevPerfilPushPreview';
 import DevPerfilCaptureShell from '../pages/DevPerfilCapture';
@@ -10,6 +11,10 @@ import DevNotifV112Capture from '../pages/DevNotifV112Capture';
  * Rotas relativas a `/__dev/*` (lazy + `<Route path="/__dev/*" />` em App.jsx).
  */
 export default function DevAppRoutes() {
+  if (!isDevCaptureRoutesEnabled()) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <Routes>
       <Route path="perfil-push" element={<DevPerfilPushPreview />} />
