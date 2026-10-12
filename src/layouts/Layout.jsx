@@ -8,6 +8,7 @@ import OnboardingPermissions from '../components/OnboardingPermissions';
 import InstallAppPrompt from '../components/InstallAppPrompt';
 import { useAuth } from '../contexts/AuthContext';
 import { clearAppBadge } from '../utils/appBadge';
+import { removeCurrentDevicePushSubscription } from '../utils/pushSubscriptionLogout';
 import BrandLockup from '../components/BrandLockup';
 
 /**
@@ -17,13 +18,19 @@ import BrandLockup from '../components/BrandLockup';
  */
 const Layout = () => {
   const navigate = useNavigate();
-  const { tipoPerfil } = useAuth();
+  const { tipoPerfil, user } = useAuth();
   const homePath = tipoPerfil === 'Motorista' ? '/motorista' : '/passageiro';
 
   const handleLogout = async () => {
-    await clearAppBadge();
-    await supabase.auth.signOut();
-    navigate('/auth');
+    try {
+      await clearAppBadge();
+      await removeCurrentDevicePushSubscription(user?.id);
+    } catch (err) {
+      console.warn('[Layout] Falha ao limpar push no logout:', err);
+    } finally {
+      await supabase.auth.signOut();
+      navigate('/auth');
+    }
   };
 
   const isMotorista = tipoPerfil === 'Motorista';
