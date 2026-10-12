@@ -38,6 +38,7 @@ import {
   labelChipListaEstadoAcordo,
   variantChipListaEstadoAcordo,
   chipClassEstadoAcordoVariant,
+  isChipEncerramentoPedidoConsensual,
 } from '../utils/acordoEstadoDisplay';
 import {
   acordoPrecisaLiveRefresh,
@@ -811,6 +812,11 @@ const MyAgreements = () => {
     const minhaLinha = (selected.acordos_passageiros || []).find((p) => p.passenger_id === user?.id);
     return isActivo(selected.estado) && (!minhaLinha || isNoAcordo(minhaLinha.estado));
   }, [selected, tipoPerfil, user?.id]);
+
+  const temRescisaoConsensualAberta = useMemo(
+    () => Boolean(selected && isChipEncerramentoPedidoConsensual(selected)),
+    [selected],
+  );
 
   const handleSairSoEu = useCallback(() => {
     if (!selected || !user?.id) return;
@@ -1903,7 +1909,17 @@ const MyAgreements = () => {
               </div>
 
               <div className="space-y-2">
-                {podeSairSoloAcordo ? (
+                {temRescisaoConsensualAberta ? (
+                  <p
+                    className="text-sm text-amber-900 dark:text-amber-100 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2 text-pretty"
+                    data-testid="terminate-picker-consensual-pendente-aviso"
+                  >
+                    Há um pedido de encerramento amigável pendente. Só podes usar justa causa até
+                    confirmar ou recusar esse pedido.
+                  </p>
+                ) : null}
+
+                {!temRescisaoConsensualAberta && podeSairSoloAcordo ? (
                   <button
                     type="button"
                     className="w-full text-left rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/80 dark:bg-emerald-950/20 p-4 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
@@ -1922,41 +1938,45 @@ const MyAgreements = () => {
                   </button>
                 ) : null}
 
-                <button
-                  type="button"
-                  className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                  disabled={terminateBusy}
-                  onClick={() => {
-                    setTerminateModo('consensual');
-                    setTerminatePickerOpen(false);
-                    setTerminateVigenciaPickerOpen(true);
-                  }}
-                >
-                  <p className="font-bold text-slate-900 dark:text-white text-balance">
-                    Acordo amigável
-                  </p>
-                  <p className="text-sm text-slate-500 mt-1 text-pretty">
-                    Pedes o encerramento e a outra parte confirma. Escolhes se termina agora ou no fim
-                    deste mês.
-                  </p>
-                </button>
+                {!temRescisaoConsensualAberta ? (
+                  <button
+                    type="button"
+                    className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                    disabled={terminateBusy}
+                    onClick={() => {
+                      setTerminateModo('consensual');
+                      setTerminatePickerOpen(false);
+                      setTerminateVigenciaPickerOpen(true);
+                    }}
+                  >
+                    <p className="font-bold text-slate-900 dark:text-white text-balance">
+                      Acordo amigável
+                    </p>
+                    <p className="text-sm text-slate-500 mt-1 text-pretty">
+                      Pedes o encerramento e a outra parte confirma. Escolhes se termina agora ou no fim
+                      deste mês.
+                    </p>
+                  </button>
+                ) : null}
 
-                <button
-                  type="button"
-                  className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                  disabled={terminateBusy}
-                  onClick={() => {
-                    setTerminateModo('aviso_previo');
-                    setTerminatePickerOpen(false);
-                    setTerminateConfirmOpen(true);
-                  }}
-                >
-                  <p className="font-bold text-slate-900 dark:text-white">Aviso prévio</p>
-                  <p className="text-sm text-slate-500 mt-1 text-pretty">
-                    O acordo mantém-se activo até ao fim deste mês. A partir do próximo mês fica
-                    cancelado.
-                  </p>
-                </button>
+                {!temRescisaoConsensualAberta ? (
+                  <button
+                    type="button"
+                    className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                    disabled={terminateBusy}
+                    onClick={() => {
+                      setTerminateModo('aviso_previo');
+                      setTerminatePickerOpen(false);
+                      setTerminateConfirmOpen(true);
+                    }}
+                  >
+                    <p className="font-bold text-slate-900 dark:text-white">Aviso prévio</p>
+                    <p className="text-sm text-slate-500 mt-1 text-pretty">
+                      O acordo mantém-se activo até ao fim deste mês. A partir do próximo mês fica
+                      cancelado.
+                    </p>
+                  </button>
+                ) : null}
 
                 <button
                   type="button"

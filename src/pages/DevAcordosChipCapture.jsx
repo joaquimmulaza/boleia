@@ -27,14 +27,32 @@ export default function DevAcordosChipCapture() {
     },
     {
       key: 'contraparte',
-      title: 'Consensual — contraparte',
+      title: 'Consensual — contraparte confirma',
       acordo: {
         estado: 'activo',
+        driver_id: 'user-a',
         rescisao_modo: 'consensual',
         rescisao_confirmada_em: null,
         rescisao_solicitada_por: 'user-a',
+        acordos_passageiros: [{ passenger_id: 'user-b', estado: 'activo' }],
       },
       userId: 'user-b',
+    },
+    {
+      key: 'pax-nao-confirma',
+      title: 'Consensual — passageiro sem confirmação (1:N)',
+      acordo: {
+        estado: 'activo',
+        driver_id: 'driver-1',
+        rescisao_modo: 'consensual',
+        rescisao_confirmada_em: null,
+        rescisao_solicitada_por: 'pax-1',
+        acordos_passageiros: [
+          { passenger_id: 'pax-1', estado: 'activo' },
+          { passenger_id: 'pax-2', estado: 'activo' },
+        ],
+      },
+      userId: 'pax-2',
     },
     {
       key: 'cancelamento',

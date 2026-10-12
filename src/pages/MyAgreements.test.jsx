@@ -173,6 +173,7 @@ function mockPagamentosGate(acordo, viewerId, emCustodia = true, estadoPagamento
 
 const acordoMotorista = {
   id: 'acordo-1',
+  driver_id: 'driver-1',
   estado: 'activo',
   modo_preco: 'POR_PASSAGEIRO',
   n_passageiros_contrato: 3,
@@ -212,6 +213,7 @@ const acordoMotorista = {
 
 const acordoPassageiro = {
   id: 'acordo-pax',
+  driver_id: 'driver-1',
   estado: 'activo',
   modo_preco: 'POR_PASSAGEIRO',
   n_passageiros_contrato: 3,
@@ -1500,6 +1502,23 @@ describe('MyAgreements — marketplace 1:N', () => {
       openAcordoKebab(dialog);
       expect(screen.getByRole('menuitem', { name: /Encerrar acordo/i })).toBeInTheDocument();
     });
+
+    it('passageiro que não confirma vê Encerramento pedido, não Falta a tua confirmação', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'pax-2' }, tipoPerfil: 'Passageiro' });
+      getAgreementsForPassenger.mockResolvedValue([
+        {
+          ...acordoPassageiro,
+          rescisao_modo: 'consensual',
+          rescisao_confirmada_em: null,
+          rescisao_solicitada_por: 'pax-viewer',
+        },
+      ]);
+
+      renderPage();
+
+      expect(await screen.findByText('Encerramento pedido')).toBeInTheDocument();
+      expect(screen.queryByText('Falta a tua confirmação')).not.toBeInTheDocument();
+    });
   });
 
   describe('encerramento consensual', () => {
@@ -1608,6 +1627,30 @@ describe('MyAgreements — marketplace 1:N', () => {
       );
       openAcordoKebab(dialog);
       expect(screen.getByRole('menuitem', { name: /Encerrar acordo/i })).toBeInTheDocument();
+    });
+
+    it('com consensual pendente o picker Encerrar só oferece justa causa', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver.mockResolvedValue([
+        {
+          ...acordoMotorista,
+          rescisao_modo: 'consensual',
+          rescisao_solicitada_por: 'pax-viewer',
+          rescisao_vigencia: 'imediato',
+        },
+      ]);
+
+      renderPage(['/acordos?openAcordoId=acordo-1']);
+
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      openAcordoKebab(dialog);
+      await clickAcordoKebabItem(/Encerrar acordo/i);
+
+      const picker = await screen.findByTestId('terminate-modality-picker');
+      expect(within(picker).queryByRole('button', { name: /Acordo amigável/i })).not.toBeInTheDocument();
+      expect(within(picker).queryByRole('button', { name: /Aviso prévio/i })).not.toBeInTheDocument();
+      expect(within(picker).queryByTestId('terminate-picker-sair-so-eu')).not.toBeInTheDocument();
+      expect(within(picker).getByRole('button', { name: /Justa causa imediata/i })).toBeInTheDocument();
     });
 
     it('após pedir consensual mantém detalhe aberto com estado enviado', async () => {
