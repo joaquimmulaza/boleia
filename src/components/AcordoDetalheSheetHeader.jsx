@@ -3,11 +3,7 @@ import { Loader2 } from 'lucide-react';
 import SheetDragHandle from './SheetDragHandle';
 import AcordoDetalheKebabMenu from './AcordoDetalheKebabMenu';
 import { Button } from './ui/button';
-import {
-  labelEstadoAcordo,
-  variantChipEstadoAcordo,
-  chipClassEstadoAcordoVariant,
-} from '../utils/acordoEstadoDisplay';
+import { acordoEstadoListaChipProps } from '../utils/acordoEstadoDisplay';
 import {
   labelChipEstadoPassageiro,
   chipClassEstadoPassageiro,
@@ -24,7 +20,10 @@ import {
  *   rescisaoModoAcordo?: string | null,
  *   rescisaoConfirmadaEmAcordo?: string | null,
  *   rescisaoSolicitadaPorAcordo?: string | null,
+ *   rescisaoEffectiveOnAcordo?: string | null,
+ *   driverIdAcordo?: string | null,
  *   acordosPassageiros?: Array<{ passenger_id?: string, estado?: string }>,
+ *   viewerUserId?: string | null,
  *   minhaLinhaEstado?: string | null,
  *   minhaLinhaPagamento?: { anulacao_motivo?: string | null } | null,
  *   leavePending?: boolean,
@@ -46,7 +45,10 @@ export default function AcordoDetalheSheetHeader({
   rescisaoModoAcordo,
   rescisaoConfirmadaEmAcordo,
   rescisaoSolicitadaPorAcordo,
+  rescisaoEffectiveOnAcordo,
+  driverIdAcordo,
   acordosPassageiros,
+  viewerUserId,
   minhaLinhaEstado,
   minhaLinhaPagamento = null,
   leavePending = false,
@@ -72,8 +74,11 @@ export default function AcordoDetalheSheetHeader({
     rescisao_modo: rescisaoModoAcordo,
     rescisao_confirmada_em: rescisaoConfirmadaEmAcordo,
     rescisao_solicitada_por: rescisaoSolicitadaPorAcordo,
+    rescisao_effective_on: rescisaoEffectiveOnAcordo,
+    driver_id: driverIdAcordo,
     acordos_passageiros: acordosPassageiros,
   };
+  const estadoChip = acordoEstadoListaChipProps(acordoEstadoChip, viewerUserId);
 
   return (
     <header
@@ -111,11 +116,12 @@ export default function AcordoDetalheSheetHeader({
         <div className="flex items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoAcordoVariant(
-                variantChipEstadoAcordo(acordoEstadoChip),
-              )}`}
+              data-testid="acordo-detalhe-estado-chip"
+              role={estadoChip.role}
+              aria-label={estadoChip.ariaLabel}
+              className={`text-xs font-bold px-2.5 py-1 rounded-full ${estadoChip.className}`}
             >
-              {labelEstadoAcordo(acordoEstadoChip)}
+              {estadoChip.label}
             </span>
             {mostrarChipLugar ? (
               <span

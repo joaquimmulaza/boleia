@@ -35,9 +35,9 @@ import {
   subscribeMarketplaceHubRefresh,
 } from '../utils/marketplaceHubRefresh';
 import {
-  labelChipListaEstadoAcordo,
-  variantChipListaEstadoAcordo,
-  chipClassEstadoAcordoVariant,
+  acordoEstadoListaChipProps,
+  isChipEncerramentoPedidoConsensual,
+  podeConfirmarRescisaoConsensual,
 } from '../utils/acordoEstadoDisplay';
 import {
   acordoPrecisaLiveRefresh,
@@ -184,9 +184,11 @@ function isNoAcordo(estado) {
  * @returns {object | null}
  */
 function pickLinhaVivaPassageiro(linhas) {
-  const vivos = lugaresVivosFromLinhas(linhas);
-  if (vivos[0]) return vivos[0];
   const list = linhas || [];
+  const activo = list.find((p) => isActivoPassageiro(p.estado));
+  if (activo) return activo;
+  const vivos = lugaresVivosFromLinhas(list);
+  if (vivos[0]) return vivos[0];
   return list[0] ?? null;
 }
 
@@ -812,6 +814,11 @@ const MyAgreements = () => {
     return isActivo(selected.estado) && (!minhaLinha || isNoAcordo(minhaLinha.estado));
   }, [selected, tipoPerfil, user?.id]);
 
+  const temRescisaoConsensualAberta = useMemo(
+    () => Boolean(selected && isChipEncerramentoPedidoConsensual(selected)),
+    [selected],
+  );
+
   const handleSairSoEu = useCallback(() => {
     if (!selected || !user?.id) return;
     const minhaLinha = (selected.acordos_passageiros || []).find((p) => p.passenger_id === user.id);
@@ -1069,8 +1076,7 @@ const MyAgreements = () => {
     const oferta = acordo.ofertas_capacidade;
     const rota = labelRotaOferta(oferta || {});
     const activo = isActivo(acordo.estado);
-    const estadoVariant = variantChipListaEstadoAcordo(acordo, user?.id);
-    const estadoLabel = labelChipListaEstadoAcordo(acordo, user?.id);
+    const estadoChipCard = acordoEstadoListaChipProps(acordo, user?.id);
     const leavePending = Boolean(pendingLeaveIds[acordo.id]);
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
     const minhaChipCtxCard = minhaLinha
@@ -1109,9 +1115,11 @@ const MyAgreements = () => {
         <div className="flex justify-between items-center gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoAcordoVariant(estadoVariant)}`}
+              role={estadoChipCard.role}
+              aria-label={estadoChipCard.ariaLabel}
+              className={`text-xs font-bold px-2.5 py-1 rounded-full ${estadoChipCard.className}`}
             >
-              {estadoLabel}
+              {estadoChipCard.label}
             </span>
             {mostrarChipLugarCard ? (
               <span
@@ -1234,10 +1242,7 @@ const MyAgreements = () => {
         janelaAberta: janelaPrecoAberta,
       });
     const rescisaoConsensualPendente =
-      activo &&
-      String(selected.rescisao_modo || '').toLowerCase() === 'consensual' &&
-      selected.rescisao_solicitada_por &&
-      selected.rescisao_solicitada_por !== user?.id;
+      activo && podeConfirmarRescisaoConsensual(selected, user?.id);
     const rescisaoConsensualEnviada =
       activo &&
       String(selected.rescisao_modo || '').toLowerCase() === 'consensual' &&
@@ -1350,7 +1355,10 @@ const MyAgreements = () => {
             rescisaoModoAcordo={selected.rescisao_modo}
             rescisaoConfirmadaEmAcordo={selected.rescisao_confirmada_em}
             rescisaoSolicitadaPorAcordo={selected.rescisao_solicitada_por}
+            rescisaoEffectiveOnAcordo={selected.rescisao_effective_on}
+            driverIdAcordo={selected.driver_id}
             acordosPassageiros={selected.acordos_passageiros}
+            viewerUserId={user?.id}
             minhaLinhaEstado={minhaLinha?.estado}
             minhaLinhaPagamento={pagamentoViewer}
             leavePending={leavePending}
@@ -1906,7 +1914,17 @@ const MyAgreements = () => {
               </div>
 
               <div className="space-y-2">
-                {podeSairSoloAcordo ? (
+                {temRescisaoConsensualAberta ? (
+                  <p
+                    className="text-sm text-amber-900 dark:text-amber-100 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2 text-pretty"
+                    data-testid="terminate-picker-consensual-pendente-aviso"
+                  >
+                    Há um pedido de encerramento amigável pendente. Só podes usar justa causa até
+                    confirmar ou recusar esse pedido.
+                  </p>
+                ) : null}
+
+                {!temRescisaoConsensualAberta && podeSairSoloAcordo ? (
                   <button
                     type="button"
                     className="w-full text-left rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/80 dark:bg-emerald-950/20 p-4 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
@@ -1925,41 +1943,45 @@ const MyAgreements = () => {
                   </button>
                 ) : null}
 
-                <button
-                  type="button"
-                  className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                  disabled={terminateBusy}
-                  onClick={() => {
-                    setTerminateModo('consensual');
-                    setTerminatePickerOpen(false);
-                    setTerminateVigenciaPickerOpen(true);
-                  }}
-                >
-                  <p className="font-bold text-slate-900 dark:text-white text-balance">
-                    Acordo amigável
-                  </p>
-                  <p className="text-sm text-slate-500 mt-1 text-pretty">
-                    Pedes o encerramento e a outra parte confirma. Escolhes se termina agora ou no fim
-                    deste mês.
-                  </p>
-                </button>
+                {!temRescisaoConsensualAberta ? (
+                  <button
+                    type="button"
+                    className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                    disabled={terminateBusy}
+                    onClick={() => {
+                      setTerminateModo('consensual');
+                      setTerminatePickerOpen(false);
+                      setTerminateVigenciaPickerOpen(true);
+                    }}
+                  >
+                    <p className="font-bold text-slate-900 dark:text-white text-balance">
+                      Acordo amigável
+                    </p>
+                    <p className="text-sm text-slate-500 mt-1 text-pretty">
+                      Pedes o encerramento e a outra parte confirma. Escolhes se termina agora ou no fim
+                      deste mês.
+                    </p>
+                  </button>
+                ) : null}
 
-                <button
-                  type="button"
-                  className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                  disabled={terminateBusy}
-                  onClick={() => {
-                    setTerminateModo('aviso_previo');
-                    setTerminatePickerOpen(false);
-                    setTerminateConfirmOpen(true);
-                  }}
-                >
-                  <p className="font-bold text-slate-900 dark:text-white">Aviso prévio</p>
-                  <p className="text-sm text-slate-500 mt-1 text-pretty">
-                    O acordo mantém-se activo até ao fim deste mês. A partir do próximo mês fica
-                    cancelado.
-                  </p>
-                </button>
+                {!temRescisaoConsensualAberta ? (
+                  <button
+                    type="button"
+                    className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                    disabled={terminateBusy}
+                    onClick={() => {
+                      setTerminateModo('aviso_previo');
+                      setTerminatePickerOpen(false);
+                      setTerminateConfirmOpen(true);
+                    }}
+                  >
+                    <p className="font-bold text-slate-900 dark:text-white">Aviso prévio</p>
+                    <p className="text-sm text-slate-500 mt-1 text-pretty">
+                      O acordo mantém-se activo até ao fim deste mês. A partir do próximo mês fica
+                      cancelado.
+                    </p>
+                  </button>
+                ) : null}
 
                 <button
                   type="button"

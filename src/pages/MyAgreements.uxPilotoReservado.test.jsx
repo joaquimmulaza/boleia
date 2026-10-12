@@ -149,6 +149,34 @@ describe('MyAgreements — UX piloto reservado (lista)', () => {
     expect(within(card).getByText(/Ana/i)).toBeInTheDocument();
   });
 
+  it('misto com reservado primeiro na lista: cartão N=1 mostra o activo, não o reservado', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      acordoBase([
+        {
+          id: 'ap-2',
+          passenger_id: 'p2',
+          estado: 'reservado',
+          quota_mensal_kz: 40000,
+          perfis: { nome_completo: 'João Reserva' },
+        },
+        {
+          id: 'ap-1',
+          passenger_id: 'p1',
+          estado: 'activo',
+          quota_mensal_kz: 40000,
+          perfis: { nome_completo: 'Ana Activa' },
+        },
+      ]),
+    ]);
+
+    renderPage();
+
+    const card = await screen.findByRole('button', { name: /Talatona/i });
+    expect(estadoChipLista(card)).toHaveTextContent('Activo');
+    expect(within(card).getByText(/Ana/i)).toBeInTheDocument();
+    expect(within(card).queryByText(/João/i)).not.toBeInTheDocument();
+  });
+
   it('só activo: chip Activo e Grupo · 2', async () => {
     getAgreementsForDriver.mockResolvedValue([
       acordoBase([
