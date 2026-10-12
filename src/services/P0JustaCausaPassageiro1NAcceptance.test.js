@@ -42,6 +42,15 @@ describe('P0 justa causa passageiro 1:N — terminate_agreement', () => {
     expect(paxBlock).not.toContain('_p0_finalize_lugares_rescisao_imediata');
     expect(paxBlock).toContain('ajustar_obrigacao_pagamento_mes');
     expect(paxBlock).toContain('_maybe_fechar_acordo_sem_lugares_vivos');
+    expect(paxBlock).toContain('_expirar_lugar_reservado_sem_divida');
+    expect(paxBlock).toContain('v_skip_rescisao_broadcast := true');
+  });
+
+  it('idempotência: chave repetida devolve ok antes de mutar', () => {
+    const sql = readMigration(MIGRATION_COPY);
+    expect(sql).toMatch(
+      /IF p_idempotency_key IS NOT NULL THEN[\s\S]*?RETURN jsonb_build_object\('acordo_id', p_acordo_id, 'status', 'ok'\)/,
+    );
   });
 
   it('ramo motorista: mantém finalize imediato do acordo', () => {
