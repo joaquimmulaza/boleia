@@ -4,6 +4,7 @@ import { ArrowRight, Clock, Users, Banknote } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AddressInput from '../components/AddressInput';
 import { FLEX_ONLY_FREE_TEXT_WARNING } from '../utils/addressGeocoderCopy';
+import { resolveProcuraOdFieldForPayload } from '../utils/procuraGeocodePayload';
 import TimeInput from '../components/TimeInput';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
@@ -651,11 +652,34 @@ const PassengerDashboard = () => {
       });
       return { ok: false };
     }
-    const originHasCoords = form.origin_lat != null && form.origin_lng != null;
-    const destinationHasCoords =
-      form.destination_lat != null && form.destination_lng != null;
-    const originOk = originHasCoords || form.origin_free_text;
-    const destinationOk = destinationHasCoords || form.destination_free_text;
+    const storedOrigin = editing && procura
+      ? { lat: procura.origin_lat ?? null, lng: procura.origin_lng ?? null }
+      : null;
+    const storedDestination = editing && procura
+      ? { lat: procura.destination_lat ?? null, lng: procura.destination_lng ?? null }
+      : null;
+    const resolvedOrigin = resolveProcuraOdFieldForPayload(
+      {
+        lat: form.origin_lat ?? null,
+        lng: form.origin_lng ?? null,
+        freeText: Boolean(form.origin_free_text),
+      },
+      storedOrigin,
+    );
+    const resolvedDestination = resolveProcuraOdFieldForPayload(
+      {
+        lat: form.destination_lat ?? null,
+        lng: form.destination_lng ?? null,
+        freeText: Boolean(form.destination_free_text),
+      },
+      storedDestination,
+    );
+    const originOk =
+      form.origin_free_text
+      || (resolvedOrigin.lat != null && resolvedOrigin.lng != null);
+    const destinationOk =
+      form.destination_free_text
+      || (resolvedDestination.lat != null && resolvedDestination.lng != null);
     if (!originOk || !destinationOk) {
       setFeedback({
         type: 'error',
@@ -688,11 +712,11 @@ const PassengerDashboard = () => {
       payload: {
         preferred_time: form.preferred_time,
         origin_name: originName,
-        origin_lat: form.origin_lat ?? null,
-        origin_lng: form.origin_lng ?? null,
+        origin_lat: resolvedOrigin.lat,
+        origin_lng: resolvedOrigin.lng,
         destination_name: destinationName,
-        destination_lat: form.destination_lat ?? null,
-        destination_lng: form.destination_lng ?? null,
+        destination_lat: resolvedDestination.lat,
+        destination_lng: resolvedDestination.lng,
         dias_semana: form.dias_semana,
         teto_mensal_kz: tetoNumero,
       },

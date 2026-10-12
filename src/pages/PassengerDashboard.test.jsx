@@ -136,7 +136,18 @@ vi.mock('../components/AddressInput', () => ({
         id={`mock-${name}`}
         name={name}
         value={value || ''}
-        onChange={(e) => onChange?.(e)}
+        onChange={(e) => {
+          onChange?.(e);
+          // Simula perda de coords ao editar texto sem nova sugestão/Usar (regressão PM #276).
+          if (name === 'origin_name' || name === 'destination_name') {
+            onSelectCoordinates?.(null);
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && e.currentTarget.form) {
+            e.currentTarget.form.requestSubmit();
+          }
+        }}
       />
       {allowFreeTextUse ? (
         <button
@@ -1554,6 +1565,46 @@ describe('PassengerDashboard — marketplace', () => {
           origin_name: 'Talatona (editado)',
           origin_lat: -8.9,
           origin_lng: 13.1,
+        }),
+      );
+    });
+    expect(
+      screen.queryByText(
+        'Como este local não está no mapa, só as ofertas sem percurso fixo aparecem como compatíveis. Para veres mais, escolhe uma sugestão da lista.',
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it('editar procura: Enter sem sugestão mantém origin_lat e origin_lng guardados', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    updateProcura.mockResolvedValue({ ...procuraBase, origin_name: 'Talatona (Enter)' });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    await abrirMinhaProcura();
+    fireEvent.click(await screen.findByRole('button', { name: /Editar procura/i }));
+
+    const formEl = getFormularioProcuraElement();
+    const originInput = formEl.querySelector('input[name="origin_name"]');
+    expect(originInput).toBeTruthy();
+    fireEvent.change(originInput, {
+      target: { name: 'origin_name', value: 'Talatona (Enter)' },
+    });
+    fireEvent.keyDown(originInput, { key: 'Enter', code: 'Enter' });
+
+    await waitFor(() => {
+      expect(updateProcura).toHaveBeenCalledWith(
+        'pr-1',
+        expect.objectContaining({
+          origin_name: 'Talatona (Enter)',
+          origin_lat: -8.9,
+          origin_lng: 13.1,
+          destination_lat: -8.8,
+          destination_lng: 13.2,
         }),
       );
     });
