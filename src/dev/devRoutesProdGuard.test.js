@@ -4,23 +4,31 @@ import path from 'node:path';
 
 const APP_PATH = path.resolve(import.meta.dirname, '../App.jsx');
 const DEV_ROUTES_PATH = path.resolve(import.meta.dirname, 'DevAppRoutes.jsx');
+const ACCESS_PATH = path.resolve(import.meta.dirname, '../utils/devCaptureAccess.js');
 
-describe('guard __dev — só disponível em import.meta.env.DEV (local vite)', () => {
-  it('App.jsx: lazy DevAppRoutes e Route /__dev/* condicionados a DEV', () => {
+describe('guard __dev — preview permitido, produção (hostname) bloqueada', () => {
+  it('devCaptureAccess: prod host boleia-cyan.vercel.app', () => {
+    const src = fs.readFileSync(ACCESS_PATH, 'utf8');
+    expect(src).toMatch(/DEV_CAPTURE_PROD_HOSTNAME = 'boleia-cyan\.vercel\.app'/);
+    expect(src).toMatch(/isDevCaptureRoutesEnabled/);
+  });
+
+  it('App.jsx: rota /__dev/* sempre registada; acesso via devCaptureAccess', () => {
     const src = fs.readFileSync(APP_PATH, 'utf8');
-    expect(src).toMatch(/const LazyDevRoutes = import\.meta\.env\.DEV\s*\?\s*lazy/);
-    expect(src).toMatch(/isDevPublicRoute = import\.meta\.env\.DEV && pathname\.startsWith\('\/__dev\/'\)/);
-    expect(src).toMatch(/\{import\.meta\.env\.DEV && LazyDevRoutes \?/);
+    expect(src).toMatch(/lazy\(\(\) => import\('\.\/dev\/DevAppRoutes\.jsx'\)\)/);
+    expect(src).toMatch(/isDevCaptureRoutesEnabled/);
     expect(src).toMatch(/path="\/__dev\/\*"/);
+    expect(src).not.toMatch(/\{import\.meta\.env\.DEV && LazyDevRoutes/);
   });
 
-  it('DevAppRoutes.jsx: fallback Navigate / se import.meta.env.DEV for falso', () => {
+  it('DevAppRoutes.jsx: Navigate / quando capturas desactivadas', () => {
     const src = fs.readFileSync(DEV_ROUTES_PATH, 'utf8');
-    expect(src).toMatch(/if \(!import\.meta\.env\.DEV\)/);
+    expect(src).toMatch(/isDevCaptureRoutesEnabled/);
     expect(src).toMatch(/<Navigate to="\/" replace \/>/);
+    expect(src).not.toMatch(/if \(!import\.meta\.env\.DEV\)/);
   });
 
-  it('App.jsx: rotas desconhecidas caem no fallback Navigate / (prod inclui /__dev/*)', () => {
+  it('App.jsx: rotas desconhecidas caem no fallback Navigate /', () => {
     const src = fs.readFileSync(APP_PATH, 'utf8');
     expect(src).toMatch(/<Route path="\*" element=\{<Navigate to="\/" replace \/>\} \/>/);
   });

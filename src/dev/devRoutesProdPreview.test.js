@@ -3,6 +3,7 @@ import { execSync, spawn } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
 import { chromium } from 'playwright';
+import { isDevCaptureRoutesEnabled } from '../utils/devCaptureAccess';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const PREVIEW_PORT = 4173 + (process.pid % 50);
@@ -11,7 +12,7 @@ const PREVIEW_URL = `http://127.0.0.1:${PREVIEW_PORT}`;
 /** @type {import('node:child_process').ChildProcess | null} */
 let previewProcess = null;
 
-describe('build produção: /__dev/* inacessível (bundle + preview)', () => {
+describe('build produção: /__dev/* por hostname (preview vs prod)', () => {
   beforeAll(() => {
     execSync('npm run build', { cwd: ROOT, stdio: 'pipe', env: { ...process.env, NODE_ENV: 'production' } });
     try {
@@ -36,31 +37,46 @@ describe('build produção: /__dev/* inacessível (bundle + preview)', () => {
     }
   });
 
-  it('entry prod não regista paths __dev (lazy chunk pode existir mas não monta)', () => {
+  it('entry prod regista rota /__dev/* (lazy); paths de captura ficam no chunk', () => {
     const distDir = path.join(ROOT, 'dist');
     const files = fs.readdirSync(distDir, { recursive: true });
     const jsFiles = files.filter((f) => String(f).endsWith('.js'));
-    let allJs = '';
     let entryBundle = '';
+    let devAppRoutesChunk = false;
     for (const file of jsFiles) {
       const content = fs.readFileSync(path.join(distDir, String(file)), 'utf8');
-      allJs += content;
       if (/^assets\/index-.*\.js$/.test(String(file))) {
         entryBundle = content;
       }
+      if (/DevAppRoutes-.*\.js$/.test(String(file)) || content.includes('dev-notif-cards-269-capture')) {
+        devAppRoutesChunk = true;
+      }
     }
-    expect(entryBundle).not.toMatch(/path="\/__dev\/\*"/);
-    expect(allJs).not.toMatch(/__dev\/notif-cards-269/);
-    expect(allJs).not.toMatch(/__dev\/acordos-chips/);
+    expect(entryBundle).toMatch(/__dev/);
+    expect(devAppRoutesChunk).toBe(true);
   });
 
-  it('preview prod: /__dev/notif-cards-269 redirecciona para / (captura não monta)', async () => {
+  it('hostname prod: capturas desactivadas (unit)', () => {
+    expect(isDevCaptureRoutesEnabled('boleia-cyan.vercel.app')).toBe(false);
+  });
+
+  it('preview host (127.0.0.1): /__dev/notif-cards-269 monta captura', async () => {
+    expect(isDevCaptureRoutesEnabled('127.0.0.1')).toBe(true);
     const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     await page.goto(`${PREVIEW_URL}/__dev/notif-cards-269`, { waitUntil: 'networkidle' });
-    await page.waitForURL((url) => url.pathname === '/', { timeout: 20_000 });
-    expect(await page.locator('[data-testid="dev-notif-cards-269-capture"]').count()).toBe(0);
-    expect(await page.getByText(/A boleia que faz sentido/i).isVisible()).toBe(true);
+    await page.locator('[data-testid="dev-notif-cards-269-capture"]').waitFor({ state: 'visible', timeout: 20_000 });
+    expect(await page.locator('[data-testid="dev-notif-cards-269-capture"]').count()).toBeGreaterThan(0);
     await browser.close();
   }, 60_000);
+
+  it('preview host (127.0.0.1): /__dev/acordos-chips monta captura', async () => {
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await page.goto(`${PREVIEW_URL}/__dev/acordos-chips`, { waitUntil: 'networkidle' });
+    await page.locator('[data-testid="dev-acordos-chip-capture"]').waitFor({ state: 'visible', timeout: 20_000 });
+    expect(await page.locator('[data-testid="dev-acordos-chip-capture"]').count()).toBeGreaterThan(0);
+    await browser.close();
+  }, 60_000);
+
 });

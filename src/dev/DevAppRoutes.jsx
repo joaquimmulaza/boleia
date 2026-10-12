@@ -5,17 +5,16 @@ import DevPerfilPushPreview from '../pages/DevPerfilPushPreview';
 import DevPerfilCaptureShell from '../pages/DevPerfilCapture';
 import DevAcordosChipCapture from '../pages/DevAcordosChipCapture';
 import DevNotifCards269Capture from '../pages/DevNotifCards269Capture';
+import { isDevCaptureRoutesEnabled } from '../utils/devCaptureAccess';
 
 /**
  * Rotas relativas a `/__dev/*` (lazy + `<Route path="/__dev/*" />` em App.jsx).
  *
- * Só montadas quando `import.meta.env.DEV` (vite dev local). Builds de produção
- * e **Vercel Preview** (`vite build`) têm DEV=false — `/__dev/*` cai no fallback
- * `Navigate /`; Critiquito QA nas previews Vercel **não** acede a estas capturas
- * (usar `npm run dev` localmente).
+ * Disponíveis em `vite dev`, **Vercel Preview** e localhost; redireccionam para `/`
+ * só no hostname de produção (`boleia-cyan.vercel.app`). Ver `devCaptureAccess.js`.
  */
 export default function DevAppRoutes() {
-  if (!import.meta.env.DEV) {
+  if (!isDevCaptureRoutesEnabled()) {
     return <Navigate to="/" replace />;
   }
 

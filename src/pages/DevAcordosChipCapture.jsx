@@ -8,7 +8,7 @@ import {
 
 /**
  * Pré-visualização DEV (390px) dos chips da lista `/acordos` — light + dark.
- * Registada só com `import.meta.env.DEV` via DevAppRoutes.
+ * Registada via DevAppRoutes (`/__dev/acordos-chips`; preview Vercel + dev local).
  *
  * @typedef {Readonly<{}>} DevAcordosChipCaptureProps
  */
