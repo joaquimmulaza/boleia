@@ -265,6 +265,9 @@ BEGIN
     RAISE EXCEPTION 'FAIL JC1N-1d: mensagem invocador não deve ser placeholder (=%)', v_inv_msg;
   END IF;
 
+  RAISE NOTICE 'JC1N-1 (copy A): invocador=% motorista=% outros_pax=% titulo=% mensagem=%',
+    v_n_pax_a, v_n_driver, v_n_pax_b, v_inv_tit, v_inv_msg;
+
   -- Idempotência: segunda chamada com a mesma chave não altera estado
   PERFORM set_config('request.jwt.claim.sub', v_pax_a::text, true);
   SET LOCAL ROLE authenticated;
@@ -286,6 +289,8 @@ BEGIN
   IF v_n_pax_a <> 1 THEN
     RAISE EXCEPTION 'FAIL JC1N-1c: idempotência invocador devia manter 1 notificação (n=%)', v_n_pax_a;
   END IF;
+
+  RAISE NOTICE 'JC1N-1c (idempotência): invocador=% (2.ª chamada)', v_n_pax_a;
 
   -- Caso 2: último passageiro (solo) por justa causa → sem_lugares_vivos
   PERFORM set_config('request.jwt.claim.sub', v_pax_solo::text, true);
@@ -341,6 +346,20 @@ BEGIN
   IF v_inv_msg LIKE '%·%' THEN
     RAISE EXCEPTION 'FAIL JC1N-2b: mensagem invocador B sem placeholder (=%)', v_inv_msg;
   END IF;
+
+  SELECT COUNT(*) INTO v_n_driver
+  FROM public.notificacoes n
+  WHERE n.user_id = v_driver
+    AND (n.metadata->>'acordo_id')::uuid = v_acordo_solo;
+
+  SELECT COUNT(*) INTO v_n_pax_a
+  FROM public.notificacoes n
+  WHERE n.user_id = v_pax_solo
+    AND (n.metadata->>'acordo_id')::uuid = v_acordo_solo
+    AND n.metadata->>'type' = 'justa_causa_passageiro_invocador';
+
+  RAISE NOTICE 'JC1N-2 (copy B): invocador=% motorista=% titulo=% mensagem=%',
+    v_n_pax_a, v_n_driver, v_inv_tit, v_inv_msg;
 
   -- Caso 4: passageiro reservado (não activo) — expira só o lugar; outro activo intacto
   DELETE FROM public.notificacoes

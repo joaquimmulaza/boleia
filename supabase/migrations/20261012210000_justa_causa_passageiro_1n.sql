@@ -1,6 +1,44 @@
 -- P0: justa causa invocada por passageiro termina só o lugar (1:N); motorista mantém encerramento total.
 -- Base: 20261012180500_consensual_pending_block_reinit.sql (terminate_agreement prod).
 
+CREATE OR REPLACE FUNCTION public._format_civil_date_luanda_pt_no_year(p_instant timestamptz)
+RETURNS text
+LANGUAGE plpgsql
+IMMUTABLE
+AS $fmt$
+DECLARE
+  v_d date;
+  v_day integer;
+  v_month integer;
+BEGIN
+  IF p_instant IS NULL THEN
+    RETURN NULL;
+  END IF;
+  v_d := (timezone('Africa/Luanda', p_instant))::date;
+  v_day := EXTRACT(day FROM v_d)::integer;
+  v_month := EXTRACT(month FROM v_d)::integer;
+  RETURN v_day::text || ' de ' || CASE v_month
+    WHEN 1 THEN 'janeiro'
+    WHEN 2 THEN 'fevereiro'
+    WHEN 3 THEN 'março'
+    WHEN 4 THEN 'abril'
+    WHEN 5 THEN 'maio'
+    WHEN 6 THEN 'junho'
+    WHEN 7 THEN 'julho'
+    WHEN 8 THEN 'agosto'
+    WHEN 9 THEN 'setembro'
+    WHEN 10 THEN 'outubro'
+    WHEN 11 THEN 'novembro'
+    WHEN 12 THEN 'dezembro'
+    ELSE 'mês'
+  END;
+END;
+$fmt$;
+
+REVOKE ALL ON FUNCTION public._format_civil_date_luanda_pt_no_year(timestamptz) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public._format_civil_date_luanda_pt_no_year(timestamptz) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._format_civil_date_luanda_pt_no_year(timestamptz) TO service_role;
+
 CREATE OR REPLACE FUNCTION public.terminate_agreement(
   p_acordo_id uuid,
   p_modo text,
@@ -35,6 +73,12 @@ DECLARE
   v_ultimo_passageiro_saiu boolean := false;
   v_pax_nome text;
   v_mensagem_motorista text;
+  v_jc_invocador_reservado boolean := false;
+  v_jc_invocador_variant text;
+  v_lugar_rescisao_em timestamptz;
+  v_data_invocador_pt text;
+  v_titulo_invocador text;
+  v_mensagem_invocador text;
   v_skip_rescisao_broadcast boolean := false;
 BEGIN
   IF v_uid IS NULL THEN
@@ -362,6 +406,9 @@ BEGIN
         RAISE EXCEPTION 'Passageiro não está activo neste acordo.';
       END IF;
 
+      v_jc_invocador_reservado := lower(v_ap_row.estado) = 'reservado';
+      v_lugar_rescisao_em := now();
+
       IF lower(v_ap_row.estado) = 'reservado' THEN
         PERFORM public._expirar_lugar_reservado_sem_divida(
           v_ap_row.id,
@@ -452,6 +499,50 @@ BEGIN
       EXCEPTION
         WHEN OTHERS THEN
           RAISE WARNING 'Falha ao notificar motorista justa causa passageiro %: %',
+            p_acordo_id, SQLERRM;
+      END;
+
+      v_jc_invocador_variant := CASE
+        WHEN v_jc_invocador_reservado THEN 'reservado'
+        WHEN v_ultimo_passageiro_saiu THEN 'ultimo'
+        ELSE 'parcial'
+      END;
+
+      v_data_invocador_pt := public._format_civil_date_luanda_pt_no_year(v_lugar_rescisao_em);
+
+      IF v_jc_invocador_variant = 'ultimo' THEN
+        v_titulo_invocador := 'Acordo encerrado';
+        v_mensagem_invocador :=
+          'Saíste por justa causa a ' || v_data_invocador_pt
+          || '. Eras o último passageiro, por isso o acordo foi encerrado. '
+          || 'Só contam os dias até essa data. Se já pagaste mais, devolvemos-te a diferença.';
+      ELSE
+        v_titulo_invocador := 'Saíste do acordo';
+        v_mensagem_invocador :=
+          'Terminaste o teu lugar por justa causa a ' || v_data_invocador_pt
+          || '. Só contam os dias até essa data. Se já pagaste mais, devolvemos-te a diferença.';
+      END IF;
+
+      BEGIN
+        INSERT INTO public.notificacoes (user_id, mensagem, tipo, metadata, link)
+        VALUES (
+          v_uid,
+          v_mensagem_invocador,
+          'info',
+          jsonb_build_object(
+            'type', 'justa_causa_passageiro_invocador',
+            'titulo', v_titulo_invocador,
+            'acordo_id', p_acordo_id,
+            'rescisao_modo', 'justa_causa',
+            'variant', v_jc_invocador_variant,
+            'lugar_rescisao_em', v_lugar_rescisao_em,
+            'acordo_estado', v_estado_final
+          ),
+          v_link
+        );
+      EXCEPTION
+        WHEN OTHERS THEN
+          RAISE WARNING 'Falha ao notificar invocador justa causa passageiro %: %',
             p_acordo_id, SQLERRM;
       END;
 

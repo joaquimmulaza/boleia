@@ -82,13 +82,15 @@ describe('P0 justa causa passageiro — UI copy v1.10 (lugar_rescisao)', () => {
   });
 
   it('ramo passageiro JC notifica invocador (tipo justa_causa_passageiro_invocador)', () => {
-    const sql = readMigration(MIGRATION_COPY);
-    const paxBlock = extractJustaCausaPassengerBlock(sql);
-    expect(paxBlock).toContain("'justa_causa_passageiro_invocador'");
-    expect(paxBlock).toMatch(/INSERT INTO public\.notificacoes[\s\S]*v_uid,/);
-    expect(paxBlock).toContain('v_mensagem_invocador');
-    expect(paxBlock).toContain("'titulo', v_titulo_invocador");
-    expect(paxBlock).not.toMatch(/v_uid,\s*\n\s*'·',/);
+    for (const mig of [MIGRATION_FIX, MIGRATION_COPY]) {
+      const sql = readMigration(mig);
+      const paxBlock = extractJustaCausaPassengerBlock(sql);
+      expect(paxBlock).toContain("'justa_causa_passageiro_invocador'");
+      expect(paxBlock).toMatch(/INSERT INTO public\.notificacoes[\s\S]*v_uid,/);
+      expect(paxBlock).toContain('v_mensagem_invocador');
+      expect(paxBlock).toContain("'titulo', v_titulo_invocador");
+      expect(paxBlock).not.toMatch(/v_uid,\s*\n\s*'·',/);
+    }
   });
 });
 
