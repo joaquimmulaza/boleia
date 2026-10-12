@@ -86,7 +86,9 @@ describe('P0 justa causa passageiro — UI copy v1.10 (lugar_rescisao)', () => {
     const paxBlock = extractJustaCausaPassengerBlock(sql);
     expect(paxBlock).toContain("'justa_causa_passageiro_invocador'");
     expect(paxBlock).toMatch(/INSERT INTO public\.notificacoes[\s\S]*v_uid,/);
-    expect(paxBlock).toMatch(/v_uid,\s*\n\s*'·',\s*\n\s*'info'/);
+    expect(paxBlock).toContain('v_mensagem_invocador');
+    expect(paxBlock).toContain("'titulo', v_titulo_invocador");
+    expect(paxBlock).not.toMatch(/v_uid,\s*\n\s*'·',/);
   });
 });
 

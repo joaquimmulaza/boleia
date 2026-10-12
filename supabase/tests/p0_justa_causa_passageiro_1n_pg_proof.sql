@@ -50,6 +50,9 @@ DECLARE
   v_pg_valor integer;
   v_n_driver int;
   v_n_pax_a int;
+  v_inv_msg text;
+  v_inv_tit text;
+  v_data_pt text;
   v_lugar_modo text;
   v_oferta_estado text;
 BEGIN
@@ -233,6 +236,35 @@ BEGIN
     RAISE EXCEPTION 'FAIL JC1N-1: invocador devia receber exactamente 1 notificação (n=%)', v_n_pax_a;
   END IF;
 
+  SELECT n.mensagem, n.metadata->>'titulo'
+  INTO v_inv_msg, v_inv_tit
+  FROM public.notificacoes n
+  WHERE n.user_id = v_pax_a
+    AND (n.metadata->>'acordo_id')::uuid = v_acordo
+    AND n.metadata->>'type' = 'justa_causa_passageiro_invocador'
+  ORDER BY n.created_at DESC
+  LIMIT 1;
+
+  SELECT public._format_civil_date_luanda_pt_no_year(ap.lugar_rescisao_em)
+  INTO v_data_pt
+  FROM public.acordos_passageiros ap
+  WHERE ap.id = v_ap_a;
+
+  IF v_inv_tit IS DISTINCT FROM 'Saíste do acordo' THEN
+    RAISE EXCEPTION 'FAIL JC1N-1d: título invocador A (=%)', v_inv_tit;
+  END IF;
+
+  IF v_inv_msg IS DISTINCT FROM (
+    'Terminaste o teu lugar por justa causa a ' || v_data_pt
+    || '. Só contam os dias até essa data. Se já pagaste mais, devolvemos-te a diferença.'
+  ) THEN
+    RAISE EXCEPTION 'FAIL JC1N-1d: mensagem invocador A (=%)', v_inv_msg;
+  END IF;
+
+  IF v_inv_msg LIKE '%·%' THEN
+    RAISE EXCEPTION 'FAIL JC1N-1d: mensagem invocador não deve ser placeholder (=%)', v_inv_msg;
+  END IF;
+
   -- Idempotência: segunda chamada com a mesma chave não altera estado
   PERFORM set_config('request.jwt.claim.sub', v_pax_a::text, true);
   SET LOCAL ROLE authenticated;
@@ -278,6 +310,36 @@ BEGIN
   FROM public.ofertas_capacidade WHERE id = v_oferta_solo;
   IF v_oferta_estado NOT IN ('disponivel', 'parcial') THEN
     RAISE EXCEPTION 'FAIL JC1N-2: oferta solo devia continuar publicada (=%)', v_oferta_estado;
+  END IF;
+
+  SELECT n.mensagem, n.metadata->>'titulo'
+  INTO v_inv_msg, v_inv_tit
+  FROM public.notificacoes n
+  WHERE n.user_id = v_pax_solo
+    AND (n.metadata->>'acordo_id')::uuid = v_acordo_solo
+    AND n.metadata->>'type' = 'justa_causa_passageiro_invocador'
+  ORDER BY n.created_at DESC
+  LIMIT 1;
+
+  SELECT public._format_civil_date_luanda_pt_no_year(ap.lugar_rescisao_em)
+  INTO v_data_pt
+  FROM public.acordos_passageiros ap
+  WHERE ap.id = v_ap_solo;
+
+  IF v_inv_tit IS DISTINCT FROM 'Acordo encerrado' THEN
+    RAISE EXCEPTION 'FAIL JC1N-2b: título invocador B (=%)', v_inv_tit;
+  END IF;
+
+  IF v_inv_msg IS DISTINCT FROM (
+    'Saíste por justa causa a ' || v_data_pt
+    || '. Eras o último passageiro, por isso o acordo foi encerrado. '
+    || 'Só contam os dias até essa data. Se já pagaste mais, devolvemos-te a diferença.'
+  ) THEN
+    RAISE EXCEPTION 'FAIL JC1N-2b: mensagem invocador B (=%)', v_inv_msg;
+  END IF;
+
+  IF v_inv_msg LIKE '%·%' THEN
+    RAISE EXCEPTION 'FAIL JC1N-2b: mensagem invocador B sem placeholder (=%)', v_inv_msg;
   END IF;
 
   -- Caso 4: passageiro reservado (não activo) — expira só o lugar; outro activo intacto

@@ -1,9 +1,18 @@
 import {
   JUSTA_CAUSA_PASSAGEIRO_INVOCADOR_NOTIF_TYPE,
+  JUSTA_CAUSA_PASSAGEIRO_INVOCADOR_SQL_PLACEHOLDER,
   parseJustaCausaInvocadorNotifVariant,
   resolvePassageiroJustaCausaInvocadorNotifCopy,
-  resolvePassageiroJustaCausaInvocadorNotifMensagem,
 } from './passageiroJustaCausaInvocadorNotifCopy';
+
+/**
+ * @param {string | null | undefined} mensagem
+ * @returns {boolean}
+ */
+function isJustaCausaInvocadorPlaceholder(mensagem) {
+  const m = (mensagem || '').trim();
+  return !m || m === JUSTA_CAUSA_PASSAGEIRO_INVOCADOR_SQL_PLACEHOLDER;
+}
 
 /**
  * @param {{ metadata?: object | null, lugarRescisaoEm?: string | null }} params
@@ -29,33 +38,35 @@ function resolveJustaCausaInvocadorCopyFromNotif(notif) {
  * @returns {string | null}
  */
 export function resolveNotificationTitulo(notif) {
-  const copy = resolveJustaCausaInvocadorCopyFromNotif(notif);
-  if (copy) return copy.titulo;
+  const metadata = notif?.metadata;
+  if (metadata?.type === JUSTA_CAUSA_PASSAGEIRO_INVOCADOR_NOTIF_TYPE) {
+    const tituloMeta = metadata?.titulo;
+    if (typeof tituloMeta === 'string' && tituloMeta.trim()) {
+      return tituloMeta.trim();
+    }
+    const copy = resolveJustaCausaInvocadorCopyFromNotif(notif);
+    if (copy) return copy.titulo;
+  }
+
   const titulo = notif?.metadata?.titulo;
   return typeof titulo === 'string' && titulo.trim() ? titulo.trim() : null;
 }
 
 /**
- * Mensagem apresentada no sino / push (substitui placeholders da BD).
+ * Mensagem apresentada no sino / push (fallback só para linhas legacy com placeholder).
  *
  * @param {{ mensagem?: string, metadata?: object | null }} notif
  * @returns {string}
  */
 export function resolveNotificationMensagem(notif) {
-  const copy = resolveJustaCausaInvocadorCopyFromNotif(notif);
-  if (copy) return copy.corpo;
-
   const metadata = notif?.metadata;
-  const type = metadata?.type;
 
-  if (type === JUSTA_CAUSA_PASSAGEIRO_INVOCADOR_NOTIF_TYPE) {
-    const variant = parseJustaCausaInvocadorNotifVariant(metadata);
-    if (variant) {
-      return resolvePassageiroJustaCausaInvocadorNotifMensagem({
-        variant,
-        lugarRescisaoEm: metadata.lugar_rescisao_em,
-      });
+  if (metadata?.type === JUSTA_CAUSA_PASSAGEIRO_INVOCADOR_NOTIF_TYPE) {
+    if (!isJustaCausaInvocadorPlaceholder(notif?.mensagem)) {
+      return notif.mensagem;
     }
+    const copy = resolveJustaCausaInvocadorCopyFromNotif(notif);
+    if (copy) return copy.corpo;
   }
 
   return notif?.mensagem || '';
@@ -68,7 +79,8 @@ export function resolveNotificationMensagem(notif) {
  * @returns {string | undefined}
  */
 export function resolveNotificationTipo(notif) {
-  const copy = resolveJustaCausaInvocadorCopyFromNotif(notif);
-  if (copy) return copy.tipo;
+  if (notif?.metadata?.type === JUSTA_CAUSA_PASSAGEIRO_INVOCADOR_NOTIF_TYPE) {
+    return notif?.tipo || 'info';
+  }
   return notif?.tipo;
 }

@@ -7,8 +7,18 @@ import { formatCivilDateLuandaPtFromIso } from './rescisaoDisplay';
  * @param {{ nome: string, dataFormatada: string }} params
  * @returns {string}
  */
-export function copyMotoristaJustaCausaParcial({ nome, dataFormatada }) {
-  return `O lugar de ${nome} terminou por justa causa a ${dataFormatada}. Recebes a parte do mês desse lugar até essa data, menos a comissão da Boleia Certa. Os outros passageiros continuam no acordo e não há penalização para ti.`;
+/**
+ * @param {{ nome: string, dataFormatada: string, omitOutrosContinuam?: boolean }} params
+ * @returns {string}
+ */
+export function copyMotoristaJustaCausaParcial({ nome, dataFormatada, omitOutrosContinuam = false }) {
+  const base =
+    `O lugar de ${nome} terminou por justa causa a ${dataFormatada}. `
+    + 'Recebes a parte do mês desse lugar até essa data, menos a comissão da Boleia Certa.';
+  if (omitOutrosContinuam) {
+    return `${base} Não há penalização para ti.`;
+  }
+  return `${base} Os outros passageiros continuam no acordo e não há penalização para ti.`;
 }
 
 /**
@@ -93,9 +103,13 @@ export function resolveMotoristaJustaCausaPassageiroAlerts(acordo, linhas) {
   const jcLinhas = linhas.filter(
     (p) => String(p.lugar_rescisao_modo || '').toLowerCase() === 'justa_causa',
   );
-  const ultimaSaidaRow = ultimoEncerrado ? pickLinhaSaidaMaisRecente(linhas) : null;
-  const ultimaSaidaId = ultimaSaidaRow
-    ? String(ultimaSaidaRow.id || ultimaSaidaRow.passenger_id || '')
+  const ultimaSaidaGlobalRow = ultimoEncerrado ? pickLinhaSaidaMaisRecente(linhas) : null;
+  const ultimaSaidaJcRow = ultimoEncerrado ? pickLinhaSaidaMaisRecente(jcLinhas) : null;
+  const ultimaGlobalId = ultimaSaidaGlobalRow
+    ? String(ultimaSaidaGlobalRow.id || ultimaSaidaGlobalRow.passenger_id || '')
+    : '';
+  const ultimaJcId = ultimaSaidaJcRow
+    ? String(ultimaSaidaJcRow.id || ultimaSaidaJcRow.passenger_id || '')
     : '';
 
   return jcLinhas
@@ -103,20 +117,37 @@ export function resolveMotoristaJustaCausaPassageiroAlerts(acordo, linhas) {
       const nome = nomeMotoristaUi(p);
       const dataFormatada = dataRescisaoLugarFormatada(p.lugar_rescisao_em);
       const rowId = String(p.id || p.passenger_id);
-      const variant =
-        ultimoEncerrado && rowId === ultimaSaidaId ? 'B2' : 'B';
+
+      /** @type {'B' | 'B2' | null} */
+      let variant = 'B';
+      if (ultimoEncerrado) {
+        if (rowId === ultimaJcId && rowId === ultimaGlobalId) {
+          variant = 'B2';
+        } else if (rowId === ultimaJcId && rowId !== ultimaGlobalId) {
+          variant = 'B';
+        } else {
+          return null;
+        }
+      }
+
       const corpo =
         variant === 'B2'
           ? copyMotoristaJustaCausaUltimoPassageiro({ nome, dataFormatada })
-          : copyMotoristaJustaCausaParcial({ nome, dataFormatada });
+          : copyMotoristaJustaCausaParcial({
+            nome,
+            dataFormatada,
+            omitOutrosContinuam: ultimoEncerrado,
+          });
       return {
         id: rowId,
         variant,
         corpo,
       };
     })
+    .filter(Boolean)
     .filter((a) => {
-      if (a.variant === 'B2') return ultimoEncerrado;
-      return estado === 'activo' || estado === 'cancelamento_pendente' || ultimoEncerrado;
+      if (ultimoEncerrado) return true;
+      if (a.variant === 'B2') return false;
+      return estado === 'activo' || estado === 'cancelamento_pendente';
     });
 }

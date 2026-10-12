@@ -127,15 +127,33 @@ describe('copy motorista — justa causa passageiro v1.10', () => {
         },
       ],
     );
-    expect(alerts).toHaveLength(2);
-    const b2 = alerts.filter((a) => a.variant === 'B2');
-    const b = alerts.filter((a) => a.variant === 'B');
-    expect(b2).toHaveLength(1);
-    expect(b2[0].id).toBe('ap-recente');
-    expect(b2[0].corpo).toContain('Bruno');
-    expect(b).toHaveLength(1);
-    expect(b[0].corpo).toContain('Os outros passageiros continuam no acordo');
-    expect(b[0].corpo).toContain('Ana');
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].variant).toBe('B2');
+    expect(alerts[0].id).toBe('ap-recente');
+    expect(alerts[0].corpo).toContain('Bruno');
+    expect(alerts[0].corpo).not.toMatch(/Os outros passageiros continuam no acordo/);
+  });
+
+  it('acordo cancelado sem_lugares_vivos — não mostra banner B «outros continuam»', () => {
+    const alerts = resolveMotoristaJustaCausaPassageiroAlerts(
+      {
+        estado: 'cancelado',
+        encerramento_motivo: 'sem_lugares_vivos',
+      },
+      [
+        {
+          id: 'ap-1',
+          passenger_id: 'p1',
+          estado: 'saiu',
+          lugar_rescisao_modo: 'justa_causa',
+          lugar_rescisao_em: '2026-10-12T10:00:00.000Z',
+          perfis: { nome_completo: 'Ana Costa' },
+        },
+      ],
+    );
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].variant).toBe('B2');
+    expect(alerts[0].corpo).not.toMatch(/Os outros passageiros continuam no acordo/);
   });
 
   it('banner B — data civil Luanda com timestamp perto da meia-noite UTC', () => {

@@ -47,14 +47,30 @@ describe('notificação v1.16 — passageiro invocador justa causa', () => {
     expect(copy.tipo).toBe(JUSTA_CAUSA_PASSAGEIRO_INVOCADOR_NOTIF_TIPO);
   });
 
-  it('sino resolve título, corpo e ícone info a partir de metadata', () => {
+  it('sino usa copy gravada na BD (push) quando mensagem não é placeholder', () => {
+    const corpoBd =
+      `Terminaste o teu lugar por justa causa a ${dataFormatada}. `
+      + 'Só contam os dias até essa data. Se já pagaste mais, devolvemos-te a diferença.';
     const notif = {
-      mensagem: '·',
-      tipo: 'warning',
-      metadata: { ...metaBase, variant: 'parcial' },
+      mensagem: corpoBd,
+      tipo: 'info',
+      metadata: {
+        ...metaBase,
+        variant: 'parcial',
+        titulo: 'Saíste do acordo',
+      },
     };
     expect(resolveNotificationTitulo(notif)).toBe('Saíste do acordo');
-    expect(resolveNotificationMensagem(notif)).toContain(dataFormatada);
+    expect(resolveNotificationMensagem(notif)).toBe(corpoBd);
     expect(resolveNotificationTipo(notif)).toBe('info');
+  });
+
+  it('sino faz fallback a v1.16 só para linhas legacy com placeholder', () => {
+    const notif = {
+      mensagem: '·',
+      tipo: 'info',
+      metadata: { ...metaBase, variant: 'parcial' },
+    };
+    expect(resolveNotificationMensagem(notif)).toContain(dataFormatada);
   });
 });
