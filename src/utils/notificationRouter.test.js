@@ -4,6 +4,7 @@ import {
   notificationRouteMap,
   acordosDeepLink,
   propostaHubDeepLink,
+  statusCardDeepLink,
 } from './notificationRouter';
 
 describe('notificationRouter', () => {
@@ -124,6 +125,50 @@ describe('notificationRouter', () => {
       expect(
         notificationRouteMap.proposal_received({ inbox: 'MOTORISTA', proposta_id: 'p2' }),
       ).toBe('/motorista?focus=propostas&propostaId=p2');
+    });
+  });
+
+  describe('status cards v1.10 / v1.11 (#269)', () => {
+    const v110Body =
+      'O motorista retirou-te do acordo Talatona → Belas Shopping. O teu lugar foi libertado.';
+    const acordoId = 'acordo-expiry-269';
+
+    it('v1.10 removido: metadata.type status → /acordos (nunca /motorista pelo texto)', () => {
+      expect(
+        resolveNotificationRoute({
+          mensagem: v110Body,
+          metadata: {
+            type: 'status',
+            card: 'v1.10',
+            acordo_id: acordoId,
+          },
+        }),
+      ).toBe(`/acordos?openAcordoId=${acordoId}`);
+    });
+
+    it('v1.11 motorista expiração → /acordos com openAcordoId', () => {
+      expect(
+        resolveNotificationRoute({
+          mensagem:
+            'A reserva de Maria Silva expirou e o acordo foi encerrado. A tua oferta continua publicada.',
+          metadata: {
+            type: 'status',
+            card: 'v1.11',
+            titulo: 'Acordo encerrado',
+            acordo_id: acordoId,
+          },
+        }),
+      ).toBe(`/acordos?openAcordoId=${acordoId}`);
+    });
+
+    it('FAIL-on-old: sem strategy status, heurística «motorista» enviava para /motorista', () => {
+      const msg = v110Body.toLowerCase();
+      expect(msg.includes('motorista')).toBe(true);
+      const legacyGuess = msg.includes('motorista') ? '/motorista' : '/acordos';
+      expect(legacyGuess).toBe('/motorista');
+      expect(statusCardDeepLink({ card: 'v1.10', acordo_id: acordoId })).toBe(
+        `/acordos?openAcordoId=${acordoId}`,
+      );
     });
   });
 

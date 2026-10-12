@@ -15,5 +15,7 @@ describe('build produção exclui rotas DEV de captura', () => {
     }
     expect(entryBundle).not.toMatch(/__dev\/acordos-chips/);
     expect(entryBundle).not.toMatch(/DevAcordosChipCapture/);
+    expect(entryBundle).not.toMatch(/__dev\/notif-cards-269/);
+    expect(entryBundle).not.toMatch(/DevNotifCards269Capture/);
   }, 120_000);
 });

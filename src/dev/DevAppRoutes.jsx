@@ -4,6 +4,7 @@ import Profile from '../pages/Profile';
 import DevPerfilPushPreview from '../pages/DevPerfilPushPreview';
 import DevPerfilCaptureShell from '../pages/DevPerfilCapture';
 import DevAcordosChipCapture from '../pages/DevAcordosChipCapture';
+import DevNotifCards269Capture from '../pages/DevNotifCards269Capture';
 
 /**
  * Rotas relativas a `/__dev/*` (lazy + `<Route path="/__dev/*" />` em App.jsx).
@@ -16,6 +17,7 @@ export default function DevAppRoutes() {
         <Route index element={<Profile />} />
       </Route>
       <Route path="acordos-chips" element={<DevAcordosChipCapture />} />
+      <Route path="notif-cards-269" element={<DevNotifCards269Capture />} />
     </Routes>
   );
 }
