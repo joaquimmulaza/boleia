@@ -12,6 +12,9 @@ import ProfileIdentityHeader from '../components/profile/ProfileIdentityHeader';
 import ProfilePersonalSection from '../components/profile/ProfilePersonalSection';
 import ProfileDriverLinks from '../components/profile/ProfileDriverLinks';
 import ProfileSignOutButton from '../components/profile/ProfileSignOutButton';
+import ProfileLoginMethodsCard from '../components/profile/ProfileLoginMethodsCard';
+import ProfileDeleteAccountCard from '../components/profile/ProfileDeleteAccountCard';
+import FeedbackAlert from '../components/FeedbackAlert';
 import { PROFILE_TITLE } from '../utils/profileCopy';
 
 const Profile = () => {
@@ -19,6 +22,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [accountFeedback, setAccountFeedback] = useState(null);
   const [userId, setUserId] = useState(null);
   const [email, setEmail] = useState('');
   const [profile, setProfile] = useState({
@@ -71,13 +75,19 @@ const Profile = () => {
   const handleSignOut = async () => {
     setSigningOut(true);
     try {
-      await clearAppBadge();
-      await removeCurrentDevicePushSubscription(userId);
+      try {
+        await clearAppBadge();
+        await removeCurrentDevicePushSubscription(userId);
+      } catch (err) {
+        console.warn('[Profile] Falha ao limpar push no logout:', err);
+      }
+      await supabase.auth.signOut();
+      navigate('/auth');
     } catch (err) {
-      console.warn('[Profile] Falha ao limpar push no logout:', err);
+      console.error('Erro ao terminar sessão:', err);
+    } finally {
+      setSigningOut(false);
     }
-    await supabase.auth.signOut();
-    navigate('/auth');
   };
 
   if (loading) {
@@ -112,7 +122,15 @@ const Profile = () => {
 
       <InstallAppCard />
 
+      <ProfileLoginMethodsCard />
+
       {isMotorista ? <ProfileDriverLinks /> : null}
+
+      {accountFeedback ? (
+        <FeedbackAlert type={accountFeedback.type} text={accountFeedback.text} />
+      ) : null}
+
+      <ProfileDeleteAccountCard onDeleteError={(text) => setAccountFeedback({ type: 'error', text })} />
 
       <ProfileSignOutButton onSignOut={handleSignOut} busy={signingOut} />
     </PageShell>

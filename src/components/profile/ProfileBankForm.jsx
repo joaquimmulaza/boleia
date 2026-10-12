@@ -44,6 +44,11 @@ export default function ProfileBankForm({
     event.preventDefault();
     setFeedback(null);
     const cleanIban = iban.replace(/\s/g, '').toUpperCase();
+    const hadIban = Boolean(initialIban.replace(/\s/g, '').trim());
+    if (hadIban && !cleanIban) {
+      setIbanError('Indica um IBAN angolano válido (AO06…).');
+      return;
+    }
     if (cleanIban && !validateAngolaIban(cleanIban)) {
       setIbanError('Indica um IBAN angolano válido (AO06…).');
       return;

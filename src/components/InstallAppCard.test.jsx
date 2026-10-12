@@ -42,6 +42,23 @@ describe('InstallAppCard', () => {
     expect(promptInstall).toHaveBeenCalled();
   });
 
+  it('sem beforeinstallprompt abre modal de instruções ao clicar Instalar app', () => {
+    usePwaInstall.mockReturnValue({
+      canInstallNative: false,
+      isInstalled: false,
+      platform: 'android',
+      isInApp: false,
+      needsInstructions: true,
+      promptInstall: vi.fn(),
+    });
+
+    render(<InstallAppCard />);
+    const button = screen.getByRole('button', { name: /Instalar app/i });
+    expect(button).not.toBeDisabled();
+    fireEvent.click(button);
+    expect(screen.getByTestId('install-instructions-overlay')).toBeInTheDocument();
+  });
+
   it('no iPhone mostra instrução Safari em vez do botão', () => {
     usePwaInstall.mockReturnValue({
       canInstallNative: false,

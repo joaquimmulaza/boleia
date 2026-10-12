@@ -16,6 +16,10 @@ export const PROFILE_SAVE_CHANGES = 'Guardar alterações';
 
 export const PROFILE_SIGN_OUT = 'Terminar sessão';
 
+export const PROFILE_DELETE_ACCOUNT = 'Apagar conta';
+
+export const PROFILE_LOGIN_METHODS_TITLE = 'Métodos de início de sessão';
+
 export const PROFILE_PERSONAL_DATA = 'Dados pessoais';
 
 export const PROFILE_EDIT = 'Editar';

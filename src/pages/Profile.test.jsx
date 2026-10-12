@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom';
 import Profile from './Profile';
 import { supabase } from '../lib/supabase';
 import * as ProfileService from '../services/ProfileService';
+import * as AccountService from '../services/AccountService';
 import {
   PROFILE_DISCARD_EDITS,
   PROFILE_EDIT,
@@ -18,6 +19,8 @@ import {
   PROFILE_SIGN_OUT,
   PROFILE_TITLE,
   PROFILE_PHONE_INVALID,
+  PROFILE_DELETE_ACCOUNT,
+  PROFILE_LOGIN_METHODS_TITLE,
 } from '../utils/profileCopy';
 
 vi.mock('../lib/supabase', () => ({
@@ -25,6 +28,7 @@ vi.mock('../lib/supabase', () => ({
     auth: {
       getUser: vi.fn(),
       signOut: vi.fn(),
+      getUserIdentities: vi.fn(),
     },
   },
 }));
@@ -32,6 +36,10 @@ vi.mock('../lib/supabase', () => ({
 vi.mock('../services/ProfileService', () => ({
   getProfile: vi.fn(),
   updateProfile: vi.fn(),
+}));
+
+vi.mock('../services/AccountService', () => ({
+  deleteOwnAccount: vi.fn(),
 }));
 
 vi.mock('../components/PushNotificationsToggle', () => ({
@@ -78,6 +86,7 @@ describe('Profile v2', () => {
       error: null,
     });
     supabase.auth.signOut.mockResolvedValue({ error: null });
+    supabase.auth.getUserIdentities.mockResolvedValue({ data: { identities: [] }, error: null });
     ProfileService.getProfile.mockResolvedValue({ ...baseProfile });
     ProfileService.updateProfile.mockResolvedValue({});
   });
@@ -195,5 +204,43 @@ describe('Profile v2', () => {
       expect(supabase.auth.signOut).toHaveBeenCalled();
     });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('terminar sessão repõe busy se signOut falhar', async () => {
+    supabase.auth.signOut.mockRejectedValueOnce(new Error('offline'));
+    await renderProfile();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: PROFILE_SIGN_OUT })).toBeInTheDocument();
+    });
+    const signOutBtn = screen.getByRole('button', { name: PROFILE_SIGN_OUT });
+    await act(async () => {
+      fireEvent.click(signOutBtn);
+    });
+    await waitFor(() => {
+      expect(signOutBtn).not.toBeDisabled();
+    });
+  });
+
+  it('mostra métodos de início de sessão e Apagar conta', async () => {
+    await renderProfile();
+    await waitFor(() => {
+      expect(screen.getByText(PROFILE_LOGIN_METHODS_TITLE)).toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: PROFILE_DELETE_ACCOUNT })).toBeInTheDocument();
+  });
+
+  it('Apagar conta abre modal de confirmação', async () => {
+    await renderProfile();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: PROFILE_DELETE_ACCOUNT })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('button', { name: PROFILE_DELETE_ACCOUNT }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText(/Apagar a conta\?/i)).toBeInTheDocument();
+    AccountService.deleteOwnAccount.mockResolvedValue(undefined);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /^Apagar a conta$/i }));
+    });
+    expect(AccountService.deleteOwnAccount).toHaveBeenCalled();
   });
 });
