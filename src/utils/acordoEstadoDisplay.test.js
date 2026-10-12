@@ -7,6 +7,7 @@ import {
   chipClassEstadoAcordoVariant,
   isAcordoEncerradoSemLugaresVivos,
   isChipEncerramentoPedidoConsensual,
+  podeConfirmarRescisaoConsensual,
   rescisaoPermiteEncerramentoMotivoSemLugares,
   rescisaoBloqueiaLabelEncerrado,
 } from './acordoEstadoDisplay';
@@ -134,12 +135,48 @@ describe('labelChipListaEstadoAcordo', () => {
     expect(labelChipListaEstadoAcordo(pedidoConsensual, 'driver-1')).toBe('Encerramento pedido');
   });
 
-  it('contraparte vê Falta a tua confirmação', () => {
-    expect(labelChipListaEstadoAcordo(pedidoConsensual, 'pax-1')).toBe('Falta a tua confirmação');
+  it('passageiro activo vê Falta a tua confirmação quando o motorista pediu (1:N)', () => {
+    const acordoMotoristaPediu = {
+      ...pedidoConsensual,
+      driver_id: 'driver-1',
+      acordos_passageiros: [
+        { passenger_id: 'pax-1', estado: 'activo' },
+        { passenger_id: 'pax-2', estado: 'activo' },
+      ],
+    };
+    expect(labelChipListaEstadoAcordo(acordoMotoristaPediu, 'pax-1')).toBe(
+      'Falta a tua confirmação',
+    );
+    expect(labelChipListaEstadoAcordo(acordoMotoristaPediu, 'pax-2')).toBe(
+      'Falta a tua confirmação',
+    );
+    expect(podeConfirmarRescisaoConsensual(acordoMotoristaPediu, 'pax-1')).toBe(true);
+    expect(podeConfirmarRescisaoConsensual(acordoMotoristaPediu, 'pax-2')).toBe(true);
   });
 
-  it('contraparte usa variante aviso (warning)', () => {
-    expect(variantChipListaEstadoAcordo(pedidoConsensual, 'pax-1')).toBe('aviso');
+  it('outro passageiro (não confirma) vê Encerramento pedido, não aviso de confirmação', () => {
+    const acordoPaxPediu = {
+      estado: 'activo',
+      driver_id: 'driver-1',
+      rescisao_modo: 'consensual',
+      rescisao_confirmada_em: null,
+      rescisao_solicitada_por: 'pax-1',
+      acordos_passageiros: [
+        { passenger_id: 'pax-1', estado: 'activo' },
+        { passenger_id: 'pax-2', estado: 'activo' },
+      ],
+    };
+    expect(podeConfirmarRescisaoConsensual(acordoPaxPediu, 'driver-1')).toBe(true);
+    expect(podeConfirmarRescisaoConsensual(acordoPaxPediu, 'pax-2')).toBe(false);
+    expect(labelChipListaEstadoAcordo(acordoPaxPediu, 'driver-1')).toBe(
+      'Falta a tua confirmação',
+    );
+    expect(labelChipListaEstadoAcordo(acordoPaxPediu, 'pax-2')).toBe('Encerramento pedido');
+    expect(variantChipListaEstadoAcordo(acordoPaxPediu, 'pax-2')).toBe('pendente');
+    expect(variantChipListaEstadoAcordo(acordoPaxPediu, 'driver-1')).toBe('aviso');
+  });
+
+  it('requerente usa variante pendente (não aviso)', () => {
     expect(variantChipListaEstadoAcordo(pedidoConsensual, 'driver-1')).toBe('pendente');
   });
 

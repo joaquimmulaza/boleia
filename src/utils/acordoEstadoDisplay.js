@@ -101,6 +101,44 @@ export function isChipEncerramentoPedidoConsensual(input) {
 }
 
 /**
+ * @param {string | null | undefined} estadoPassageiro
+ * @returns {boolean}
+ */
+function isPassageiroLugarVivoParaRescisao(estadoPassageiro) {
+  const e = String(estadoPassageiro || '').toLowerCase();
+  return e === 'activo' || e === 'reservado';
+}
+
+/**
+ * Espelha terminate_agreement: só a contraparte autorizada confirma consensual pendente.
+ *
+ * @param {AcordoEstadoChipInput & { driver_id?: string | null, acordos_passageiros?: Array<{ passenger_id?: string | null, estado?: string | null }> }} acordo
+ * @param {string | null | undefined} userId
+ * @returns {boolean}
+ */
+export function podeConfirmarRescisaoConsensual(acordo, userId) {
+  const norm = normalizeAcordoEstadoInput(acordo);
+  if (!userId || !isChipEncerramentoPedidoConsensual(norm)) return false;
+  if (String(norm.rescisao_solicitada_por) === String(userId)) return false;
+
+  const driverId = acordo?.driver_id;
+  if (!driverId) return false;
+
+  const solicitanteIsDriver =
+    String(norm.rescisao_solicitada_por) === String(driverId);
+  const isDriver = String(userId) === String(driverId);
+
+  const linhas = acordo?.acordos_passageiros || [];
+  const isPaxActivo = linhas.some(
+    (p) =>
+      String(p.passenger_id) === String(userId)
+      && isPassageiroLugarVivoParaRescisao(p.estado),
+  );
+
+  return (solicitanteIsDriver && isPaxActivo) || (!solicitanteIsDriver && isDriver);
+}
+
+/**
  * Labels humanos para estado do cabeçalho do acordo (lista + detalhe).
  * Distinção Encerrado vs Cancelado vem só de encerramento_motivo (não inferir da UI).
  *
@@ -130,7 +168,7 @@ export function labelChipListaEstadoAcordo(acordo, userId) {
     if (userId && String(norm.rescisao_solicitada_por) === String(userId)) {
       return 'Encerramento pedido';
     }
-    if (userId && String(norm.rescisao_solicitada_por) !== String(userId)) {
+    if (userId && podeConfirmarRescisaoConsensual(acordo, userId)) {
       return 'Falta a tua confirmação';
     }
     return 'Encerramento pedido';
@@ -151,7 +189,7 @@ export function variantChipListaEstadoAcordo(acordo, userId) {
   if (
     isChipEncerramentoPedidoConsensual(norm)
     && userId
-    && String(norm.rescisao_solicitada_por) !== String(userId)
+    && podeConfirmarRescisaoConsensual(acordo, userId)
   ) {
     return 'aviso';
   }
