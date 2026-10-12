@@ -3,8 +3,10 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import AbsenceTracker from './AbsenceTracker';
 import { expectNoUserFacingJargon } from '../test/jargonBan';
-import * as faltasDisplay from '../utils/faltasDisplay';
-
+import {
+  filterFaltasEsteMes,
+  todayLuandaISO,
+} from '../utils/faltasDisplay';
 const mockNavigate = vi.fn();
 let mockAcordoId = 'acordo-uuid-001';
 
@@ -72,10 +74,17 @@ vi.mock('../components/LogAbsenceModal', () => ({
     ) : null,
 }));
 
+/** @param {number} offsetDays from today Luanda */
+function isoLuandaOffsetDays(offsetDays) {
+  const base = todayLuandaISO();
+  const [y, m, d] = base.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + offsetDays, 12, 0, 0));
+  return todayLuandaISO(dt);
+}
+
 describe('AbsenceTracker — marketplace', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(faltasDisplay, 'filterFaltasEsteMes').mockImplementation((faltas) => faltas || []);
     mockAcordoId = 'acordo-uuid-001';
     mockListPagamentosByAcordo.mockResolvedValue([
       { passenger_id: 'user-1', estado: 'em_custodia' },
@@ -84,7 +93,7 @@ describe('AbsenceTracker — marketplace', () => {
       {
         id: 'f1',
         id_acordo: 'acordo-uuid-001',
-        data_falta: '2026-09-01',
+        data_falta: isoLuandaOffsetDays(-1),
         tipo: 'Passageiro',
         desconto_kz: 1363.64,
         viagem: 'ambas',
@@ -115,21 +124,43 @@ describe('AbsenceTracker — marketplace', () => {
   });
 
   it('apresenta desconto com sinal coerente entre total e histórico', async () => {
+    mockGetAbsences.mockResolvedValue([
+      {
+        id: 'f1',
+        id_acordo: 'acordo-uuid-001',
+        data_falta: isoLuandaOffsetDays(-1),
+        tipo: 'Passageiro',
+        desconto_kz: -1363.64,
+        viagem: 'ambas',
+      },
+    ]);
     render(<AbsenceTracker />);
     expect(await screen.findAllByText(/1363,64/)).toHaveLength(2);
     expect(screen.queryByText(/-1363,64/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/−1363,64/)).not.toBeInTheDocument();
+
+    const total = screen.getByTestId('desconto-falta-total');
+    const linha = screen.getByTestId('desconto-falta-amount');
+    expect(total.className).toContain('tabular-nums');
+    expect(linha.className).toContain('tabular-nums');
+    expect(total.className).toContain('text-slate-900');
+    expect(linha.className).toContain('text-slate-900');
+    expect(linha.className).not.toMatch(/text-red/);
   });
 
   it('usa filtro «Este mês» no total e no histórico', async () => {
-    vi.spyOn(faltasDisplay, 'filterFaltasEsteMes').mockImplementation((faltas) =>
-      (faltas || []).filter((f) => f.data_falta !== '2026-10-15'),
-    );
+    const hoje = todayLuandaISO();
+    const futuro = isoLuandaOffsetDays(10);
+    expect(filterFaltasEsteMes([
+      { data_falta: futuro, desconto_kz: 1272.73 },
+      { data_falta: hoje, desconto_kz: 500 },
+    ]).map((f) => f.data_falta)).toEqual([hoje]);
 
     mockGetAbsences.mockResolvedValue([
       {
         id: 'f-future',
         id_acordo: 'acordo-uuid-001',
-        data_falta: '2026-10-15',
+        data_falta: futuro,
         tipo: 'Motorista',
         desconto_kz: 1272.73,
         viagem: 'ambas',
@@ -137,7 +168,7 @@ describe('AbsenceTracker — marketplace', () => {
       {
         id: 'f-today',
         id_acordo: 'acordo-uuid-001',
-        data_falta: '2026-10-01',
+        data_falta: hoje,
         tipo: 'Passageiro',
         desconto_kz: 500,
         viagem: 'ambas',
@@ -147,9 +178,9 @@ describe('AbsenceTracker — marketplace', () => {
     render(<AbsenceTracker />);
 
     expect(await screen.findByTestId('absence-card')).toBeInTheDocument();
-    expect(faltasDisplay.filterFaltasEsteMes).toHaveBeenCalled();
     expect(screen.getAllByTestId('absence-card')).toHaveLength(1);
     expect(screen.queryByText('1272,73')).not.toBeInTheDocument();
+    expect(screen.getByTestId('desconto-falta-total')).toHaveTextContent('500');
   });
 
   it('mostra o vazio do mês sem faltas', async () => {

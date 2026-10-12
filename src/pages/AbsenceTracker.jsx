@@ -15,6 +15,8 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import {
+  DESCONTO_FALTA_AMOUNT_CLASS,
+  descontoFaltaMagnitudeKz,
   filterFaltasEsteMes,
   formatFaltaDiaCurto,
   resolveFaltasHubCard,
@@ -243,7 +245,10 @@ const AbsenceTracker = () => {
         <p className="text-[13px] font-semibold leading-[18px] text-slate-500 dark:text-slate-400">
           Total a descontar
         </p>
-        <p className="text-[28px] font-bold leading-[38px] text-slate-900 tabular-nums dark:text-white">
+        <p
+          data-testid="desconto-falta-total"
+          className={`text-[28px] font-bold leading-[38px] ${DESCONTO_FALTA_AMOUNT_CLASS}`}
+        >
           {formatKwanza(totalDesconto)} Kz
         </p>
       </div>
@@ -295,10 +300,11 @@ const AbsenceTracker = () => {
                   </div>
                 </div>
                 <p
-                  className="shrink-0 text-[15px] font-semibold text-slate-900 tabular-nums dark:text-white"
-                  aria-label={`Desconto de ${formatKwanza(falta.desconto_kz)} Kz`}
+                  data-testid="desconto-falta-amount"
+                  className={`shrink-0 text-[15px] font-semibold ${DESCONTO_FALTA_AMOUNT_CLASS}`}
+                  aria-label={`Desconto de ${formatKwanza(descontoFaltaMagnitudeKz(falta.desconto_kz))} Kz`}
                 >
-                  {formatKwanza(falta.desconto_kz)} Kz
+                  {formatKwanza(descontoFaltaMagnitudeKz(falta.desconto_kz))} Kz
                 </p>
               </div>
             );

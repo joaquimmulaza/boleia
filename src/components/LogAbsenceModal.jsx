@@ -51,31 +51,69 @@ const LogAbsenceModal = ({
   isOpen,
   onClose,
   onSubmit,
-  tipoPerfil = 'Motorista',
+  tipoPerfil,
   quotaMensalKz = null,
   diasUteisMes = null,
 }) => {
-  const isPassageiro = String(tipoPerfil || '').toLowerCase() === 'passageiro';
-  const tipoDefault = isPassageiro ? 'Passageiro' : 'Motorista';
+  const perfilNorm = String(tipoPerfil || '').toLowerCase();
+  const isPassageiro = perfilNorm === 'passageiro';
+  const isMotorista = perfilNorm === 'motorista';
+  const tipoDefault = isPassageiro ? 'Passageiro' : isMotorista ? 'Motorista' : '';
   const tipoLocked = isPassageiro;
 
-  const buildInitialForm = () => ({
+  if (!isOpen) return null;
+
+  if (!tipoDefault) return null;
+
+  return (
+    <LogAbsenceForm
+      key={tipoDefault}
+      tipoDefault={tipoDefault}
+      tipoLocked={tipoLocked}
+      quotaMensalKz={quotaMensalKz}
+      diasUteisMes={diasUteisMes}
+      onClose={onClose}
+      onSubmit={onSubmit}
+    />
+  );
+};
+
+/**
+ * @param {{
+ *   tipoDefault: 'Passageiro' | 'Motorista',
+ *   tipoLocked: boolean,
+ *   quotaMensalKz?: number | null,
+ *   diasUteisMes?: number | null,
+ *   onClose: () => void,
+ *   onSubmit: LogAbsenceModalProps['onSubmit'],
+ * }} props
+ */
+function LogAbsenceForm({
+  tipoDefault,
+  tipoLocked,
+  quotaMensalKz,
+  diasUteisMes,
+  onClose,
+  onSubmit,
+}) {
+  const [formData, setFormData] = useState(() => ({
     dataFalta: '',
     tipo: tipoDefault,
     observacao: '',
     viagem: /** @type {ViagemFalta} */ ('ambas'),
-  });
-
-  const [formData, setFormData] = useState(buildInitialForm);
-
-  if (!isOpen) return null;
+  }));
 
   const minDataFalta = firstDayCurrentMonthLuanda();
   const maxDataFalta = todayLuandaISO();
   const descontoDia = descontoDesteDia(quotaMensalKz, diasUteisMes, formData.viagem);
 
   const resetForm = () => {
-    setFormData(buildInitialForm());
+    setFormData({
+      dataFalta: '',
+      tipo: tipoDefault,
+      observacao: '',
+      viagem: 'ambas',
+    });
   };
 
   const handleClose = () => {
@@ -243,6 +281,8 @@ const LogAbsenceModal = ({
       </form>
     </OverlayShell>
   );
-};
+}
+
+/** @typedef {Parameters<typeof LogAbsenceModal>[0]} LogAbsenceModalProps */
 
 export default LogAbsenceModal;

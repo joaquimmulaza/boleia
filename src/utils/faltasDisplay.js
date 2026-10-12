@@ -57,12 +57,25 @@ export function filterFaltasEsteMes(faltas, refDate = new Date()) {
 }
 
 /**
+ * Magnitude positiva do desconto (BD pode devolver sinal inconsistente).
+ * @param {number | string | null | undefined} descontoKz
+ * @returns {number}
+ */
+export function descontoFaltaMagnitudeKz(descontoKz) {
+  return Math.abs(Number(descontoKz) || 0);
+}
+
+/** Classes partilhadas entre total e linhas do histórico. */
+export const DESCONTO_FALTA_AMOUNT_CLASS =
+  'tabular-nums text-slate-900 dark:text-white';
+
+/**
  * @param {Array<{ desconto_kz?: number }>} faltas
  * @returns {number}
  */
 export function sumDescontoFaltas(faltas) {
   return (faltas || []).reduce(
-    (acc, falta) => acc + (Number(falta.desconto_kz) || 0),
+    (acc, falta) => acc + descontoFaltaMagnitudeKz(falta.desconto_kz),
     0,
   );
 }

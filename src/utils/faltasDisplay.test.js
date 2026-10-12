@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   filterFaltasEsteMes,
   sumDescontoFaltas,
+  descontoFaltaMagnitudeKz,
   todayLuandaISO,
   isFutureFaltaDate,
   formatFaltaDiaCurto,
@@ -31,6 +32,11 @@ describe('faltasDisplay', () => {
     ]);
 
     expect(total).toBeCloseTo(1909.09, 2);
+  });
+
+  it('normaliza magnitude do desconto quando a BD devolve sinal negativo', () => {
+    expect(descontoFaltaMagnitudeKz(-1363.64)).toBeCloseTo(1363.64, 2);
+    expect(sumDescontoFaltas([{ desconto_kz: -500 }, { desconto_kz: 200 }])).toBe(700);
   });
 
   it('devolve hoje em Luanda (YYYY-MM-DD)', () => {
