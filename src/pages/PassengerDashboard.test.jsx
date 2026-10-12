@@ -124,8 +124,11 @@ vi.mock('../services/ProfileService', () => ({
   findPassageiroByTelefone: vi.fn(),
 }));
 
-vi.mock('../components/AddressInput', () => ({
-  default: ({
+vi.mock('../components/AddressInput', async () => {
+  const React = await import('react');
+  const { useEffect, useRef } = React;
+
+  function MockAddressInput({
     name,
     label,
     value,
@@ -134,10 +137,24 @@ vi.mock('../components/AddressInput', () => ({
     allowFreeTextUse,
     onConfirmFreeText,
     fieldError,
-  }) => (
+    submitBlockFocusToken = 0,
+  }) {
+    const inputRef = useRef(null);
+    const submitBlockFocusSeenRef = useRef(0);
+    const fieldErrorId = `mock-${name}-field-error`;
+
+    useEffect(() => {
+      if (submitBlockFocusToken > submitBlockFocusSeenRef.current && fieldError) {
+        submitBlockFocusSeenRef.current = submitBlockFocusToken;
+        inputRef.current?.focus();
+      }
+    }, [submitBlockFocusToken, fieldError]);
+
+    return (
     <label htmlFor={`mock-${name}`}>
       {label}
       <input
+        ref={inputRef}
         id={`mock-${name}`}
         name={name}
         value={value || ''}
@@ -147,9 +164,11 @@ vi.mock('../components/AddressInput', () => ({
             e.currentTarget.form.requestSubmit();
           }
         }}
+        aria-invalid={fieldError ? true : undefined}
+        aria-describedby={fieldError ? fieldErrorId : undefined}
       />
       {fieldError ? (
-        <div role="alert" data-testid={`field-error-${name}`}>
+        <div id={fieldErrorId} role="alert" data-testid={`field-error-${name}`}>
           {fieldError}
         </div>
       ) : null}
@@ -178,8 +197,11 @@ vi.mock('../components/AddressInput', () => ({
         Coords mock
       </button>
     </label>
-  ),
-}));
+    );
+  }
+
+  return { default: MockAddressInput };
+});
 
 function getFormularioProcuraElement() {
   const submit = screen.getByRole('button', { name: /Guardar (procura|alterações)/i });
@@ -1545,6 +1567,32 @@ describe('PassengerDashboard — marketplace', () => {
 
     expect(await screen.findByTestId('passenger-feedback')).toHaveTextContent(/Indica origem e destino/i);
     expect(createProcura).not.toHaveBeenCalled();
+  });
+
+  it('criar procura: submit bloqueado foca origem por resolver com copy v1.4', async () => {
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Criar procura/i }));
+
+    const form = withinFormularioProcura();
+    changeCampoProcura('origin_name', 'Bairro inventado QA');
+    changeCampoProcura('destination_name', 'Outro sítio QA');
+
+    const originInput = screen.getByDisplayValue('Bairro inventado QA');
+
+    fireEvent.click(form.getByRole('button', { name: /Guardar procura/i }));
+
+    expect(createProcura).not.toHaveBeenCalled();
+    expect(screen.getByTestId('field-error-origin_name')).toHaveTextContent(
+      'Escolhe um local da lista ou usa o que escreveste.',
+    );
+    expect(originInput).toHaveAttribute('aria-describedby', 'mock-origin_name-field-error');
+    expect(originInput).toHaveAttribute('aria-invalid', 'true');
+    expect(document.activeElement).toBe(originInput);
   });
 
   it('editar procura: texto editado sem sugestão bloqueia submit (não envia lat/lng antigas)', async () => {

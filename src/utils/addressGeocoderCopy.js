@@ -17,8 +17,9 @@ export const GEOCODER_NETWORK_ERROR_MESSAGE =
 
 export const GEOCODER_RETRY_LABEL = 'Tentar outra vez';
 
-/** Campo OD por resolver (inline submit bloqueado). */
-export const GEOCODER_FIELD_UNRESOLVED_TODO = 'Escolhe um local da lista.';
+/** Campo OD por resolver (inline submit bloqueado) — v1.4. */
+export const GEOCODER_FIELD_UNRESOLVED_TODO =
+  'Escolhe um local da lista ou usa o que escreveste.';
 
 /** @deprecated alias — usar GEOCODER_FIELD_UNRESOLVED_TODO */
 export const GEOCODER_FIELD_UNRESOLVED_PROVISIONAL = GEOCODER_FIELD_UNRESOLVED_TODO;

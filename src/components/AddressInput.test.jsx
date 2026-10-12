@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AddressInput from './AddressInput';
 import {
   EMPTY_GEOCODER_MESSAGE,
+  GEOCODER_FIELD_UNRESOLVED_TODO,
   formatUseFreeTextLabel,
 } from '../utils/addressGeocoderCopy';
 
@@ -460,6 +461,42 @@ describe('AddressInput', () => {
     expect(onConfirmFreeText).toHaveBeenCalled();
     expect(onSelectCoordinates).toHaveBeenCalledWith(null);
     expect(screen.queryByText(EMPTY_GEOCODER_MESSAGE)).not.toBeInTheDocument();
+  });
+
+  it('erro por resolver: copy v1.4, aria-describedby, aria-invalid e foco no submit bloqueado', () => {
+    const { rerender } = render(
+      <AddressInput
+        name="origin_name"
+        label="Origem"
+        value="Talatona editado"
+        onChange={vi.fn()}
+        fieldError={GEOCODER_FIELD_UNRESOLVED_TODO}
+        submitBlockFocusToken={0}
+      />,
+    );
+
+    const input = screen.getByRole('combobox', { name: /Origem/i });
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Escolhe um local da lista ou usa o que escreveste.',
+    );
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input).toHaveAttribute('aria-describedby', 'origin_name-field-error');
+    expect(document.getElementById('origin_name-field-error')).toHaveTextContent(
+      GEOCODER_FIELD_UNRESOLVED_TODO,
+    );
+
+    rerender(
+      <AddressInput
+        name="origin_name"
+        label="Origem"
+        value="Talatona editado"
+        onChange={vi.fn()}
+        fieldError={GEOCODER_FIELD_UNRESOLVED_TODO}
+        submitBlockFocusToken={1}
+      />,
+    );
+
+    expect(document.activeElement).toBe(screen.getByRole('combobox', { name: /Origem/i }));
   });
 
 });

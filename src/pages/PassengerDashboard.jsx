@@ -701,7 +701,11 @@ const PassengerDashboard = () => {
     });
     if (!resolvedOrigin.ok || !resolvedDestination.ok) {
       if (resolvedOrigin.unresolved || resolvedDestination.unresolved) {
-        return { ok: false, unresolvedOd: true };
+        return {
+          ok: false,
+          unresolvedOd: true,
+          focusField: resolvedOrigin.unresolved ? 'origin_name' : 'destination_name',
+        };
       }
       setFeedback({
         type: 'error',
@@ -816,6 +820,11 @@ const PassengerDashboard = () => {
     ? GEOCODER_FIELD_UNRESOLVED_PROVISIONAL
     : null;
 
+  const [procuraOdSubmitBlockFocus, setProcuraOdSubmitBlockFocus] = useState({
+    token: 0,
+    fieldName: null,
+  });
+
   const persistProcuraUpdate = async (payload) => {
     if (submitProcuraInFlightRef.current || savingProcura) {
       return undefined;
@@ -848,7 +857,15 @@ const PassengerDashboard = () => {
     if (submitProcuraInFlightRef.current || savingProcura) return;
     setFeedback({ type: '', text: '' });
     const built = buildProcuraPayload();
-    if (!built.ok) return;
+    if (!built.ok) {
+      if (built.unresolvedOd && built.focusField) {
+        setProcuraOdSubmitBlockFocus((prev) => ({
+          token: prev.token + 1,
+          fieldName: built.focusField,
+        }));
+      }
+      return;
+    }
 
     if (editing && procura) {
       const nImpacto = countPropostasAInvalidar({
@@ -1844,6 +1861,11 @@ const PassengerDashboard = () => {
             onChange={handleProcuraOdNameChange('origin_name')}
             allowFreeTextUse
             fieldError={originFieldError}
+            submitBlockFocusToken={
+              procuraOdSubmitBlockFocus.fieldName === 'origin_name'
+                ? procuraOdSubmitBlockFocus.token
+                : 0
+            }
             onConfirmFreeText={() =>
               setForm((prev) => ({
                 ...prev,
@@ -1878,6 +1900,11 @@ const PassengerDashboard = () => {
             onChange={handleProcuraOdNameChange('destination_name')}
             allowFreeTextUse
             fieldError={destinationFieldError}
+            submitBlockFocusToken={
+              procuraOdSubmitBlockFocus.fieldName === 'destination_name'
+                ? procuraOdSubmitBlockFocus.token
+                : 0
+            }
             onConfirmFreeText={() =>
               setForm((prev) => ({
                 ...prev,

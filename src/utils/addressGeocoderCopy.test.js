@@ -28,8 +28,12 @@ describe('addressGeocoderCopy', () => {
   });
 
   it('campo por resolver e erro de rede: copy final sem TODO na UI', () => {
-    expect(GEOCODER_FIELD_UNRESOLVED_TODO).toBe('Escolhe um local da lista.');
-    expect(GEOCODER_FIELD_UNRESOLVED_PROVISIONAL).toBe('Escolhe um local da lista.');
+    expect(GEOCODER_FIELD_UNRESOLVED_TODO).toBe(
+      'Escolhe um local da lista ou usa o que escreveste.',
+    );
+    expect(GEOCODER_FIELD_UNRESOLVED_PROVISIONAL).toBe(
+      'Escolhe um local da lista ou usa o que escreveste.',
+    );
     expect(GEOCODER_FIELD_UNRESOLVED_TODO).not.toMatch(/TODO/);
     expect(GEOCODER_NETWORK_ERROR_TODO).toBe(GEOCODER_NETWORK_ERROR_MESSAGE);
     expect(GEOCODER_NETWORK_ERROR_TODO).not.toMatch(/TODO/);

@@ -19,6 +19,7 @@ import {
  *   allowFreeTextUse?: boolean,
  *   required?: boolean,
  *   fieldError?: string | null,
+ *   submitBlockFocusToken?: number,
  * }} props
  */
 const AddressInput = ({
@@ -32,6 +33,7 @@ const AddressInput = ({
   allowFreeTextUse = false,
   required = true,
   fieldError = null,
+  submitBlockFocusToken = 0,
 }) => {
   const {
     suggestions,
@@ -49,8 +51,11 @@ const AddressInput = ({
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const wrapperRef = useRef(null);
+  const inputRef = useRef(null);
+  const submitBlockFocusSeenRef = useRef(0);
   const inputId = id || name;
   const listboxId = `${inputId}-geocoder-listbox`;
+  const fieldErrorId = `${inputId}-field-error`;
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -102,6 +107,16 @@ const AddressInput = ({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (
+      submitBlockFocusToken > submitBlockFocusSeenRef.current
+      && fieldError
+    ) {
+      submitBlockFocusSeenRef.current = submitBlockFocusToken;
+      inputRef.current?.focus();
+    }
+  }, [submitBlockFocusToken, fieldError]);
 
   const trimmedInputLength = inputValue.trim().length;
 
@@ -207,6 +222,7 @@ const AddressInput = ({
         )}
         <div className="relative flex items-center">
           <input
+            ref={inputRef}
             id={inputId}
             type="text"
             name={name}
@@ -222,6 +238,8 @@ const AddressInput = ({
             aria-controls={listPanelOpen ? listboxId : undefined}
             aria-activedescendant={listPanelOpen ? activeOptionId : undefined}
             aria-autocomplete="list"
+            aria-invalid={fieldError ? true : undefined}
+            aria-describedby={fieldError ? fieldErrorId : undefined}
             autoComplete="off"
             className="form-input w-full pl-4 pr-4 h-14 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:ring-primary/20 transition-all placeholder:text-slate-400 outline-none"
           />
@@ -229,7 +247,11 @@ const AddressInput = ({
       </label>
 
       {fieldError ? (
-        <div className="mt-1 ml-1 text-xs text-red-500 font-medium" role="alert">
+        <div
+          id={fieldErrorId}
+          className="mt-1 ml-1 text-xs text-red-500 font-medium"
+          role="alert"
+        >
           {fieldError}
         </div>
       ) : null}
