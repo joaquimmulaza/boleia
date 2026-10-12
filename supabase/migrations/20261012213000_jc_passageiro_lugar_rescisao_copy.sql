@@ -492,7 +492,7 @@ BEGIN
         VALUES (
           v_uid,
           '·',
-          'warning',
+          'info',
           jsonb_build_object(
             'type', 'justa_causa_passageiro_invocador',
             'acordo_id', p_acordo_id,

@@ -1,61 +1,60 @@
 import { describe, it, expect } from 'vitest';
 import {
   JUSTA_CAUSA_PASSAGEIRO_INVOCADOR_NOTIF_TYPE,
-  resolvePassageiroJustaCausaInvocadorNotifMensagem,
+  JUSTA_CAUSA_PASSAGEIRO_INVOCADOR_NOTIF_TIPO,
+  resolvePassageiroJustaCausaInvocadorNotifCopy,
 } from './passageiroJustaCausaInvocadorNotifCopy';
-import { resolveNotificationMensagem } from './notificationDisplayMensagem';
+import {
+  resolveNotificationMensagem,
+  resolveNotificationTitulo,
+  resolveNotificationTipo,
+} from './notificationDisplayMensagem';
 
-describe('notificação in-app — passageiro invocador justa causa', () => {
-  const acordoId = 'a5555555-5555-4555-8555-555555555555';
+describe('notificação v1.16 — passageiro invocador justa causa', () => {
+  /** Instantâneo fixo: 12 de outubro (civil Luanda). */
   const lugarRescisaoEm = '2026-10-12T10:00:00.000Z';
+  const dataFormatada = '12 de outubro';
 
-  it('tipo metadata estável para SQL e sino', () => {
-    expect(JUSTA_CAUSA_PASSAGEIRO_INVOCADOR_NOTIF_TYPE).toBe(
-      'justa_causa_passageiro_invocador',
-    );
-  });
+  const metaBase = {
+    type: JUSTA_CAUSA_PASSAGEIRO_INVOCADOR_NOTIF_TYPE,
+    lugar_rescisao_em: lugarRescisaoEm,
+    acordo_id: 'a5555555-5555-4555-8555-555555555555',
+  };
 
-  it('variante parcial — copy pós-acção (interim; TODO Copywriter)', () => {
-    const msg = resolvePassageiroJustaCausaInvocadorNotifMensagem({
+  it('A) ficam outros passageiros — título e corpo exactos', () => {
+    const copy = resolvePassageiroJustaCausaInvocadorNotifCopy({
       variant: 'parcial',
       lugarRescisaoEm,
     });
-    expect(msg).toContain('justa causa');
-    expect(msg).toContain('Os outros passageiros continuam no acordo');
-    expect(msg).not.toContain('TODO');
-    expect(msg).not.toContain('Recebes a parte do mês');
+    expect(copy.titulo).toBe('Saíste do acordo');
+    expect(copy.corpo).toBe(
+      `Terminaste o teu lugar por justa causa a ${dataFormatada}. `
+      + 'Só contam os dias até essa data. Se já pagaste mais, devolvemos-te a diferença.',
+    );
+    expect(copy.tipo).toBe(JUSTA_CAUSA_PASSAGEIRO_INVOCADOR_NOTIF_TIPO);
   });
 
-  it('variante ultimo — acordo encerrado', () => {
-    const msg = resolvePassageiroJustaCausaInvocadorNotifMensagem({
+  it('B) era o último passageiro — título e corpo exactos', () => {
+    const copy = resolvePassageiroJustaCausaInvocadorNotifCopy({
       variant: 'ultimo',
       lugarRescisaoEm,
     });
-    expect(msg).toContain('último passageiro');
-    expect(msg).toContain('justa causa');
+    expect(copy.titulo).toBe('Acordo encerrado');
+    expect(copy.corpo).toBe(
+      `Saíste por justa causa a ${dataFormatada}. Eras o último passageiro, por isso o acordo foi encerrado. `
+      + 'Só contam os dias até essa data. Se já pagaste mais, devolvemos-te a diferença.',
+    );
+    expect(copy.tipo).toBe(JUSTA_CAUSA_PASSAGEIRO_INVOCADOR_NOTIF_TIPO);
   });
 
-  it('variante reservado — lugar reservado', () => {
-    const msg = resolvePassageiroJustaCausaInvocadorNotifMensagem({
-      variant: 'reservado',
-      lugarRescisaoEm,
-    });
-    expect(msg).toContain('lugar reservado');
-    expect(msg).toContain('justa causa');
-  });
-
-  it('resolveNotificationMensagem substitui placeholder SQL no sino', () => {
-    const sqlPlaceholder = '·';
-    const resolved = resolveNotificationMensagem({
-      mensagem: sqlPlaceholder,
-      metadata: {
-        type: JUSTA_CAUSA_PASSAGEIRO_INVOCADOR_NOTIF_TYPE,
-        variant: 'parcial',
-        lugar_rescisao_em: lugarRescisaoEm,
-        acordo_id: acordoId,
-      },
-    });
-    expect(resolved).not.toBe(sqlPlaceholder);
-    expect(resolved).toContain('justa causa');
+  it('sino resolve título, corpo e ícone info a partir de metadata', () => {
+    const notif = {
+      mensagem: '·',
+      tipo: 'warning',
+      metadata: { ...metaBase, variant: 'parcial' },
+    };
+    expect(resolveNotificationTitulo(notif)).toBe('Saíste do acordo');
+    expect(resolveNotificationMensagem(notif)).toContain(dataFormatada);
+    expect(resolveNotificationTipo(notif)).toBe('info');
   });
 });

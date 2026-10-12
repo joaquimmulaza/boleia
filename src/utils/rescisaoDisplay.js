@@ -9,6 +9,12 @@ const luandaDateFormatter = new Intl.DateTimeFormat('pt-PT', {
   timeZone: ADENDA_TIMEZONE,
 });
 
+const luandaDateNoYearFormatter = new Intl.DateTimeFormat('pt-PT', {
+  day: 'numeric',
+  month: 'long',
+  timeZone: ADENDA_TIMEZONE,
+});
+
 const luandaDateTimeFormatter = new Intl.DateTimeFormat('pt-PT', {
   day: 'numeric',
   month: 'long',
@@ -50,6 +56,19 @@ export function formatCivilDateLuandaPtFromIso(isoTimestamp) {
   if (Number.isNaN(d.getTime())) return null;
   const datePart = luandaYmdFormatter.format(d);
   return formatDateLuandaPt(datePart);
+}
+
+/**
+ * Data civil pt-PT (Luanda), dia + mês — sem ano (notificações v1.16).
+ *
+ * @param {string | null | undefined} isoTimestamp
+ * @returns {string | null}
+ */
+export function formatCivilDateLuandaPtNoYearFromIso(isoTimestamp) {
+  if (!isoTimestamp) return null;
+  const d = new Date(isoTimestamp);
+  if (Number.isNaN(d.getTime())) return null;
+  return luandaDateNoYearFormatter.format(d);
 }
 
 /**
