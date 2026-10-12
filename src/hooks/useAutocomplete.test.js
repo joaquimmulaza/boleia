@@ -14,6 +14,27 @@ describe('useAutocomplete', () => {
     vi.clearAllMocks();
   });
 
+  it('cancela pedido anterior com AbortController ao iniciar novo fetch', async () => {
+    const signals = [];
+    getPlacePredictions.mockImplementation((_input, { signal }) => {
+      signals.push(signal);
+      return new Promise(() => {});
+    });
+
+    const { result } = renderHook(() => useAutocomplete());
+
+    await act(async () => {
+      void result.current.fetchPredictions('Via');
+    });
+    await act(async () => {
+      void result.current.fetchPredictions('Viana');
+    });
+
+    expect(getPlacePredictions).toHaveBeenCalledTimes(2);
+    expect(signals[0].aborted).toBe(true);
+    expect(signals[1].aborted).toBe(false);
+  });
+
   it('passa AbortSignal ao LocationService e ignora resposta de pedido obsoleto', async () => {
     let resolveSlow;
     const slowPromise = new Promise((resolve) => {

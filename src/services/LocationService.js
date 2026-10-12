@@ -63,7 +63,11 @@ export const photonPropertiesToAddress = (properties = {}) => {
  */
 export const mapPhotonFeature = (feature) => {
   const { geometry, properties = {} } = feature;
-  const [lng, lat] = geometry?.coordinates ?? [0, 0];
+  const coordinates = geometry?.coordinates;
+  const lng =
+    Array.isArray(coordinates) && coordinates.length >= 2 ? Number(coordinates[0]) : null;
+  const lat =
+    Array.isArray(coordinates) && coordinates.length >= 2 ? Number(coordinates[1]) : null;
   const address = photonPropertiesToAddress(properties);
   const itemMeta = {
     class: properties.osm_key === 'boundary' ? 'boundary' : properties.osm_key,
@@ -90,8 +94,8 @@ export const mapPhotonFeature = (feature) => {
   return {
     place_id: `photon-${properties.osm_id}`,
     description,
-    lat: Number(lat),
-    lng: Number(lng),
+    lat,
+    lng,
     _metroLuanda: isLuandaMetroAddress(address) ? 0 : 1,
     _rank: rank,
   };

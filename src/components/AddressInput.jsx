@@ -82,7 +82,7 @@ const AddressInput = ({
       clearTimeout(debounceTimeoutRef.current);
     }
 
-    if (newVal.length > 2) {
+    if (newVal.trim().length > 2) {
       setShowDropdown(true);
       debounceTimeoutRef.current = setTimeout(() => {
         fetchPredictions(newVal);
@@ -101,7 +101,12 @@ const AddressInput = ({
     };
   }, []);
 
+  const trimmedInputLength = inputValue.trim().length;
+
   const handleUseFreeText = () => {
+    if (!allowFreeTextUse || trimmedInputLength <= 2) {
+      return;
+    }
     setShowDropdown(false);
     clearSuggestions();
     onConfirmFreeText?.();
@@ -124,13 +129,18 @@ const AddressInput = ({
   const showFreeTextAction =
     allowFreeTextUse
     && !loading
-    && inputValue.trim().length > 2
+    && trimmedInputLength > 2
     && (errorKind === null || errorKind === 'network');
 
   const emptyMessage =
-    !loading && !errorKind && inputValue.length > 2 ? EMPTY_GEOCODER_MESSAGE : undefined;
+    allowFreeTextUse
+    && !loading
+    && !errorKind
+    && trimmedInputLength > 2
+      ? EMPTY_GEOCODER_MESSAGE
+      : undefined;
 
-  const listPanelOpen = showDropdown && inputValue.length > 2;
+  const listPanelOpen = showDropdown && trimmedInputLength > 2;
 
   const activeOptionId =
     suggestions.length > 0 && activeIndex >= 0 && activeIndex < suggestions.length
@@ -198,7 +208,7 @@ const AddressInput = ({
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             onFocus={() => {
-              if (inputValue.length > 2) setShowDropdown(true);
+              if (trimmedInputLength > 2) setShowDropdown(true);
             }}
             role="combobox"
             aria-expanded={listPanelOpen}

@@ -167,7 +167,7 @@ describe('AddressInput', () => {
     expect(onSelectCoordinates).not.toHaveBeenCalled();
   });
 
-  it('sem allowFreeTextUse não mostra acção Usar quando a lista vem vazia', () => {
+  it('sem allowFreeTextUse não mostra copy livre nem acção Usar quando a lista vem vazia', () => {
     mockSuggestions = [];
     mockLoading = false;
 
@@ -182,10 +182,91 @@ describe('AddressInput', () => {
 
     fireEvent.focus(screen.getByLabelText(/^Destino$/i));
 
-    expect(screen.getByText(EMPTY_GEOCODER_MESSAGE)).toBeInTheDocument();
+    expect(screen.queryByText(EMPTY_GEOCODER_MESSAGE)).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: formatUseFreeTextLabel('XYZZZZ') }),
     ).not.toBeInTheDocument();
+  });
+
+  it('debounce: várias alterações rápidas disparam um único fetchPredictions', async () => {
+    vi.useFakeTimers();
+    render(
+      <AddressInput name="origin_name" label="Origem" value="" onChange={vi.fn()} />,
+    );
+
+    const input = screen.getByLabelText(/^Origem$/i);
+    fireEvent.change(input, { target: { value: 'Ta' } });
+    fireEvent.change(input, { target: { value: 'Tal' } });
+    fireEvent.change(input, { target: { value: 'Tala' } });
+
+    expect(fetchPredictions).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(300);
+
+    expect(fetchPredictions).toHaveBeenCalledTimes(1);
+    expect(fetchPredictions).toHaveBeenCalledWith('Tala');
+    vi.useRealTimers();
+  });
+
+  it('texto vazio ou só espaços não mostra Usar no focus nem durante debounce', async () => {
+    vi.useFakeTimers();
+    mockLoading = true;
+
+    render(
+      <AddressInput
+        name="origin_name"
+        label="Origem"
+        value="   "
+        onChange={vi.fn()}
+        allowFreeTextUse
+        onSelectCoordinates={vi.fn()}
+      />,
+    );
+
+    fireEvent.focus(screen.getByLabelText(/^Origem$/i));
+    expect(screen.queryByRole('button', { name: /Usar/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(EMPTY_GEOCODER_MESSAGE)).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/^Origem$/i), { target: { value: '  ab  ' } });
+    await vi.advanceTimersByTimeAsync(299);
+    expect(fetchPredictions).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /Usar/i })).not.toBeInTheDocument();
+
+    vi.useRealTimers();
+  });
+
+  it('Usar não apaga coordenadas válidas quando o texto fica vazio', async () => {
+    const onSelectCoordinates = vi.fn();
+    mockSuggestions = [
+      { place_id: 'photon-1', description: 'Talatona, Luanda' },
+    ];
+
+    render(
+      <AddressInput
+        name="origin_name"
+        label="Origem"
+        value=""
+        onChange={vi.fn()}
+        onSelectCoordinates={onSelectCoordinates}
+        allowFreeTextUse
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/^Origem$/i), { target: { value: 'Talatona' } });
+    fireEvent.click(await screen.findByText('Talatona, Luanda'));
+
+    await waitFor(() => {
+      expect(onSelectCoordinates).toHaveBeenCalledWith(
+        expect.objectContaining({ lat: -8.838, lng: 13.234 }),
+      );
+    });
+    onSelectCoordinates.mockClear();
+
+    fireEvent.change(screen.getByLabelText(/^Origem$/i), { target: { value: '   ' } });
+    fireEvent.focus(screen.getByLabelText(/^Origem$/i));
+
+    expect(onSelectCoordinates).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /Usar/i })).not.toBeInTheDocument();
   });
 
   it('com allowFreeTextUse mostra copy e acção Usar quando a lista vem vazia', () => {

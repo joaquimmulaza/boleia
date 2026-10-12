@@ -310,6 +310,15 @@ describe('LocationService (OpenStreetMap / Photon)', () => {
       expect(mapped.lat).toBeCloseTo(-9.1);
       expect(mapped.lng).toBeCloseTo(13.5);
     });
+
+    it('sem geometry devolve lat e lng null (nunca 0,0)', () => {
+      const mapped = mapPhotonFeature({
+        type: 'Feature',
+        properties: { osm_id: 99, name: 'Sem ponto', countrycode: 'AO', state: 'Luanda' },
+      });
+      expect(mapped.lat).toBeNull();
+      expect(mapped.lng).toBeNull();
+    });
   });
 
   describe('getPlaceDetails', () => {

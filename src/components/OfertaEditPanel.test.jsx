@@ -3,7 +3,10 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import OfertaEditPanel from './OfertaEditPanel';
 import { updateOferta } from '../services/OfertaService';
-import { formatUseFreeTextLabel } from '../utils/addressGeocoderCopy';
+import {
+  EMPTY_GEOCODER_MESSAGE,
+  formatUseFreeTextLabel,
+} from '../utils/addressGeocoderCopy';
 
 vi.mock('../services/OfertaService', () => ({
   updateOferta: vi.fn(),
@@ -178,6 +181,7 @@ describe('OfertaEditPanel', () => {
     fireEvent.change(screen.getByLabelText(/^Origem$/i), { target: { value: 'ZZZZZZZ' } });
     fireEvent.focus(screen.getByLabelText(/^Origem$/i));
 
+    expect(screen.queryByText(EMPTY_GEOCODER_MESSAGE)).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: formatUseFreeTextLabel('ZZZZZZZ') }),
     ).not.toBeInTheDocument();
