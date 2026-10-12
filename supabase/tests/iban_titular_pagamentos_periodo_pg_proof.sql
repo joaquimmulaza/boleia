@@ -1,13 +1,16 @@
 -- Prova PG: iban_titular privacidade + renovação quota integral (_create_pagamentos_periodo).
 \set ON_ERROR_STOP on
 
-\echo '=== fail-on-old: authenticated ainda lê perfis.iban_titular (pré-fix) ==='
+\echo '=== fail-on-old: authenticated ainda lê perfis.iban / iban_titular (pré-fix) ==='
 DO $$
 BEGIN
   IF has_column_privilege('authenticated', 'public.perfis', 'iban_titular', 'SELECT') THEN
     RAISE EXCEPTION 'FAIL-on-old: authenticated ainda tem SELECT em perfis.iban_titular';
   END IF;
-  RAISE NOTICE 'PASS: SELECT iban_titular revogado para authenticated';
+  IF has_column_privilege('authenticated', 'public.perfis', 'iban', 'SELECT') THEN
+    RAISE EXCEPTION 'FAIL-on-old: authenticated ainda tem SELECT em perfis.iban';
+  END IF;
+  RAISE NOTICE 'PASS: SELECT iban/iban_titular revogado para authenticated';
 END $$;
 
 \echo '=== RPC get_own_perfil_contacto presente ==='
@@ -41,10 +44,63 @@ $fn$;
 
 GRANT EXECUTE ON FUNCTION public._iban_pg_proof_expect_denied(text, text) TO authenticated, anon;
 
+-- Passageiro no acordo não lê bancos do motorista: SELECT (42501) ou RPC negada (42501/P0001/42883).
+CREATE OR REPLACE FUNCTION public._iban_pg_proof_expect_passageiro_sem_bancos_motorista(
+  p_label_prefix text,
+  p_driver_id uuid,
+  p_acordo_id uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path TO 'public'
+AS $fn$
+BEGIN
+  PERFORM public._iban_pg_proof_expect_denied(
+    p_label_prefix || ' SELECT iban',
+    format('SELECT iban FROM public.perfis WHERE id = %L', p_driver_id)
+  );
+  PERFORM public._iban_pg_proof_expect_denied(
+    p_label_prefix || ' SELECT iban_titular',
+    format('SELECT iban_titular FROM public.perfis WHERE id = %L', p_driver_id)
+  );
+
+  BEGIN
+    EXECUTE format('SELECT public.get_acordo_motorista_dados_bancarios(%L)', p_acordo_id);
+    RAISE EXCEPTION 'FAIL %: RPC get_acordo_motorista_dados_bancarios devia negar ou estar ausente', p_label_prefix;
+  EXCEPTION
+    WHEN undefined_function THEN
+      NULL;
+    WHEN OTHERS THEN
+      IF SQLSTATE NOT IN ('42501', 'P0001') THEN
+        RAISE EXCEPTION 'FAIL % RPC get_acordo_motorista_dados_bancarios: esperava 42501/P0001/42883, obteve % — %',
+          p_label_prefix, SQLSTATE, SQLERRM;
+      END IF;
+  END;
+
+  BEGIN
+    EXECUTE format(
+      'SELECT * FROM public.admin_motoristas_tem_iban(ARRAY[%L]::uuid[])',
+      p_driver_id
+    );
+    RAISE EXCEPTION 'FAIL %: admin_motoristas_tem_iban devia negar passageiro', p_label_prefix;
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLSTATE NOT IN ('42501', 'P0001') THEN
+        RAISE EXCEPTION 'FAIL % RPC admin_motoristas_tem_iban: esperava 42501/P0001, obteve % — %',
+          p_label_prefix, SQLSTATE, SQLERRM;
+      END IF;
+  END;
+END;
+$fn$;
+
+GRANT EXECUTE ON FUNCTION public._iban_pg_proof_expect_passageiro_sem_bancos_motorista(text, uuid, uuid)
+  TO authenticated, anon;
+
 DO $$
 DECLARE
   v_driver uuid := 'd1111111-1111-4111-8111-111111111111';
   v_pax uuid := 'd2222222-2222-4222-8222-222222222222';
+  v_pax_reservado uuid := 'd7777777-7777-4777-8777-777777777777';
   v_out uuid := 'd3333333-3333-4333-8333-333333333333';
   v_acordo uuid := 'd4444444-4444-4444-8444-444444444444';
   v_ap uuid := 'd5555555-5555-4555-8555-555555555555';
@@ -62,6 +118,7 @@ BEGIN
   INSERT INTO auth.users (id, email) VALUES
     (v_driver, 'iban-proof-driver@test'),
     (v_pax, 'iban-proof-pax@test'),
+    (v_pax_reservado, 'iban-proof-pax-res@test'),
     (v_out, 'iban-proof-out@test')
   ON CONFLICT (id) DO NOTHING;
 
@@ -69,7 +126,8 @@ BEGIN
     id, nome_completo, telefone, tipo_perfil, iban, iban_titular
   ) VALUES
     (v_driver, 'Proof Driver', '+244921000001', 'Motorista', 'AO06DRIVER0001', 'Titular Motorista'),
-    (v_pax, 'Proof Pax', '+244921000002', 'Passageiro', NULL, NULL),
+    (v_pax, 'Proof Pax Activo', '+244921000002', 'Passageiro', NULL, NULL),
+    (v_pax_reservado, 'Proof Pax Reservado', '+244921000007', 'Passageiro', NULL, NULL),
     (v_out, 'Proof Out', '+244921000003', 'Passageiro', NULL, NULL)
   ON CONFLICT (id) DO UPDATE SET
     iban = EXCLUDED.iban,
@@ -105,7 +163,9 @@ BEGIN
 
   INSERT INTO public.acordos_passageiros (
     id, acordo_id, passenger_id, estado, quota_mensal_kz, ordem_insercao
-  ) VALUES (v_ap, v_acordo, v_pax, 'activo', v_quota, 0);
+  ) VALUES
+    (v_ap, v_acordo, v_pax, 'activo', v_quota, 0),
+    (gen_random_uuid(), v_acordo, v_pax_reservado, 'reservado', v_quota, 1);
 
   PERFORM set_config('session_replication_role', 'origin', true);
 
@@ -142,14 +202,28 @@ BEGIN
 
   RESET ROLE;
 
-  -- Passageiro: SELECT directo iban_titular nega
+  -- Passageiro activo (JWT próprio): SELECT + RPCs não expõem bancos do motorista
   PERFORM set_config('request.jwt.claim.sub', v_pax::text, true);
   PERFORM set_config('request.jwt.claims', format('{"role":"authenticated","sub":"%s"}', v_pax), true);
   SET LOCAL ROLE authenticated;
 
-  PERFORM public._iban_pg_proof_expect_denied(
-    'pax SELECT iban_titular',
-    format('SELECT iban_titular FROM public.perfis WHERE id = %L', v_driver)
+  PERFORM public._iban_pg_proof_expect_passageiro_sem_bancos_motorista(
+    'pax activo',
+    v_driver,
+    v_acordo
+  );
+
+  RESET ROLE;
+
+  -- Passageiro reservado (JWT próprio): mesma barreira
+  PERFORM set_config('request.jwt.claim.sub', v_pax_reservado::text, true);
+  PERFORM set_config('request.jwt.claims', format('{"role":"authenticated","sub":"%s"}', v_pax_reservado), true);
+  SET LOCAL ROLE authenticated;
+
+  PERFORM public._iban_pg_proof_expect_passageiro_sem_bancos_motorista(
+    'pax reservado',
+    v_driver,
+    v_acordo
   );
 
   RESET ROLE;
