@@ -1341,9 +1341,10 @@ describe('MyAgreements — marketplace 1:N', () => {
     ).toBeInTheDocument();
   });
 
-  it('justa causa: confirmação menciona quotas ajustadas proporcionalmente', async () => {
+  it('justa causa passageiro (parcial): confirmação termina só o lugar, não o acordo', async () => {
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    countLugaresVivosAcordo.mockResolvedValue(2);
     terminateAgreement.mockResolvedValue({ id: 'acordo-pax', estado: 'activo' });
 
     renderPage();
@@ -1360,8 +1361,48 @@ describe('MyAgreements — marketplace 1:N', () => {
     fireEvent.click(within(justaPicker).getByText('Motivo de segurança'));
     fireEvent.click(within(justaPicker).getByRole('button', { name: /^Continuar$/i }));
 
+    await waitFor(() => {
+      expect(countLugaresVivosAcordo).toHaveBeenCalledWith('acordo-pax');
+    });
+
+    const sheet = await screen.findByTestId('terminate-confirm-sheet');
+    expect(within(sheet).getByText(/terminar o teu lugar/i)).toBeInTheDocument();
+    expect(within(sheet).queryByText(/Vais encerrar o acordo/i)).not.toBeInTheDocument();
     expect(
-      await screen.findByText(/As quotas deste mês são ajustadas proporcionalmente/i),
+      within(sheet).getByText(/Os outros passageiros continuam no acordo/i),
+    ).toBeInTheDocument();
+    expect(
+      within(sheet).getByRole('button', { name: /^Terminar o meu lugar$/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(sheet).queryByRole('button', { name: /^Encerrar acordo$/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('justa causa passageiro (último): confirma encerramento do acordo', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    countLugaresVivosAcordo.mockResolvedValue(1);
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    openAcordoKebab(dialog);
+    await clickAcordoKebabItem(/Encerrar acordo/i);
+
+    const picker = await screen.findByTestId('terminate-modality-picker');
+    fireEvent.click(within(picker).getByText('Justa causa imediata'));
+
+    const justaPicker = await screen.findByTestId('terminate-justa-picker');
+    fireEvent.click(within(justaPicker).getByText('Motivo de segurança'));
+    fireEvent.click(within(justaPicker).getByRole('button', { name: /^Continuar$/i }));
+
+    const sheet = await screen.findByTestId('terminate-confirm-sheet');
+    expect(await within(sheet).findByText(/Vais encerrar o acordo/i)).toBeInTheDocument();
+    expect(within(sheet).getByText(/último passageiro/i)).toBeInTheDocument();
+    expect(
+      within(sheet).getByRole('button', { name: /^Encerrar acordo$/i }),
     ).toBeInTheDocument();
   });
 

@@ -73,6 +73,42 @@ describe('copy motorista — justa causa passageiro v1.10', () => {
     expect(alerts[0].corpo).toContain('oferta continua publicada');
   });
 
+  it('B2 só no lugar com lugar_rescisao_em mais recente quando acordo fechou', () => {
+    const alerts = resolveMotoristaJustaCausaPassageiroAlerts(
+      {
+        estado: 'cancelado',
+        encerramento_motivo: 'sem_lugares_vivos',
+      },
+      [
+        {
+          id: 'ap-antigo',
+          passenger_id: 'p-antigo',
+          estado: 'saiu',
+          lugar_rescisao_modo: 'justa_causa',
+          lugar_rescisao_em: '2026-10-01T10:00:00.000Z',
+          perfis: { nome_completo: 'Ana Antiga' },
+        },
+        {
+          id: 'ap-recente',
+          passenger_id: 'p-recente',
+          estado: 'saiu',
+          lugar_rescisao_modo: 'justa_causa',
+          lugar_rescisao_em: '2026-10-12T10:00:00.000Z',
+          perfis: { nome_completo: 'Bruno Recente' },
+        },
+      ],
+    );
+    expect(alerts).toHaveLength(2);
+    const b2 = alerts.filter((a) => a.variant === 'B2');
+    const b = alerts.filter((a) => a.variant === 'B');
+    expect(b2).toHaveLength(1);
+    expect(b2[0].id).toBe('ap-recente');
+    expect(b2[0].corpo).toContain('Bruno');
+    expect(b).toHaveLength(1);
+    expect(b[0].corpo).toContain('Os outros passageiros continuam no acordo');
+    expect(b[0].corpo).toContain('Ana');
+  });
+
   it('ignora saída normal (sem lugar_rescisao_modo justa_causa)', () => {
     const alerts = resolveMotoristaJustaCausaPassageiroAlerts(
       { estado: 'activo', encerramento_motivo: null },

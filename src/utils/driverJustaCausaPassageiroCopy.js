@@ -1,3 +1,4 @@
+import { ADENDA_TIMEZONE } from './adendaEffectiveFrom.js';
 import { formatPrimeiroNome } from './primeiroNome';
 import { formatDateLuandaPt } from './rescisaoDisplay';
 
@@ -27,8 +28,31 @@ export function copyMotoristaJustaCausaUltimoPassageiro({ nome, dataFormatada })
  */
 function dataRescisaoLugarFormatada(iso) {
   if (!iso) return '';
-  const datePart = String(iso).slice(0, 10);
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const datePart = new Intl.DateTimeFormat('en-CA', {
+    timeZone: ADENDA_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
   return formatDateLuandaPt(datePart) || datePart;
+}
+
+/**
+ * @param {object[]} jcLinhas
+ * @returns {object | null}
+ */
+function pickLugarRescisaoJustaCausaMaisRecente(jcLinhas) {
+  if (!jcLinhas.length) return null;
+  return jcLinhas.reduce((best, row) => {
+    const tBest = best?.lugar_rescisao_em
+      ? new Date(best.lugar_rescisao_em).getTime()
+      : 0;
+    const tRow = row?.lugar_rescisao_em ? new Date(row.lugar_rescisao_em).getTime() : 0;
+    if (!best || tRow >= tBest) return row;
+    return best;
+  }, null);
 }
 
 /**
@@ -57,24 +81,35 @@ export function resolveMotoristaJustaCausaPassageiroAlerts(acordo, linhas) {
   const ultimoEncerrado =
     estado === 'cancelado' && motivo === 'sem_lugares_vivos';
 
-  return linhas
-    .filter((p) => String(p.lugar_rescisao_modo || '').toLowerCase() === 'justa_causa')
+  const jcLinhas = linhas.filter(
+    (p) => String(p.lugar_rescisao_modo || '').toLowerCase() === 'justa_causa',
+  );
+  const jcUltimoRow = ultimoEncerrado
+    ? pickLugarRescisaoJustaCausaMaisRecente(jcLinhas)
+    : null;
+  const jcUltimoId = jcUltimoRow
+    ? String(jcUltimoRow.id || jcUltimoRow.passenger_id || '')
+    : '';
+
+  return jcLinhas
     .map((p) => {
       const nome = nomeMotoristaUi(p);
       const dataFormatada = dataRescisaoLugarFormatada(p.lugar_rescisao_em);
-      const variant = ultimoEncerrado ? 'B2' : 'B';
+      const rowId = String(p.id || p.passenger_id);
+      const variant =
+        ultimoEncerrado && rowId === jcUltimoId ? 'B2' : 'B';
       const corpo =
         variant === 'B2'
           ? copyMotoristaJustaCausaUltimoPassageiro({ nome, dataFormatada })
           : copyMotoristaJustaCausaParcial({ nome, dataFormatada });
       return {
-        id: String(p.id || p.passenger_id),
+        id: rowId,
         variant,
         corpo,
       };
     })
     .filter((a) => {
       if (a.variant === 'B2') return ultimoEncerrado;
-      return estado === 'activo' || estado === 'cancelamento_pendente';
+      return estado === 'activo' || estado === 'cancelamento_pendente' || ultimoEncerrado;
     });
 }
