@@ -5,6 +5,7 @@ import {
   LUANDA_PHOTON_LAT,
   LUANDA_PHOTON_LON,
   mapPhotonFeature,
+  photonFeatureHasBairro,
 } from './LocationService';
 
 const mockFetch = vi.fn();
@@ -163,7 +164,7 @@ describe('LocationService (OpenStreetMap / Photon)', () => {
       ]);
     });
 
-    it('dispara pesquisa assistida «bairro {termo}» para enriquecer municípios', async () => {
+    it('dispara pesquisa assistida «bairro {termo}» só se o principal não trouxer bairro', async () => {
       mockFetch
         .mockResolvedValueOnce({
           ok: true,
@@ -178,6 +179,32 @@ describe('LocationService (OpenStreetMap / Photon)', () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(2);
       expect(mockFetch.mock.calls[1][0]).toContain('q=bairro+Talatona');
+    });
+
+    it('não dispara «bairro …» quando o pedido principal já inclui bairro', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          features: [
+            makePhotonFeature({
+              osm_id: 1,
+              properties: {
+                district: 'Talatona',
+                county: 'Município do Talatona',
+                state: 'Luanda',
+                countrycode: 'AO',
+                type: 'district',
+              },
+            }),
+          ],
+        }),
+      });
+
+      await getPlacePredictions('Talatona');
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch.mock.calls[0][0]).toContain('q=Talatona');
+      expect(mockFetch.mock.calls[0][0]).not.toMatch(/q=bairro\+/);
     });
 
     it('inclui Angola fora de Luanda e lista Luanda primeiro (sem filtro rígido)', async () => {
@@ -321,13 +348,15 @@ describe('LocationService (OpenStreetMap / Photon)', () => {
           json: async () => ({
             features: [
               makePhotonFeature({
-                osm_id: 1,
+                osm_id: 10,
                 properties: {
-                  district: 'Talatona',
-                  county: 'Município do Talatona',
+                  name: 'Luanda',
+                  county: 'Luanda',
                   state: 'Luanda',
                   countrycode: 'AO',
-                  type: 'district',
+                  osm_key: 'boundary',
+                  osm_value: 'administrative',
+                  type: 'county',
                 },
               }),
             ],
@@ -339,9 +368,9 @@ describe('LocationService (OpenStreetMap / Photon)', () => {
           json: async () => ({}),
         });
 
-      const result = await getPlacePredictions('Talatona');
+      const result = await getPlacePredictions('Luanda');
       expect(result).toHaveLength(1);
-      expect(result[0].place_id).toBe('photon-1');
+      expect(result[0].place_id).toBe('photon-10');
     });
 
     it('re-lança AbortError para o hook cancelar pedidos obsoletos', async () => {
@@ -349,6 +378,42 @@ describe('LocationService (OpenStreetMap / Photon)', () => {
 
       await expect(getPlacePredictions('Talatona', { signal: new AbortController().signal }))
         .rejects.toMatchObject({ name: 'AbortError' });
+    });
+  });
+
+  describe('photonFeatureHasBairro', () => {
+    it('detecta district/suburb como bairro', () => {
+      expect(
+        photonFeatureHasBairro(
+          makePhotonFeature({
+            properties: {
+              district: 'Viana',
+              county: 'Município de Viana',
+              countrycode: 'AO',
+              state: 'Luanda',
+              type: 'district',
+            },
+          }),
+        ),
+      ).toBe(true);
+    });
+
+    it('entrada só município não conta como bairro', () => {
+      expect(
+        photonFeatureHasBairro(
+          makePhotonFeature({
+            properties: {
+              name: 'Luanda',
+              county: 'Luanda',
+              countrycode: 'AO',
+              state: 'Luanda',
+              osm_key: 'boundary',
+              osm_value: 'administrative',
+              type: 'county',
+            },
+          }),
+        ),
+      ).toBe(false);
     });
   });
 

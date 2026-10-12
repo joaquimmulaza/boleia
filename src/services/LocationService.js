@@ -122,6 +122,24 @@ export const isLuandaMetroAddress = (address = {}) => {
 };
 
 /**
+ * @param {object} feature - Feature GeoJSON Photon.
+ * @returns {boolean}
+ */
+export const photonFeatureHasBairro = (feature) => {
+  const properties = feature?.properties ?? {};
+  if (properties.countrycode && properties.countrycode !== 'AO') {
+    return false;
+  }
+  const address = photonPropertiesToAddress(properties);
+  const itemMeta = {
+    class: properties.osm_key === 'boundary' ? 'boundary' : properties.osm_key,
+    type: properties.osm_value === 'administrative' ? 'administrative' : properties.type,
+  };
+  const { bairro } = extractBairroMunicipio(address, itemMeta);
+  return Boolean(bairro);
+};
+
+/**
  * @param {string} query
  * @param {AbortSignal | undefined} signal
  * @returns {Promise<object[]>}
@@ -169,28 +187,22 @@ export const getPlacePredictions = async (input, options = {}) => {
     : `bairro ${trimmed}`;
 
   try {
-    const [primarySettled, assistSettled] = await Promise.allSettled([
-      fetchPhotonRaw(trimmed, options.signal),
-      assistQuery
-        ? fetchPhotonRaw(assistQuery, options.signal)
-        : Promise.resolve([]),
-    ]);
-
-    if (primarySettled.status === 'rejected') {
-      throw primarySettled.reason;
-    }
-    const primaryFeatures = primarySettled.value;
+    const primaryFeatures = await fetchPhotonRaw(trimmed, options.signal);
+    const primaryHasBairro = primaryFeatures.some(photonFeatureHasBairro);
 
     let assistFeatures = [];
-    if (assistSettled.status === 'fulfilled') {
-      assistFeatures = assistSettled.value;
-    } else if (assistSettled.reason?.name === 'AbortError') {
-      throw assistSettled.reason;
-    } else {
-      console.warn(
-        '[LocationService] Pesquisa assistida «bairro …» falhou:',
-        assistSettled.reason?.message ?? assistSettled.reason,
-      );
+    if (assistQuery && !primaryHasBairro) {
+      try {
+        assistFeatures = await fetchPhotonRaw(assistQuery, options.signal);
+      } catch (assistError) {
+        if (assistError?.name === 'AbortError') {
+          throw assistError;
+        }
+        console.warn(
+          '[LocationService] Pesquisa assistida «bairro …» falhou:',
+          assistError?.message ?? assistError,
+        );
+      }
     }
 
     const byId = new Map();
