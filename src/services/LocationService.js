@@ -160,6 +160,7 @@ const fetchPhotonRaw = async (query, signal) => {
   if (!response.ok) {
     const err = new Error(`Photon respondeu com status ${response.status}`);
     err.status = response.status;
+    err.errorKind = 'network';
     console.warn(`[LocationService] ${err.message}`);
     throw err;
   }
@@ -219,6 +220,9 @@ export const getPlacePredictions = async (input, options = {}) => {
     const seenLabels = new Set();
     const deduped = [];
     for (const item of mapped) {
+      if (item.lat == null || item.lng == null) {
+        continue;
+      }
       const key = normalizeGeocoderLabel(item.description);
       if (seenLabels.has(key)) continue;
       seenLabels.add(key);

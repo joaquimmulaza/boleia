@@ -328,7 +328,23 @@ describe('LocationService (OpenStreetMap / Photon)', () => {
         json: async () => ({}),
       });
 
-      await expect(getPlacePredictions('Talatona')).rejects.toThrow(/429/);
+      await expect(getPlacePredictions('Talatona')).rejects.toMatchObject({
+        errorKind: 'network',
+        status: 429,
+      });
+    });
+
+    it('lança erro com errorKind network quando Photon responde 503', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        json: async () => ({}),
+      });
+
+      await expect(getPlacePredictions('Viana')).rejects.toMatchObject({
+        errorKind: 'network',
+        status: 503,
+      });
     });
 
     it('lança erro quando Photon responde 500 (não devolve lista vazia)', async () => {
@@ -338,7 +354,58 @@ describe('LocationService (OpenStreetMap / Photon)', () => {
         json: async () => ({}),
       });
 
-      await expect(getPlacePredictions('Viana')).rejects.toThrow(/500/);
+      await expect(getPlacePredictions('Viana')).rejects.toMatchObject({
+        errorKind: 'network',
+        status: 500,
+      });
+    });
+
+    it('exclui sugestões sem coordenadas válidas', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          features: [
+            {
+              type: 'Feature',
+              geometry: { type: 'Point', coordinates: [13.1, -8.9] },
+              properties: {
+                osm_id: 99,
+                name: 'Com coords',
+                district: 'Talatona',
+                county: 'Município do Talatona',
+                countrycode: 'AO',
+                state: 'Luanda',
+                osm_key: 'place',
+                osm_value: 'suburb',
+                type: 'district',
+              },
+            },
+            {
+              type: 'Feature',
+              geometry: { type: 'Point', coordinates: [] },
+              properties: {
+                osm_id: 100,
+                name: 'Sem coords',
+                countrycode: 'AO',
+                state: 'Luanda',
+              },
+            },
+            {
+              type: 'Feature',
+              properties: {
+                osm_id: 101,
+                name: 'Outro sem geometry',
+                countrycode: 'AO',
+                state: 'Luanda',
+              },
+            },
+          ],
+        }),
+      });
+
+      const result = await getPlacePredictions('Tal');
+      expect(result).toHaveLength(1);
+      expect(result[0].place_id).toBe('photon-99');
     });
 
     it('falha na pesquisa assistida «bairro …» não descarta resultados principais', async () => {
