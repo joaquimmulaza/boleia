@@ -100,10 +100,11 @@ describe('PACOTE ENG #14 — renovação período M0→M1', () => {
     });
 
     it('SQL _create_pagamentos_periodo usa quota_mensal_kz do passageiro', () => {
-      const sql = readMigration('20260907152236_pacote_eng14_renovacao_periodo.sql');
+      const sql = readMigration('20261012173100_iban_titular_revoke_pagamentos_periodo.sql');
       expect(sql).toMatch(/_create_pagamentos_periodo/);
-      expect(sql).toMatch(/r\.quota_mensal_kz/);
-      expect(sql).toMatch(/compute_payout_liquido_kz\(r\.quota_mensal_kz/);
+      expect(sql).toMatch(/quota_mensal_kz/);
+      expect(sql).toMatch(/valor_devido_kz/);
+      expect(sql).toMatch(/compute_payout_liquido_kz\(v_quota/);
     });
   });
 
