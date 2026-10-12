@@ -134,7 +134,7 @@ describe('labelEstadoAcordo', () => {
   });
 });
 
-describe('labelChipListaEstadoAcordo — consensual 1:N (só motorista confirma)', () => {
+describe('labelChipListaEstadoAcordo — consensual 1:N (gate SQL confirm)', () => {
   it('requerente passageiro vê Encerramento pedido', () => {
     const acordo = {
       ...BASE_1N,
@@ -167,15 +167,33 @@ describe('labelChipListaEstadoAcordo — consensual 1:N (só motorista confirma)
     expect(podeConfirmarRescisaoConsensual(acordo, 'pax-2')).toBe(false);
   });
 
-  it('motorista requerente vê Encerramento pedido; passageiros também', () => {
+  it('motorista requerente vê Encerramento pedido; pax activos veem Falta a tua confirmação', () => {
     const acordo = {
       ...BASE_1N,
       rescisao_solicitada_por: 'driver-1',
     };
     expect(labelChipListaEstadoAcordo(acordo, 'driver-1')).toBe('Encerramento pedido');
-    expect(labelChipListaEstadoAcordo(acordo, 'pax-1')).toBe('Encerramento pedido');
+    expect(variantChipListaEstadoAcordo(acordo, 'driver-1')).toBe('pendente');
+    expect(labelChipListaEstadoAcordo(acordo, 'pax-1')).toBe('Falta a tua confirmação');
+    expect(variantChipListaEstadoAcordo(acordo, 'pax-1')).toBe('aviso');
+    expect(labelChipListaEstadoAcordo(acordo, 'pax-2')).toBe('Falta a tua confirmação');
+    expect(podeConfirmarRescisaoConsensual(acordo, 'pax-1')).toBe(true);
+    expect(podeConfirmarRescisaoConsensual(acordo, 'pax-2')).toBe(true);
+    expect(podeConfirmarRescisaoConsensual(acordo, 'driver-1')).toBe(false);
+  });
+
+  it('pax inactivo no acordo não confirma quando motorista pediu', () => {
+    const acordo = {
+      ...BASE_1N,
+      rescisao_solicitada_por: 'driver-1',
+      acordos_passageiros: [
+        { passenger_id: 'pax-1', estado: 'activo' },
+        { passenger_id: 'pax-2', estado: 'saiu' },
+      ],
+    };
+    expect(podeConfirmarRescisaoConsensual(acordo, 'pax-2')).toBe(false);
     expect(labelChipListaEstadoAcordo(acordo, 'pax-2')).toBe('Encerramento pedido');
-    expect(podeConfirmarRescisaoConsensual(acordo, 'pax-1')).toBe(false);
+    expect(variantChipListaEstadoAcordo(acordo, 'pax-2')).toBe('info');
   });
 });
 

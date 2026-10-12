@@ -1543,6 +1543,30 @@ describe('MyAgreements — marketplace 1:N', () => {
       rescisao_vigencia: 'imediato',
     };
 
+    it('passageiro activo vê Confirmar, Recusar e chip aviso quando motorista pediu consensual', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+      getAgreementsForPassenger.mockResolvedValue([
+        {
+          ...acordoPassageiro,
+          rescisao_modo: 'consensual',
+          rescisao_confirmada_em: null,
+          rescisao_solicitada_por: 'driver-1',
+          rescisao_vigencia: 'imediato',
+        },
+      ]);
+
+      renderPage(['/acordos?openAcordoId=acordo-pax&focus=rescisao']);
+
+      expect(
+        await screen.findByRole('status', { name: 'Falta a tua confirmação' }),
+      ).toHaveClass('bg-amber-100');
+
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      expect(within(dialog).getByTestId('rescisao-consensual-pendente')).toBeInTheDocument();
+      expect(within(dialog).getByTestId('rescisao-confirmar-cta')).toBeInTheDocument();
+      expect(within(dialog).getByTestId('rescisao-recusar-cta')).toBeInTheDocument();
+    });
+
     it('motorista vê Confirmar e Recusar; confirmar chama terminateAgreement consensual', async () => {
       mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
       const encerrado = {

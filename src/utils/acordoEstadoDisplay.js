@@ -101,9 +101,26 @@ export function isChipEncerramentoPedidoConsensual(input) {
 }
 
 /**
- * Só o motorista confirma pedido consensual pendente (passageiro requerente).
+ * Passageiro activo/reservado no acordo (alinhado a terminate_agreement v_is_pax).
  *
- * @param {AcordoEstadoChipInput & { driver_id?: string | null }} acordo
+ * @param {{ acordos_passageiros?: Array<{ passenger_id?: string, estado?: string }> } | null | undefined} acordo
+ * @param {string | null | undefined} userId
+ * @returns {boolean}
+ */
+function isPassageiroActivoReservadoNoAcordo(acordo, userId) {
+  if (!userId || !acordo?.acordos_passageiros?.length) return false;
+  return acordo.acordos_passageiros.some((linha) => {
+    if (String(linha.passenger_id) !== String(userId)) return false;
+    const e = String(linha.estado || '').toLowerCase();
+    return e === 'activo' || e === 'reservado';
+  });
+}
+
+/**
+ * Quem pode confirmar pedido consensual pendente — espelha terminate_agreement v_confirma:
+ * (requerente passageiro → motorista) OU (requerente motorista → passageiro activo/reservado).
+ *
+ * @param {AcordoEstadoChipInput & { driver_id?: string | null, acordos_passageiros?: Array<{ passenger_id?: string, estado?: string }> }} acordo
  * @param {string | null | undefined} userId
  * @returns {boolean}
  */
@@ -113,9 +130,16 @@ export function podeConfirmarRescisaoConsensual(acordo, userId) {
   if (String(norm.rescisao_solicitada_por) === String(userId)) return false;
 
   const driverId = acordo?.driver_id;
-  if (!driverId) return false;
+  if (!driverId || !norm.rescisao_solicitada_por) return false;
 
-  return String(userId) === String(driverId);
+  const solicitanteIsDriver =
+    String(norm.rescisao_solicitada_por) === String(driverId);
+  const viewerIsDriver = String(userId) === String(driverId);
+  const viewerIsActivePax = isPassageiroActivoReservadoNoAcordo(acordo, userId);
+
+  if (solicitanteIsDriver && viewerIsActivePax) return true;
+  if (!solicitanteIsDriver && viewerIsDriver) return true;
+  return false;
 }
 
 /**

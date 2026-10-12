@@ -24,6 +24,11 @@ export default function DevAcordosChipCapture() {
     ],
   };
 
+  const acordoDriverPediu = {
+    ...acordoPaxPediu,
+    rescisao_solicitada_por: 'driver-1',
+  };
+
   const chipFixtures = [
     {
       key: 'motorista-confirma',
@@ -41,6 +46,12 @@ export default function DevAcordosChipCapture() {
       key: 'requerente',
       title: 'Passageiro requerente — Encerramento pedido',
       acordo: acordoPaxPediu,
+      userId: 'pax-1',
+    },
+    {
+      key: 'pax-confirma-driver',
+      title: 'Passageiro activo — motorista pediu (Falta a tua confirmação)',
+      acordo: acordoDriverPediu,
       userId: 'pax-1',
     },
   ];
