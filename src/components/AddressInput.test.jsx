@@ -3,20 +3,28 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AddressInput from './AddressInput';
 
+const fetchPredictions = vi.fn();
+const selectPlace = vi.fn();
+const clearSuggestions = vi.fn();
+let mockSuggestions = [];
+let mockLoading = false;
+
 vi.mock('../hooks/useAutocomplete', () => ({
   useAutocomplete: () => ({
-    suggestions: [],
-    loading: false,
+    suggestions: mockSuggestions,
+    loading: mockLoading,
     error: null,
-    fetchPredictions: vi.fn(),
-    selectPlace: vi.fn(),
-    clearSuggestions: vi.fn(),
+    fetchPredictions,
+    selectPlace,
+    clearSuggestions,
   }),
 }));
 
 describe('AddressInput', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSuggestions = [];
+    mockLoading = false;
   });
 
   it('renderiza com atributo required por defeito', () => {
@@ -93,5 +101,63 @@ describe('AddressInput', () => {
     expect(onChange).toHaveBeenCalledWith({
       target: { name: 'pickup_name', value: 'Mutamba' },
     });
+  });
+
+  it('origem e destino usam o mesmo debounce de autocomplete', async () => {
+    vi.useFakeTimers();
+    render(
+      <>
+        <AddressInput name="origin_name" label="Origem" value="" onChange={vi.fn()} />
+        <AddressInput name="destination_name" label="Destino" value="" onChange={vi.fn()} />
+      </>,
+    );
+
+    fireEvent.change(screen.getByLabelText(/^Origem$/i), { target: { value: 'Via' } });
+    fireEvent.change(screen.getByLabelText(/^Destino$/i), { target: { value: 'Tal' } });
+
+    expect(fetchPredictions).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(300);
+
+    expect(fetchPredictions).toHaveBeenCalledWith('Via');
+    expect(fetchPredictions).toHaveBeenCalledWith('Tal');
+    vi.useRealTimers();
+  });
+
+  it('limpa coordenadas ao editar texto (texto livre sem inventar lat/lng)', () => {
+    const onSelectCoordinates = vi.fn();
+    render(
+      <AddressInput
+        name="origin_name"
+        label="Origem"
+        value="Talatona"
+        onChange={vi.fn()}
+        onSelectCoordinates={onSelectCoordinates}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/^Origem$/i), {
+      target: { value: 'Endereço sem geocode' },
+    });
+
+    expect(onSelectCoordinates).toHaveBeenCalledWith(null);
+  });
+
+  it('mostra estado sem resultados com TODO(Copywriter) quando a lista vem vazia', () => {
+    mockSuggestions = [];
+    mockLoading = false;
+
+    render(
+      <AddressInput
+        name="destination_name"
+        label="Destino"
+        value="XYZZZZ"
+        onChange={vi.fn()}
+      />,
+    );
+
+    fireEvent.focus(screen.getByLabelText(/^Destino$/i));
+
+    expect(screen.getByText(/TODO\(Copywriter\)/i)).toBeInTheDocument();
   });
 });

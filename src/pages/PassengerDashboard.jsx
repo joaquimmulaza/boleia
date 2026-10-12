@@ -639,7 +639,9 @@ const PassengerDashboard = () => {
    * @returns {{ ok: boolean, payload?: object, tetoNumero?: number | null }}
    */
   const buildProcuraPayload = () => {
-    if (form.origin_lat == null || form.destination_lat == null) {
+    const originName = String(form.origin_name || '').trim();
+    const destinationName = String(form.destination_name || '').trim();
+    if (!originName || !destinationName) {
       setFeedback({
         type: 'error',
         text: 'Seleccione origem e destino na lista de sugestões.',
@@ -670,12 +672,12 @@ const PassengerDashboard = () => {
       tetoNumero,
       payload: {
         preferred_time: form.preferred_time,
-        origin_name: form.origin_name,
-        origin_lat: form.origin_lat,
-        origin_lng: form.origin_lng,
-        destination_name: form.destination_name,
-        destination_lat: form.destination_lat,
-        destination_lng: form.destination_lng,
+        origin_name: originName,
+        origin_lat: form.origin_lat ?? null,
+        origin_lng: form.origin_lng ?? null,
+        destination_name: destinationName,
+        destination_lat: form.destination_lat ?? null,
+        destination_lng: form.destination_lng ?? null,
         dias_semana: form.dias_semana,
         teto_mensal_kz: tetoNumero,
       },
@@ -1717,7 +1719,11 @@ const PassengerDashboard = () => {
             value={form.origin_name}
             onChange={handleChange}
             onSelectCoordinates={(c) =>
-              setForm((prev) => ({ ...prev, origin_lat: c.lat, origin_lng: c.lng }))
+              setForm((prev) => ({
+                ...prev,
+                origin_lat: c?.lat ?? null,
+                origin_lng: c?.lng ?? null,
+              }))
             }
           />
           <AddressInput
@@ -1726,7 +1732,11 @@ const PassengerDashboard = () => {
             value={form.destination_name}
             onChange={handleChange}
             onSelectCoordinates={(c) =>
-              setForm((prev) => ({ ...prev, destination_lat: c.lat, destination_lng: c.lng }))
+              setForm((prev) => ({
+                ...prev,
+                destination_lat: c?.lat ?? null,
+                destination_lng: c?.lng ?? null,
+              }))
             }
           />
           <label className="flex flex-col gap-1.5 text-sm font-semibold">
@@ -2277,8 +2287,8 @@ const PassengerDashboard = () => {
                         ...prev,
                         form: {
                           ...prev.form,
-                          origin_lat: c.lat,
-                          origin_lng: c.lng,
+                          origin_lat: c?.lat ?? null,
+                          origin_lng: c?.lng ?? null,
                         },
                       }))
                     }
@@ -2298,8 +2308,8 @@ const PassengerDashboard = () => {
                         ...prev,
                         form: {
                           ...prev.form,
-                          destination_lat: c.lat,
-                          destination_lng: c.lng,
+                          destination_lat: c?.lat ?? null,
+                          destination_lng: c?.lng ?? null,
                         },
                       }))
                     }

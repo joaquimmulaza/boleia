@@ -130,7 +130,7 @@ vi.mock('../components/AddressInput', () => ({
         value={value || ''}
         onChange={(e) => {
           onChange?.(e);
-          onSelectCoordinates?.({ lat: -8.9, lng: 13.1 });
+          onSelectCoordinates?.(null);
         }}
       />
     </label>
@@ -1404,6 +1404,47 @@ describe('PassengerDashboard — marketplace', () => {
     expect(await screen.findByText('Propostas concluídas')).toBeInTheDocument();
     expect(screen.getByText('Cancelada')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Cancelar proposta/i })).not.toBeInTheDocument();
+  });
+
+  it('criar procura aceita texto livre sem coordenadas quando origem e destino estão preenchidos', async () => {
+    createProcura.mockResolvedValue({
+      ...procuraBase,
+      id: 'pr-livre',
+      origin_lat: null,
+      origin_lng: null,
+      destination_lat: null,
+      destination_lng: null,
+    });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Criar procura/i }));
+
+    fireEvent.change(screen.getByLabelText(/^Origem$/i), {
+      target: { name: 'origin_name', value: 'Bairro inventado QA' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Destino$/i), {
+      target: { name: 'destination_name', value: 'Outro sítio QA' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Guardar procura/i }));
+
+    await waitFor(() => {
+      expect(createProcura).toHaveBeenCalledWith(
+        expect.objectContaining({
+          origin_name: 'Bairro inventado QA',
+          destination_name: 'Outro sítio QA',
+          origin_lat: null,
+          origin_lng: null,
+          destination_lat: null,
+          destination_lng: null,
+        }),
+      );
+    });
   });
 
   it('criar procura envia dias_semana e teto_mensal_kz ao interagir no formulário', async () => {

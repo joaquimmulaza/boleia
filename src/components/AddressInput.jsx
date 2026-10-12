@@ -62,6 +62,9 @@ const AddressInput = ({
     const newVal = e.target.value;
     setInputValue(newVal);
     onChange({ target: { name, value: newVal } });
+    if (onSelectCoordinates) {
+      onSelectCoordinates(null);
+    }
 
     // ⚡ Bolt: Clear the timeout on subsequent rapid keystrokes to effectively debounce the call.
     if (debounceTimeoutRef.current) {
@@ -133,6 +136,11 @@ const AddressInput = ({
           loading={loading}
           error={error}
           onSelect={handleSelect}
+          emptyMessage={
+            !loading && inputValue.length > 2
+              ? 'TODO(Copywriter): sem resultados — pode guardar o texto introduzido.'
+              : undefined
+          }
         />
       )}
     </div>
