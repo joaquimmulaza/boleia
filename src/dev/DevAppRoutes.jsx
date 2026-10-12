@@ -6,12 +6,10 @@ import DevPerfilCaptureShell from '../pages/DevPerfilCapture';
 import DevPerfilCaptureMotoristaShell from '../pages/DevPerfilCaptureMotorista';
 import DevPagamentoPanelCapture from '../pages/DevPagamentoPanelCapture';
 import DevAcordosChipCapture from '../pages/DevAcordosChipCapture';
-<<<<<<< HEAD
 import DevMotoristaJustaCausaCapture from '../pages/DevMotoristaJustaCausaCapture';
-=======
+import DevJustaCausaConfirmCapture from '../pages/DevJustaCausaConfirmCapture';
 import DevNotifCards269Capture from '../pages/DevNotifCards269Capture';
 import { isDevCaptureRoutesEnabled } from '../utils/devCaptureAccess';
->>>>>>> origin/main
 
 /**
  * Rotas relativas a `/__dev/*` (lazy + `<Route path="/__dev/*" />` em App.jsx).
@@ -35,11 +33,9 @@ export default function DevAppRoutes() {
         <Route index element={<Profile />} />
       </Route>
       <Route path="acordos-chips" element={<DevAcordosChipCapture />} />
-<<<<<<< HEAD
       <Route path="motorista-jc-passageiro" element={<DevMotoristaJustaCausaCapture />} />
-=======
+      <Route path="justa-causa-confirm" element={<DevJustaCausaConfirmCapture />} />
       <Route path="notif-cards-269" element={<DevNotifCards269Capture />} />
->>>>>>> origin/main
     </Routes>
   );
 }
