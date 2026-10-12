@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useAutocomplete } from '../hooks/useAutocomplete';
+import { useFloatingGeocoderPanel } from '../hooks/useFloatingGeocoderPanel';
 import AutocompleteDropdown from './AutocompleteDropdown';
 import { Input } from './ui/input';
 import { cn } from '../lib/utils';
@@ -56,6 +58,8 @@ const AddressInput = ({
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const wrapperRef = useRef(null);
+  const anchorRef = useRef(null);
+  const dropdownPanelRef = useRef(null);
   const inputRef = useRef(null);
   const submitBlockFocusSeenRef = useRef(0);
   const inputId = id || name;
@@ -74,9 +78,11 @@ const AddressInput = ({
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-        setShowDropdown(false);
-      }
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (wrapperRef.current?.contains(target)) return;
+      if (dropdownPanelRef.current?.contains(target)) return;
+      setShowDropdown(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -168,6 +174,7 @@ const AddressInput = ({
       : undefined;
 
   const listPanelOpen = showDropdown && trimmedInputLength > 2;
+  const floatingLayout = useFloatingGeocoderPanel(anchorRef, listPanelOpen);
 
   const activeOptionId =
     suggestions.length > 0 && activeIndex >= 0 && activeIndex < suggestions.length
@@ -225,7 +232,7 @@ const AddressInput = ({
             {label}
           </span>
         )}
-        <div className="relative flex items-center">
+        <div ref={anchorRef} className="relative flex items-center">
           <Input
             ref={inputRef}
             id={inputId}
@@ -266,23 +273,31 @@ const AddressInput = ({
          <div className="mt-1 ml-1 text-xs text-red-500 font-medium">{error}</div>
       )}
 
-      {listPanelOpen && (
-        <AutocompleteDropdown
-          suggestions={suggestions}
-          loading={loading}
-          error={error}
-          errorKind={errorKind}
-          onSelect={handleSelect}
-          onRetry={retryLastFetch}
-          listboxId={listboxId}
-          activeIndex={activeIndex}
-          emptyMessage={emptyMessage}
-          freeTextActionLabel={
-            showFreeTextAction ? formatUseFreeTextLabel(inputValue) : undefined
-          }
-          onUseFreeText={showFreeTextAction ? handleUseFreeText : undefined}
-        />
-      )}
+      {listPanelOpen
+        ? (typeof document !== 'undefined'
+            ? createPortal(
+                <AutocompleteDropdown
+                  ref={dropdownPanelRef}
+                  suggestions={suggestions}
+                  loading={loading}
+                  error={error}
+                  errorKind={errorKind}
+                  onSelect={handleSelect}
+                  onRetry={retryLastFetch}
+                  listboxId={listboxId}
+                  activeIndex={activeIndex}
+                  emptyMessage={emptyMessage}
+                  floatingStyle={floatingLayout?.style}
+                  maxListHeight={floatingLayout?.maxListHeight ?? 240}
+                  freeTextActionLabel={
+                    showFreeTextAction ? formatUseFreeTextLabel(inputValue) : undefined
+                  }
+                  onUseFreeText={showFreeTextAction ? handleUseFreeText : undefined}
+                />,
+                document.body,
+              )
+            : null)
+        : null}
     </div>
   );
 };

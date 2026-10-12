@@ -12,7 +12,8 @@ import {
   shouldDismissSheet,
 } from '../utils/sheetGesture';
 
-const INTERACTIVE_SELECTOR = 'input, textarea, select, button, a, [contenteditable="true"], [contenteditable=""]';
+const INTERACTIVE_SELECTOR =
+  'input, textarea, select, button, a, [data-sheet-close="true"], [contenteditable="true"], [contenteditable=""]';
 
 /**
  * @param {EventTarget | null} target
@@ -257,7 +258,10 @@ export function useSheetDrag({ enabled, onDismiss }) {
     const onPointerDown = (event) => {
       if (event.button !== 0) return;
       if (drag.pointerId != null) return;
-      if (isInteractiveTarget(event.target)) return;
+      if (isInteractiveTarget(event.target)) {
+        blockClick = false;
+        return;
+      }
       cancelAnim();
       drag.pointerId = event.pointerId;
       drag.startX = event.clientX;
@@ -352,6 +356,10 @@ export function useSheetDrag({ enabled, onDismiss }) {
     /** @param {MouseEvent} event */
     const onClickCapture = (event) => {
       if (!blockClick) return;
+      if (isInteractiveTarget(event.target)) {
+        blockClick = false;
+        return;
+      }
       blockClick = false;
       event.preventDefault();
       event.stopPropagation();

@@ -23,6 +23,8 @@ for (const width of WIDTHS) {
   await page.goto(`${BASE}/__dev/hub-passageiro-ux`, { waitUntil: 'networkidle' });
   await page.waitForSelector('[data-testid="hub-passageiro-ux-capture-root"]');
 
+  await page.locator('[data-testid="hub-ux-h6a-edit-sheet"]').scrollIntoViewIfNeeded();
+
   const pickup = page.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
   await pickup.click();
   await pickup.fill('Talatona');

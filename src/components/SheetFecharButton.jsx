@@ -15,7 +15,7 @@ const SheetFecharButton = React.forwardRef(function SheetFecharButton(
   { onClick, disabled = false, className, ...rest },
   ref,
 ) {
-  const handleMouseDown = (e) => {
+  const handlePointerDown = (e) => {
     e.stopPropagation();
   };
 
@@ -34,7 +34,9 @@ const SheetFecharButton = React.forwardRef(function SheetFecharButton(
       size="icon"
       disabled={disabled}
       aria-label="Fechar"
-      onMouseDown={handleMouseDown}
+      data-sheet-close="true"
+      onPointerDown={handlePointerDown}
+      onMouseDown={handlePointerDown}
       onClick={handleClick}
       className={`size-10 shrink-0 text-slate-600 dark:text-slate-300 ${className || ''}`}
       {...rest}

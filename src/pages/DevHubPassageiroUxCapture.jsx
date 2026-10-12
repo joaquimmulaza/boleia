@@ -43,6 +43,29 @@ export default function DevHubPassageiroUxCapture() {
         <p className="text-sm text-slate-500">Grupo · 2 de 4</p>
       </section>
 
+      <section
+        className="mt-6 space-y-3 rounded-xl border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+        data-testid="hub-ux-editar-procura-form"
+      >
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white">Editar procura</h2>
+        <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+          <AddressInput
+            name="origin_name"
+            label="Origem"
+            value="Talatona"
+            onChange={() => {}}
+            allowFreeTextUse
+          />
+          <AddressInput
+            name="destination_name"
+            label="Destino"
+            value="Miramar"
+            onChange={() => {}}
+            allowFreeTextUse
+          />
+        </form>
+      </section>
+
       <div className="relative mt-6 min-h-[560px]" data-testid="hub-ux-h6a-edit-sheet">
         <OverlayShell
           variant="bottom"
