@@ -67,6 +67,11 @@ describe('estadoPassageiro — chip por estado', () => {
     expect(isSaiuPassageiro('expirado', pagamento)).toBe(true);
   });
 
+  it('expirado + rescisão por justa causa → chip Terminado', () => {
+    const pagamento = { anulacao_motivo: ANULACAO_MOTIVO.RESCISAO_JUSTA_CAUSA };
+    expect(labelChipEstadoPassageiro('expirado', pagamento)).toBe('Terminado');
+  });
+
   it('legacy: expirado + acordo terminado antes da activação → chip Terminado', () => {
     const pagamento = { anulacao_motivo: ANULACAO_MOTIVO.ACORDO_TERMINADO_ANTES_ACTIVACAO };
     expect(estadoPassageiroParaChip('expirado', pagamento)).toBe('terminado');

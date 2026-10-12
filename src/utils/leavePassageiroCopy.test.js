@@ -100,7 +100,43 @@ describe('leavePassageiroCopy — saída antes vs depois da activação', () => 
     ).toMatch(/És o último passageiro/);
   });
 
-  it('último passageiro com aviso prévio pendente: linha PM independente da rescisão', () => {
+  it('último passageiro com consensual confirmado: acordo cancelado (alinhado ao chip)', () => {
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        lugarEstado: 'activo',
+        pagamento: { estado: 'em_custodia' },
+        lugaresVivosCount: 1,
+        lugaresVivosLoading: false,
+        rescisao_modo: 'consensual',
+        rescisao_confirmada_em: '2026-10-01T12:00:00Z',
+      }),
+    ).toMatch(/o acordo é cancelado\./);
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        lugarEstado: 'activo',
+        pagamento: { estado: 'em_custodia' },
+        lugaresVivosCount: 1,
+        lugaresVivosLoading: false,
+        rescisao_modo: 'consensual',
+        rescisao_confirmada_em: '2026-10-01T12:00:00Z',
+      }),
+    ).not.toMatch(/o acordo é encerrado\./);
+  });
+
+  it('último passageiro com rescisão justa causa já aplicada: copy cancelado (alinhado ao chip)', () => {
+    expect(
+      copyConfirmacaoSaidaPassageiro({
+        lugarEstado: 'reservado',
+        pagamento: { estado: 'pendente_pagamento' },
+        lugaresVivosCount: 1,
+        lugaresVivosLoading: false,
+        rescisao_modo: 'justa_causa',
+        rescisao_confirmada_em: '2026-10-01T12:00:00Z',
+      }),
+    ).toMatch(/o acordo é cancelado\./);
+  });
+
+  it('último passageiro com aviso prévio pendente: cancelado (mesma regra que chip)', () => {
     expect(
       copyConfirmacaoSaidaPassageiro({
         lugarEstado: 'activo',
@@ -110,10 +146,7 @@ describe('leavePassageiroCopy — saída antes vs depois da activação', () => 
         rescisao_modo: 'aviso_previo',
         rescisao_confirmada_em: null,
       }),
-    ).toBe(
-      'A tua quota deste mês não é reembolsada. '
-      + 'És o último passageiro. Ao saíres, o acordo é encerrado.',
-    );
+    ).toMatch(/o acordo é cancelado\./);
     expect(
       copyConfirmacaoSaidaPassageiro({
         lugarEstado: 'activo',

@@ -3,10 +3,15 @@ import { isActivoPassageiro } from './acordoPassageiroStatus';
 import { isLugarVivoPassageiro } from './estadoPassageiro.js';
 import { PAYMENT_STATES } from './paymentStatus';
 import { valorEmDividaParaExibir } from './pagamentoObrigacaoCopy';
+import { rescisaoBloqueiaLabelEncerrado } from './acordoEstadoDisplay.js';
 
-/** Copy modal quando o servidor confirma um único lugar vivo. */
+/** Copy modal quando o servidor confirma um único lugar vivo (fecho «Encerrado»). */
 export const COPY_CONFIRMACAO_ULTIMO_PASSAGEIRO =
   'És o último passageiro. Ao saíres, o acordo é encerrado.';
+
+/** Mesma regra que {@link labelEstadoAcordo} — rescisão que impede chip «Encerrado». */
+export const COPY_CONFIRMACAO_ULTIMO_PASSAGEIRO_CANCELADO =
+  'És o último passageiro. Ao saíres, o acordo é cancelado.';
 
 /**
  * @param {string | null | undefined} lugarEstado
@@ -57,9 +62,20 @@ function copyLinhaFinanceiraSaidaPassageiro(ctx) {
  *   pagamentoLoading?: boolean,
  *   lugaresVivosCount?: number | null,
  *   lugaresVivosLoading?: boolean,
+ *   rescisao_modo?: string | null,
+ *   rescisao_confirmada_em?: string | null,
  * }} ctx
  * @returns {string}
  */
+export function copyLinhaUltimoPassageiroFechoAcordo(ctx) {
+  if (
+    rescisaoBloqueiaLabelEncerrado(ctx.rescisao_modo, ctx.rescisao_confirmada_em)
+  ) {
+    return COPY_CONFIRMACAO_ULTIMO_PASSAGEIRO_CANCELADO;
+  }
+  return COPY_CONFIRMACAO_ULTIMO_PASSAGEIRO;
+}
+
 export function copyConfirmacaoSaidaPassageiro(ctx) {
   const prefixoIndividual =
     'Saída individual: o acordo mantém-se activo para os restantes. ';
@@ -71,7 +87,7 @@ export function copyConfirmacaoSaidaPassageiro(ctx) {
     && isLugarVivoPassageiro(ctx.lugarEstado);
 
   if (ultimoPassageiroVivo) {
-    return `${linhaFinanceira} ${COPY_CONFIRMACAO_ULTIMO_PASSAGEIRO}`;
+    return `${linhaFinanceira} ${copyLinhaUltimoPassageiroFechoAcordo(ctx)}`;
   }
 
   return prefixoIndividual + linhaFinanceira;
