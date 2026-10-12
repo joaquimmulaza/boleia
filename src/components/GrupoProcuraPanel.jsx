@@ -577,10 +577,20 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
             if (!busy) setEditarOpen(false);
           }}
         >
-          <div className="space-y-4 px-4 pb-sheet">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="editar-grupo-title"
+            className="space-y-4 px-4 pb-sheet"
+          >
             <SheetDragHandle />
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Editar grupo</h2>
+              <h2
+                id="editar-grupo-title"
+                className="text-lg font-bold text-slate-900 dark:text-white"
+              >
+                Editar grupo
+              </h2>
               <SheetFecharButton
                 disabled={busy}
                 data-testid="editar-grupo-fechar"
@@ -594,7 +604,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
             ) : null}
             <fieldset className="space-y-2">
               <legend className="text-sm font-semibold">Tamanho desejado</legend>
-              <div className="flex flex-wrap gap-2" role="group" aria-label="Tamanho desejado">
+              <div className="flex flex-nowrap gap-2 overflow-x-auto">
                 {CAPACIDADES.map((n) => {
                   const floor = Math.max(2, membros.length);
                   const abaixo = n < floor;
@@ -605,8 +615,9 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
                       type="button"
                       disabled={abaixo || busy}
                       aria-pressed={activo}
+                      aria-label={String(n)}
                       onClick={() => setEditCapacidade(n)}
-                      className={`size-10 rounded-lg text-sm font-bold tabular-nums disabled:opacity-40 ${
+                      className={`size-10 shrink-0 whitespace-nowrap rounded-lg text-sm font-bold tabular-nums disabled:opacity-40 ${
                         activo
                           ? 'bg-primary text-white'
                           : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'

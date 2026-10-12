@@ -46,6 +46,7 @@ vi.mock('./AddressInput', () => ({
         value={value || ''}
         onChange={onChange}
         required={required}
+        className="h-14 rounded-xl border border-input bg-background pl-4 pr-4"
       />
     </label>
   ),
@@ -712,10 +713,26 @@ describe('GrupoProcuraPanel T31', () => {
     const fechar = within(sheet).getByTestId('editar-grupo-fechar');
     expect(fechar).toHaveAccessibleName(/Fechar/i);
     expect(fechar.className).toMatch(/inline-flex/);
+    expect(screen.queryByText('Fechar')).not.toBeInTheDocument();
+    const dialog = within(sheet).getByRole('dialog');
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    expect(dialog).toHaveAttribute('aria-labelledby', 'editar-grupo-title');
+    expect(within(dialog).getByRole('heading', { name: 'Editar grupo' })).toHaveAttribute(
+      'id',
+      'editar-grupo-title',
+    );
     expect(within(sheet).getByTestId('editar-grupo-subtitle')).toHaveTextContent(
       'As propostas que já enviaste não mudam. As próximas usam os dados novos do grupo.',
     );
     expect(within(sheet).queryByText(/snapshots/i)).not.toBeInTheDocument();
+    const tamanhoFieldset = within(dialog).getByRole('group', { name: 'Tamanho desejado' });
+    const tamanhoRow = tamanhoFieldset.querySelector('.flex-nowrap');
+    expect(tamanhoRow).toBeTruthy();
+    expect(tamanhoRow.className).toMatch(/flex-nowrap/);
+    expect(within(tamanhoFieldset).getByRole('button', { name: '8' })).toHaveClass('whitespace-nowrap');
+    const pickup = within(dialog).getByRole('textbox', { name: /Ponto de recolha \(opcional\)/i });
+    expect(pickup.className).toMatch(/border-input/);
+    expect(pickup.className).toMatch(/bg-background/);
   });
 
   it('editar capacidade abaixo dos membros fica desactivado e gravar não mexe em propostas', async () => {

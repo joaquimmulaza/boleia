@@ -1,8 +1,9 @@
 import React from 'react';
+import { X } from 'lucide-react';
 import { Button } from './ui/button';
 
 /**
- * Fechar de sheets bottom — shadcn Button com nome acessível fixo.
+ * Fechar de sheets — botão X shadcn com aria-label «Fechar».
  * @param {{
  *   onClick: () => void,
  *   disabled?: boolean,
@@ -19,14 +20,14 @@ const SheetFecharButton = React.forwardRef(function SheetFecharButton(
       ref={ref}
       type="button"
       variant="ghost"
-      size="sm"
+      size="icon"
       disabled={disabled}
       aria-label="Fechar"
       onClick={onClick}
-      className={`h-10 shrink-0 px-3 font-bold text-slate-600 dark:text-slate-300 ${className || ''}`}
+      className={`size-10 shrink-0 text-slate-600 dark:text-slate-300 ${className || ''}`}
       {...rest}
     >
-      Fechar
+      <X className="size-5" aria-hidden="true" />
     </Button>
   );
 });

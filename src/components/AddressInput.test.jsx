@@ -46,6 +46,8 @@ describe('AddressInput', () => {
 
     const input = screen.getByRole('textbox', { name: /Ponto de recolha \(opcional\)/i });
     expect(input).not.toBeRequired();
+    expect(input.className).toMatch(/border-input/);
+    expect(input.className).toMatch(/bg-background/);
   });
 
   it('associa label ao input usando id ou fallback para name', () => {

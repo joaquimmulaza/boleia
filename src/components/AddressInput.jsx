@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAutocomplete } from '../hooks/useAutocomplete';
 import AutocompleteDropdown from './AutocompleteDropdown';
+import { Input } from './ui/input';
+import { cn } from '../lib/utils';
 
 /**
  * Campo de endereço com autocomplete Photon/OSM.
@@ -108,7 +110,7 @@ const AddressInput = ({
           </span>
         )}
         <div className="relative flex items-center">
-          <input
+          <Input
             id={inputId}
             type="text"
             name={name}
@@ -118,7 +120,9 @@ const AddressInput = ({
             onFocus={() => {
               if (inputValue.length > 2) setShowDropdown(true);
             }}
-            className="form-input w-full pl-4 pr-4 h-14 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:ring-primary/20 transition-all placeholder:text-slate-400 outline-none"
+            className={cn(
+              'h-14 rounded-xl border-input bg-background pl-4 pr-4 text-base transition-all placeholder:text-slate-400',
+            )}
           />
         </div>
       </label>
