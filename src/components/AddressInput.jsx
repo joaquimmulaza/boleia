@@ -121,7 +121,7 @@ const AddressInput = ({
               if (inputValue.length > 2) setShowDropdown(true);
             }}
             className={cn(
-              'h-14 rounded-xl border-input bg-background pl-4 pr-4 text-base transition-all placeholder:text-slate-400',
+              'h-14 rounded-xl border border-input bg-card pl-4 pr-4 text-base transition-all placeholder:text-slate-400 dark:bg-background',
             )}
           />
         </div>

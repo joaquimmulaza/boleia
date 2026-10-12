@@ -21,7 +21,8 @@
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
   --border: #e2e8f0;
-  --input: #e2e8f0;
+  /* ≥3:1 vs fundo card/branco (smoke Critiquito — campos em sheets claros) */
+  --input: #718096;
   --ring: #10b748;
   --inverse: #06130b;
   --inverse-fg: #ffffff;

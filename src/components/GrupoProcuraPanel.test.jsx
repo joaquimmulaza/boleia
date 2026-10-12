@@ -46,7 +46,7 @@ vi.mock('./AddressInput', () => ({
         value={value || ''}
         onChange={onChange}
         required={required}
-        className="h-14 rounded-xl border border-input bg-background pl-4 pr-4"
+        className="h-14 rounded-xl border border-input bg-card pl-4 pr-4 dark:bg-background"
       />
     </label>
   ),
@@ -732,7 +732,8 @@ describe('GrupoProcuraPanel T31', () => {
     expect(within(tamanhoFieldset).getByRole('button', { name: '8' })).toHaveClass('whitespace-nowrap');
     const pickup = within(dialog).getByRole('textbox', { name: /Ponto de recolha \(opcional\)/i });
     expect(pickup.className).toMatch(/border-input/);
-    expect(pickup.className).toMatch(/bg-background/);
+    expect(pickup.className).toMatch(/bg-card/);
+    expect(pickup.className).toMatch(/dark:bg-background/);
   });
 
   it('editar capacidade abaixo dos membros fica desactivado e gravar não mexe em propostas', async () => {
