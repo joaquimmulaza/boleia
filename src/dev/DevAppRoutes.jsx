@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom';
 import Profile from '../pages/Profile';
 import DevPerfilPushPreview from '../pages/DevPerfilPushPreview';
 import DevPerfilCaptureShell from '../pages/DevPerfilCapture';
+import DevPagamentoPanelCapture from '../pages/DevPagamentoPanelCapture';
 import DevAcordosChipCapture from '../pages/DevAcordosChipCapture';
 
 /**
@@ -11,6 +12,7 @@ import DevAcordosChipCapture from '../pages/DevAcordosChipCapture';
 export default function DevAppRoutes() {
   return (
     <Routes>
+      <Route path="pagamento-panel" element={<DevPagamentoPanelCapture />} />
       <Route path="perfil-push" element={<DevPerfilPushPreview />} />
       <Route path="perfil" element={<DevPerfilCaptureShell />}>
         <Route index element={<Profile />} />

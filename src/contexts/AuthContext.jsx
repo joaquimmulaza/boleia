@@ -146,6 +146,7 @@ function AuthProviderLive({ children }) {
         ...resto,
         telefone: contactoResult.data?.telefone ?? null,
         iban: contactoResult.data?.iban ?? null,
+        iban_titular: contactoResult.data?.iban_titular ?? null,
       };
       if (isCurrentFetch()) {
         setProfile(profileData);
