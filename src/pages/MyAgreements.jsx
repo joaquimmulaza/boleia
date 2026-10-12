@@ -35,9 +35,7 @@ import {
   subscribeMarketplaceHubRefresh,
 } from '../utils/marketplaceHubRefresh';
 import {
-  labelChipListaEstadoAcordo,
-  variantChipListaEstadoAcordo,
-  chipClassEstadoAcordoVariant,
+  acordoEstadoListaChipProps,
   isChipEncerramentoPedidoConsensual,
   podeConfirmarRescisaoConsensual,
 } from '../utils/acordoEstadoDisplay';
@@ -1079,10 +1077,7 @@ const MyAgreements = () => {
     const oferta = acordo.ofertas_capacidade;
     const rota = labelRotaOferta(oferta || {});
     const activo = isActivo(acordo.estado);
-    const estadoVariant = variantChipListaEstadoAcordo(acordo, user?.id);
-    const estadoLabel = labelChipListaEstadoAcordo(acordo, user?.id);
-    const chipEstadoRole =
-      estadoVariant === 'info' || estadoVariant === 'aviso' ? 'status' : undefined;
+    const estadoChipCard = acordoEstadoListaChipProps(acordo, user?.id);
     const leavePending = Boolean(pendingLeaveIds[acordo.id]);
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
     const minhaChipCtxCard = minhaLinha
@@ -1120,11 +1115,11 @@ const MyAgreements = () => {
         <div className="flex justify-between items-center gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <span
-              role={chipEstadoRole}
-              aria-label={chipEstadoRole === 'status' ? estadoLabel : undefined}
-              className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoAcordoVariant(estadoVariant)}`}
+              role={estadoChipCard.role}
+              aria-label={estadoChipCard.ariaLabel}
+              className={`text-xs font-bold px-2.5 py-1 rounded-full ${estadoChipCard.className}`}
             >
-              {estadoLabel}
+              {estadoChipCard.label}
             </span>
             {mostrarChipLugarCard ? (
               <span
@@ -1356,6 +1351,10 @@ const MyAgreements = () => {
             rescisaoModoAcordo={selected.rescisao_modo}
             rescisaoConfirmadaEmAcordo={selected.rescisao_confirmada_em}
             rescisaoSolicitadaPorAcordo={selected.rescisao_solicitada_por}
+            rescisaoEffectiveOnAcordo={selected.rescisao_effective_on}
+            driverIdAcordo={selected.driver_id}
+            acordosPassageiros={selected.acordos_passageiros}
+            viewerUserId={user?.id}
             minhaLinhaEstado={minhaLinha?.estado}
             minhaLinhaPagamento={pagamentoViewer}
             leavePending={leavePending}

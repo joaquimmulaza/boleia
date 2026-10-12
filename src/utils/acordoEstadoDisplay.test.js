@@ -8,6 +8,7 @@ import {
   isAcordoEncerradoSemLugaresVivos,
   isChipEncerramentoPedidoConsensual,
   podeConfirmarRescisaoConsensual,
+  acordoEstadoListaChipProps,
   rescisaoPermiteEncerramentoMotivoSemLugares,
   rescisaoBloqueiaLabelEncerrado,
 } from './acordoEstadoDisplay';
@@ -173,7 +174,7 @@ describe('labelChipListaEstadoAcordo — consensual 1:N (gate SQL confirm)', () 
       rescisao_solicitada_por: 'driver-1',
     };
     expect(labelChipListaEstadoAcordo(acordo, 'driver-1')).toBe('Encerramento pedido');
-    expect(variantChipListaEstadoAcordo(acordo, 'driver-1')).toBe('pendente');
+    expect(variantChipListaEstadoAcordo(acordo, 'driver-1')).toBe('info');
     expect(labelChipListaEstadoAcordo(acordo, 'pax-1')).toBe('Falta a tua confirmação');
     expect(variantChipListaEstadoAcordo(acordo, 'pax-1')).toBe('aviso');
     expect(labelChipListaEstadoAcordo(acordo, 'pax-2')).toBe('Falta a tua confirmação');
@@ -194,6 +195,20 @@ describe('labelChipListaEstadoAcordo — consensual 1:N (gate SQL confirm)', () 
     expect(podeConfirmarRescisaoConsensual(acordo, 'pax-2')).toBe(false);
     expect(labelChipListaEstadoAcordo(acordo, 'pax-2')).toBe('Encerramento pedido');
     expect(variantChipListaEstadoAcordo(acordo, 'pax-2')).toBe('info');
+  });
+});
+
+describe('acordoEstadoListaChipProps', () => {
+  it('confirmação pendente expõe role status e aria-label', () => {
+    const acordo = {
+      ...BASE_1N,
+      rescisao_solicitada_por: 'pax-1',
+    };
+    const chip = acordoEstadoListaChipProps(acordo, 'driver-1');
+    expect(chip.label).toBe('Falta a tua confirmação');
+    expect(chip.variant).toBe('aviso');
+    expect(chip.role).toBe('status');
+    expect(chip.ariaLabel).toBe('Falta a tua confirmação');
   });
 });
 

@@ -192,10 +192,29 @@ export function variantChipListaEstadoAcordo(acordo, userId) {
   const norm = normalizeAcordoEstadoInput(acordo);
   if (isChipEncerramentoPedidoConsensual(norm) && userId) {
     if (podeConfirmarRescisaoConsensual(acordo, userId)) return 'aviso';
-    if (String(norm.rescisao_solicitada_por) !== String(userId)) return 'info';
-    return 'pendente';
+    return 'info';
   }
   return variantChipEstadoAcordo(norm);
+}
+
+/**
+ * Props do chip de estado (lista + modal) — única fonte para label/variante/classes.
+ *
+ * @param {string | AcordoEstadoChipInput | null | undefined} acordo
+ * @param {string | null | undefined} userId
+ * @returns {{ label: string, variant: string, role?: 'status', className: string, ariaLabel?: string }}
+ */
+export function acordoEstadoListaChipProps(acordo, userId) {
+  const variant = variantChipListaEstadoAcordo(acordo, userId);
+  const label = labelChipListaEstadoAcordo(acordo, userId);
+  const role = variant === 'info' || variant === 'aviso' ? 'status' : undefined;
+  return {
+    label,
+    variant,
+    role,
+    className: chipClassEstadoAcordoVariant(variant),
+    ariaLabel: role === 'status' ? label : undefined,
+  };
 }
 
 export function labelEstadoAcordo(estado, encerramentoMotivo, rescisaoModo) {

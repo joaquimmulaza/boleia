@@ -1543,6 +1543,66 @@ describe('MyAgreements — marketplace 1:N', () => {
       rescisao_vigencia: 'imediato',
     };
 
+    it('(A) modal: outro passageiro vê chip neutro Encerramento pedido', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'pax-2' }, tipoPerfil: 'Passageiro' });
+      getAgreementsForPassenger.mockResolvedValue([
+        {
+          ...acordoPassageiro,
+          rescisao_modo: 'consensual',
+          rescisao_confirmada_em: null,
+          rescisao_solicitada_por: 'pax-viewer',
+          rescisao_vigencia: 'imediato',
+        },
+      ]);
+
+      renderPage(['/acordos?openAcordoId=acordo-pax']);
+
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      const header = within(dialog).getByTestId('acordo-detalhe-sheet-header');
+      const chip = within(header).getByTestId('acordo-detalhe-estado-chip');
+      expect(chip).toHaveTextContent('Encerramento pedido');
+      expect(chip).toHaveClass('bg-zinc-100');
+      expect(chip).not.toHaveClass('bg-amber-100');
+    });
+
+    it('(B) modal: passageiro activo vê chip aviso quando motorista pediu consensual', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+      getAgreementsForPassenger.mockResolvedValue([
+        {
+          ...acordoPassageiro,
+          rescisao_modo: 'consensual',
+          rescisao_confirmada_em: null,
+          rescisao_solicitada_por: 'driver-1',
+          rescisao_vigencia: 'imediato',
+        },
+      ]);
+
+      renderPage(['/acordos?openAcordoId=acordo-pax']);
+
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      const chip = within(dialog).getByTestId('acordo-detalhe-estado-chip');
+      expect(chip).toHaveTextContent('Falta a tua confirmação');
+      expect(chip).toHaveClass('bg-amber-100');
+    });
+
+    it('(C) modal: motorista vê chip aviso quando passageiro pediu consensual', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver.mockResolvedValue([
+        {
+          ...acordoComPedidoPassageiroMotorista,
+          rescisao_solicitada_por: 'pax-1',
+        },
+      ]);
+      getAgreementsForPassenger.mockResolvedValue([]);
+
+      renderPage(['/acordos?openAcordoId=acordo-1']);
+
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      const chip = within(dialog).getByTestId('acordo-detalhe-estado-chip');
+      expect(chip).toHaveTextContent('Falta a tua confirmação');
+      expect(chip).toHaveClass('bg-amber-100');
+    });
+
     it('passageiro activo vê Confirmar, Recusar e chip aviso quando motorista pediu consensual', async () => {
       mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
       getAgreementsForPassenger.mockResolvedValue([
