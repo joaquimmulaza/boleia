@@ -2201,7 +2201,7 @@ const MyAgreements = () => {
               : terminateModo === 'aviso_previo'
                 ? 'O acordo mantém-se activo até ao último dia deste mês. A quota deste mês não é reembolsada.'
                 : terminateModo === 'justa_causa'
-                  ? 'O acordo termina de imediato se o motivo for válido. As quotas deste mês podem ser ajustadas proporcionalmente.'
+                  ? 'O acordo termina de imediato se o motivo for válido. As quotas deste mês são ajustadas proporcionalmente.'
                   : '',
         })}
         confirmText="Encerrar acordo"

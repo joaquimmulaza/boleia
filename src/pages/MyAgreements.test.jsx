@@ -1275,6 +1275,30 @@ describe('MyAgreements — marketplace 1:N', () => {
     ).toBeInTheDocument();
   });
 
+  it('justa causa: confirmação menciona quotas ajustadas proporcionalmente', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    terminateAgreement.mockResolvedValue({ id: 'acordo-pax', estado: 'activo' });
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    openAcordoKebab(dialog);
+    await clickAcordoKebabItem(/Encerrar acordo/i);
+
+    const picker = await screen.findByTestId('terminate-modality-picker');
+    fireEvent.click(within(picker).getByText('Justa causa imediata'));
+
+    const justaPicker = await screen.findByTestId('terminate-justa-picker');
+    fireEvent.click(within(justaPicker).getByText('Motivo de segurança'));
+    fireEvent.click(within(justaPicker).getByRole('button', { name: /^Continuar$/i }));
+
+    expect(
+      await screen.findByText(/As quotas deste mês são ajustadas proporcionalmente/i),
+    ).toBeInTheDocument();
+  });
+
   it('terminate offlineQueued: mostra feedback de sincronização', async () => {
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
