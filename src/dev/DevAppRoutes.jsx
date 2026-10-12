@@ -10,8 +10,8 @@ import { isDevCaptureRoutesEnabled } from '../utils/devCaptureAccess';
 /**
  * Rotas relativas a `/__dev/*` (lazy + `<Route path="/__dev/*" />` em App.jsx).
  *
- * Disponíveis em `vite dev`, **Vercel Preview** e localhost; redireccionam para `/`
- * só no hostname de produção (`boleia-cyan.vercel.app`). Ver `devCaptureAccess.js`.
+ * `vite dev` (import.meta.env.DEV) ou preview na allowlist
+ * `boleia-<hash>-joaquim-mulazas-projects.vercel.app`. Ver `devCaptureAccess.js`.
  */
 export default function DevAppRoutes() {
   if (!isDevCaptureRoutesEnabled()) {

@@ -313,7 +313,7 @@ function AuthProviderLive({ children }) {
 
 /**
  * @param {{ children: React.ReactNode; devValue?: Record<string, unknown> }} props
- * `devValue` — capturas `/__dev/*` (dev local + preview; não em boleia-cyan.vercel.app).
+ * `devValue` — capturas `/__dev/*` (vite dev ou host preview allowlist).
  */
 export function AuthProvider({ children, devValue }) {
   if (isDevCaptureRoutesEnabled() && devValue !== undefined) {
