@@ -1,6 +1,11 @@
 import React from 'react';
 import NotificationListItem from '../components/NotificationListItem';
-import { NOTIF_TITULO_V1_12 } from '../utils/notificationStatusCardCopy';
+import {
+  NOTIF_TITULO_V1_12,
+  NOTIF_TITULO_V1_14,
+  NOTIF_BODY_V1_14_SEM_ROTA,
+  notifBodyV114ComRota,
+} from '../utils/notificationStatusCardCopy';
 
 const FIXTURE_CREATED_AT = '2026-10-12T08:00:00.000Z';
 const ACORDO_ID = 'f5555555-5555-4555-8555-555555555555';
@@ -41,10 +46,44 @@ const FIXTURES = [
       },
     },
   },
+  {
+    key: 'v114-com-rota',
+    label: 'v1.14 — removido último (com rota)',
+    notif: {
+      id: 'n-v114-route',
+      mensagem: notifBodyV114ComRota('Talatona', 'Belas Shopping'),
+      tipo: 'info',
+      lida: false,
+      created_at: FIXTURE_CREATED_AT,
+      metadata: {
+        type: 'status',
+        card: 'v1.14',
+        titulo: NOTIF_TITULO_V1_14,
+        acordo_id: ACORDO_ID,
+      },
+    },
+  },
+  {
+    key: 'v114-sem-rota',
+    label: 'v1.14 — removido último (flexível)',
+    notif: {
+      id: 'n-v114-flex',
+      mensagem: NOTIF_BODY_V1_14_SEM_ROTA,
+      tipo: 'info',
+      lida: false,
+      created_at: FIXTURE_CREATED_AT,
+      metadata: {
+        type: 'status',
+        card: 'v1.14',
+        titulo: NOTIF_TITULO_V1_14,
+        acordo_id: ACORDO_ID,
+      },
+    },
+  },
 ];
 
 /**
- * Captura DEV (390px) — card motorista v1.12 (expiração com lugares vivos).
+ * Captura DEV (390px) — cards v1.12 (motorista) e v1.14 (passageiro removido).
  *
  * @typedef {Readonly<{}>} DevNotifV112CaptureProps
  */
@@ -52,7 +91,7 @@ export default function DevNotifV112Capture() {
   return (
     <div className="min-h-dvh bg-background-light p-4" data-testid="dev-notif-v112-capture-root">
       <div className="mx-auto max-w-[390px] space-y-8">
-        <h1 className="text-lg font-bold text-slate-900">Captura — notificação v1.12</h1>
+        <h1 className="text-lg font-bold text-slate-900">Captura — cards v1.12 / v1.14</h1>
 
         <section data-testid="dev-notif-v112-light">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Light</p>

@@ -16,6 +16,8 @@ DECLARE
   v_acordo_exp_name uuid := 'd7777777-7777-4777-8777-777777777777';
   v_acordo_exp_noname uuid := 'd8888888-8888-4888-8888-888888888888';
   v_acordo_driver uuid := 'd9999999-9999-4999-8999-999999999999';
+  v_acordo_driver_od uuid := 'daaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa01';
+  v_oferta_fixa uuid;
   v_ap_cp1 uuid := 'e4444444-4444-4444-8444-444444444441';
   v_ap_cp2 uuid := 'e4444444-4444-4444-8444-444444444442';
   v_ap_p1 uuid := 'e5555555-5555-4555-8555-555555555551';
@@ -234,7 +236,7 @@ BEGIN
     RAISE EXCEPTION 'FAIL G2 sem nome: notif motorista (n=%)', v_n;
   END IF;
 
-  -- Motorista remove passageiro: sem notificação leave_passenger ao motorista
+  -- v1.14 flexível: motorista remove último — passageiro card info, motorista sem notif
   INSERT INTO public.acordos (
     id, oferta_id, procura_id, driver_id, modo_preco, n_passageiros_contrato,
     valor_mensal_total_kz, valor_mensal_por_passageiro_kz, estado, dias_uteis_mes
@@ -255,6 +257,72 @@ BEGIN
   SELECT COUNT(*)::integer INTO v_n FROM public.notificacoes WHERE user_id = v_driver;
   IF v_n <> 0 THEN
     RAISE EXCEPTION 'FAIL driver remove: motorista não devia ser notificado (n=%)', v_n;
+  END IF;
+
+  SELECT COUNT(*)::integer INTO v_n
+  FROM public.notificacoes
+  WHERE user_id = v_pax2
+    AND mensagem = 'O motorista retirou-te do acordo, que foi encerrado.'
+    AND lower(tipo) = 'info';
+
+  IF v_n <> 1 THEN
+    RAISE EXCEPTION 'FAIL v1.14 flex: passageiro (n=%)', v_n;
+  END IF;
+
+  SELECT metadata INTO v_meta
+  FROM public.notificacoes
+  WHERE user_id = v_pax2
+    AND mensagem = 'O motorista retirou-te do acordo, que foi encerrado.'
+  LIMIT 1;
+
+  IF v_meta->>'card' <> 'v1.14' OR v_meta->>'titulo' <> 'Acordo encerrado' THEN
+    RAISE EXCEPTION 'FAIL v1.14 flex metadata: %', v_meta;
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM public.notificacoes WHERE user_id = v_pax2 AND link IS NOT NULL) THEN
+    RAISE EXCEPTION 'FAIL v1.14: sem CTA/link';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM public.notificacoes
+    WHERE user_id = v_pax2 AND mensagem = 'O teu acordo de boleia foi cancelado.'
+  ) THEN
+    RAISE EXCEPTION 'FAIL v1.14: copy antiga cancelado ainda presente';
+  END IF;
+
+  -- v1.14 com rota OD real
+  INSERT INTO public.ofertas_capacidade (
+    driver_id, veiculo_id, flexibilidade_rota, departure_time, vagas_disponiveis, vagas_totais,
+    modo_preco, valor_mensal_ask_kz, estado, origin_name, destination_name
+  ) VALUES (
+    v_driver, v_veiculo, false, '08:00', 4, 4, 'POR_PASSAGEIRO', 20000, 'disponivel',
+    'Talatona', 'Belas Shopping'
+  ) RETURNING id INTO v_oferta_fixa;
+
+  INSERT INTO public.acordos (
+    id, oferta_id, procura_id, driver_id, modo_preco, n_passageiros_contrato,
+    valor_mensal_total_kz, valor_mensal_por_passageiro_kz, estado, dias_uteis_mes
+  ) VALUES (
+    v_acordo_driver_od, v_oferta_fixa, v_procura, v_driver, 'POR_PASSAGEIRO', 1, 20000, 20000, 'activo', 22
+  );
+
+  INSERT INTO public.acordos_passageiros (id, acordo_id, passenger_id, estado, quota_mensal_kz, ordem_insercao)
+  VALUES ('e4444444-4444-4444-8444-444444444443', v_acordo_driver_od, v_pax_named, 'activo', 20000, 0);
+
+  DELETE FROM public.notificacoes;
+
+  PERFORM set_config('request.jwt.claim.sub', v_driver::text, true);
+  SET LOCAL ROLE authenticated;
+  PERFORM public.leave_passenger(v_acordo_driver_od, v_pax_named, gen_random_uuid());
+  RESET ROLE;
+
+  SELECT COUNT(*)::integer INTO v_n
+  FROM public.notificacoes
+  WHERE user_id = v_pax_named
+    AND mensagem = 'O motorista retirou-te do acordo Talatona → Belas Shopping, que foi encerrado.';
+
+  IF v_n <> 1 THEN
+    RAISE EXCEPTION 'FAIL v1.14 com rota (n=%)', v_n;
   END IF;
 
   PERFORM set_config('session_replication_role', 'origin', true);

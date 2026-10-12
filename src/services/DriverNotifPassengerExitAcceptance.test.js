@@ -14,6 +14,7 @@ import {
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS = join(ROOT, '../../supabase/migrations');
 const MIGRATION = '20261012180000_driver_notif_passenger_exit.sql';
+const MIGRATION_V114 = '20261012190000_passenger_removed_last_v1_14.sql';
 
 function readMigration() {
   return readFileSync(join(MIGRATIONS, MIGRATION), 'utf8');
@@ -49,6 +50,18 @@ describe('Driver notif passenger exit — migração', () => {
     expect(sql).toMatch(/'card',\s*'v1\.8'/);
     expect(sql).toMatch(new RegExp(`'titulo',\\s*'${NOTIF_TITULO_V1_7.replace(/'/g, "''")}'`));
     expect(sql).toMatch(new RegExp(`'titulo',\\s*'${NOTIF_TITULO_V1_8.replace(/'/g, "''")}'`));
+  });
+
+  it('v1.14: leave_passenger card passageiro removido (último)', () => {
+    expect(existsSync(join(MIGRATIONS, MIGRATION_V114))).toBe(true);
+    const sql = readFileSync(join(MIGRATIONS, MIGRATION_V114), 'utf8');
+    expect(sql).toMatch(/'card',\s*'v1\.14'/);
+    expect(sql).toMatch(/'titulo',\s*'Acordo encerrado'/);
+    expect(sql).toContain('O motorista retirou-te do acordo, que foi encerrado.');
+    expect(sql).toContain('→');
+    expect(sql).toMatch(/last_passenger_driver_removed[\s\S]{0,80}true, true/);
+    expect(sql).toMatch(/tipo,\s*metadata\)/);
+    expect(sql).not.toMatch(/'error'/);
   });
 
   it('script prova PG dedicado', () => {

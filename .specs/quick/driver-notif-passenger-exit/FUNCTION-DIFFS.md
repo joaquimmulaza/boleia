@@ -46,3 +46,17 @@
 ```
 
 **Nota:** PR #269 (`20261012170000_expiry_close_sem_lugares_vivos.sql`) também redefine estas funções — rebase obrigatório após merge.
+
+## `leave_passenger` — v1.14 (passageiro removido, último)
+
+**Base:** `20261012180000_driver_notif_passenger_exit.sql`
+
+```diff
++ v_oferta_flex, v_origem, v_destino, v_corpo_v114
+- last_passenger_driver_removed suppress: true, false
++ last_passenger_driver_removed suppress: true, true
++ ELSIF motorista AND último AND cancelado → INSERT passageiro v1.14 (info, sem link)
++   flexível ou sem OD → «O motorista retirou-te do acordo, que foi encerrado.»
++   OD real → «… {origem} → {destino}, que foi encerrado.»
+- trigger genérico «O teu acordo de boleia foi cancelado.» (suppressed)
+```
