@@ -1,5 +1,7 @@
 # Diff normalizado — funções vs corpo em produção (main pós-merge: até 20261012180500)
 
+Migração deste pacote: `20261012181000_expiry_close_sem_lugares_vivos.sql` (após `20261012180500`; sem colisão com #275).
+
 Base `apply_due_reserva_expiry`: `20261009180000_p0_acordo_pagamento_estados.sql`  
 Base `leave_passenger`: `20261010000000_encerramento_motivo_leave_passenger.sql`
 
