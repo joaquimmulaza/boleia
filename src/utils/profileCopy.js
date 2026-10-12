@@ -1,0 +1,40 @@
+/** Copy aprovada — /perfil v2 */
+
+export const PROFILE_TITLE = 'O meu perfil';
+
+export const PROFILE_SAVE_SUCCESS = 'Dados guardados.';
+
+export const PROFILE_SAVE_ERROR = 'Não foi possível guardar. Tenta outra vez.';
+
+export const PROFILE_PHONE_INVALID = 'Indica um número de telefone válido.';
+
+export const PROFILE_DISCARD_EDITS = 'Descartar alterações';
+
+export const PROFILE_DISCARD_EDITS_NARROW = 'Cancelar';
+
+export const PROFILE_SAVE_CHANGES = 'Guardar alterações';
+
+export const PROFILE_SIGN_OUT = 'Terminar sessão';
+
+export const PROFILE_PERSONAL_DATA = 'Dados pessoais';
+
+export const PROFILE_EDIT = 'Editar';
+
+export const PROFILE_APP_SECTION_TITLE = 'App no telemóvel';
+
+export const PROFILE_APP_SECTION_DESC =
+  'Adiciona a app ao ecrã principal para a abrires mais depressa e receberes avisos.';
+
+export const PROFILE_APP_INSTALL_CTA = 'Instalar app';
+
+export const PROFILE_APP_IPHONE_HINT =
+  'No iPhone, no Safari, toca em Partilhar e em Adicionar ao ecrã principal.';
+
+export const PROFILE_BANK_TITLE = 'Dados bancários';
+
+export const PROFILE_BANK_SUBTITLE = 'Para receber pagamentos das boleias.';
+
+export const PROFILE_RECEIPTS = 'Recebimentos';
+
+export const PUSH_PROFILE_BLOCKED_SINGLE_LINE =
+  'As notificações estão bloqueadas neste navegador. Permite-as nas definições do navegador.';

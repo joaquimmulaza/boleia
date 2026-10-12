@@ -25,6 +25,8 @@ import AcordoRenovar from './pages/AcordoRenovar';
 import AcordoNaoRenovar from './pages/AcordoNaoRenovar';
 import VehicleSetup from './pages/VehicleSetup';
 import Profile from './pages/Profile';
+import ProfileBankDetails from './pages/ProfileBankDetails';
+import ProfileRecebimentos from './pages/ProfileRecebimentos';
 import AdminPagamentos from './pages/AdminPagamentos';
 import AdminRoute from './components/AdminRoute';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -132,6 +134,8 @@ function AppShell() {
           <Route path="/faltas" element={<AbsenceTracker />} />
           <Route path="/faltas/:acordoId" element={<AbsenceTracker />} />
           <Route path="/perfil" element={<Profile />} />
+          <Route path="/perfil/dados-bancarios" element={<ProfileBankDetails />} />
+          <Route path="/perfil/recebimentos" element={<ProfileRecebimentos />} />
         </Route>
 
         <Route element={<AdminRoute />}>

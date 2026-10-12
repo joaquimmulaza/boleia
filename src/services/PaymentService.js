@@ -198,6 +198,22 @@ export async function listRepassesMotorista() {
   return data || [];
 }
 
+/**
+ * Repasses do motorista autenticado (RLS driver).
+ * @param {string} driverId
+ * @returns {Promise<object[]>}
+ */
+export async function listMyRepassesMotorista(driverId) {
+  const { data, error } = await supabase
+    .from('repasses_motorista')
+    .select('*')
+    .eq('driver_id', driverId)
+    .order('liquidado_em', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
 export async function listPagamentosPendentesValidacao() {
   const { data, error } = await supabase
     .from('pagamentos_acordo')

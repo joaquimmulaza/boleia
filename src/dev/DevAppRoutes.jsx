@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom';
 import Profile from '../pages/Profile';
 import DevPerfilPushPreview from '../pages/DevPerfilPushPreview';
 import DevPerfilCaptureShell from '../pages/DevPerfilCapture';
+import DevPerfilCaptureMotoristaShell from '../pages/DevPerfilCaptureMotorista';
 import DevAcordosChipCapture from '../pages/DevAcordosChipCapture';
 
 /**
@@ -13,6 +14,9 @@ export default function DevAppRoutes() {
     <Routes>
       <Route path="perfil-push" element={<DevPerfilPushPreview />} />
       <Route path="perfil" element={<DevPerfilCaptureShell />}>
+        <Route index element={<Profile />} />
+      </Route>
+      <Route path="perfil-motorista" element={<DevPerfilCaptureMotoristaShell />}>
         <Route index element={<Profile />} />
       </Route>
       <Route path="acordos-chips" element={<DevAcordosChipCapture />} />

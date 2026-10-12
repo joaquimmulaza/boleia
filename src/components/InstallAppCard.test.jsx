@@ -11,7 +11,7 @@ describe('InstallAppCard', () => {
     vi.clearAllMocks();
   });
 
-  it('mostra estado instalada sem CTA de instalação', () => {
+  it('oculta a secção quando a app já está instalada (standalone)', () => {
     usePwaInstall.mockReturnValue({
       canInstallNative: false,
       isInstalled: true,
@@ -22,12 +22,11 @@ describe('InstallAppCard', () => {
     });
 
     render(<InstallAppCard />);
-    expect(screen.getByTestId('install-app-installed')).toBeInTheDocument();
-    expect(screen.getByText(/App no ecrã/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Adicionar ao ecrã/i })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('install-app-card')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('install-app-installed')).not.toBeInTheDocument();
   });
 
-  it('mostra CTA nativo Adicionar ao ecrã', () => {
+  it('mostra CTA Instalar app com beforeinstallprompt', () => {
     const promptInstall = vi.fn().mockResolvedValue('accepted');
     usePwaInstall.mockReturnValue({
       canInstallNative: true,
@@ -39,11 +38,11 @@ describe('InstallAppCard', () => {
     });
 
     render(<InstallAppCard />);
-    fireEvent.click(screen.getByRole('button', { name: /Adicionar ao ecrã/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Instalar app/i }));
     expect(promptInstall).toHaveBeenCalled();
   });
 
-  it('mostra Ver como adicionar no iOS', () => {
+  it('no iPhone mostra instrução Safari em vez do botão', () => {
     usePwaInstall.mockReturnValue({
       canInstallNative: false,
       isInstalled: false,
@@ -54,7 +53,7 @@ describe('InstallAppCard', () => {
     });
 
     render(<InstallAppCard />);
-    fireEvent.click(screen.getByRole('button', { name: /Ver como adicionar/i }));
-    expect(screen.getByRole('dialog', { name: /Adicionar ao ecrã/i })).toBeInTheDocument();
+    expect(screen.getByText(/No iPhone, no Safari/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Instalar app/i })).not.toBeInTheDocument();
   });
 });
