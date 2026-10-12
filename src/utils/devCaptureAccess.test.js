@@ -1,44 +1,42 @@
 import { describe, it, expect } from 'vitest';
 import {
-  DEV_CAPTURE_PROD_HOSTNAMES,
+  DEV_CAPTURE_LOCAL_HOSTS,
   DEV_CAPTURE_PREVIEW_HOST_PATTERN,
-  isDevCapturePreviewHost,
-  isDevCaptureProdHost,
+  isDevCaptureAllowedHost,
   isDevCaptureRoutesEnabled,
 } from './devCaptureAccess';
 
-describe('devCaptureAccess — allowlist preview Vercel', () => {
-  it('aliases de produção explícitos', () => {
-    expect(DEV_CAPTURE_PROD_HOSTNAMES).toContain('boleia-cyan.vercel.app');
-    expect(DEV_CAPTURE_PROD_HOSTNAMES).toContain('boleia-joaquim-mulazas-projects.vercel.app');
-    expect(isDevCaptureProdHost('boleia-cyan.vercel.app')).toBe(true);
-    expect(isDevCaptureProdHost('boleia-joaquim-mulazas-projects.vercel.app')).toBe(true);
+const PREVIEW_SAMPLE = 'boleia-4khaffcwr-joaquim-mulazas-projects.vercel.app';
+
+describe('devCaptureAccess — allowlist estrita', () => {
+  it('padrão preview exige hash de 9 caracteres', () => {
+    expect(PREVIEW_SAMPLE).toMatch(DEV_CAPTURE_PREVIEW_HOST_PATTERN);
+    expect(isDevCaptureAllowedHost(PREVIEW_SAMPLE)).toBe(true);
+    expect(isDevCaptureAllowedHost('boleia-abc-joaquim-mulazas-projects.vercel.app')).toBe(false);
   });
 
-  it('preview com hash no padrão boleia-<hash>-joaquim-mulazas-projects.vercel.app', () => {
-    const sample = 'boleia-4khaffcwr-joaquim-mulazas-projects.vercel.app';
-    expect(DEV_CAPTURE_PREVIEW_HOST_PATTERN.test(sample)).toBe(true);
-    expect(isDevCapturePreviewHost(sample)).toBe(true);
+  it('localhost e 127.0.0.1 permitidos', () => {
+    expect(DEV_CAPTURE_LOCAL_HOSTS).toEqual(['localhost', '127.0.0.1']);
+    expect(isDevCaptureAllowedHost('localhost')).toBe(true);
+    expect(isDevCaptureAllowedHost('127.0.0.1')).toBe(true);
   });
 
-  it('domínio desconhecido ou custom negado (sem vite dev)', () => {
-    expect(isDevCapturePreviewHost('127.0.0.1')).toBe(false);
-    expect(isDevCapturePreviewHost('localhost')).toBe(false);
-    expect(isDevCapturePreviewHost('example.com')).toBe(false);
-    expect(isDevCapturePreviewHost('boleia-git-main-joaquim.vercel.app')).toBe(false);
+  it('três hosts de produção / git negados', () => {
+    expect(isDevCaptureAllowedHost('boleia-cyan.vercel.app')).toBe(false);
+    expect(isDevCaptureAllowedHost('boleia-joaquim-mulazas-projects.vercel.app')).toBe(false);
+    expect(isDevCaptureAllowedHost('boleia-git-main-joaquim-mulazas-projects.vercel.app')).toBe(false);
   });
 
-  it('isDevCaptureRoutesEnabled em host: prod e desconhecido negam fora allowlist', () => {
-    const onHostOnly = (/** @type {string} */ host) => isDevCapturePreviewHost(host);
+  it('domínio desconhecido negado', () => {
+    expect(isDevCaptureAllowedHost('evil.example')).toBe(false);
+    expect(isDevCaptureAllowedHost('boleia-git-main-joaquim.vercel.app')).toBe(false);
+  });
 
-    expect(onHostOnly('boleia-cyan.vercel.app')).toBe(false);
-    expect(onHostOnly('boleia-joaquim-mulazas-projects.vercel.app')).toBe(false);
-    expect(onHostOnly('boleia-4khaffcwr-joaquim-mulazas-projects.vercel.app')).toBe(true);
-    expect(onHostOnly('evil.example')).toBe(false);
-
+  it('isDevCaptureRoutesEnabled respeita allowlist fora vite dev', () => {
     if (!import.meta.env.DEV) {
       expect(isDevCaptureRoutesEnabled('boleia-cyan.vercel.app')).toBe(false);
-      expect(isDevCaptureRoutesEnabled('evil.example')).toBe(false);
+      expect(isDevCaptureRoutesEnabled(PREVIEW_SAMPLE)).toBe(true);
+      expect(isDevCaptureRoutesEnabled('127.0.0.1')).toBe(true);
     }
   });
 });

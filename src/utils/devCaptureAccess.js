@@ -1,24 +1,17 @@
 /**
- * Guard `/__dev/*` (Critiquito): (1) `import.meta.env.DEV` (vite local, igual acordos-chips em main);
- * (2) allowlist preview Vercel — `boleia-<hash>-joaquim-mulazas-projects.vercel.app`.
- * Prod explícita e restantes domínios → negado.
+ * Guard `/__dev/*` (Critiquito): allowlist estrita em build prod + `import.meta.env.DEV` (vite local).
+ *
+ * Permitido: `localhost`, `127.0.0.1`, e
+ * `^boleia-[a-z0-9]{9}-joaquim-mulazas-projects\.vercel\.app$` (preview deployment hash).
+ * Todo o resto (prod, `boleia-git-*`, custom) → negado.
  */
 
 /** @type {readonly string[]} */
-export const DEV_CAPTURE_PROD_HOSTNAMES = [
-  'boleia-cyan.vercel.app',
-  'boleia-joaquim-mulazas-projects.vercel.app',
-];
+export const DEV_CAPTURE_LOCAL_HOSTS = ['localhost', '127.0.0.1'];
 
-/** @deprecated usar DEV_CAPTURE_PROD_HOSTNAMES */
-export const DEV_CAPTURE_PROD_HOSTNAME = DEV_CAPTURE_PROD_HOSTNAMES[0];
-
-/**
- * Preview deployment: `boleia-<hash>-joaquim-mulazas-projects.vercel.app` (hífen após boleia).
- * Exclui prod (`boleia-joaquim-…` sem hash intermédio).
- */
+/** Preview Vercel — hash exactamente 9 caracteres alfanuméricos. */
 export const DEV_CAPTURE_PREVIEW_HOST_PATTERN =
-  /^boleia-[a-z0-9]+-joaquim-mulazas-projects\.vercel\.app$/i;
+  /^boleia-[a-z0-9]{9}-joaquim-mulazas-projects\.vercel\.app$/i;
 
 /**
  * @param {string} [hostname]
@@ -29,23 +22,15 @@ function resolveHostname(hostname) {
 }
 
 /**
- * @param {string} [hostname]
- * @returns {boolean}
- */
-export function isDevCaptureProdHost(hostname) {
-  return DEV_CAPTURE_PROD_HOSTNAMES.includes(resolveHostname(hostname));
-}
-
-/**
- * Allowlist preview (build prod no browser). Não inclui prod nem localhost.
+ * Allowlist (sem `import.meta.env.DEV`).
  *
  * @param {string} [hostname]
  * @returns {boolean}
  */
-export function isDevCapturePreviewHost(hostname) {
+export function isDevCaptureAllowedHost(hostname) {
   const host = resolveHostname(hostname);
-  if (isDevCaptureProdHost(host)) {
-    return false;
+  if (DEV_CAPTURE_LOCAL_HOSTS.includes(host)) {
+    return true;
   }
   return DEV_CAPTURE_PREVIEW_HOST_PATTERN.test(host);
 }
@@ -58,5 +43,5 @@ export function isDevCaptureRoutesEnabled(hostname) {
   if (import.meta.env.DEV) {
     return true;
   }
-  return isDevCapturePreviewHost(hostname);
+  return isDevCaptureAllowedHost(hostname);
 }
