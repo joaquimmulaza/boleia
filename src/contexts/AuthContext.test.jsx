@@ -139,7 +139,7 @@ describe('AuthContext', () => {
     expect(screen.getByTestId('tipoPerfil')).toHaveTextContent('Motorista');
     expect(supabase.from).toHaveBeenCalledWith('perfis');
     expect(mockSelect).toHaveBeenCalledWith(PERFIL_COLUNAS_AUTH_CONTEXT_SELECT);
-    expect(PERFIL_COLUNAS_AUTH_CONTEXT_SELECT).toMatch(/\biban_titular\b/);
+    expect(PERFIL_COLUNAS_AUTH_CONTEXT_SELECT).not.toMatch(/\biban_titular\b/);
     expect(screen.getByTestId('admin')).toHaveTextContent('nao-admin');
   });
 
@@ -155,7 +155,7 @@ describe('AuthContext', () => {
       error: null,
     });
     supabase.rpc.mockResolvedValue({
-      data: { telefone: '+244923111222', iban: 'AO06PROPRIO' },
+      data: { telefone: '+244923111222', iban: 'AO06PROPRIO', iban_titular: 'Titular Próprio' },
       error: null,
     });
     supabase.auth.getSession.mockResolvedValue({

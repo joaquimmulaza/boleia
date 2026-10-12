@@ -60,6 +60,7 @@ export const getProfile = async (userId) => {
     ...resto,
     telefone: contacto?.telefone ?? null,
     iban: contacto?.iban ?? null,
+    iban_titular: contacto?.iban_titular ?? null,
   };
 };
 

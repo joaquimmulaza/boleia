@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS = join(ROOT, '../../supabase/migrations');
-const MIGRATION_FIX = '20261012170000_expiry_close_sem_lugares_vivos.sql';
+const MIGRATION_FIX = '20261012190000_expiry_close_sem_lugares_vivos.sql';
 const MIGRATION_LEAVE_PROD = '20261010000000_encerramento_motivo_leave_passenger.sql';
 const MIGRATION_EXPIRY_PROD = '20261009180000_p0_acordo_pagamento_estados.sql';
 
@@ -25,7 +25,7 @@ function extractLeavePassengerBody(raw) {
   return m?.[0] || '';
 }
 
-describe('expiry close sem_lugares_vivos — migração 20261012170000', () => {
+describe('expiry close sem_lugares_vivos — migração 20261012190000', () => {
   it('migração de fix existe', () => {
     expect(existsSync(join(MIGRATIONS, MIGRATION_FIX))).toBe(true);
   });

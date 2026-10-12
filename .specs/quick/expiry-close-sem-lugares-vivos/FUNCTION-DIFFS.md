@@ -1,4 +1,4 @@
-# Diff normalizado — funções vs corpo em produção (main pré-20261012170000)
+# Diff normalizado — funções vs corpo em produção (main pós-merge: até 20261012180500)
 
 Base `apply_due_reserva_expiry`: `20261009180000_p0_acordo_pagamento_estados.sql`  
 Base `leave_passenger`: `20261010000000_encerramento_motivo_leave_passenger.sql`

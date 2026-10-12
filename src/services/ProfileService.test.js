@@ -61,11 +61,29 @@ describe('ProfileService', () => {
     expect(supabase.from).toHaveBeenCalledWith('perfis');
     expect(mockSelect).toHaveBeenCalledWith(PERFIL_COLUNAS_SELECT);
     expect(PERFIL_COLUNAS_SELECT).not.toMatch(/\*/);
-    expect(PERFIL_COLUNAS_SELECT).not.toMatch(/\b(telefone|iban|is_admin)\b/);
+    expect(PERFIL_COLUNAS_SELECT).not.toMatch(/\b(telefone|iban|iban_titular|is_admin)\b/);
     expect(supabase.rpc).toHaveBeenCalledWith('get_own_perfil_contacto');
     expect(profile.nome_completo).toBe('Teste');
     expect(profile.telefone).toBe('+244923000111');
     expect(profile.iban).toBe('AO06TEST');
+  });
+
+  it('getProfile junta iban_titular da RPC própria', async () => {
+    mockSingle.mockResolvedValue({
+      data: { id: 'user-1', nome_completo: 'Mot' },
+      error: null,
+    });
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'user-1' } },
+      error: null,
+    });
+    supabase.rpc.mockResolvedValue({
+      data: { telefone: '+244923000111', iban: 'AO06', iban_titular: 'João Motorista' },
+      error: null,
+    });
+
+    const profile = await getProfile('user-1');
+    expect(profile.iban_titular).toBe('João Motorista');
   });
 
   it('getProfile de outra pessoa não junta o contacto da sessão', async () => {
