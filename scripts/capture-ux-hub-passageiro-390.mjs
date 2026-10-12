@@ -8,7 +8,7 @@ import { ensureCaptureOutDir, resolveCaptureOutDir } from './captureOutDir.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BASE = process.env.VITE_URL || 'http://127.0.0.1:5173';
 const OUT = resolveCaptureOutDir();
-const WIDTHS = [390, 355];
+const WIDTHS = [390];
 
 ensureCaptureOutDir(OUT);
 

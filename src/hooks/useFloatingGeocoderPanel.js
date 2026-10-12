@@ -1,11 +1,14 @@
 import { useLayoutEffect, useState } from 'react';
 
-const DEFAULT_MAX = 240;
-const MIN_MAX = 120;
+const DEFAULT_LIST_MAX = 240;
+const MIN_LIST_MAX = 64;
 const VIEWPORT_MARGIN = 16;
+const GAP_BELOW_INPUT = 8;
+/** Rodapé «Powered by OpenStreetMap» + bordas do painel. */
+const PANEL_CHROME_BELOW_LIST = 44;
 
 /**
- * Posição fixed do painel de sugestões para não ser cortado por overflow do sheet.
+ * Posição fixed do painel de sugestões — **sempre abaixo** do campo, sem sobrepor o header do sheet.
  * @param {React.RefObject<HTMLElement | null>} anchorRef
  * @param {boolean} open
  * @returns {{ style: import('react').CSSProperties, maxListHeight: number } | null}
@@ -28,24 +31,20 @@ export function useFloatingGeocoderPanel(anchorRef, open) {
       if (!el) return;
       const rect = el.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_MARGIN;
-      const spaceAbove = rect.top - VIEWPORT_MARGIN;
-      const openUp = spaceBelow < 160 && spaceAbove > spaceBelow;
-      const available = openUp ? spaceAbove : spaceBelow;
+      const maxPanelHeight = Math.max(MIN_LIST_MAX + PANEL_CHROME_BELOW_LIST, spaceBelow - GAP_BELOW_INPUT);
       const maxListHeight = Math.min(
-        DEFAULT_MAX,
-        Math.max(MIN_MAX, available - 48),
+        DEFAULT_LIST_MAX,
+        Math.max(MIN_LIST_MAX, maxPanelHeight - PANEL_CHROME_BELOW_LIST),
       );
 
-      const top = openUp ? rect.top - 8 : rect.bottom + 8;
       setLayout({
         maxListHeight,
         style: {
           position: 'fixed',
           left: rect.left,
           width: rect.width,
-          top,
-          transform: openUp ? 'translateY(-100%)' : undefined,
-          zIndex: 80,
+          top: rect.bottom + GAP_BELOW_INPUT,
+          zIndex: 61,
         },
       });
     };

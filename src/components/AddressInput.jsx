@@ -10,6 +10,7 @@ import {
   formatUseFreeTextLabel,
 } from '../utils/addressGeocoderCopy';
 import { ADDRESS_INPUT_SURFACE_CLASS } from '../utils/addressInputSurface.js';
+import { GEOCODER_DISMISS_CHROME_SELECTOR } from '../utils/geocoderDismissChrome.js';
 
 /**
  * Campo de endereço com autocomplete Photon/OSM (combobox a11y).
@@ -175,6 +176,21 @@ const AddressInput = ({
 
   const listPanelOpen = showDropdown && trimmedInputLength > 2;
   const floatingLayout = useFloatingGeocoderPanel(anchorRef, listPanelOpen);
+
+  useEffect(() => {
+    if (!listPanelOpen) return undefined;
+
+    const dismissOnSheetChrome = (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest(GEOCODER_DISMISS_CHROME_SELECTOR)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', dismissOnSheetChrome, true);
+    return () => document.removeEventListener('pointerdown', dismissOnSheetChrome, true);
+  }, [listPanelOpen]);
 
   const activeOptionId =
     suggestions.length > 0 && activeIndex >= 0 && activeIndex < suggestions.length

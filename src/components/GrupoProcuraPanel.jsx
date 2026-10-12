@@ -584,7 +584,10 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
             className="space-y-4 px-4 pb-sheet"
           >
             <SheetDragHandle />
-            <div className="flex items-center justify-between gap-3">
+            <div
+              className="flex items-center justify-between gap-3"
+              data-geocoder-dismiss-chrome
+            >
               <h2
                 id="editar-grupo-title"
                 className="text-lg font-bold text-slate-900 dark:text-white"

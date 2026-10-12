@@ -121,5 +121,48 @@ describe('GrupoProcuraPanel — sheet Editar grupo (integração real)', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('editar-grupo-sheet')).not.toBeInTheDocument();
     });
+    expect(getPlaceDetails).not.toHaveBeenCalled();
+  });
+
+  it('com lista aberta: dropdown fica abaixo do campo e não tapa o header', async () => {
+    await abrirSheetEditar();
+    const pickup = screen.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
+    fireEvent.change(pickup, { target: { value: 'Talatona' } });
+
+    await waitFor(
+      () => {
+        expect(screen.getByRole('listbox', { name: 'Sugestões de locais' })).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+
+    const fechar = screen.getByTestId('editar-grupo-fechar');
+    const listbox = screen.getByRole('listbox', { name: 'Sugestões de locais' });
+    const fecharRect = fechar.getBoundingClientRect();
+    const listRect = listbox.getBoundingClientRect();
+    const inputRect = pickup.getBoundingClientRect();
+
+    expect(listRect.top).toBeGreaterThanOrEqual(inputRect.bottom - 1);
+    expect(listRect.top).toBeGreaterThan(fecharRect.bottom - 1);
+  });
+
+  it('pointerdown no handle fecha a lista sem seleccionar sugestão', async () => {
+    await abrirSheetEditar();
+    const pickup = screen.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
+    fireEvent.change(pickup, { target: { value: 'Talatona' } });
+
+    await waitFor(
+      () => {
+        expect(screen.getByRole('listbox', { name: 'Sugestões de locais' })).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+
+    fireEvent.pointerDown(screen.getByTestId('sheet-drag-handle'));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('listbox', { name: 'Sugestões de locais' })).not.toBeInTheDocument();
+    });
+    expect(getPlaceDetails).not.toHaveBeenCalled();
   });
 });
