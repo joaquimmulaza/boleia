@@ -3,6 +3,7 @@ import AcordoPagamentosMotoristaPanel from '../components/AcordoPagamentosMotori
 import AcordoContratoSnapshot from '../components/AcordoContratoSnapshot';
 import AcordoPagamentoEstadoCartao from '../components/AcordoPagamentoEstadoCartao';
 import { buildAcordoContratoSnapshot } from '../utils/buildAcordoContratoSnapshot';
+import { resolvePessoasAcordoUi } from '../utils/resolvePessoasAcordoUi';
 import { copyCartaoEstadoPagamentoPassageiro } from '../utils/resolveAcordoPagamentoUi';
 import { ANULACAO_MOTIVO } from '../constants/anulacaoMotivos.js';
 
@@ -10,11 +11,24 @@ import { ANULACAO_MOTIVO } from '../constants/anulacaoMotivos.js';
  * Captura DEV (390px) — hotfix prod QA acordos (#276 follow-up).
  */
 export default function DevHotfixProdQaCapture() {
-  const snapshotN1 = buildAcordoContratoSnapshot({
+  const acordoB4010c7e = {
     modo_preco: 'POR_PASSAGEIRO',
     n_passageiros_contrato: 1,
     valor_mensal_por_passageiro_kz: 22000,
     valor_mensal_total_kz: 22000,
+  };
+  const linhasEncerradoSaiu = [
+    {
+      id: 'ap-crit',
+      passenger_id: 'pax-crit',
+      estado: 'saiu',
+      quota_mensal_kz: 22000,
+      perfis: { nome_completo: 'Critiquito Prod Passenger' },
+    },
+  ];
+  const pessoasB4010c7e = resolvePessoasAcordoUi(acordoB4010c7e, linhasEncerradoSaiu);
+  const snapshotN1 = buildAcordoContratoSnapshot(acordoB4010c7e, {
+    nLabel: pessoasB4010c7e.nLabel ?? undefined,
   });
 
   const cartaoJustaCausa = copyCartaoEstadoPagamentoPassageiro('S3', {
@@ -75,9 +89,14 @@ export default function DevHotfixProdQaCapture() {
           <p className="text-xs text-slate-500">Pagamento mensal · Pagamento pendente</p>
         </section>
 
-        <section data-testid="capture-individual">
-          <p className="text-xs font-semibold text-slate-500 mb-2">4 — Pessoas no acordo · N=1</p>
+        <section data-testid="capture-individual" className="space-y-3">
+          <p className="text-xs font-semibold text-slate-500 mb-2">
+            4 — b4010c7e · encerrado · fonte única (Individual + Passageiros · 0)
+          </p>
           <AcordoContratoSnapshot snapshot={snapshotN1} />
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+            Passageiros · {pessoasB4010c7e.nPassageirosVivos}
+          </p>
         </section>
       </div>
     </div>

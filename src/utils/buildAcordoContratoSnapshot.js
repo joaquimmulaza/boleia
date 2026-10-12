@@ -81,12 +81,16 @@ export function buildAcordoContratoSnapshot(acordo, options = {}) {
   const temResto =
     modoPreco === 'TOTAL_ACORDO' && totalMensalKz % nContrato !== 0;
 
+  const nLabelResolved =
+    options.nLabel
+    ?? labelNContrato(nContrato, options.primeiroNomePassageiro)
+    ?? `Grupo · ${nContrato} pessoas`;
+
   return {
     complete: true,
     modalidade: labelModoPreco(modoPreco),
     nContrato,
-    nLabel: labelNContrato(nContrato, options.primeiroNomePassageiro)
-      ?? `Grupo · ${nContrato} pessoas`,
+    nLabel: nLabelResolved,
     totalMensalKz,
     porPassageiroKz,
     valorReferenciaKz:

@@ -45,6 +45,10 @@ import {
 } from '../hooks/useAcordoDetalheLiveRefresh';
 import { labelRotaOferta } from '../utils/ofertaLabels';
 import { buildAcordoContratoSnapshot } from '../utils/buildAcordoContratoSnapshot';
+import {
+  labelPessoasNoAcordoContrato,
+  resolvePessoasAcordoUi,
+} from '../utils/resolvePessoasAcordoUi';
 import AcordoContratoSnapshot from '../components/AcordoContratoSnapshot';
 import { isOfertaFlexivel } from '../services/OfertaService';
 import AcordoPagamentoPanel from '../components/AcordoPagamentoPanel';
@@ -111,7 +115,6 @@ import {
   isActivoPassageiro,
   isReservadoPassageiro,
   isExpiradoPassageiro,
-  contagemLugaresVivos,
   formatContagemPassageiros,
   labelChipEstadoPassageiro,
   chipClassEstadoPassageiro,
@@ -1086,7 +1089,9 @@ const MyAgreements = () => {
       tipoPerfil === 'Passageiro'
         ? (minhaLinha?.quota_mensal_kz ?? acordo.valor_mensal_por_passageiro_kz)
         : acordo.valor_mensal_por_passageiro_kz;
-    const rotuloPessoas = nPax === 1 ? 'Individual' : `Grupo · ${nPax} pessoas`;
+    const rotuloPessoas =
+      labelPessoasNoAcordoContrato(acordo.n_passageiros_contrato)
+      ?? (nPax === 1 ? 'Individual' : `Grupo · ${nPax} pessoas`);
     return (
       <button
         type="button"
@@ -1175,11 +1180,12 @@ const MyAgreements = () => {
       ? chipCtxForAcordoPassageiro(selected.id, minhaLinha.passenger_id)
       : null;
     const pagamentoViewer = mergePagamentoComChipContexto(pagamento, minhaChipCtxSheet);
+    const pessoasAcordoUi = resolvePessoasAcordoUi(selected, linhas);
     const {
-      total: nPassageirosVivos,
-      confirmados: nConfirmados,
-      reservados: nReservados,
-    } = contagemLugaresVivos(linhas);
+      nPassageirosVivos,
+      nConfirmados,
+      nReservados,
+    } = pessoasAcordoUi;
     const quotaDestaque =
       minhaLinha?.quota_mensal_kz ?? selected.valor_mensal_por_passageiro_kz;
     const podeSair =
@@ -1483,7 +1489,9 @@ const MyAgreements = () => {
             ) : null}
 
             <AcordoContratoSnapshot
-              snapshot={buildAcordoContratoSnapshot(selected)}
+              snapshot={buildAcordoContratoSnapshot(selected, {
+                nLabel: pessoasAcordoUi.nLabel ?? undefined,
+              })}
               highlightKz={isPassageiro ? quotaDestaque : null}
               className="border-0 bg-transparent dark:bg-transparent p-0"
             />

@@ -382,6 +382,38 @@ describe('MyAgreements — marketplace 1:N', () => {
     expect(within(dialog).queryByText('Ana Costa')).not.toBeInTheDocument();
   });
 
+  it('b4010c7e — motorista encerrado individual: Individual no contrato e Passageiros · 0', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'driver-qa' }, tipoPerfil: 'Motorista' });
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        id: 'b4010c7e',
+        estado: 'cancelado',
+        n_passageiros_contrato: 1,
+        valor_mensal_por_passageiro_kz: 22000,
+        valor_mensal_total_kz: 22000,
+        acordos_passageiros: [
+          {
+            id: 'ap-crit',
+            passenger_id: 'pax-crit',
+            estado: 'saiu',
+            quota_mensal_kz: 22000,
+            perfis: { nome_completo: 'Critiquito Prod Passenger' },
+          },
+        ],
+      },
+    ]);
+    setupPagamentosDefault(false);
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const snapshot = within(dialog).getByTestId('acordo-contrato-snapshot');
+    expect(within(snapshot).getByText('Individual')).toBeInTheDocument();
+    expect(within(snapshot).queryByText(/Critiquito/i)).not.toBeInTheDocument();
+    expect(within(dialog).getByText(/Passageiros · 0/i)).toBeInTheDocument();
+  });
+
   it('motorista: acordo individual na lista mostra Individual no rotulo pessoas', async () => {
     getAgreementsForDriver.mockResolvedValue([
       {
