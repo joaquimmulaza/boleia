@@ -2,7 +2,12 @@ import React from 'react';
 import { ChevronRight, Landmark, Wallet } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '../ui/card';
-import { PROFILE_BANK_SUBTITLE, PROFILE_BANK_TITLE, PROFILE_RECEIPTS } from '../../utils/profileCopy';
+import {
+  PROFILE_BANK_SUBTITLE,
+  PROFILE_BANK_TITLE,
+  PROFILE_RECEIPTS,
+  PROFILE_RECEIPTS_COMING_SOON,
+} from '../../utils/profileCopy';
 
 /**
  * Links motorista: dados bancários + recebimentos.
@@ -25,10 +30,15 @@ export default function ProfileDriverLinks() {
         <div className="mx-4 border-t border-border" />
         <div
           aria-disabled="true"
-          className="flex items-center gap-3 px-4 py-4 opacity-50 pointer-events-none select-none"
+          className="px-4 py-4 opacity-50 pointer-events-none select-none"
         >
-          <Wallet className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-          <p className="flex-1 font-semibold text-foreground">{PROFILE_RECEIPTS}</p>
+          <div className="flex items-start gap-3">
+            <Wallet className="size-5 shrink-0 text-muted-foreground mt-0.5" aria-hidden="true" />
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-foreground">{PROFILE_RECEIPTS}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{PROFILE_RECEIPTS_COMING_SOON}</p>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

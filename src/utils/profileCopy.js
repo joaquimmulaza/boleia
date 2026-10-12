@@ -36,5 +36,8 @@ export const PROFILE_BANK_SUBTITLE = 'Para receber pagamentos das boleias.';
 
 export const PROFILE_RECEIPTS = 'Recebimentos';
 
+/** Helper provisório — linha Recebimentos desactivada (UX 5/6). */
+export const PROFILE_RECEIPTS_COMING_SOON = 'Disponível em breve';
+
 export const PUSH_PROFILE_BLOCKED_SINGLE_LINE =
   'As notificações estão bloqueadas neste navegador. Permite-as nas definições do navegador.';

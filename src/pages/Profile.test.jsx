@@ -11,6 +11,7 @@ import {
   PROFILE_EDIT,
   PROFILE_PERSONAL_DATA,
   PROFILE_RECEIPTS,
+  PROFILE_RECEIPTS_COMING_SOON,
   PROFILE_SAVE_CHANGES,
   PROFILE_SAVE_ERROR,
   PROFILE_SAVE_SUCCESS,
@@ -114,6 +115,7 @@ describe('Profile v2', () => {
       expect(screen.getByText('Motorista')).toBeInTheDocument();
     });
     expect(screen.getByText(PROFILE_RECEIPTS)).toBeInTheDocument();
+    expect(screen.getByText(PROFILE_RECEIPTS_COMING_SOON)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Dados bancários/i })).toHaveAttribute(
       'href',
       '/perfil/dados-bancarios',
@@ -122,6 +124,7 @@ describe('Profile v2', () => {
     const recebimentosRow = screen.getByText(PROFILE_RECEIPTS).closest('[aria-disabled="true"]');
     expect(recebimentosRow).toBeTruthy();
     expect(recebimentosRow).toHaveAttribute('aria-disabled', 'true');
+    expect(recebimentosRow).toHaveTextContent(PROFILE_RECEIPTS_COMING_SOON);
     fireEvent.click(recebimentosRow);
     expect(screen.getByRole('heading', { name: PROFILE_TITLE })).toBeInTheDocument();
   });
