@@ -17,9 +17,6 @@ export function isStandalone() {
 }
 
 /**
- * @returns {InstallPlatform}
- */
-/**
  * iPadOS reporta «Macintosh» com ecrã táctil.
  * @returns {boolean}
  */

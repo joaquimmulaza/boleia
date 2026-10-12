@@ -1,11 +1,14 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import InstallAppCard from './InstallAppCard';
 import { usePwaInstall } from '../hooks/usePwaInstall';
 import {
   PROFILE_APP_IPHONE_HINT,
-  PROFILE_APP_OPEN_IN_SAFARI,
+  PROFILE_APP_IOS_OPEN_SAFARI_THEN_SHARE,
+  PROFILE_APP_IOS_SHARE_ONLY,
+  PROFILE_APP_COPY_LINK,
+  PROFILE_APP_LINK_COPIED,
 } from '../utils/profileCopy';
 
 vi.mock('../hooks/usePwaInstall');
@@ -21,6 +24,12 @@ const baseMock = {
 describe('InstallAppCard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
   });
 
   it('oculta a secção quando a app já está instalada (standalone)', () => {
@@ -28,78 +37,100 @@ describe('InstallAppCard', () => {
       ...baseMock,
       isInstalled: true,
       platform: 'android',
-      isIosSafari: false,
+      iosInstall: null,
     });
 
     render(<InstallAppCard />);
     expect(screen.queryByTestId('install-app-card')).not.toBeInTheDocument();
   });
 
-  it('Safari iOS: só a dica Partilhar, sem abrir no Safari', () => {
+  it('Safari iOS: instruções actuais do Safari', () => {
     usePwaInstall.mockReturnValue({
       ...baseMock,
       platform: 'ios',
-      isIosSafari: true,
+      iosInstall: { mode: 'safari', showCopyLink: false },
     });
 
     render(<InstallAppCard />);
     expect(screen.getByTestId('install-ios-safari-hint')).toHaveTextContent(PROFILE_APP_IPHONE_HINT);
-    expect(screen.queryByText(PROFILE_APP_OPEN_IN_SAFARI)).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Instalar app/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: PROFILE_APP_COPY_LINK })).not.toBeInTheDocument();
   });
 
-  it('Chrome iOS: abrir no Safari primeiro, depois dica Partilhar', () => {
+  it('in-app iOS: copy v1.3, Copiar link e toast Link copiado.', async () => {
     usePwaInstall.mockReturnValue({
       ...baseMock,
       platform: 'ios',
-      isIosSafari: false,
-    });
-
-    render(<InstallAppCard />);
-    const block = screen.getByTestId('install-ios-non-safari-hints');
-    expect(block).toHaveTextContent(PROFILE_APP_OPEN_IN_SAFARI);
-    expect(block).toHaveTextContent(PROFILE_APP_IPHONE_HINT);
-    expect(screen.queryByRole('button', { name: /Instalar app/i })).not.toBeInTheDocument();
-  });
-
-  it('Firefox iOS: abrir no Safari primeiro, depois dica Partilhar', () => {
-    usePwaInstall.mockReturnValue({
-      ...baseMock,
-      platform: 'ios',
-      isIosSafari: false,
-      isInApp: false,
-    });
-
-    render(<InstallAppCard />);
-    expect(screen.getByText(PROFILE_APP_OPEN_IN_SAFARI)).toBeInTheDocument();
-    expect(screen.getByText(PROFILE_APP_IPHONE_HINT)).toBeInTheDocument();
-  });
-
-  it('browser dentro de uma app (iOS): abrir no Safari e dica Partilhar, sem botão', () => {
-    usePwaInstall.mockReturnValue({
-      ...baseMock,
-      platform: 'ios',
-      isIosSafari: false,
       isInApp: true,
+      iosInstall: { mode: 'open_safari_then_share', showCopyLink: true },
     });
 
     render(<InstallAppCard />);
-    expect(screen.getByTestId('install-ios-non-safari-hints')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Instalar app/i })).not.toBeInTheDocument();
+    expect(screen.getByTestId('install-ios-non-safari-hints')).toHaveTextContent(
+      PROFILE_APP_IOS_OPEN_SAFARI_THEN_SHARE,
+    );
+    fireEvent.click(screen.getByRole('button', { name: PROFILE_APP_COPY_LINK }));
+    expect(navigator.clipboard.writeText).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.getByTestId('install-link-copied-toast')).toHaveTextContent(PROFILE_APP_LINK_COPIED);
+    });
+  });
+
+  it('CriOS abaixo do 16.4: abrir no Safari depois Partilhar', () => {
+    usePwaInstall.mockReturnValue({
+      ...baseMock,
+      platform: 'ios',
+      iosInstall: { mode: 'open_safari_then_share', showCopyLink: false },
+    });
+
+    render(<InstallAppCard />);
+    expect(screen.getByText(PROFILE_APP_IOS_OPEN_SAFARI_THEN_SHARE)).toBeInTheDocument();
+  });
+
+  it('CriOS no iOS 16.4 ou acima: só Partilhar', () => {
+    usePwaInstall.mockReturnValue({
+      ...baseMock,
+      platform: 'ios',
+      iosInstall: { mode: 'share_only', showCopyLink: false },
+    });
+
+    render(<InstallAppCard />);
+    expect(screen.getByText(PROFILE_APP_IOS_SHARE_ONLY)).toBeInTheDocument();
+  });
+
+  it('EdgiOS no iOS 16.4+: só Partilhar', () => {
+    usePwaInstall.mockReturnValue({
+      ...baseMock,
+      platform: 'ios',
+      iosInstall: { mode: 'share_only', showCopyLink: false },
+    });
+
+    render(<InstallAppCard />);
+    expect(screen.getByTestId('install-ios-non-safari-hints')).toHaveTextContent(PROFILE_APP_IOS_SHARE_ONLY);
+  });
+
+  it('FxiOS: abrir no Safari depois Partilhar', () => {
+    usePwaInstall.mockReturnValue({
+      ...baseMock,
+      platform: 'ios',
+      iosInstall: { mode: 'open_safari_then_share', showCopyLink: false },
+    });
+
+    render(<InstallAppCard />);
+    expect(screen.getByText(PROFILE_APP_IOS_OPEN_SAFARI_THEN_SHARE)).toBeInTheDocument();
   });
 
   it('Android Chrome: modal genérico sem passos Safari iOS', () => {
     usePwaInstall.mockReturnValue({
       ...baseMock,
       platform: 'android',
-      isIosSafari: false,
+      iosInstall: null,
     });
 
     render(<InstallAppCard />);
     fireEvent.click(screen.getByRole('button', { name: /Instalar app/i }));
     expect(screen.getByTestId('install-instructions-overlay')).toBeInTheDocument();
     expect(screen.queryByText(/No iPhone, segue estes passos no Safari/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Toca em Partilhar/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(PROFILE_APP_IOS_SHARE_ONLY)).not.toBeInTheDocument();
     expect(screen.getByText(/No teu browser, procura a opção/i)).toBeInTheDocument();
   });
 
@@ -107,13 +138,12 @@ describe('InstallAppCard', () => {
     usePwaInstall.mockReturnValue({
       ...baseMock,
       platform: 'desktop',
-      isIosSafari: false,
+      iosInstall: null,
     });
 
     render(<InstallAppCard />);
     fireEvent.click(screen.getByRole('button', { name: /Instalar app/i }));
-    expect(screen.getByTestId('install-instructions-overlay')).toBeInTheDocument();
-    expect(screen.queryByText(/No iPhone, segue estes passos no Safari/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(PROFILE_APP_IOS_OPEN_SAFARI_THEN_SHARE)).not.toBeInTheDocument();
     expect(screen.getByText(/No teu browser, procura a opção/i)).toBeInTheDocument();
   });
 
@@ -123,7 +153,7 @@ describe('InstallAppCard', () => {
       ...baseMock,
       canInstallNative: true,
       platform: 'android',
-      isIosSafari: false,
+      iosInstall: null,
       promptInstall,
     });
 

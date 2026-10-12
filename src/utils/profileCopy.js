@@ -34,8 +34,17 @@ export const PROFILE_APP_INSTALL_CTA = 'Instalar app';
 export const PROFILE_APP_IPHONE_HINT =
   'No iPhone, no Safari, toca em Partilhar e em Adicionar ao ecrã principal.';
 
-/** Copy provisória (New Bot) — iOS fora do Safari / in-app antes da dica Partilhar. */
-export const PROFILE_APP_OPEN_IN_SAFARI = 'Abre esta página no Safari para instalar';
+/** PERFIL_V2_COPY v1.3 — iOS fora do Safari / in-app / CriOS·EdgiOS abaixo 16.4 / FxiOS·outros. */
+export const PROFILE_APP_IOS_OPEN_SAFARI_THEN_SHARE =
+  'Para instalares a app, abre esta página no Safari. Depois toca em «Partilhar» › «Adicionar ao ecrã principal».';
+
+/** PERFIL_V2_COPY v1.3 — CriOS·EdgiOS em iOS 16.4+. */
+export const PROFILE_APP_IOS_SHARE_ONLY =
+  'Toca em «Partilhar» › «Adicionar ao ecrã principal».';
+
+export const PROFILE_APP_COPY_LINK = 'Copiar link';
+
+export const PROFILE_APP_LINK_COPIED = 'Link copiado.';
 
 export const PROFILE_BANK_TITLE = 'Dados bancários';
 

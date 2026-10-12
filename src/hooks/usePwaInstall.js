@@ -2,10 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   detectInstallPlatform,
   isInAppBrowser,
-  isIosSafariBrowser,
   isStandalone,
   needsManualInstallInstructions,
 } from '../utils/pwaInstall';
+import { resolveIosInstallInstruction } from '../utils/iosInstallInstruction';
 
 /**
  * @typedef {import('../utils/pwaInstall').InstallPlatform} InstallPlatform
@@ -26,7 +26,7 @@ import {
  *   platform: InstallPlatform,
  *   isInApp: boolean,
  *   needsInstructions: boolean,
- *   isIosSafari: boolean,
+ *   iosInstall: import('../utils/iosInstallInstruction').IosInstallInstruction | null,
  *   promptInstall: () => Promise<'accepted' | 'dismissed' | 'unavailable'>,
  * }}
  */
@@ -37,8 +37,8 @@ export function usePwaInstall() {
 
   const platform = detectInstallPlatform();
   const inApp = isInAppBrowser();
-  const iosSafari = isIosSafariBrowser();
   const canInstallNative = Boolean(deferredPrompt) && !installed;
+  const iosInstall = platform === 'ios' ? resolveIosInstallInstruction() : null;
   const needsInstructions = needsManualInstallInstructions({
     canInstallNative,
     platform,
@@ -92,7 +92,7 @@ export function usePwaInstall() {
     platform,
     isInApp: inApp,
     needsInstructions,
-    isIosSafari: iosSafari,
+    iosInstall,
     promptInstall,
   };
 }
