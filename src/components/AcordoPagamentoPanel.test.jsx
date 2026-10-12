@@ -1,23 +1,45 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import AcordoPagamentoPanel from './AcordoPagamentoPanel.jsx';
 
 vi.mock('../services/PaymentService', () => ({
-  getPlatformIban: vi.fn(() => 'AO06004000000000000000000'),
+  getAcordoMotoristaDadosBancarios: vi.fn(),
   uploadComprovativo: vi.fn(),
 }));
 
-import { getPlatformIban, uploadComprovativo } from '../services/PaymentService';
+import {
+  getAcordoMotoristaDadosBancarios,
+  uploadComprovativo,
+} from '../services/PaymentService';
+
+const ACORDO_ID = 'acordo-pag-1';
+const IBAN_MOTORISTA = 'AO06DRIVER000000000000001';
 
 describe('AcordoPagamentoPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getPlatformIban).mockReturnValue('AO06004000000000000000000');
+    vi.mocked(getAcordoMotoristaDadosBancarios).mockResolvedValue({
+      iban: IBAN_MOTORISTA,
+      iban_titular: 'João Motorista',
+    });
   });
 
-  it('acordo activo: resumo Valor a pagar sem desagregação proporcional', () => {
+  const renderPanel = (props = {}) => render(
+    <AcordoPagamentoPanel
+      acordoId={ACORDO_ID}
+      pagamento={{
+        id: 'pag-1',
+        valor_kz: 43000,
+        estado: 'pendente_pagamento',
+      }}
+      {...props}
+    />,
+  );
+
+  it('acordo activo: resumo Valor a pagar sem desagregação proporcional', async () => {
     render(
       <AcordoPagamentoPanel
+        acordoId={ACORDO_ID}
         pagamento={{
           id: 'pag-1',
           valor_kz: 15636,
@@ -36,14 +58,18 @@ describe('AcordoPagamentoPanel', () => {
         }}
       />,
     );
+    await waitFor(() => {
+      expect(getAcordoMotoristaDadosBancarios).toHaveBeenCalledWith(ACORDO_ID);
+    });
     expect(screen.queryByTestId('linha-proporcional-pagamento')).not.toBeInTheDocument();
     expect(screen.getByTestId('linha-valor-pagar-resumo')).toHaveTextContent(/Valor a pagar:/);
     expect(screen.getByTestId('linha-prazo-pagamento')).toBeInTheDocument();
   });
 
-  it('saída do acordo: mostra linha proporcional v1.4', () => {
+  it('saída do acordo: mostra linha proporcional v1.4', async () => {
     render(
       <AcordoPagamentoPanel
+        acordoId={ACORDO_ID}
         pagamento={{
           id: 'pag-1',
           valor_kz: 15636,
@@ -63,100 +89,111 @@ describe('AcordoPagamentoPanel', () => {
         }}
       />,
     );
+    await waitFor(() => {
+      expect(screen.getByTestId('motorista-bancos-iban')).toBeInTheDocument();
+    });
     expect(screen.getByTestId('linha-proporcional-pagamento')).toBeInTheDocument();
   });
 
-  it('mostra valor do acordo e IBAN da plataforma', () => {
-    render(
-      <AcordoPagamentoPanel
-        pagamento={{
-          id: 'pag-1',
-          valor_kz: 43000,
-          estado: 'pendente_pagamento',
-        }}
-      />,
-    );
+  it('mostra valor do acordo e IBAN do motorista via RPC', async () => {
+    renderPanel();
+    await waitFor(() => {
+      expect(screen.getByTestId('motorista-bancos-iban')).toBeInTheDocument();
+    });
     expect(screen.getByTestId('acordo-pagamento-panel')).toBeInTheDocument();
     expect(screen.getByText(/43[\s\u00a0]000/)).toBeInTheDocument();
-    expect(screen.getByText(/AO06004000000000000000000/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Enviar comprovativo/i })).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(IBAN_MOTORISTA))).toBeInTheDocument();
+    expect(screen.getByText(/João Motorista/)).toBeInTheDocument();
+    expect(getAcordoMotoristaDadosBancarios).toHaveBeenCalledWith(ACORDO_ID);
+    expect(screen.getByRole('button', { name: /Enviar comprovativo/i })).toBeEnabled();
   });
 
-  it('sem IBAN: empty state e botão desactivado', () => {
-    vi.mocked(getPlatformIban).mockReturnValue(null);
+  it('erro na RPC: mensagem amigável e botão desactivado', async () => {
+    vi.mocked(getAcordoMotoristaDadosBancarios).mockResolvedValue({
+      iban: null,
+      iban_titular: null,
+      erro: 'Sem permissão para ver dados bancários deste acordo.',
+    });
 
-    render(
-      <AcordoPagamentoPanel
-        pagamento={{
-          id: 'pag-1',
-          valor_kz: 43000,
-          estado: 'pendente_pagamento',
-        }}
-      />,
-    );
+    renderPanel();
 
-    expect(screen.getByTestId('iban-nao-configurado')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('motorista-bancos-erro')).toHaveTextContent(/Sem permissão/);
+    });
+    const btn = screen.getByRole('button', { name: /Enviar comprovativo/i });
+    expect(btn).toBeDisabled();
+  });
+
+  it('sem IBAN do motorista: empty state e botão desactivado', async () => {
+    vi.mocked(getAcordoMotoristaDadosBancarios).mockResolvedValue({
+      iban: null,
+      iban_titular: null,
+    });
+
+    renderPanel();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('iban-nao-configurado')).toBeInTheDocument();
+    });
     expect(screen.getByText(/Transferência indisponível/i)).toBeInTheDocument();
     const btn = screen.getByRole('button', { name: /Enviar comprovativo/i });
     expect(btn).toBeDisabled();
   });
 
-  it('mostra preview do ficheiro e acção Substituir comprovativo', () => {
-    render(
-      <AcordoPagamentoPanel
-        pagamento={{
-          id: 'pag-1',
-          valor_kz: 43000,
-          estado: 'comprovativo_enviado',
-          comprovativo_path: 'uid/pag-1/recibo-setembro.pdf',
-        }}
-      />,
-    );
+  it('mostra preview do ficheiro e acção Substituir comprovativo', async () => {
+    renderPanel({
+      pagamento: {
+        id: 'pag-1',
+        valor_kz: 43000,
+        estado: 'comprovativo_enviado',
+        comprovativo_path: 'uid/pag-1/recibo-setembro.pdf',
+      },
+    });
 
+    await waitFor(() => {
+      expect(screen.getByTestId('comprovativo-preview')).toBeInTheDocument();
+    });
     expect(screen.getByTestId('comprovativo-preview')).toHaveTextContent('recibo-setembro.pdf');
     expect(screen.getByRole('button', { name: /Substituir comprovativo/i })).toBeInTheDocument();
   });
 
-  it('estado anulado — chip Cancelado no painel', () => {
-    render(
-      <AcordoPagamentoPanel
-        pagamento={{
-          id: 'pag-3',
-          valor_kz: 0,
-          estado: 'anulado',
-        }}
-      />,
-    );
-    expect(screen.getByText('Cancelado')).toBeInTheDocument();
+  it('estado anulado — chip Cancelado no painel', async () => {
+    renderPanel({
+      pagamento: {
+        id: 'pag-3',
+        valor_kz: 0,
+        estado: 'anulado',
+      },
+    });
+    await waitFor(() => {
+      expect(screen.getByText('Cancelado')).toBeInTheDocument();
+    });
     expect(screen.queryByRole('button', { name: /Enviar comprovativo/i })).not.toBeInTheDocument();
   });
 
-  it('não mostra upload quando pagamento já em custódia', () => {
-    render(
-      <AcordoPagamentoPanel
-        pagamento={{
-          id: 'pag-2',
-          valor_kz: 43000,
-          estado: 'em_custodia',
-        }}
-      />,
-    );
+  it('não mostra upload quando pagamento já em custódia', async () => {
+    renderPanel({
+      pagamento: {
+        id: 'pag-2',
+        valor_kz: 43000,
+        estado: 'em_custodia',
+      },
+    });
+    await waitFor(() => {
+      expect(getAcordoMotoristaDadosBancarios).toHaveBeenCalled();
+    });
     expect(screen.queryByRole('button', { name: /Enviar comprovativo/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Substituir comprovativo/i })).not.toBeInTheDocument();
   });
 
-  it('upload chama serviço quando IBAN configurado', async () => {
+  it('upload chama serviço quando IBAN do motorista disponível', async () => {
     vi.mocked(uploadComprovativo).mockResolvedValue('pag-1');
 
-    render(
-      <AcordoPagamentoPanel
-        pagamento={{
-          id: 'pag-1',
-          valor_kz: 43000,
-          estado: 'pendente_pagamento',
-        }}
-      />,
-    );
+    renderPanel();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Enviar comprovativo/i })).toBeEnabled();
+    });
 
     const input = screen.getByTestId('comprovativo-input');
     const file = new File(['x'], 'comprovativo.pdf', { type: 'application/pdf' });
@@ -165,9 +202,10 @@ describe('AcordoPagamentoPanel', () => {
     expect(uploadComprovativo).toHaveBeenCalledWith('pag-1', file);
   });
 
-  it('v1.6 excesso: Diferença em análise e linha secundária, sem check', () => {
+  it('v1.6 excesso: Diferença em análise e linha secundária, sem check', async () => {
     render(
       <AcordoPagamentoPanel
+        acordoId={ACORDO_ID}
         pagamento={{
           id: 'pag-ex',
           valor_kz: 0,
@@ -185,7 +223,9 @@ describe('AcordoPagamentoPanel', () => {
         }}
       />,
     );
-    expect(screen.getByText('Diferença em análise')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Diferença em análise')).toBeInTheDocument();
+    });
     expect(screen.getByTestId('linha-excesso-pagamento')).toHaveTextContent(
       /correspondem a 5 de 22 dias úteis/,
     );
@@ -193,9 +233,10 @@ describe('AcordoPagamentoPanel', () => {
     expect(screen.queryByTestId('linha-proporcional-pagamento')).not.toBeInTheDocument();
   });
 
-  it('v1.6 saiu com pagamento pendente: destaca valor em dívida', () => {
+  it('v1.6 saiu com pagamento pendente: destaca valor em dívida', async () => {
     render(
       <AcordoPagamentoPanel
+        acordoId={ACORDO_ID}
         lugarEstado="saiu"
         pagamento={{
           id: 'pag-saiu',
@@ -212,15 +253,19 @@ describe('AcordoPagamentoPanel', () => {
         }}
       />,
     );
+    await waitFor(() => {
+      expect(screen.getByTestId('valor-em-divida-destaque')).toBeInTheDocument();
+    });
     const destaque = screen.getByTestId('valor-em-divida-destaque');
     expect(destaque).toHaveTextContent(/8[\s\u00a0]?000/);
     expect(destaque.querySelector('.text-2xl')).toBeTruthy();
     expect(screen.queryByTestId('pagamento-estado-check')).not.toBeInTheDocument();
   });
 
-  it('S1-B: obrigação valor 0 oculta prazo 72h e CTA de upload', () => {
+  it('S1-B: obrigação valor 0 oculta prazo 72h e CTA de upload', async () => {
     render(
       <AcordoPagamentoPanel
+        acordoId={ACORDO_ID}
         pagamento={{
           id: 'pag-zero',
           valor_kz: 0,
@@ -235,13 +280,17 @@ describe('AcordoPagamentoPanel', () => {
         }}
       />,
     );
+    await waitFor(() => {
+      expect(getAcordoMotoristaDadosBancarios).toHaveBeenCalled();
+    });
     expect(screen.queryByTestId('linha-prazo-pagamento')).not.toBeInTheDocument();
     expect(screen.queryByTestId('comprovativo-upload-btn')).not.toBeInTheDocument();
   });
 
-  it('v1.6 em custódia sem dívida: mostra check', () => {
+  it('v1.6 em custódia sem dívida: mostra check', async () => {
     render(
       <AcordoPagamentoPanel
+        acordoId={ACORDO_ID}
         lugarEstado="activo"
         pagamento={{
           id: 'pag-ok',
@@ -251,6 +300,8 @@ describe('AcordoPagamentoPanel', () => {
         obrigacao={{ valor_em_divida: 0, quota: 43000 }}
       />,
     );
-    expect(screen.getByTestId('pagamento-estado-check')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('pagamento-estado-check')).toBeInTheDocument();
+    });
   });
 });

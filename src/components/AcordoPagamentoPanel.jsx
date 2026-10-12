@@ -1,10 +1,11 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Upload, Loader2, FileText, CheckCircle2 } from 'lucide-react';
 import { formatKwanza } from '../utils/formatKwanza';
 import {
   helpEstadoPagamento,
   chipClassEstadoPagamento,
   PAYMENT_STATES,
+  motoristaTemIbanCompleto,
 } from '../utils/paymentStatus';
 import {
   normalizeObrigacaoSnapshot,
@@ -20,13 +21,17 @@ import {
   isPagamentoEmExcessoAnalise,
 } from '../utils/pagamentoObrigacaoCopy';
 import { basenameComprovativoPath } from '../utils/comprovativoPath';
-import { getPlatformIban, uploadComprovativo } from '../services/PaymentService';
+import {
+  getAcordoMotoristaDadosBancarios,
+  uploadComprovativo,
+} from '../services/PaymentService';
 import FeedbackAlert from './FeedbackAlert';
 
 /**
- * Bloco de pagamento mensal (passageiro) — IBAN plataforma + comprovativo.
+ * Bloco de pagamento mensal (passageiro) — IBAN do motorista (RPC) + comprovativo.
  *
  * @param {{
+ *   acordoId: string,
  *   pagamento: {
  *     id: string,
  *     valor_kz: number,
@@ -44,6 +49,7 @@ import FeedbackAlert from './FeedbackAlert';
  * }} props
  */
 function AcordoPagamentoPanel({
+  acordoId,
   pagamento,
   obrigacao = null,
   lugarEstado = null,
@@ -54,6 +60,52 @@ function AcordoPagamentoPanel({
   const inputRef = useRef(/** @type {HTMLInputElement | null} */ (null));
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState(/** @type {{ type: 'success' | 'error', text: string } | null} */ (null));
+  const [bancosLoading, setBancosLoading] = useState(true);
+  const [dadosBancariosMotorista, setDadosBancariosMotorista] = useState(
+    /** @type {{ iban: string | null, iban_titular: string | null } | null} */ (null),
+  );
+  const [bancosErro, setBancosErro] = useState(/** @type {string | null} */ (null));
+
+  useEffect(() => {
+    if (!acordoId) {
+      setBancosLoading(false);
+      setDadosBancariosMotorista(null);
+      setBancosErro('Identificador do acordo em falta.');
+      return undefined;
+    }
+
+    let cancelled = false;
+    setBancosLoading(true);
+    setBancosErro(null);
+
+    getAcordoMotoristaDadosBancarios(acordoId)
+      .then((result) => {
+        if (cancelled) return;
+        if (result.erro) {
+          setDadosBancariosMotorista(null);
+          setBancosErro(result.erro);
+          return;
+        }
+        setDadosBancariosMotorista({
+          iban: result.iban,
+          iban_titular: result.iban_titular,
+        });
+        setBancosErro(null);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error('Erro ao carregar dados bancários do motorista:', error);
+        setDadosBancariosMotorista(null);
+        setBancosErro('Não foi possível carregar os dados bancários do motorista.');
+      })
+      .finally(() => {
+        if (!cancelled) setBancosLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [acordoId]);
 
   if (!pagamento) {
     return (
@@ -64,8 +116,8 @@ function AcordoPagamentoPanel({
   }
 
   const obrigacaoNorm = normalizeObrigacaoSnapshot(obrigacao);
-  const platformIban = getPlatformIban();
-  const ibanConfigurado = Boolean(platformIban);
+  const ibanMotoristaCompleto = motoristaTemIbanCompleto(dadosBancariosMotorista);
+  const ibanConfigurado = ibanMotoristaCompleto && !bancosErro;
   const estadoNorm = String(pagamento.estado || '').toLowerCase();
   const emExcesso = isPagamentoEmExcessoAnalise(pagamento);
   const obrigacaoValorZero = obrigacaoNorm != null && Number(obrigacaoNorm.valor) === 0;
@@ -138,7 +190,7 @@ function AcordoPagamentoPanel({
       />
       <button
         type="button"
-        disabled={busy || !ibanConfigurado}
+        disabled={busy || bancosLoading || !ibanConfigurado}
         onClick={() => inputRef.current?.click()}
         className="w-full min-h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-primary text-white font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
         data-testid="comprovativo-upload-btn"
@@ -162,6 +214,57 @@ function AcordoPagamentoPanel({
   }
 
   const mostrarCorpoCompleto = layout === 'completo';
+
+  const blocoIbanMotorista = (() => {
+    if (bancosLoading) {
+      return (
+        <p className="text-xs text-slate-500" data-testid="motorista-bancos-loading">
+          A carregar dados bancários do motorista…
+        </p>
+      );
+    }
+    if (bancosErro) {
+      return (
+        <FeedbackAlert
+          type="error"
+          text={bancosErro}
+          data-testid="motorista-bancos-erro"
+        />
+      );
+    }
+    if (ibanMotoristaCompleto && dadosBancariosMotorista) {
+      return (
+        <div className="space-y-1 text-xs text-slate-500 text-pretty" data-testid="motorista-bancos-iban">
+          <p>
+            Titular:{' '}
+            <span className="font-medium text-slate-700 dark:text-slate-200">
+              {dadosBancariosMotorista.iban_titular}
+            </span>
+          </p>
+          <p>
+            IBAN do motorista:{' '}
+            <span className="font-mono text-slate-700 dark:text-slate-200">
+              {dadosBancariosMotorista.iban}
+            </span>
+          </p>
+        </div>
+      );
+    }
+    return (
+      <div
+        className="rounded-xl border border-amber-200/80 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-900/40 p-3 space-y-1"
+        data-testid="iban-nao-configurado"
+      >
+        <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+          Transferência indisponível
+        </p>
+        <p className="text-xs text-amber-800/90 dark:text-amber-200/90 text-pretty">
+          O motorista ainda não preencheu IBAN e titular no perfil. Não é possível enviar
+          comprovativo até os dados estarem completos.
+        </p>
+      </div>
+    );
+  })();
 
   return (
     <section
@@ -230,25 +333,7 @@ function AcordoPagamentoPanel({
         </>
       ) : null}
 
-      {ibanConfigurado ? (
-        <p className="text-xs text-slate-500 text-pretty">
-          IBAN da plataforma:{' '}
-          <span className="font-mono text-slate-700 dark:text-slate-200">{platformIban}</span>
-        </p>
-      ) : (
-        <div
-          className="rounded-xl border border-amber-200/80 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-900/40 p-3 space-y-1"
-          data-testid="iban-nao-configurado"
-        >
-          <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
-            Transferência indisponível
-          </p>
-          <p className="text-xs text-amber-800/90 dark:text-amber-200/90 text-pretty">
-            O IBAN da plataforma ainda não está configurado. Não é possível enviar comprovativo
-            até a equipa activar o pagamento.
-          </p>
-        </div>
-      )}
+      {blocoIbanMotorista}
 
       {pagamento.rejeicao_motivo ? (
         <FeedbackAlert

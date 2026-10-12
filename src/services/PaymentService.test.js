@@ -5,6 +5,7 @@ import {
   uploadComprovativo,
   adminValidatePayment,
   getAcordoContactos,
+  getAcordoMotoristaDadosBancarios,
   listPagamentosPendentesValidacao,
   listPagamentosEmCustodia,
   listRepassesMotorista,
@@ -98,6 +99,28 @@ describe('PaymentService', () => {
       p_aprovar: false,
       p_motivo: 'Comprovativo ilegível',
     });
+  });
+
+  it('getAcordoMotoristaDadosBancarios usa RPC e devolve IBAN', async () => {
+    supabase.rpc.mockResolvedValue({
+      data: { iban: 'AO06X', iban_titular: 'Maria' },
+      error: null,
+    });
+    const result = await getAcordoMotoristaDadosBancarios('acordo-1');
+    expect(supabase.rpc).toHaveBeenCalledWith('get_acordo_motorista_dados_bancarios', {
+      p_acordo_id: 'acordo-1',
+    });
+    expect(result).toEqual({ iban: 'AO06X', iban_titular: 'Maria' });
+  });
+
+  it('getAcordoMotoristaDadosBancarios devolve erro amigável em 42501', async () => {
+    supabase.rpc.mockResolvedValue({
+      data: null,
+      error: { code: '42501', message: 'Sem permissão para ver dados bancários deste acordo.' },
+    });
+    const result = await getAcordoMotoristaDadosBancarios('acordo-x');
+    expect(result.erro).toMatch(/Sem permissão/);
+    expect(result.iban).toBeNull();
   });
 
   it('getAcordoContactos usa RPC get_acordo_contactos', async () => {

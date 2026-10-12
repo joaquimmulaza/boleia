@@ -26,7 +26,8 @@ DECLARE
   v_iban_titular text;
 BEGIN
   IF v_uid IS NULL THEN
-    RAISE EXCEPTION 'Não autenticado.';
+    RAISE EXCEPTION 'Não autenticado.'
+      USING ERRCODE = '42501';
   END IF;
 
   SELECT p.telefone, p.iban, p.iban_titular
@@ -42,7 +43,9 @@ BEGIN
 END;
 $function$;
 
-GRANT EXECUTE ON FUNCTION public.get_own_perfil_contacto() TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_own_perfil_contacto() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.get_own_perfil_contacto() FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_own_perfil_contacto() TO authenticated;
 
 -- === 3. Passageiro (ou motorista) no acordo: IBAN do motorista sem SELECT em perfis ===
 CREATE OR REPLACE FUNCTION public.get_acordo_motorista_dados_bancarios(p_acordo_id uuid)
@@ -60,7 +63,8 @@ DECLARE
   v_titular text;
 BEGIN
   IF v_uid IS NULL OR p_acordo_id IS NULL THEN
-    RAISE EXCEPTION 'Não autenticado.';
+    RAISE EXCEPTION 'Não autenticado.'
+      USING ERRCODE = '42501';
   END IF;
 
   SELECT * INTO v_acordo FROM public.acordos WHERE id = p_acordo_id;
@@ -69,6 +73,7 @@ BEGIN
   END IF;
 
   v_is_driver := v_uid = v_acordo.driver_id;
+  -- reservado incluído de propósito: passageiro precisa do IBAN para pagar e activar o lugar.
   SELECT EXISTS (
     SELECT 1 FROM public.acordos_passageiros ap
     WHERE ap.acordo_id = p_acordo_id
@@ -77,7 +82,8 @@ BEGIN
   ) INTO v_is_participant;
 
   IF NOT v_is_driver AND NOT v_is_participant AND NOT public.is_platform_admin() THEN
-    RAISE EXCEPTION 'Sem permissão para ver dados bancários deste acordo.';
+    RAISE EXCEPTION 'Sem permissão para ver dados bancários deste acordo.'
+      USING ERRCODE = '42501';
   END IF;
 
   SELECT NULLIF(btrim(COALESCE(p.iban, '')), ''),

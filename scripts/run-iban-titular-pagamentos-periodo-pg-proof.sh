@@ -6,6 +6,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PROOF_SQL="${ROOT}/supabase/tests/iban_titular_pagamentos_periodo_pg_proof.sql"
 ROLES_FIRST="${ROOT}/supabase/tests/bootstrap_roles_first.sql"
 P0_AUTH_OVERRIDES="${ROOT}/supabase/tests/bootstrap_p0_auth_overrides.sql"
+PGVERSION="${PGVERSION:-17}"
 PGPORT="${PGPORT:-5432}"
 export PGPORT
 DB_NAME="iban_titular_proof_$$"
@@ -16,10 +17,19 @@ if ! command -v psql >/dev/null 2>&1; then
   exit 2
 fi
 
-if ! sudo -u postgres psql -p "${PGPORT}" -c 'SELECT 1' postgres >/dev/null 2>&1; then
-  echo "==> A arrancar PostgreSQL (porta ${PGPORT})..."
-  sudo pg_ctlcluster 16 main start || sudo service postgresql start || true
-fi
+start_pg() {
+  if sudo -u postgres psql -p "${PGPORT}" -c 'SELECT 1' postgres >/dev/null 2>&1; then
+    return 0
+  fi
+  echo "==> A arrancar PostgreSQL ${PGVERSION}/main (porta ${PGPORT})..."
+  if command -v pg_ctlcluster >/dev/null 2>&1 && [[ -d "/etc/postgresql/${PGVERSION}/main" ]]; then
+    sudo pg_ctlcluster "${PGVERSION}" main start
+  else
+    echo "AVISO: cluster ${PGVERSION}/main indisponível; tentar service postgresql." >&2
+    sudo service postgresql start || true
+  fi
+}
+start_pg
 
 cleanup() {
   if [[ -n "${TMP_MIG_DIR}" && -d "${TMP_MIG_DIR}" ]]; then

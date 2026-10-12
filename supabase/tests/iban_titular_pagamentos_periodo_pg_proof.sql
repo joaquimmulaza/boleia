@@ -39,13 +39,14 @@ EXCEPTION
 END;
 $fn$;
 
-GRANT EXECUTE ON FUNCTION public._iban_pg_proof_expect_denied(text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public._iban_pg_proof_expect_denied(text, text) TO authenticated, anon;
 
 DO $$
 DECLARE
   v_driver uuid := 'd1111111-1111-4111-8111-111111111111';
   v_pax uuid := 'd2222222-2222-4222-8222-222222222222';
   v_out uuid := 'd3333333-3333-4333-8333-333333333333';
+  v_pax_saiu uuid := 'd6666666-6666-4666-8666-666666666666';
   v_acordo uuid := 'd4444444-4444-4444-8444-444444444444';
   v_ap uuid := 'd5555555-5555-4555-8555-555555555555';
   v_veiculo uuid;
@@ -64,7 +65,8 @@ BEGIN
   INSERT INTO auth.users (id, email) VALUES
     (v_driver, 'iban-proof-driver@test'),
     (v_pax, 'iban-proof-pax@test'),
-    (v_out, 'iban-proof-out@test')
+    (v_out, 'iban-proof-out@test'),
+    (v_pax_saiu, 'iban-proof-pax-saiu@test')
   ON CONFLICT (id) DO NOTHING;
 
   INSERT INTO public.perfis (
@@ -72,7 +74,8 @@ BEGIN
   ) VALUES
     (v_driver, 'Proof Driver', '+244921000001', 'Motorista', 'AO06DRIVER0001', 'Titular Motorista'),
     (v_pax, 'Proof Pax', '+244921000002', 'Passageiro', NULL, NULL),
-    (v_out, 'Proof Out', '+244921000003', 'Passageiro', NULL, NULL)
+    (v_out, 'Proof Out', '+244921000003', 'Passageiro', NULL, NULL),
+    (v_pax_saiu, 'Proof Pax Saiu', '+244921000004', 'Passageiro', NULL, NULL)
   ON CONFLICT (id) DO UPDATE SET
     iban = EXCLUDED.iban,
     iban_titular = EXCLUDED.iban_titular;
@@ -107,9 +110,19 @@ BEGIN
 
   INSERT INTO public.acordos_passageiros (
     id, acordo_id, passenger_id, estado, quota_mensal_kz, ordem_insercao
-  ) VALUES (v_ap, v_acordo, v_pax, 'activo', v_quota, 0);
+  ) VALUES
+    (v_ap, v_acordo, v_pax, 'activo', v_quota, 0),
+    (gen_random_uuid(), v_acordo, v_pax_saiu, 'saiu', v_quota, 1);
 
   PERFORM set_config('session_replication_role', 'origin', true);
+
+  -- anon: RPC dados bancários → 42501
+  SET LOCAL ROLE anon;
+  PERFORM public._iban_pg_proof_expect_denied(
+    'anon RPC dados bancários',
+    format('SELECT public.get_acordo_motorista_dados_bancarios(%L)', v_acordo)
+  );
+  RESET ROLE;
 
   -- Outro utilizador: SELECT iban_titular → 42501
   PERFORM set_config('request.jwt.claim.sub', v_out::text, true);
@@ -120,6 +133,11 @@ BEGIN
   PERFORM public._iban_pg_proof_expect_denied(
     'out SELECT iban_titular',
     format('SELECT iban_titular FROM public.perfis WHERE id = %L', v_driver)
+  );
+
+  PERFORM public._iban_pg_proof_expect_denied(
+    'out RPC dados bancários',
+    format('SELECT public.get_acordo_motorista_dados_bancarios(%L)', v_acordo)
   );
 
   RESET ROLE;
@@ -151,6 +169,18 @@ BEGIN
      OR v_bancos->>'iban_titular' IS DISTINCT FROM 'Titular Motorista' THEN
     RAISE EXCEPTION 'FAIL: get_acordo_motorista_dados_bancarios devolveu %', v_bancos;
   END IF;
+
+  RESET ROLE;
+
+  -- Passageiro saiu: RPC negada
+  PERFORM set_config('request.jwt.claim.sub', v_pax_saiu::text, true);
+  PERFORM set_config('request.jwt.claims', format('{"role":"authenticated","sub":"%s"}', v_pax_saiu), true);
+  SET LOCAL ROLE authenticated;
+
+  PERFORM public._iban_pg_proof_expect_denied(
+    'pax saiu RPC dados bancários',
+    format('SELECT public.get_acordo_motorista_dados_bancarios(%L)', v_acordo)
+  );
 
   RESET ROLE;
   PERFORM set_config('request.jwt.claim.sub', '', true);
