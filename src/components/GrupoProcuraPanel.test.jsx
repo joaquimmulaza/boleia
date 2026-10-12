@@ -692,7 +692,7 @@ describe('GrupoProcuraPanel T31', () => {
     expect(screen.queryByRole('button', { name: 'Apagar grupo' })).not.toBeInTheDocument();
   });
 
-  it('sheet Editar grupo (H6a): Fechar shadcn e sem jargon snapshots', async () => {
+  it('sheet Editar grupo (H6a): Fechar shadcn e subtítulo aprovado', async () => {
     getGrupoByProcura.mockResolvedValue({ id: 'g-1', procura_id: 'pr-1', n_maximo: 4 });
     listMembrosGrupo.mockResolvedValue([
       {
@@ -712,6 +712,9 @@ describe('GrupoProcuraPanel T31', () => {
     const fechar = within(sheet).getByTestId('editar-grupo-fechar');
     expect(fechar).toHaveAccessibleName(/Fechar/i);
     expect(fechar.className).toMatch(/inline-flex/);
+    expect(within(sheet).getByTestId('editar-grupo-subtitle')).toHaveTextContent(
+      'As propostas que já enviaste não mudam. As próximas usam os dados novos do grupo.',
+    );
     expect(within(sheet).queryByText(/snapshots/i)).not.toBeInTheDocument();
   });
 

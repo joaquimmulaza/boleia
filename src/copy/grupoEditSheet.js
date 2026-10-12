@@ -1,10 +1,10 @@
+/** Subtítulo aprovado — sheet «Editar grupo» (hub passageiro H6a). */
+export const GRUPO_EDIT_SHEET_SUBTITLE =
+  'As propostas que já enviaste não mudam. As próximas usam os dados novos do grupo.';
+
 /**
- * Copy do sheet «Editar grupo» (hub passageiro — Figma H6a).
- * TODO(Copywriter): redigir subtítulo PT-PT humano — explicar impacto em propostas
- * abertas sem jargon («snapshots», N_proposto, etc.).
- *
- * @returns {string | null} null enquanto a copy não estiver aprovada.
+ * @returns {string}
  */
 export function getGrupoEditSheetSubtitle() {
-  return null;
+  return GRUPO_EDIT_SHEET_SUBTITLE;
 }
