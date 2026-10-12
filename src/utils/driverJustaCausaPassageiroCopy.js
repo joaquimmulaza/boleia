@@ -1,6 +1,5 @@
-import { ADENDA_TIMEZONE } from './adendaEffectiveFrom.js';
 import { formatPrimeiroNome } from './primeiroNome';
-import { formatDateLuandaPt } from './rescisaoDisplay';
+import { formatCivilDateLuandaPtFromIso } from './rescisaoDisplay';
 
 /**
  * v1.10 — motorista, detalhe do acordo, passageiro invocou justa causa (outros vivos).
@@ -27,16 +26,7 @@ export function copyMotoristaJustaCausaUltimoPassageiro({ nome, dataFormatada })
  * @returns {string}
  */
 function dataRescisaoLugarFormatada(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const datePart = new Intl.DateTimeFormat('en-CA', {
-    timeZone: ADENDA_TIMEZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(d);
-  return formatDateLuandaPt(datePart) || datePart;
+  return formatCivilDateLuandaPtFromIso(iso) || '';
 }
 
 /**

@@ -109,6 +109,25 @@ describe('copy motorista — justa causa passageiro v1.10', () => {
     expect(b[0].corpo).toContain('Ana');
   });
 
+  it('banner B — data civil Luanda com timestamp perto da meia-noite UTC', () => {
+    const alerts = resolveMotoristaJustaCausaPassageiroAlerts(
+      { estado: 'activo', encerramento_motivo: null },
+      [
+        {
+          id: 'ap-1',
+          passenger_id: 'p1',
+          lugar_rescisao_modo: 'justa_causa',
+          lugar_rescisao_em: '2026-10-12T23:30:00.000Z',
+          perfis: { nome_completo: 'Ana Costa' },
+        },
+        { id: 'ap-2', passenger_id: 'p2', estado: 'activo' },
+      ],
+    );
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].corpo).toMatch(/13 de outubro de 2026/i);
+    expect(alerts[0].corpo).not.toMatch(/12 de outubro de 2026/i);
+  });
+
   it('ignora saída normal (sem lugar_rescisao_modo justa_causa)', () => {
     const alerts = resolveMotoristaJustaCausaPassageiroAlerts(
       { estado: 'activo', encerramento_motivo: null },

@@ -18,6 +18,14 @@ const luandaDateTimeFormatter = new Intl.DateTimeFormat('pt-PT', {
   timeZone: ADENDA_TIMEZONE,
 });
 
+/** YYYY-MM-DD civil em Africa/Luanda a partir de instante ISO. */
+const luandaYmdFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: ADENDA_TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
 /**
  * Formata data ISO (YYYY-MM-DD) em pt-PT com fuso Africa/Luanda.
  * @param {string | null | undefined} isoDate
@@ -28,6 +36,20 @@ export function formatDateLuandaPt(isoDate) {
   const d = new Date(`${String(isoDate).slice(0, 10)}T12:00:00`);
   if (Number.isNaN(d.getTime())) return null;
   return luandaDateFormatter.format(d);
+}
+
+/**
+ * Data civil em pt-PT (Africa/Luanda) a partir de timestamp ISO — não usar `slice(0, 10)` UTC.
+ *
+ * @param {string | null | undefined} isoTimestamp
+ * @returns {string | null}
+ */
+export function formatCivilDateLuandaPtFromIso(isoTimestamp) {
+  if (!isoTimestamp) return null;
+  const d = new Date(isoTimestamp);
+  if (Number.isNaN(d.getTime())) return null;
+  const datePart = luandaYmdFormatter.format(d);
+  return formatDateLuandaPt(datePart);
 }
 
 /**
