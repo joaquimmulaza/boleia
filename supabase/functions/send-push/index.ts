@@ -132,10 +132,13 @@ serve(async (req) => {
 
     const sendPromises = subscriptions.map((sub) => {
       const subInfo = sub.subscription;
-      return webpush.sendNotification(subInfo, notificationPayload).catch((err) => {
+      return webpush.sendNotification(subInfo, notificationPayload).catch(async (err) => {
         console.error("Error sending push notification to one device:", err);
         if (err.statusCode === 410 || err.statusCode === 404) {
-             supabaseAdmin.from('push_subscriptions').delete().eq('subscription', JSON.stringify(subInfo));
+          await supabaseAdmin
+            .from("push_subscriptions")
+            .delete()
+            .eq("subscription", JSON.stringify(subInfo));
         }
       });
     });

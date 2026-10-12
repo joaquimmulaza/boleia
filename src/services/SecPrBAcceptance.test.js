@@ -27,6 +27,9 @@ describe('Security PR B — contrato', () => {
   it('revoga anon/PUBLIC em push_subscriptions mantendo authenticated', () => {
     const sql = readMigration();
     expect(sql).toMatch(/REVOKE ALL ON TABLE public\.push_subscriptions FROM anon, PUBLIC/);
+    expect(sql).toMatch(
+      /REVOKE REFERENCES, TRIGGER ON TABLE public\.push_subscriptions FROM anon, authenticated, PUBLIC/,
+    );
     expect(sql).toMatch(/GRANT INSERT \(user_id, subscription\) ON TABLE public\.push_subscriptions TO authenticated/);
     expect(sql).toMatch(/GRANT DELETE ON TABLE public\.push_subscriptions TO authenticated/);
     expect(sql).toMatch(/GRANT SELECT ON TABLE public\.push_subscriptions TO authenticated/);
@@ -45,9 +48,15 @@ describe('Security PR B — contrato', () => {
     expect(sql).toMatch(/vault\.decrypted_secrets/);
     expect(sql).toMatch(/push_webhook_secret/);
     expect(sql).toMatch(/x-boleia-push-secret/);
-    expect(sql).toMatch(/send-push legado \(sem header secret\)/);
+    expect(sql).not.toMatch(/push_webhook_secret em falta/);
     expect(sql).toMatch(/PERFORM net\.http_post/);
     expect(sql).toMatch(/handle_new_notification_push/);
+  });
+
+  it('send-push remove subscrições 404/410 com await', () => {
+    const src = readFileSync(SEND_PUSH, 'utf8');
+    expect(src).toMatch(/410 \|\| err\.statusCode === 404/);
+    expect(src).toMatch(/await supabaseAdmin[\s\S]*push_subscriptions[\s\S]*\.delete\(\)/);
   });
 
   it('send-push exige secret em constant-time', () => {

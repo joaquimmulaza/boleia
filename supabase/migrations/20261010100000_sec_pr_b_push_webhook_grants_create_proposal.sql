@@ -4,6 +4,7 @@
 -- push_subscriptions — fechar anon/PUBLIC (prova 42501 em INSERT directo)
 -- =============================================================================
 REVOKE ALL ON TABLE public.push_subscriptions FROM anon, PUBLIC;
+REVOKE REFERENCES, TRIGGER ON TABLE public.push_subscriptions FROM anon, authenticated, PUBLIC;
 
 GRANT INSERT (user_id, subscription) ON TABLE public.push_subscriptions TO authenticated;
 GRANT DELETE ON TABLE public.push_subscriptions TO authenticated;
@@ -29,7 +30,6 @@ BEGIN
   LIMIT 1;
 
   IF v_push_secret IS NULL OR length(trim(v_push_secret)) = 0 THEN
-    RAISE LOG 'handle_new_notification_push: push_webhook_secret em falta — send-push legado (sem header secret)';
     v_headers := jsonb_build_object('Content-Type', 'application/json');
   ELSE
     v_headers := jsonb_build_object(

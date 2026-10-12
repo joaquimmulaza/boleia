@@ -192,6 +192,22 @@ describe('Layout Component', () => {
     );
   });
 
+  it('terminar sessão chama signOut mesmo se limpeza push falhar', async () => {
+    useAuth.mockReturnValue({ tipoPerfil: 'Passageiro', user: { id: 'user-logout-2' } });
+    supabase.auth.signOut.mockResolvedValue({ error: null });
+    removeCurrentDevicePushSubscription.mockRejectedValue(new Error('push cleanup failed'));
+
+    await act(async () => {
+      renderWithRouterAndTheme(<Layout />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /terminar sessão/i }));
+    });
+
+    expect(supabase.auth.signOut).toHaveBeenCalledTimes(1);
+  });
+
   it('main faz scroll interno e header não usa sticky sobre o conteúdo', async () => {
     useAuth.mockReturnValue({ tipoPerfil: 'Passageiro' });
 
