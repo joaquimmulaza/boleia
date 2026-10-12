@@ -4,7 +4,7 @@
  */
 
 import {
-  isAnulacaoMotivoAcordoTerminadoAntesActivacao,
+  isAnulacaoMotivoLugarTerminadoAntesActivacao,
   isAnulacaoMotivoSaidaVoluntaria,
 } from './pagamentoAnulacaoMotivo.js';
 import { PAYMENT_STATES } from './paymentStatus.js';
@@ -26,7 +26,7 @@ export function normalizeEstadoPassageiroKey(estado) {
 export function estadoPassageiroParaChip(estado, pagamento) {
   const e = normalizeEstadoPassageiroKey(estado);
   if (e === 'expirado') {
-    if (isAnulacaoMotivoAcordoTerminadoAntesActivacao(pagamento)) {
+    if (isAnulacaoMotivoLugarTerminadoAntesActivacao(pagamento)) {
       return 'terminado';
     }
     if (isAnulacaoMotivoSaidaVoluntaria(pagamento)) {

@@ -7,6 +7,8 @@ export const ANULACAO_MOTIVO = Object.freeze({
   SAISTE_ANTES_ACTIVACAO: 'Saíste antes da activação do lugar',
   ACORDO_TERMINADO_ANTES_ACTIVACAO: 'Acordo terminado antes da activação',
   RESERVA_TERMINADA_SEM_ACTIVACAO: 'Reserva terminada sem activação',
+  /** Rescisão imediata por justa causa — chip «Terminado» (#249). */
+  RESCISAO_JUSTA_CAUSA: 'Rescisão por justa causa',
 });
 
 /** Motivos que mapeiam para UI S1 (expiração / TTL reserva). */
