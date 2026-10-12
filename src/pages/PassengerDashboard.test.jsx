@@ -23,6 +23,7 @@ import {
 } from '../services/GrupoService';
 import { listWaitlistByProcura } from '../services/WaitlistService';
 import { expectNoUserFacingJargon } from '../test/jargonBan';
+import { FLEX_ONLY_FREE_TEXT_WARNING } from '../utils/addressGeocoderCopy';
 import { confirmPropostaSheet } from '../test/confirmPropostaSheet.js';
 import { formatKwanza } from '../utils/formatKwanza';
 import { COPY_N_FIXO } from '../utils/opportunityProposal';
@@ -1603,6 +1604,47 @@ describe('PassengerDashboard — marketplace', () => {
           origin_name: 'Talatona (Enter)',
           origin_lat: -8.9,
           origin_lng: 13.1,
+          destination_lat: -8.8,
+          destination_lng: 13.2,
+        }),
+      );
+    });
+  });
+
+  it('editar procura: Usar texto livre na origem grava sem lat/lng (coords antigas apagadas)', async () => {
+    const textoLivre = 'Bairro inventado editar';
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    updateProcura.mockResolvedValue({
+      ...procuraBase,
+      origin_name: textoLivre,
+      origin_lat: null,
+      origin_lng: null,
+    });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    await abrirMinhaProcura();
+    fireEvent.click(await screen.findByRole('button', { name: /Editar procura/i }));
+
+    const form = withinFormularioProcura();
+    changeCampoProcura('origin_name', textoLivre);
+    fireEvent.click(form.getByRole('button', { name: /Usar mock origin_name/i }));
+
+    expect(screen.getByText(FLEX_ONLY_FREE_TEXT_WARNING)).toBeInTheDocument();
+
+    fireEvent.click(form.getByRole('button', { name: /Guardar alterações/i }));
+
+    await waitFor(() => {
+      expect(updateProcura).toHaveBeenCalledWith(
+        'pr-1',
+        expect.objectContaining({
+          origin_name: textoLivre,
+          origin_lat: null,
+          origin_lng: null,
           destination_lat: -8.8,
           destination_lng: 13.2,
         }),
