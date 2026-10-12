@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Prova PG: expiração último lugar (v1.11 + oferta Explorar) + remoção parcial (v1.10).
 # Aplica todas as migrações em ordem; o fix #269 é 20261012181000_expiry_close_sem_lugares_vivos.sql.
+# Repro OID temp table (manual): supabase/tests/expiry_close_sem_lugares_vivos_temp_table_oid_repro.sql
 # PGVERSION/PGPORT configuráveis (CI usa PG17; local pode usar PG16 com PGVERSION=16).
 set -euo pipefail
 

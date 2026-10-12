@@ -42,8 +42,9 @@ describe('expiry close sem_lugares_vivos — migração 20261012181000', () => {
     );
     const body = extractApplyDueReservaExpiryBody(sql);
     expect(body).toMatch(/_p0_encerrar_acordo_sem_lugares_vivos_pos_expiracao/);
-    expect(body).toMatch(/_apply_due_expiry_acordo_batch/);
-    expect(body).toMatch(/fecha_todo_lote/);
+    expect(body).toMatch(/v_acordos_fecha_todo_lote/);
+    expect(body).not.toMatch(/_apply_due_expiry_acordo_batch/);
+    expect(body).not.toMatch(/CREATE TEMP TABLE/);
     expect(body).toMatch(/IF NOT v_fecha_todo_lote AND NOT v_fechou THEN/);
     expect(body).toMatch(/ORDER BY ap\.acordo_id, ap\.reservado_expira_em, ap\.id/);
     expect(body).toMatch(/recount_oferta_vagas/);

@@ -315,3 +315,26 @@ BEGIN
 
   RAISE NOTICE 'PASS EC1+EC1b+EC3+EC2: expiry último lugar v1.11 + lote dual + driver remove parcial v1.10';
 END $$;
+
+\echo '=== EC4: duas transacções apply_due na mesma ligação (pooling / plan cache) ==='
+-- Com corpo 25e7b706 (temp table ON COMMIT DROP): 2.ª transacção falha
+-- «could not open relation with OID … _apply_due_expiry_acordo_batch».
+-- Repro isolado: supabase/tests/expiry_close_sem_lugares_vivos_temp_table_oid_repro.sql
+
+BEGIN;
+SELECT set_config('request.jwt.claim.sub', 'f2222222-2222-4222-8222-222222222222', true);
+SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+SET LOCAL ROLE authenticated;
+SELECT public.apply_due_reserva_expiry('f5555555-5555-4555-8555-555555555555'::uuid);
+RESET ROLE;
+COMMIT;
+
+BEGIN;
+SELECT set_config('request.jwt.claim.sub', 'f2222222-2222-4222-8222-222222222222', true);
+SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+SET LOCAL ROLE authenticated;
+SELECT public.apply_due_reserva_expiry('f5555555-5555-4555-8555-555555555555'::uuid);
+RESET ROLE;
+COMMIT;
+
+\echo 'PASS EC4: segunda chamada apply_due na mesma sessão sem erro'
