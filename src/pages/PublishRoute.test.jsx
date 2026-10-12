@@ -25,8 +25,8 @@ vi.mock('../services/LocationService', () => ({
 }));
 
 vi.mock('../components/AddressInput', () => ({
-  default: ({ name, label, onChange, onSelectCoordinates }) => (
-    <div>
+  default: ({ name, label, onChange, onSelectCoordinates, allowFreeTextUse }) => (
+    <div data-testid={`address-input-${name}`} data-allow-free-text={String(Boolean(allowFreeTextUse))}>
       <label htmlFor={name}>{label}</label>
       <input
         id={name}
@@ -284,6 +284,21 @@ describe('PublishRoute — Publicar oferta', () => {
         }),
       );
     });
+  });
+
+  it('campos OD não activam Usar texto livre (allowFreeTextUse desligado)', async () => {
+    await act(async () => {
+      renderWithRouter(<PublishRoute />);
+    });
+
+    expect(screen.getByTestId('address-input-origin_name')).toHaveAttribute(
+      'data-allow-free-text',
+      'false',
+    );
+    expect(screen.getByTestId('address-input-destination_name')).toHaveAttribute(
+      'data-allow-free-text',
+      'false',
+    );
   });
 
   it('não expõe jargon de produto na UI de publicar oferta', async () => {

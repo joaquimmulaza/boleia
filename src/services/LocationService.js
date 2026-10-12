@@ -1,14 +1,14 @@
 // src/services/LocationService.js
-// Geocoding & Autocomplete via OpenStreetMap (Nominatim)
-// Sem API Key. Filtrado para Angola (countrycodes=ao) com preferência Luanda (viewbox).
+// Geocoding & Autocomplete via OpenStreetMap (Photon API by Komoot)
+// Sem API Key. Viés Luanda (lat/lon) + filtro Angola no cliente.
 
-const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search';
+const PHOTON_BASE_URL = 'https://photon.komoot.io/api/';
 const MIN_INPUT_LENGTH = 3;
 const RESULTS_LIMIT = 8;
-const NOMINATIM_USER_AGENT = 'BoleiaCerta/1.0 (contact: joaquimmulazadev@gmail.com)';
 
-/** viewbox Nominatim: min_lon,max_lat,max_lon,min_lat — Luanda metropolitana (sem bounded). */
-export const LUANDA_NOMINATIM_VIEWBOX = '13.10,-8.72,13.50,-9.08';
+/** Centro Luanda — viés Photon (lat/lon). */
+export const LUANDA_PHOTON_LAT = -8.839;
+export const LUANDA_PHOTON_LON = 13.289;
 
 /**
  * @param {Record<string, string | undefined>} address
@@ -34,11 +34,40 @@ export const extractBairroMunicipio = (address = {}, item = {}) => {
 };
 
 /**
- * @param {object} item - Resultado Nominatim.
+ * @param {object} properties - Propriedades Photon.
+ * @returns {Record<string, string | undefined>}
+ */
+export const photonPropertiesToAddress = (properties = {}) => {
+  const state = properties.state || '';
+  return {
+    suburb: properties.district || undefined,
+    neighbourhood:
+      properties.type === 'locality' || properties.osm_value === 'suburb'
+        ? properties.name
+        : properties.neighbourhood,
+    city: properties.city,
+    county: properties.county,
+    city_district: properties.city_district,
+    state,
+    village: properties.type === 'locality' ? properties.name : undefined,
+    'ISO3166-2-lvl4':
+      properties.countrycode === 'AO' && state.includes('Luanda') ? 'AO-LUA' : undefined,
+  };
+};
+
+/**
+ * @param {object} feature - Feature GeoJSON Photon.
  * @returns {{ place_id: string, description: string, lat: number, lng: number, _rank: number }}
  */
-export const mapNominatimResult = (item) => {
-  const { bairro, municipio } = extractBairroMunicipio(item.address, item);
+export const mapPhotonFeature = (feature) => {
+  const { geometry, properties = {} } = feature;
+  const [lng, lat] = geometry?.coordinates ?? [0, 0];
+  const address = photonPropertiesToAddress(properties);
+  const itemMeta = {
+    class: properties.osm_key === 'boundary' ? 'boundary' : properties.osm_key,
+    type: properties.osm_value === 'administrative' ? 'administrative' : properties.type,
+  };
+  const { bairro, municipio } = extractBairroMunicipio(address, itemMeta);
   let description;
   let rank;
 
@@ -52,15 +81,15 @@ export const mapNominatimResult = (item) => {
     description = municipio;
     rank = 1;
   } else {
-    description = (item.display_name || '').split(',')[0]?.trim() || item.name || '';
+    description = properties.name || '';
     rank = 2;
   }
 
   return {
-    place_id: `nominatim-${item.place_id}`,
+    place_id: `photon-${properties.osm_id}`,
     description,
-    lat: Number.parseFloat(item.lat),
-    lng: Number.parseFloat(item.lon),
+    lat: Number(lat),
+    lng: Number(lng),
     _rank: rank,
   };
 };
@@ -85,37 +114,30 @@ export const isLuandaMetroAddress = (address = {}) => {
  * @param {AbortSignal | undefined} signal
  * @returns {Promise<object[]>}
  */
-const fetchNominatimRaw = async (query, signal) => {
+const fetchPhotonRaw = async (query, signal) => {
   const params = new URLSearchParams({
-    format: 'json',
     q: query,
-    countrycodes: 'ao',
-    viewbox: LUANDA_NOMINATIM_VIEWBOX,
-    addressdetails: '1',
+    lat: String(LUANDA_PHOTON_LAT),
+    lon: String(LUANDA_PHOTON_LON),
     limit: String(RESULTS_LIMIT),
+    lang: 'pt',
   });
 
-  const url = `${NOMINATIM_SEARCH_URL}?${params.toString()}`;
-  const response = await fetch(url, {
-    signal,
-    headers: {
-      Accept: 'application/json',
-      'Accept-Language': 'pt',
-      'User-Agent': NOMINATIM_USER_AGENT,
-    },
-  });
+  const url = `${PHOTON_BASE_URL}?${params.toString()}`;
+  const response = await fetch(url, { signal });
 
   if (!response.ok) {
-    console.warn(`[LocationService] Nominatim respondeu com status ${response.status}`);
+    console.warn(`[LocationService] Photon respondeu com status ${response.status}`);
     return [];
   }
 
   const data = await response.json();
-  return Array.isArray(data) ? data : [];
+  const features = data?.features ?? [];
+  return Array.isArray(features) ? features : [];
 };
 
 /**
- * Busca sugestões de locais no Nominatim (Angola + preferência Luanda).
+ * Busca sugestões de locais no Photon (viés Luanda + filtro Angola no cliente).
  *
  * @param {string} input
  * @param {{ signal?: AbortSignal }} [options]
@@ -132,31 +154,35 @@ export const getPlacePredictions = async (input, options = {}) => {
     : `bairro ${trimmed}`;
 
   try {
-    const [primaryRows, assistRows] = await Promise.all([
-      fetchNominatimRaw(trimmed, options.signal),
+    const [primaryFeatures, assistFeatures] = await Promise.all([
+      fetchPhotonRaw(trimmed, options.signal),
       assistQuery
-        ? fetchNominatimRaw(assistQuery, options.signal)
+        ? fetchPhotonRaw(assistQuery, options.signal)
         : Promise.resolve([]),
     ]);
 
     const byId = new Map();
-    for (const row of [...primaryRows, ...assistRows]) {
-      if (!row?.place_id) continue;
-      const address = row.address || {};
+    for (const feature of [...primaryFeatures, ...assistFeatures]) {
+      const properties = feature?.properties;
+      if (!properties?.osm_id) continue;
+      if (properties.countrycode && properties.countrycode !== 'AO') {
+        continue;
+      }
+      const address = photonPropertiesToAddress(properties);
       if (address.state && !isLuandaMetroAddress(address)) {
         continue;
       }
-      byId.set(row.place_id, row);
+      byId.set(properties.osm_id, feature);
     }
 
-    return sortNominatimResults([...byId.values()].map(mapNominatimResult))
+    return sortNominatimResults([...byId.values()].map(mapPhotonFeature))
       .slice(0, RESULTS_LIMIT)
       .map(({ _rank, ...rest }) => rest);
   } catch (error) {
     if (error?.name === 'AbortError') {
       throw error;
     }
-    console.warn('[LocationService] Erro ao contactar Nominatim:', error.message);
+    console.warn('[LocationService] Erro ao contactar Photon:', error.message);
     return [];
   }
 };

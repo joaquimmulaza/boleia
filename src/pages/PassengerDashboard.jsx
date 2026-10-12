@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, Clock, Users, Banknote } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AddressInput from '../components/AddressInput';
+import { FLEX_ONLY_FREE_TEXT_WARNING_TODO } from '../utils/addressGeocoderCopy';
 import TimeInput from '../components/TimeInput';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
@@ -207,9 +208,11 @@ const PassengerDashboard = () => {
     origin_name: '',
     origin_lat: null,
     origin_lng: null,
+    origin_free_text: false,
     destination_name: '',
     destination_lat: null,
     destination_lng: null,
+    destination_free_text: false,
     dias_semana: [...DIAS_UTEIS_DEFAULT],
     teto_mensal_kz: '',
   });
@@ -644,6 +647,18 @@ const PassengerDashboard = () => {
     if (!originName || !destinationName) {
       setFeedback({
         type: 'error',
+        text: 'Indica origem e destino.',
+      });
+      return { ok: false };
+    }
+    const originHasCoords = form.origin_lat != null && form.origin_lng != null;
+    const destinationHasCoords =
+      form.destination_lat != null && form.destination_lng != null;
+    const originOk = originHasCoords || form.origin_free_text;
+    const destinationOk = destinationHasCoords || form.destination_free_text;
+    if (!originOk || !destinationOk) {
+      setFeedback({
+        type: 'error',
         text: 'Seleccione origem e destino na lista de sugestões.',
       });
       return { ok: false };
@@ -685,14 +700,18 @@ const PassengerDashboard = () => {
   };
 
   const prefillFormFromProcura = (row) => {
+    const originHasCoords = row.origin_lat != null && row.origin_lng != null;
+    const destinationHasCoords = row.destination_lat != null && row.destination_lng != null;
     setForm({
       preferred_time: String(row.preferred_time || '07:15').slice(0, 5),
       origin_name: row.origin_name || '',
       origin_lat: row.origin_lat ?? null,
       origin_lng: row.origin_lng ?? null,
+      origin_free_text: Boolean(row.origin_name?.trim()) && !originHasCoords,
       destination_name: row.destination_name || '',
       destination_lat: row.destination_lat ?? null,
       destination_lng: row.destination_lng ?? null,
+      destination_free_text: Boolean(row.destination_name?.trim()) && !destinationHasCoords,
       dias_semana: Array.isArray(row.dias_semana) && row.dias_semana.length > 0
         ? row.dias_semana.map((d) => Number(d))
         : [...DIAS_UTEIS_DEFAULT],
@@ -1713,16 +1732,29 @@ const PassengerDashboard = () => {
           </>
           )}
 
+          {(form.origin_free_text || form.destination_free_text) && (
+            <p
+              className="text-sm text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 rounded-xl px-3 py-2.5"
+              role="status"
+            >
+              {FLEX_ONLY_FREE_TEXT_WARNING_TODO}
+            </p>
+          )}
           <AddressInput
             name="origin_name"
             label="Origem"
             value={form.origin_name}
             onChange={handleChange}
+            allowFreeTextUse
+            onConfirmFreeText={() =>
+              setForm((prev) => ({ ...prev, origin_free_text: true }))
+            }
             onSelectCoordinates={(c) =>
               setForm((prev) => ({
                 ...prev,
                 origin_lat: c?.lat ?? null,
                 origin_lng: c?.lng ?? null,
+                ...(c ? { origin_free_text: false } : {}),
               }))
             }
           />
@@ -1731,11 +1763,16 @@ const PassengerDashboard = () => {
             label="Destino"
             value={form.destination_name}
             onChange={handleChange}
+            allowFreeTextUse
+            onConfirmFreeText={() =>
+              setForm((prev) => ({ ...prev, destination_free_text: true }))
+            }
             onSelectCoordinates={(c) =>
               setForm((prev) => ({
                 ...prev,
                 destination_lat: c?.lat ?? null,
                 destination_lng: c?.lng ?? null,
+                ...(c ? { destination_free_text: false } : {}),
               }))
             }
           />

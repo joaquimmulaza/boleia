@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AddressInput from './AddressInput';
 import {
@@ -29,6 +29,7 @@ describe('AddressInput', () => {
     vi.clearAllMocks();
     mockSuggestions = [];
     mockLoading = false;
+    selectPlace.mockResolvedValue({ lat: -8.838, lng: 13.234 });
   });
 
   it('renderiza com atributo required por defeito', () => {
@@ -128,26 +129,40 @@ describe('AddressInput', () => {
     vi.useRealTimers();
   });
 
-  it('limpa coordenadas ao editar texto (texto livre sem inventar lat/lng)', () => {
+  it('não apaga coordenadas ao editar texto após escolher sugestão', async () => {
     const onSelectCoordinates = vi.fn();
+    mockSuggestions = [
+      { place_id: 'photon-1', description: 'Talatona, Luanda' },
+    ];
+
     render(
       <AddressInput
         name="origin_name"
         label="Origem"
-        value="Talatona"
+        value=""
         onChange={vi.fn()}
         onSelectCoordinates={onSelectCoordinates}
       />,
     );
 
+    fireEvent.change(screen.getByLabelText(/^Origem$/i), { target: { value: 'Tala' } });
+    fireEvent.click(await screen.findByText('Talatona, Luanda'));
+
+    await waitFor(() => {
+      expect(onSelectCoordinates).toHaveBeenCalledWith(
+        expect.objectContaining({ lat: -8.838, lng: 13.234 }),
+      );
+    });
+    onSelectCoordinates.mockClear();
+
     fireEvent.change(screen.getByLabelText(/^Origem$/i), {
-      target: { value: 'Endereço sem geocode' },
+      target: { value: 'Talatona editado' },
     });
 
-    expect(onSelectCoordinates).toHaveBeenCalledWith(null);
+    expect(onSelectCoordinates).not.toHaveBeenCalled();
   });
 
-  it('mostra copy aprovada e acção Usar quando a lista vem vazia', () => {
+  it('sem allowFreeTextUse não mostra acção Usar quando a lista vem vazia', () => {
     mockSuggestions = [];
     mockLoading = false;
 
@@ -164,14 +179,37 @@ describe('AddressInput', () => {
 
     expect(screen.getByText(EMPTY_GEOCODER_MESSAGE)).toBeInTheDocument();
     expect(
+      screen.queryByRole('button', { name: formatUseFreeTextLabel('XYZZZZ') }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('com allowFreeTextUse mostra copy e acção Usar quando a lista vem vazia', () => {
+    mockSuggestions = [];
+    mockLoading = false;
+
+    render(
+      <AddressInput
+        name="destination_name"
+        label="Destino"
+        value="XYZZZZ"
+        onChange={vi.fn()}
+        allowFreeTextUse
+      />,
+    );
+
+    fireEvent.focus(screen.getByLabelText(/^Destino$/i));
+
+    expect(screen.getByText(EMPTY_GEOCODER_MESSAGE)).toBeInTheDocument();
+    expect(
       screen.getByRole('button', { name: formatUseFreeTextLabel('XYZZZZ') }),
     ).toBeInTheDocument();
   });
 
-  it('Usar texto livre fecha sugestões e mantém coordenadas nulas', () => {
+  it('Usar texto livre fecha sugestões, confirma free-text e mantém coordenadas nulas', () => {
     mockSuggestions = [];
     mockLoading = false;
     const onSelectCoordinates = vi.fn();
+    const onConfirmFreeText = vi.fn();
 
     render(
       <AddressInput
@@ -180,6 +218,8 @@ describe('AddressInput', () => {
         value="Bairro QA"
         onChange={vi.fn()}
         onSelectCoordinates={onSelectCoordinates}
+        onConfirmFreeText={onConfirmFreeText}
+        allowFreeTextUse
       />,
     );
 
@@ -188,6 +228,7 @@ describe('AddressInput', () => {
       screen.getByRole('button', { name: formatUseFreeTextLabel('Bairro QA') }),
     );
 
+    expect(onConfirmFreeText).toHaveBeenCalled();
     expect(onSelectCoordinates).toHaveBeenCalledWith(null);
     expect(screen.queryByText(EMPTY_GEOCODER_MESSAGE)).not.toBeInTheDocument();
   });

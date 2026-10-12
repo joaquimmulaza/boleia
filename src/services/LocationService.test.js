@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   getPlacePredictions,
   getPlaceDetails,
-  LUANDA_NOMINATIM_VIEWBOX,
+  LUANDA_PHOTON_LAT,
+  LUANDA_PHOTON_LON,
+  mapPhotonFeature,
 } from './LocationService';
 
 const mockFetch = vi.fn();
@@ -11,21 +13,23 @@ global.fetch = mockFetch;
 /**
  * @param {object} overrides
  */
-const makeNominatimItem = ({
-  place_id = 100,
-  lat = '-8.838',
-  lon = '13.234',
-  address = {},
-  display_name = 'Fallback',
+const makePhotonFeature = ({
+  osm_id = 100,
+  lat = -8.838,
+  lng = 13.234,
+  properties = {},
 } = {}) => ({
-  place_id,
-  lat,
-  lon,
-  display_name,
-  address,
+  type: 'Feature',
+  geometry: { type: 'Point', coordinates: [lng, lat] },
+  properties: {
+    osm_id,
+    countrycode: 'AO',
+    state: 'Luanda',
+    ...properties,
+  },
 });
 
-describe('LocationService (OpenStreetMap / Nominatim)', () => {
+describe('LocationService (OpenStreetMap / Photon)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -47,21 +51,21 @@ describe('LocationService (OpenStreetMap / Nominatim)', () => {
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it('chama Nominatim com countrycodes=ao e viewbox de Luanda (sem bounded)', async () => {
+    it('chama Photon com viés Luanda (lat/lon) e sem header User-Agent', async () => {
       mockFetch.mockResolvedValue({
         ok: true,
-        json: async () => [],
+        json: async () => ({ features: [] }),
       });
 
       await getPlacePredictions('Talatona');
 
       expect(mockFetch.mock.calls.length).toBeGreaterThanOrEqual(1);
       const [calledUrl, options] = mockFetch.mock.calls[0];
-      expect(calledUrl).toContain('nominatim.openstreetmap.org/search');
-      expect(calledUrl).toContain('countrycodes=ao');
-      expect(calledUrl).toContain(`viewbox=${encodeURIComponent(LUANDA_NOMINATIM_VIEWBOX)}`);
-      expect(calledUrl).not.toContain('bounded=1');
+      expect(calledUrl).toContain('photon.komoot.io/api/');
+      expect(calledUrl).toContain(`lat=${LUANDA_PHOTON_LAT}`);
+      expect(calledUrl).toContain(`lon=${LUANDA_PHOTON_LON}`);
       expect(calledUrl).toContain('q=Talatona');
+      expect(options?.headers?.['User-Agent']).toBeUndefined();
       expect(options?.signal).toBeUndefined();
     });
 
@@ -69,7 +73,7 @@ describe('LocationService (OpenStreetMap / Nominatim)', () => {
       const controller = new AbortController();
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => [],
+        json: async () => ({ features: [] }),
       });
 
       await getPlacePredictions('Viana', { signal: controller.signal });
@@ -77,25 +81,29 @@ describe('LocationService (OpenStreetMap / Nominatim)', () => {
       expect(mockFetch.mock.calls[0][1].signal).toBe(controller.signal);
     });
 
-    it('formata sugestões como «Bairro, Município» a partir de suburb e city', async () => {
+    it('formata sugestões como «Bairro, Município» a partir de district e county', async () => {
       mockFetch.mockResolvedValue({
         ok: true,
-        json: async () => [
-          makeNominatimItem({
-            place_id: 1,
-            address: {
-              suburb: 'Talatona',
-              city: 'Luanda',
-              state: 'Luanda',
-              'ISO3166-2-lvl4': 'AO-LUA',
-            },
-          }),
-        ],
+        json: async () => ({
+          features: [
+            makePhotonFeature({
+              osm_id: 1,
+              properties: {
+                district: 'Talatona',
+                county: 'Município do Talatona',
+                name: 'Talatona',
+                osm_key: 'place',
+                osm_value: 'suburb',
+                type: 'district',
+              },
+            }),
+          ],
+        }),
       });
 
       const result = await getPlacePredictions('Talatona');
-      expect(result[0].description).toBe('Talatona, Luanda');
-      expect(result[0].place_id).toBe('nominatim-1');
+      expect(result[0].description).toBe('Talatona, Município do Talatona');
+      expect(result[0].place_id).toBe('photon-1');
       expect(result[0].lat).toBeCloseTo(-8.838);
       expect(result[0].lng).toBeCloseTo(13.234);
     });
@@ -104,76 +112,65 @@ describe('LocationService (OpenStreetMap / Nominatim)', () => {
       mockFetch
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => [
-            makeNominatimItem({
-              place_id: 10,
-              address: { city: 'Luanda', state: 'Luanda', 'ISO3166-2-lvl4': 'AO-LUA' },
-              display_name: 'Luanda',
-            }),
-          ],
+          json: async () => ({
+            features: [
+              makePhotonFeature({
+                osm_id: 10,
+                properties: {
+                  name: 'Luanda',
+                  county: 'Luanda',
+                  osm_key: 'boundary',
+                  osm_value: 'administrative',
+                  type: 'county',
+                },
+              }),
+            ],
+          }),
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => [
-            makeNominatimItem({
-              place_id: 11,
-              address: {
-                neighbourhood: 'Viana',
-                county: 'Município de Viana',
-                state: 'Luanda',
-                'ISO3166-2-lvl4': 'AO-LUA',
-              },
-            }),
-            makeNominatimItem({
-              place_id: 12,
-              address: {
-                quarter: 'Kilamba',
-                city_district: 'Belas',
-                state: 'Luanda',
-                'ISO3166-2-lvl4': 'AO-LUA',
-              },
-            }),
-          ],
+          json: async () => ({
+            features: [
+              makePhotonFeature({
+                osm_id: 11,
+                properties: {
+                  name: 'Viana',
+                  district: 'Viana',
+                  county: 'Município de Viana',
+                  osm_value: 'suburb',
+                  type: 'district',
+                },
+              }),
+              makePhotonFeature({
+                osm_id: 12,
+                properties: {
+                  name: 'Kilamba',
+                  district: 'Kilamba',
+                  county: 'Belas',
+                  type: 'locality',
+                },
+              }),
+            ],
+          }),
         });
 
       const result = await getPlacePredictions('Viana');
       expect(result.map((r) => r.place_id)).toEqual([
-        'nominatim-11',
-        'nominatim-12',
-        'nominatim-10',
+        'photon-11',
+        'photon-12',
+        'photon-10',
       ]);
-      expect(result[2].description).toBe('Luanda');
     });
 
     it('dispara pesquisa assistida «bairro {termo}» para enriquecer municípios', async () => {
       mockFetch
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => [
-            makeNominatimItem({
-              place_id: 20,
-              address: {
-                county: 'Município do Talatona',
-                state: 'Luanda',
-                'ISO3166-2-lvl4': 'AO-LUA',
-              },
-            }),
-          ],
+          json: async () => ({ features: [] }),
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => [
-            makeNominatimItem({
-              place_id: 21,
-              address: {
-                neighbourhood: 'Bairro Kifica',
-                suburb: 'Benfica',
-                county: 'Município do Talatona',
-                state: 'Luanda',
-                'ISO3166-2-lvl4': 'AO-LUA',
-              },
-            }),
-          ],
+          json: async () => ({ features: [] }),
         });
 
       await getPlacePredictions('Talatona');
@@ -182,10 +179,37 @@ describe('LocationService (OpenStreetMap / Nominatim)', () => {
       expect(mockFetch.mock.calls[1][0]).toContain('q=bairro+Talatona');
     });
 
-    it('retorna [] quando Nominatim não devolve resultados', async () => {
+    it('exclui resultados fora de Angola no cliente', async () => {
       mockFetch.mockResolvedValue({
         ok: true,
-        json: async () => [],
+        json: async () => ({
+          features: [
+            makePhotonFeature({
+              osm_id: 99,
+              properties: { countrycode: 'PT', state: 'Lisboa', name: 'Lisboa' },
+            }),
+            makePhotonFeature({
+              osm_id: 1,
+              properties: {
+                district: 'Talatona',
+                county: 'Município do Talatona',
+                countrycode: 'AO',
+                state: 'Luanda',
+              },
+            }),
+          ],
+        }),
+      });
+
+      const result = await getPlacePredictions('Tal');
+      expect(result).toHaveLength(1);
+      expect(result[0].place_id).toBe('photon-1');
+    });
+
+    it('retorna [] quando Photon não devolve resultados', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ features: [] }),
       });
 
       const result = await getPlacePredictions('XYZ_Inexistente');
@@ -207,6 +231,16 @@ describe('LocationService (OpenStreetMap / Nominatim)', () => {
     });
   });
 
+  describe('mapPhotonFeature', () => {
+    it('mapeia coordenadas GeoJSON [lng, lat]', () => {
+      const mapped = mapPhotonFeature(
+        makePhotonFeature({ lat: -9.1, lng: 13.5, properties: { osm_id: 7, name: 'Teste' } }),
+      );
+      expect(mapped.lat).toBeCloseTo(-9.1);
+      expect(mapped.lng).toBeCloseTo(13.5);
+    });
+  });
+
   describe('getPlaceDetails', () => {
     it('retorna null se placeId for nulo ou vazio', async () => {
       expect(await getPlaceDetails(null, [])).toBeNull();
@@ -216,10 +250,10 @@ describe('LocationService (OpenStreetMap / Nominatim)', () => {
 
     it('resolve coordenadas a partir do cache local', async () => {
       const cachedSuggestions = [
-        { place_id: 'nominatim-111', description: 'Talatona, Luanda', lat: -8.838, lng: 13.234 },
+        { place_id: 'photon-111', description: 'Talatona, Luanda', lat: -8.838, lng: 13.234 },
       ];
 
-      const result = await getPlaceDetails('nominatim-111', cachedSuggestions);
+      const result = await getPlaceDetails('photon-111', cachedSuggestions);
       expect(result).toEqual({ lat: -8.838, lng: 13.234 });
       expect(mockFetch).not.toHaveBeenCalled();
     });

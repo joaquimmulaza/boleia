@@ -3,9 +3,21 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import OfertaEditPanel from './OfertaEditPanel';
 import { updateOferta } from '../services/OfertaService';
+import { formatUseFreeTextLabel } from '../utils/addressGeocoderCopy';
 
 vi.mock('../services/OfertaService', () => ({
   updateOferta: vi.fn(),
+}));
+
+vi.mock('../hooks/useAutocomplete', () => ({
+  useAutocomplete: () => ({
+    suggestions: [],
+    loading: false,
+    error: null,
+    fetchPredictions: vi.fn(),
+    selectPlace: vi.fn(),
+    clearSuggestions: vi.fn(),
+  }),
 }));
 
 const ofertaFixa = {
@@ -152,5 +164,22 @@ describe('OfertaEditPanel', () => {
 
     expect(await screen.findByText(/1 proposta deixa de corresponder/i)).toBeInTheDocument();
     expect(screen.getByText(/1 proposta aberta deixa de corresponder e será invalidada/i)).toBeInTheDocument();
+  });
+
+  it('editar oferta fixa não mostra acção Usar texto livre no geocoder', () => {
+    render(
+      <OfertaEditPanel
+        oferta={ofertaFixa}
+        onCancel={() => {}}
+        onSaved={() => {}}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/^Origem$/i), { target: { value: 'ZZZZZZZ' } });
+    fireEvent.focus(screen.getByLabelText(/^Origem$/i));
+
+    expect(
+      screen.queryByRole('button', { name: formatUseFreeTextLabel('ZZZZZZZ') }),
+    ).not.toBeInTheDocument();
   });
 });

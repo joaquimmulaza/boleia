@@ -9,20 +9,23 @@ export const useAutocomplete = () => {
   const requestSeqRef = useRef(0);
 
   const fetchPredictions = useCallback(async (input) => {
+    const seq = requestSeqRef.current + 1;
+    requestSeqRef.current = seq;
+
     if (abortRef.current) {
       abortRef.current.abort();
     }
 
     if (!input || input.length < 3) {
-      setSuggestions([]);
-      setLoading(false);
+      if (requestSeqRef.current === seq) {
+        setSuggestions([]);
+        setLoading(false);
+      }
       return;
     }
 
     const controller = new AbortController();
     abortRef.current = controller;
-    const seq = requestSeqRef.current + 1;
-    requestSeqRef.current = seq;
 
     setLoading(true);
     setError(null);

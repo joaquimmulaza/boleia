@@ -121,21 +121,77 @@ vi.mock('../services/ProfileService', () => ({
 }));
 
 vi.mock('../components/AddressInput', () => ({
-  default: ({ name, label, value, onChange, onSelectCoordinates }) => (
-    <label>
+  default: ({
+    name,
+    label,
+    value,
+    onChange,
+    onSelectCoordinates,
+    allowFreeTextUse,
+    onConfirmFreeText,
+  }) => (
+    <label htmlFor={`mock-${name}`}>
       {label}
       <input
+        id={`mock-${name}`}
         name={name}
-        aria-label={label}
         value={value || ''}
-        onChange={(e) => {
-          onChange?.(e);
-          onSelectCoordinates?.(null);
-        }}
+        onChange={(e) => onChange?.(e)}
       />
+      {allowFreeTextUse ? (
+        <button
+          type="button"
+          aria-label={`Usar mock ${name}`}
+          onClick={() => {
+            onConfirmFreeText?.();
+            onSelectCoordinates?.(null);
+          }}
+        >
+          Usar mock
+        </button>
+      ) : null}
+      <button
+        type="button"
+        aria-label={`Coords mock ${name}`}
+        onClick={() =>
+          onSelectCoordinates?.({
+            lat: name === 'origin_name' ? -8.9 : -8.8,
+            lng: name === 'origin_name' ? 13.1 : 13.2,
+          })
+        }
+      >
+        Coords mock
+      </button>
     </label>
   ),
 }));
+
+function getFormularioProcuraElement() {
+  const submit = screen.getByRole('button', { name: /Guardar (procura|alterações)/i });
+  const form = submit.closest('form');
+  if (!form) {
+    throw new Error('Formulário de procura não encontrado');
+  }
+  return form;
+}
+
+function withinFormularioProcura() {
+  return within(getFormularioProcuraElement());
+}
+
+function changeCampoProcura(fieldName, value) {
+  const input = getFormularioProcuraElement().querySelector(`input[name="${fieldName}"]`);
+  if (!input) {
+    throw new Error(`Campo ${fieldName} não encontrado no formulário`);
+  }
+  fireEvent.change(input, { target: { name: fieldName, value } });
+}
+
+function preencherCoordsOrigemDestino() {
+  const form = withinFormularioProcura();
+  fireEvent.click(form.getByRole('button', { name: /Coords mock origin_name/i }));
+  fireEvent.click(form.getByRole('button', { name: /Coords mock destination_name/i }));
+}
 
 /** Expõe location.search para assert de deep-link (Critiquito ENG#33). */
 function LocationSearchProbe() {
@@ -935,6 +991,8 @@ describe('PassengerDashboard — marketplace', () => {
     expect(await screen.findByTestId('propor-browse-sheet')).toBeInTheDocument();
     expect(screen.getByText(/Dados em falta para propor/i)).toBeInTheDocument();
     expect(createProcura).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /Usar mock origin_name/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Usar mock destination_name/i })).not.toBeInTheDocument();
   });
 
   it('createProposta falha após createProcura: feedback claro', async () => {
@@ -1406,7 +1464,7 @@ describe('PassengerDashboard — marketplace', () => {
     expect(screen.queryByRole('button', { name: /Cancelar proposta/i })).not.toBeInTheDocument();
   });
 
-  it('criar procura aceita texto livre sem coordenadas quando origem e destino estão preenchidos', async () => {
+  it('criar procura: texto livre só após Usar em origem e destino', async () => {
     createProcura.mockResolvedValue({
       ...procuraBase,
       id: 'pr-livre',
@@ -1424,14 +1482,19 @@ describe('PassengerDashboard — marketplace', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: /Criar procura/i }));
 
-    fireEvent.change(screen.getByLabelText(/^Origem$/i), {
-      target: { name: 'origin_name', value: 'Bairro inventado QA' },
-    });
-    fireEvent.change(screen.getByLabelText(/^Destino$/i), {
-      target: { name: 'destination_name', value: 'Outro sítio QA' },
-    });
+    const form = withinFormularioProcura();
+    changeCampoProcura('origin_name', 'Bairro inventado QA');
+    changeCampoProcura('destination_name', 'Outro sítio QA');
 
-    fireEvent.click(screen.getByRole('button', { name: /Guardar procura/i }));
+    fireEvent.click(form.getByRole('button', { name: /Guardar procura/i }));
+    expect(createProcura).not.toHaveBeenCalled();
+    expect(await screen.findByTestId('passenger-feedback')).toHaveTextContent(
+      /Seleccione origem e destino na lista de sugestões/i,
+    );
+
+    fireEvent.click(form.getByRole('button', { name: /Usar mock origin_name/i }));
+    fireEvent.click(form.getByRole('button', { name: /Usar mock destination_name/i }));
+    fireEvent.click(form.getByRole('button', { name: /Guardar procura/i }));
 
     await waitFor(() => {
       expect(createProcura).toHaveBeenCalledWith(
@@ -1442,6 +1505,50 @@ describe('PassengerDashboard — marketplace', () => {
           origin_lng: null,
           destination_lat: null,
           destination_lng: null,
+        }),
+      );
+    });
+  });
+
+  it('criar procura: campos vazios mostram mensagem para indicar origem e destino', async () => {
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Criar procura/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Guardar procura/i }));
+
+    expect(await screen.findByTestId('passenger-feedback')).toHaveTextContent(/Indica origem e destino/i);
+    expect(createProcura).not.toHaveBeenCalled();
+  });
+
+  it('editar procura: alterar texto da origem não apaga coordenadas no payload', async () => {
+    listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+    updateProcura.mockResolvedValue({ ...procuraBase, origin_name: 'Talatona (editado)' });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    await abrirMinhaProcura();
+    fireEvent.click(await screen.findByRole('button', { name: /Editar procura/i }));
+
+    const form = withinFormularioProcura();
+    changeCampoProcura('origin_name', 'Talatona (editado)');
+
+    fireEvent.click(form.getByRole('button', { name: /Guardar alterações/i }));
+
+    await waitFor(() => {
+      expect(updateProcura).toHaveBeenCalledWith(
+        'pr-1',
+        expect.objectContaining({
+          origin_name: 'Talatona (editado)',
+          origin_lat: -8.9,
+          origin_lng: 13.1,
         }),
       );
     });
@@ -1463,14 +1570,12 @@ describe('PassengerDashboard — marketplace', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: /Criar procura/i }));
 
-    fireEvent.change(screen.getByLabelText(/^Origem$/i), {
-      target: { name: 'origin_name', value: 'Talatona' },
-    });
-    fireEvent.change(screen.getByLabelText(/^Destino$/i), {
-      target: { name: 'destination_name', value: 'Miramar' },
-    });
+    const form = withinFormularioProcura();
+    changeCampoProcura('origin_name', 'Talatona');
+    changeCampoProcura('destination_name', 'Miramar');
+    preencherCoordsOrigemDestino();
 
-    const sab = screen.getByRole('button', { name: /^Sáb$/i });
+    const sab = form.getByRole('button', { name: /^Sáb$/i });
     expect(sab).toHaveAttribute('aria-pressed', 'false');
     fireEvent.click(sab);
     expect(sab).toHaveAttribute('aria-pressed', 'true');
@@ -1508,14 +1613,12 @@ describe('PassengerDashboard — marketplace', () => {
     );
 
     fireEvent.click(await screen.findByRole('button', { name: /Criar procura/i }));
-    fireEvent.change(screen.getByLabelText(/^Origem$/i), {
-      target: { name: 'origin_name', value: 'Talatona' },
-    });
-    fireEvent.change(screen.getByLabelText(/^Destino$/i), {
-      target: { name: 'destination_name', value: 'Miramar' },
-    });
+    const form = withinFormularioProcura();
+    changeCampoProcura('origin_name', 'Talatona');
+    changeCampoProcura('destination_name', 'Miramar');
+    preencherCoordsOrigemDestino();
 
-    const btn = screen.getByRole('button', { name: /Guardar procura/i });
+    const btn = form.getByRole('button', { name: /Guardar procura/i });
     fireEvent.click(btn);
     fireEvent.click(btn);
     expect(createProcura).toHaveBeenCalledTimes(1);
@@ -1577,14 +1680,12 @@ describe('PassengerDashboard — marketplace', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Grupo$/i }));
     fireEvent.click(screen.getByRole('button', { name: /^5$/i }));
 
-    fireEvent.change(screen.getByLabelText(/^Origem$/i), {
-      target: { name: 'origin_name', value: 'Talatona' },
-    });
-    fireEvent.change(screen.getByLabelText(/^Destino$/i), {
-      target: { name: 'destination_name', value: 'Miramar' },
-    });
+    const form = withinFormularioProcura();
+    changeCampoProcura('origin_name', 'Talatona');
+    changeCampoProcura('destination_name', 'Miramar');
+    preencherCoordsOrigemDestino();
 
-    fireEvent.click(screen.getByRole('button', { name: /Guardar procura/i }));
+    fireEvent.click(form.getByRole('button', { name: /Guardar procura/i }));
 
     await waitFor(() => {
       expect(createProcuraWithGrupo).toHaveBeenCalledWith(
@@ -1615,14 +1716,12 @@ describe('PassengerDashboard — marketplace', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Criar procura/i }));
     fireEvent.click(screen.getByRole('button', { name: /^Grupo$/i }));
 
-    fireEvent.change(screen.getByLabelText(/^Origem$/i), {
-      target: { name: 'origin_name', value: 'Talatona' },
-    });
-    fireEvent.change(screen.getByLabelText(/^Destino$/i), {
-      target: { name: 'destination_name', value: 'Miramar' },
-    });
+    const form = withinFormularioProcura();
+    changeCampoProcura('origin_name', 'Talatona');
+    changeCampoProcura('destination_name', 'Miramar');
+    preencherCoordsOrigemDestino();
 
-    fireEvent.click(screen.getByRole('button', { name: /Guardar procura/i }));
+    fireEvent.click(form.getByRole('button', { name: /Guardar procura/i }));
 
     await waitFor(() => {
       expect(createProcuraWithGrupo).toHaveBeenCalled();

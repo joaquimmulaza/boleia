@@ -7,14 +7,16 @@ import {
 } from '../utils/addressGeocoderCopy';
 
 /**
- * Campo de endereço com autocomplete Nominatim/OSM.
+ * Campo de endereço com autocomplete Photon/OSM.
  * @param {{
  *   id?: string,
  *   name: string,
  *   label?: string,
  *   value?: string,
  *   onChange: (e: { target: { name: string, value: string } }) => void,
- *   onSelectCoordinates?: (coords: { lat: number, lng: number, [key: string]: any }) => void,
+ *   onSelectCoordinates?: (coords: { lat: number, lng: number, [key: string]: any } | null) => void,
+ *   onConfirmFreeText?: () => void,
+ *   allowFreeTextUse?: boolean,
  *   required?: boolean,
  * }} props
  */
@@ -25,6 +27,8 @@ const AddressInput = ({
   value,
   onChange,
   onSelectCoordinates,
+  onConfirmFreeText,
+  allowFreeTextUse = false,
   required = true,
 }) => {
   const {
@@ -57,27 +61,19 @@ const AddressInput = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // ⚡ Bolt: Added a debounce timeout ref to optimize performance
-  // Why: Prevents unnecessary API calls to the geocoding service on every single keystroke.
-  // Impact: Reduces the number of requests sent and improves input responsiveness.
   const debounceTimeoutRef = useRef(null);
 
   const handleChange = (e) => {
     const newVal = e.target.value;
     setInputValue(newVal);
     onChange({ target: { name, value: newVal } });
-    if (onSelectCoordinates) {
-      onSelectCoordinates(null);
-    }
 
-    // ⚡ Bolt: Clear the timeout on subsequent rapid keystrokes to effectively debounce the call.
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
 
     if (newVal.length > 2) {
       setShowDropdown(true);
-      // ⚡ Bolt: Wait for 300ms of inactivity before triggering the API call
       debounceTimeoutRef.current = setTimeout(() => {
         fetchPredictions(newVal);
       }, 300);
@@ -98,6 +94,7 @@ const AddressInput = ({
   const handleUseFreeText = () => {
     setShowDropdown(false);
     clearSuggestions();
+    onConfirmFreeText?.();
     if (onSelectCoordinates) {
       onSelectCoordinates(null);
     }
@@ -113,6 +110,9 @@ const AddressInput = ({
       onSelectCoordinates(details);
     }
   };
+
+  const showFreeTextAction =
+    allowFreeTextUse && !loading && inputValue.trim().length > 2;
 
   return (
     <div className="flex flex-col w-full relative" ref={wrapperRef}>
@@ -152,11 +152,9 @@ const AddressInput = ({
             !loading && inputValue.length > 2 ? EMPTY_GEOCODER_MESSAGE : undefined
           }
           freeTextActionLabel={
-            !loading && inputValue.trim().length > 2
-              ? formatUseFreeTextLabel(inputValue)
-              : undefined
+            showFreeTextAction ? formatUseFreeTextLabel(inputValue) : undefined
           }
-          onUseFreeText={handleUseFreeText}
+          onUseFreeText={showFreeTextAction ? handleUseFreeText : undefined}
         />
       )}
     </div>

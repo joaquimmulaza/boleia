@@ -23,7 +23,7 @@ describe('useAutocomplete', () => {
     getPlacePredictions
       .mockReturnValueOnce(slowPromise)
       .mockResolvedValueOnce([
-        { place_id: 'nominatim-2', description: 'Viana, Viana', lat: 1, lng: 2 },
+        { place_id: 'photon-2', description: 'Viana, Viana', lat: 1, lng: 2 },
       ]);
 
     const { result } = renderHook(() => useAutocomplete());
@@ -47,13 +47,32 @@ describe('useAutocomplete', () => {
     );
 
     await act(async () => {
-      resolveSlow([{ place_id: 'nominatim-stale', description: 'Stale', lat: 0, lng: 0 }]);
+      resolveSlow([{ place_id: 'photon-stale', description: 'Stale', lat: 0, lng: 0 }]);
     });
 
     await waitFor(() => {
       expect(result.current.suggestions).toEqual([
-        { place_id: 'nominatim-2', description: 'Viana, Viana', lat: 1, lng: 2 },
+        { place_id: 'photon-2', description: 'Viana, Viana', lat: 1, lng: 2 },
       ]);
     });
+  });
+
+  it('incrementa sequência em cada pedido, incluindo input curto', async () => {
+    getPlacePredictions.mockResolvedValue([]);
+
+    const { result } = renderHook(() => useAutocomplete());
+
+    await act(async () => {
+      void result.current.fetchPredictions('ab');
+    });
+    await act(async () => {
+      void result.current.fetchPredictions('abc');
+    });
+
+    expect(getPlacePredictions).toHaveBeenCalledTimes(1);
+    expect(getPlacePredictions).toHaveBeenCalledWith(
+      'abc',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
   });
 });
