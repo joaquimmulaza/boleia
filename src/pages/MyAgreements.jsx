@@ -1087,6 +1087,7 @@ const MyAgreements = () => {
         ? (minhaLinha?.quota_mensal_kz ?? acordo.valor_mensal_por_passageiro_kz)
         : acordo.valor_mensal_por_passageiro_kz;
     const rotuloPessoas = (() => {
+      if (nPax === 0) return null;
       if (nPax === 1 && tipoPerfil === 'Motorista') {
         const pax = pickLinhaVivaPassageiro(linhas);
         return formatPrimeiroNome(nomePassageiro(pax));
@@ -1144,10 +1145,14 @@ const MyAgreements = () => {
           <span>{rota.destino}</span>
         </div>
         <div className="flex justify-between items-end gap-2 text-sm text-slate-500">
-          <span className="flex items-center gap-1">
-            <Users size={14} aria-hidden="true" />
-            {rotuloPessoas}
-          </span>
+          {rotuloPessoas ? (
+            <span className="flex items-center gap-1" data-testid={`acordo-grupo-linha-${acordo.id}`}>
+              <Users size={14} aria-hidden="true" />
+              {rotuloPessoas}
+            </span>
+          ) : (
+            <span className="sr-only" data-testid={`acordo-grupo-linha-${acordo.id}`} />
+          )}
           {activo && quotaCard != null ? (
             <strong
               data-testid="card-quota-congelada"

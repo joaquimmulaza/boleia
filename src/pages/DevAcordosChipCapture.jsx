@@ -75,7 +75,7 @@ export default function DevAcordosChipCapture() {
         { passenger_id: 'p2', estado: 'reservado' },
       ],
       userId: 'driver-1',
-      grupoLabel: 'Grupo · 0 pessoas',
+      grupoLabel: null,
     },
     {
       key: 'misto',
@@ -174,7 +174,7 @@ export default function DevAcordosChipCapture() {
           {pilotoFixtures.map(({ key, title, acordo, linhas, userId, grupoLabel }) => {
             const variant = variantChipListaEstadoAcordo(acordo, userId);
             const label = labelChipListaEstadoAcordo(acordo, userId);
-            const grupo = grupoLabel ?? rotuloGrupoListaAcordo(linhas);
+            const grupo = grupoLabel === null ? null : (grupoLabel ?? rotuloGrupoListaAcordo(linhas));
             return (
               <div
                 key={key}
@@ -188,10 +188,14 @@ export default function DevAcordosChipCapture() {
                 >
                   {label}
                 </span>
-                <div className="flex items-center gap-1 text-sm text-slate-500">
-                  <Users size={14} aria-hidden="true" />
-                  <span data-testid={`dev-piloto-grupo-${key}`}>{grupo}</span>
-                </div>
+                {grupo ? (
+                  <div className="flex items-center gap-1 text-sm text-slate-500">
+                    <Users size={14} aria-hidden="true" />
+                    <span data-testid={`dev-piloto-grupo-${key}`}>{grupo}</span>
+                  </div>
+                ) : (
+                  <span data-testid={`dev-piloto-grupo-${key}`} className="sr-only" />
+                )}
               </div>
             );
           })}

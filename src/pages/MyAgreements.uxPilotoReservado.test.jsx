@@ -89,7 +89,7 @@ describe('MyAgreements — UX piloto reservado (lista)', () => {
     });
   });
 
-  it('só reservado: chip Reservado e Grupo · 0 (N = activos)', async () => {
+  it('só reservado: chip Reservado e sem linha Grupo (0 activos — nunca «0 pessoas»)', async () => {
     getAgreementsForDriver.mockResolvedValue([
       acordoBase([
         {
@@ -116,7 +116,10 @@ describe('MyAgreements — UX piloto reservado (lista)', () => {
     expect(chip).toBeTruthy();
     expect(chip).toHaveTextContent('Reservado');
     expect(chip).not.toHaveTextContent('Activo');
-    expect(within(card).getByText(/Grupo · 0 pessoas/i)).toBeInTheDocument();
+    expect(within(card).queryByText(/Grupo ·/i)).not.toBeInTheDocument();
+    expect(within(card).queryByText(/0 pessoas/i)).not.toBeInTheDocument();
+    expect(within(card).getByTestId('acordo-grupo-linha-acordo-piloto')).toBeInTheDocument();
+    expect(within(card).getByTestId('acordo-grupo-linha-acordo-piloto').textContent?.trim()).toBe('');
   });
 
   it('misto: chip Activo e Grupo · 1', async () => {
