@@ -173,13 +173,7 @@ async function main() {
     await context.close();
   }
 
-  const allMd5Lines = shots.map((shot) => {
-    const file = `perfil-v2-${shot.width}-${shot.theme}-${shot.role}.png`;
-    const outPath = path.join(OUT, file);
-    const md5 = createHash('md5').update(fs.readFileSync(outPath)).digest('hex');
-    return `${file} ${md5}`;
-  });
-  fs.writeFileSync(path.join(OUT, 'perfil-v2-md5.txt'), `${allMd5Lines.join('\n')}\n`);
+  fs.writeFileSync(path.join(OUT, 'perfil-v2-md5.txt'), `${md5Lines.join('\n')}\n`);
   await browser.close();
 }
 

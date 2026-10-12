@@ -3,6 +3,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getProfile, updateProfile } from '../services/ProfileService';
+import { Button } from '../components/ui/button';
 import PageShell from '../components/PageShell';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ProfileBankForm from '../components/profile/ProfileBankForm';
@@ -12,36 +13,64 @@ export default function ProfileBankDetails() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState(null);
-  const [tipoPerfil, setTipoPerfil] = useState('Passageiro');
+  const [tipoPerfil, setTipoPerfil] = useState(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const [bank, setBank] = useState({ iban: '', iban_titular: '' });
 
   useEffect(() => {
+    let cancelled = false;
     const load = async () => {
+      setLoading(true);
+      setLoadFailed(false);
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        setUserId(user.id);
+        if (!user) {
+          if (!cancelled) setLoadFailed(true);
+          return;
+        }
+        if (!cancelled) setUserId(user.id);
         const perfil = await getProfile(user.id);
+        if (cancelled) return;
         if (perfil) {
           setTipoPerfil(perfil.tipo_perfil || 'Passageiro');
           setBank({
             iban: perfil.iban || '',
             iban_titular: perfil.iban_titular || '',
           });
+        } else {
+          setLoadFailed(true);
         }
       } catch (error) {
         console.error('Erro ao carregar dados bancários:', error);
+        if (!cancelled) setLoadFailed(true);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     load();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [retryCount]);
 
   if (loading) {
     return (
       <PageShell>
         <LoadingSkeleton variant="profile" />
+      </PageShell>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <PageShell className="flex flex-col items-center justify-center gap-4 px-6 py-12 text-center">
+        <p className="text-sm text-muted-foreground">
+          Não foi possível carregar os dados bancários. Tenta outra vez.
+        </p>
+        <Button type="button" onClick={() => setRetryCount((c) => c + 1)}>
+          Tentar outra vez
+        </Button>
       </PageShell>
     );
   }

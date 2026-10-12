@@ -142,6 +142,8 @@ export default function ProfileBankForm({
                   <Button type="button" variant="ghost" onClick={() => {
                     setTitular(initialTitular);
                     setIban(initialIban);
+                    setIbanError('');
+                    setFeedback(null);
                     setEditing(false);
                   }}
                   >
