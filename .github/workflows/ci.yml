@@ -1,9 +1,15 @@
+# Triggers temporariamente desactivados devido ao bloqueio de billing do GitHub Actions.
+# Quando o billing estiver resolvido, restaurar push e pull_request (bloco original abaixo).
+#
+# on:
+#   push:
+#     branches: [main]
+#   pull_request:
+
 name: CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
