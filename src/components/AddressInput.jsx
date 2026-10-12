@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAutocomplete } from '../hooks/useAutocomplete';
 import AutocompleteDropdown from './AutocompleteDropdown';
+import {
+  EMPTY_GEOCODER_MESSAGE,
+  formatUseFreeTextLabel,
+} from '../utils/addressGeocoderCopy';
 
 /**
- * Campo de endereço com autocomplete Photon/OSM.
+ * Campo de endereço com autocomplete Nominatim/OSM.
  * @param {{
  *   id?: string,
  *   name: string,
@@ -91,6 +95,14 @@ const AddressInput = ({
     };
   }, []);
 
+  const handleUseFreeText = () => {
+    setShowDropdown(false);
+    clearSuggestions();
+    if (onSelectCoordinates) {
+      onSelectCoordinates(null);
+    }
+  };
+
   const handleSelect = async (suggestion) => {
     setInputValue(suggestion.description);
     onChange({ target: { name, value: suggestion.description } });
@@ -137,10 +149,14 @@ const AddressInput = ({
           error={error}
           onSelect={handleSelect}
           emptyMessage={
-            !loading && inputValue.length > 2
-              ? 'TODO(Copywriter): sem resultados — pode guardar o texto introduzido.'
+            !loading && inputValue.length > 2 ? EMPTY_GEOCODER_MESSAGE : undefined
+          }
+          freeTextActionLabel={
+            !loading && inputValue.trim().length > 2
+              ? formatUseFreeTextLabel(inputValue)
               : undefined
           }
+          onUseFreeText={handleUseFreeText}
         />
       )}
     </div>

@@ -33,6 +33,24 @@ describe('AutocompleteDropdown', () => {
     expect(screen.getByText('Powered by OpenStreetMap')).toBeInTheDocument();
   });
 
+  it('mostra mensagem vazia e acção de texto livre quando configurado', () => {
+    const onUseFreeText = vi.fn();
+    render(
+      <AutocompleteDropdown
+        suggestions={[]}
+        emptyMessage="Não encontrámos este local. Podes usar o que escreveste."
+        freeTextActionLabel='Usar “Talatona”'
+        onUseFreeText={onUseFreeText}
+      />,
+    );
+
+    expect(
+      screen.getByText('Não encontrámos este local. Podes usar o que escreveste.'),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Usar “Talatona”' }));
+    expect(onUseFreeText).toHaveBeenCalledTimes(1);
+  });
+
   it('calls onSelect when a suggestion is clicked', () => {
     const onSelectMock = vi.fn();
     render(<AutocompleteDropdown suggestions={mockSuggestions} onSelect={onSelectMock} />);

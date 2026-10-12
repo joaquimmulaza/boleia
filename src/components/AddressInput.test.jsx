@@ -2,6 +2,10 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AddressInput from './AddressInput';
+import {
+  EMPTY_GEOCODER_MESSAGE,
+  formatUseFreeTextLabel,
+} from '../utils/addressGeocoderCopy';
 
 const fetchPredictions = vi.fn();
 const selectPlace = vi.fn();
@@ -143,7 +147,7 @@ describe('AddressInput', () => {
     expect(onSelectCoordinates).toHaveBeenCalledWith(null);
   });
 
-  it('mostra estado sem resultados com TODO(Copywriter) quando a lista vem vazia', () => {
+  it('mostra copy aprovada e acção Usar quando a lista vem vazia', () => {
     mockSuggestions = [];
     mockLoading = false;
 
@@ -158,6 +162,34 @@ describe('AddressInput', () => {
 
     fireEvent.focus(screen.getByLabelText(/^Destino$/i));
 
-    expect(screen.getByText(/TODO\(Copywriter\)/i)).toBeInTheDocument();
+    expect(screen.getByText(EMPTY_GEOCODER_MESSAGE)).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: formatUseFreeTextLabel('XYZZZZ') }),
+    ).toBeInTheDocument();
   });
+
+  it('Usar texto livre fecha sugestões e mantém coordenadas nulas', () => {
+    mockSuggestions = [];
+    mockLoading = false;
+    const onSelectCoordinates = vi.fn();
+
+    render(
+      <AddressInput
+        name="origin_name"
+        label="Origem"
+        value="Bairro QA"
+        onChange={vi.fn()}
+        onSelectCoordinates={onSelectCoordinates}
+      />,
+    );
+
+    fireEvent.focus(screen.getByLabelText(/^Origem$/i));
+    fireEvent.click(
+      screen.getByRole('button', { name: formatUseFreeTextLabel('Bairro QA') }),
+    );
+
+    expect(onSelectCoordinates).toHaveBeenCalledWith(null);
+    expect(screen.queryByText(EMPTY_GEOCODER_MESSAGE)).not.toBeInTheDocument();
+  });
+
 });

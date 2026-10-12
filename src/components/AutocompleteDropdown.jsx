@@ -9,6 +9,8 @@ import { MapPin } from 'lucide-react';
  *   onSelect: (suggestion: { place_id: string, description: string }) => void,
  *   title?: string,
  *   emptyMessage?: string,
+ *   freeTextActionLabel?: string,
+ *   onUseFreeText?: () => void,
  * }} props
  */
 const AutocompleteDropdown = ({
@@ -18,6 +20,8 @@ const AutocompleteDropdown = ({
   onSelect,
   title,
   emptyMessage,
+  freeTextActionLabel,
+  onUseFreeText,
 }) => {
   if (loading) {
     return (
@@ -42,7 +46,18 @@ const AutocompleteDropdown = ({
         {title ? (
           <p className="border-b border-slate-100 px-3 py-2 text-xs font-semibold text-slate-500 dark:border-slate-700">{title}</p>
         ) : null}
-        <p className="p-4 text-center text-sm text-slate-500">{emptyMessage}</p>
+        <div className="p-4 text-center space-y-3">
+          <p className="text-sm text-slate-500">{emptyMessage}</p>
+          {freeTextActionLabel && onUseFreeText ? (
+            <button
+              type="button"
+              onClick={onUseFreeText}
+              className="w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/80 px-3 py-2.5 text-sm font-semibold text-primary hover:bg-primary/10 transition-colors"
+            >
+              {freeTextActionLabel}
+            </button>
+          ) : null}
+        </div>
       </div>
     );
   }
