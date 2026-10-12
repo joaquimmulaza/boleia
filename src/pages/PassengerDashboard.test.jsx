@@ -1595,6 +1595,29 @@ describe('PassengerDashboard — marketplace', () => {
     expect(document.activeElement).toBe(originInput);
   });
 
+  it('criar procura: após sugestão/coords, texto alterado bloqueia submit e não envia lat/lng antigas', async () => {
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Criar procura/i }));
+
+    const form = withinFormularioProcura();
+    changeCampoProcura('origin_name', 'Talatona');
+    changeCampoProcura('destination_name', 'Miramar');
+    preencherCoordsOrigemDestino();
+    changeCampoProcura('origin_name', 'Talatona (texto novo)');
+
+    expect(screen.getByTestId('field-error-origin_name')).toHaveTextContent(
+      GEOCODER_FIELD_UNRESOLVED_PROVISIONAL,
+    );
+
+    fireEvent.click(form.getByRole('button', { name: /Guardar procura/i }));
+    expect(createProcura).not.toHaveBeenCalled();
+  });
+
   it('editar procura: texto editado sem sugestão bloqueia submit (não envia lat/lng antigas)', async () => {
     listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
 

@@ -74,6 +74,18 @@ describe('resolveProcuraOdFieldForPayload', () => {
     ).toEqual({ ok: false, unresolved: true, lat: null, lng: null });
   });
 
+  it('criar procura: texto alterado após sugestão fica por resolver (não reutiliza lat/lng do form)', () => {
+    expect(
+      resolveProcuraOdFieldForPayload({
+        name: 'Talatona (texto novo)',
+        lat: -8.9,
+        lng: 13.1,
+        freeText: false,
+        lastSelectedName: 'Talatona',
+      }),
+    ).toEqual({ ok: false, unresolved: true, lat: null, lng: null });
+  });
+
   it('isProcuraOdFieldUnresolved detecta campo por resolver', () => {
     expect(
       isProcuraOdFieldUnresolved({
