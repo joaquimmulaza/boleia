@@ -2,6 +2,8 @@
 // Geocoding & Autocomplete via OpenStreetMap (Photon API by Komoot)
 // Sem API Key. Viés Luanda (lat/lon) + filtro Angola no cliente.
 
+import { normalizeGeocoderLabel } from '../utils/normalizeGeocoderLabel';
+
 const PHOTON_BASE_URL = 'https://photon.komoot.io/api/';
 const MIN_INPUT_LENGTH = 3;
 const RESULTS_LIMIT = 8;
@@ -178,7 +180,17 @@ export const getPlacePredictions = async (input, options = {}) => {
       byId.set(properties.osm_id, feature);
     }
 
-    return sortNominatimResults([...byId.values()].map(mapPhotonFeature))
+    const mapped = sortNominatimResults([...byId.values()].map(mapPhotonFeature));
+    const seenLabels = new Set();
+    const deduped = [];
+    for (const item of mapped) {
+      const key = normalizeGeocoderLabel(item.description);
+      if (seenLabels.has(key)) continue;
+      seenLabels.add(key);
+      deduped.push(item);
+    }
+
+    return deduped
       .slice(0, RESULTS_LIMIT)
       .map(({ _rank, _metroLuanda, ...rest }) => rest);
   } catch (error) {
@@ -186,7 +198,7 @@ export const getPlacePredictions = async (input, options = {}) => {
       throw error;
     }
     console.warn('[LocationService] Erro ao contactar Photon:', error.message);
-    return [];
+    throw error;
   }
 };
 

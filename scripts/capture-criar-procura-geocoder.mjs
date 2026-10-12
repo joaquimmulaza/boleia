@@ -103,44 +103,95 @@ const NO_RESULTS_QUERY = 'ZZZZZZZZZZZZZZZ';
  * @param {import('playwright').Page} page
  * @param {string} label
  */
-async function openNoResultsState(page, label) {
+/**
+ * @param {import('playwright').Page} page
+ * @param {string} label
+ */
+async function openCriarProcuraField(page, label) {
   await page.locator('button:has-text("Criar procura")').first().click();
-  const input = page.locator(`label:has-text("${label}") input`).first();
+  const input = page.locator(`label:has-text("${label}") [role="combobox"]`).first();
   await input.click();
-  await input.fill(NO_RESULTS_QUERY);
-  await page.waitForTimeout(1200);
-  await page.waitForSelector('text=Não encontrámos este local', { timeout: 20000 });
+  return input;
 }
 
-async function capture(theme) {
+/**
+ * @param {import('playwright').Page} page
+ * @param {string} label
+ */
+async function openNoResultsState(page, label) {
+  const input = await openCriarProcuraField(page, label);
+  await input.fill(NO_RESULTS_QUERY);
+  await page.waitForTimeout(1200);
+  await page.waitForSelector('[data-testid="geocoder-empty-state"]', { timeout: 20000 });
+}
+
+/**
+ * @param {import('playwright').Page} page
+ */
+async function installPhotonAbort(page) {
+  await page.route('**/photon.komoot.io/**', (route) => route.abort('failed'));
+}
+
+/**
+ * @param {import('playwright').Page} page
+ * @param {string} label
+ */
+async function openNetworkErrorState(page, label) {
+  await installPhotonAbort(page);
+  const input = await openCriarProcuraField(page, label);
+  await input.fill('Viana');
+  await page.waitForTimeout(1200);
+  await page.waitForSelector('[data-testid="geocoder-network-error"]', { timeout: 20000 });
+}
+
+/**
+ * @param {'light' | 'dark'} theme
+ */
+async function captureTheme(theme) {
   const env = loadEnvLocal();
   const supabaseUrl = env.VITE_SUPABASE_URL;
   if (!supabaseUrl) {
     throw new Error('VITE_SUPABASE_URL em falta em .env.local');
   }
 
+  fs.mkdirSync(OUT, { recursive: true });
+
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
     colorScheme: theme,
   });
-  const page = await context.newPage();
-  await installSession(page, supabaseUrl, theme);
 
-  await page.goto(`${BASE}/passageiro`, { waitUntil: 'networkidle' });
-  await openNoResultsState(page, 'Origem');
+  const emptyPage = await context.newPage();
+  await installSession(emptyPage, supabaseUrl, theme);
+  await emptyPage.goto(`${BASE}/passageiro`, { waitUntil: 'networkidle' });
+  await openNoResultsState(emptyPage, 'Origem');
+  const emptyPath = path.join(OUT, `ux-criar-procura-sem-resultados-${theme}-390.png`);
+  await emptyPage.screenshot({ path: emptyPath, fullPage: false });
+  await emptyPage.close();
 
-  fs.mkdirSync(OUT, { recursive: true });
-  const outPath = path.join(OUT, `ux-criar-procura-sem-resultados-${theme}-390.png`);
-  await page.screenshot({ path: outPath, fullPage: false });
+  const networkPage = await context.newPage();
+  await installSession(networkPage, supabaseUrl, theme);
+  await networkPage.goto(`${BASE}/passageiro`, { waitUntil: 'networkidle' });
+  await openNetworkErrorState(networkPage, 'Origem');
+  const networkPath = path.join(OUT, `ux-criar-procura-erro-rede-${theme}-390.png`);
+  await networkPage.screenshot({ path: networkPath, fullPage: false });
+  await networkPage.close();
+
   await browser.close();
-  return outPath;
+  return { emptyPath, networkPath };
 }
 
-const lightPath = await capture('light');
-const darkPath = await capture('dark');
+const light = await captureTheme('light');
+const dark = await captureTheme('dark');
 
 console.log(JSON.stringify({
-  light: { path: lightPath, md5: md5File(lightPath) },
-  dark: { path: darkPath, md5: md5File(darkPath) },
+  semResultados: {
+    light: { path: light.emptyPath, md5: md5File(light.emptyPath) },
+    dark: { path: dark.emptyPath, md5: md5File(dark.emptyPath) },
+  },
+  erroRede: {
+    light: { path: light.networkPath, md5: md5File(light.networkPath) },
+    dark: { path: dark.networkPath, md5: md5File(dark.networkPath) },
+  },
 }, null, 2));

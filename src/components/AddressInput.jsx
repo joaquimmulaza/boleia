@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAutocomplete } from '../hooks/useAutocomplete';
 import AutocompleteDropdown from './AutocompleteDropdown';
 import {
@@ -7,7 +7,7 @@ import {
 } from '../utils/addressGeocoderCopy';
 
 /**
- * Campo de endereço com autocomplete Photon/OSM.
+ * Campo de endereço com autocomplete Photon/OSM (combobox a11y).
  * @param {{
  *   id?: string,
  *   name: string,
@@ -35,21 +35,29 @@ const AddressInput = ({
     suggestions,
     loading,
     error,
+    errorKind,
     fetchPredictions,
+    retryLastFetch,
     selectPlace,
     clearSuggestions,
   } = useAutocomplete();
 
   const [inputValue, setInputValue] = useState(value || '');
   const [showDropdown, setShowDropdown] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
   const wrapperRef = useRef(null);
   const inputId = id || name;
+  const listboxId = `${inputId}-geocoder-listbox`;
 
   useEffect(() => {
-    // Sincroniza o valor controlado externo com o input interno.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setInputValue(value || '');
   }, [value]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActiveIndex(0);
+  }, [suggestions, errorKind, loading]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -100,7 +108,7 @@ const AddressInput = ({
     }
   };
 
-  const handleSelect = async (suggestion) => {
+  const handleSelect = useCallback(async (suggestion) => {
     setInputValue(suggestion.description);
     onChange({ target: { name, value: suggestion.description } });
     setShowDropdown(false);
@@ -109,10 +117,63 @@ const AddressInput = ({
     if (details && onSelectCoordinates) {
       onSelectCoordinates(details);
     }
-  };
+  }, [name, onChange, onSelectCoordinates, selectPlace]);
 
   const showFreeTextAction =
-    allowFreeTextUse && !loading && inputValue.trim().length > 2;
+    allowFreeTextUse && !loading && !errorKind && inputValue.trim().length > 2;
+
+  const emptyMessage =
+    !loading && !errorKind && inputValue.length > 2 ? EMPTY_GEOCODER_MESSAGE : undefined;
+
+  const listPanelOpen = showDropdown && inputValue.length > 2;
+
+  const activeOptionId =
+    suggestions.length > 0 && activeIndex >= 0 && activeIndex < suggestions.length
+      ? `${listboxId}-option-${activeIndex}`
+      : undefined;
+
+  const shouldPreventEnterSubmit = listPanelOpen && (
+    loading
+    || errorKind === 'network'
+    || suggestions.length > 0
+    || Boolean(emptyMessage)
+    || showFreeTextAction
+  );
+
+  const handleKeyDown = (e) => {
+    if (!listPanelOpen) return;
+
+    if (e.key === 'ArrowDown' && suggestions.length > 0) {
+      e.preventDefault();
+      setActiveIndex((prev) => Math.min(prev + 1, suggestions.length - 1));
+      return;
+    }
+
+    if (e.key === 'ArrowUp' && suggestions.length > 0) {
+      e.preventDefault();
+      setActiveIndex((prev) => Math.max(prev - 1, 0));
+      return;
+    }
+
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      setShowDropdown(false);
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      if (shouldPreventEnterSubmit) {
+        e.preventDefault();
+      }
+      if (loading || errorKind === 'network') {
+        return;
+      }
+      if (suggestions.length > 0) {
+        const pick = suggestions[activeIndex] ?? suggestions[0];
+        void handleSelect(pick);
+      }
+    }
+  };
 
   return (
     <div className="flex flex-col w-full relative" ref={wrapperRef}>
@@ -130,27 +191,36 @@ const AddressInput = ({
             required={required}
             value={inputValue}
             onChange={handleChange}
+            onKeyDown={handleKeyDown}
             onFocus={() => {
               if (inputValue.length > 2) setShowDropdown(true);
             }}
+            role="combobox"
+            aria-expanded={listPanelOpen}
+            aria-controls={listPanelOpen ? listboxId : undefined}
+            aria-activedescendant={listPanelOpen ? activeOptionId : undefined}
+            aria-autocomplete="list"
+            autoComplete="off"
             className="form-input w-full pl-4 pr-4 h-14 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:ring-primary/20 transition-all placeholder:text-slate-400 outline-none"
           />
         </div>
       </label>
 
-      {error && !showDropdown && (
+      {error && !listPanelOpen && !errorKind && (
          <div className="mt-1 ml-1 text-xs text-red-500 font-medium">{error}</div>
       )}
 
-      {showDropdown && (
+      {listPanelOpen && (
         <AutocompleteDropdown
           suggestions={suggestions}
           loading={loading}
           error={error}
+          errorKind={errorKind}
           onSelect={handleSelect}
-          emptyMessage={
-            !loading && inputValue.length > 2 ? EMPTY_GEOCODER_MESSAGE : undefined
-          }
+          onRetry={retryLastFetch}
+          listboxId={listboxId}
+          activeIndex={activeIndex}
+          emptyMessage={emptyMessage}
           freeTextActionLabel={
             showFreeTextAction ? formatUseFreeTextLabel(inputValue) : undefined
           }

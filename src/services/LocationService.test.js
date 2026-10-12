@@ -254,11 +254,44 @@ describe('LocationService (OpenStreetMap / Photon)', () => {
       expect(result).toEqual([]);
     });
 
-    it('retorna [] e não lança exceção em caso de erro de rede', async () => {
+    it('deduplica sugestões com o mesmo label normalizado', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          features: [
+            makePhotonFeature({
+              osm_id: 1,
+              properties: {
+                district: 'Benfica',
+                county: 'Município do Talatona',
+                state: 'Luanda',
+                countrycode: 'AO',
+                type: 'district',
+              },
+            }),
+            makePhotonFeature({
+              osm_id: 2,
+              properties: {
+                name: 'Benfica',
+                county: 'Município do Talatona',
+                state: 'Luanda',
+                countrycode: 'AO',
+                type: 'locality',
+              },
+            }),
+          ],
+        }),
+      });
+
+      const result = await getPlacePredictions('Benfica');
+      expect(result).toHaveLength(1);
+      expect(result[0].description).toMatch(/Benfica/i);
+    });
+
+    it('propaga erro de rede para a UI (não confundir com lista vazia)', async () => {
       mockFetch.mockRejectedValueOnce(new TypeError('Failed to fetch'));
 
-      const result = await getPlacePredictions('Mutamba');
-      expect(result).toEqual([]);
+      await expect(getPlacePredictions('Mutamba')).rejects.toThrow(/Failed to fetch/);
     });
 
     it('re-lança AbortError para o hook cancelar pedidos obsoletos', async () => {

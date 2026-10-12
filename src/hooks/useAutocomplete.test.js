@@ -75,4 +75,17 @@ describe('useAutocomplete', () => {
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
   });
+
+  it('marca errorKind network quando getPlacePredictions falha', async () => {
+    getPlacePredictions.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+    const { result } = renderHook(() => useAutocomplete());
+
+    await act(async () => {
+      await result.current.fetchPredictions('Talatona');
+    });
+
+    expect(result.current.errorKind).toBe('network');
+    expect(result.current.suggestions).toEqual([]);
+  });
 });

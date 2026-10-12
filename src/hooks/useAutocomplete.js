@@ -5,8 +5,11 @@ export const useAutocomplete = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  /** @type {'network' | null} */
+  const [errorKind, setErrorKind] = useState(null);
   const abortRef = useRef(null);
   const requestSeqRef = useRef(0);
+  const lastInputRef = useRef('');
 
   const fetchPredictions = useCallback(async (input) => {
     const seq = requestSeqRef.current + 1;
@@ -20,15 +23,19 @@ export const useAutocomplete = () => {
       if (requestSeqRef.current === seq) {
         setSuggestions([]);
         setLoading(false);
+        setError(null);
+        setErrorKind(null);
       }
       return;
     }
 
+    lastInputRef.current = input;
     const controller = new AbortController();
     abortRef.current = controller;
 
     setLoading(true);
     setError(null);
+    setErrorKind(null);
 
     try {
       const results = await getPlacePredictions(input, { signal: controller.signal });
@@ -42,6 +49,7 @@ export const useAutocomplete = () => {
       }
       if (requestSeqRef.current === seq) {
         setError(err.message || 'Erro ao obter sugestões.');
+        setErrorKind('network');
         setSuggestions([]);
       }
     } finally {
@@ -51,9 +59,17 @@ export const useAutocomplete = () => {
     }
   }, []);
 
+  const retryLastFetch = useCallback(() => {
+    const input = lastInputRef.current;
+    if (input && input.length >= 3) {
+      void fetchPredictions(input);
+    }
+  }, [fetchPredictions]);
+
   const selectPlace = useCallback(async (placeId) => {
     setLoading(true);
     setError(null);
+    setErrorKind(null);
 
     try {
       const details = await getPlaceDetails(placeId, suggestions);
@@ -61,6 +77,7 @@ export const useAutocomplete = () => {
       return details;
     } catch (err) {
       setError(err.message || 'Erro ao obter detalhes do local.');
+      setErrorKind('network');
       return null;
     } finally {
       setLoading(false);
@@ -69,13 +86,17 @@ export const useAutocomplete = () => {
 
   const clearSuggestions = useCallback(() => {
     setSuggestions([]);
+    setError(null);
+    setErrorKind(null);
   }, []);
 
   return {
     suggestions,
     loading,
     error,
+    errorKind,
     fetchPredictions,
+    retryLastFetch,
     selectPlace,
     clearSuggestions,
   };

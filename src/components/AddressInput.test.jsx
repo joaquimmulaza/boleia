@@ -12,13 +12,17 @@ const selectPlace = vi.fn();
 const clearSuggestions = vi.fn();
 let mockSuggestions = [];
 let mockLoading = false;
+let mockErrorKind = null;
+const retryLastFetch = vi.fn();
 
 vi.mock('../hooks/useAutocomplete', () => ({
   useAutocomplete: () => ({
     suggestions: mockSuggestions,
     loading: mockLoading,
     error: null,
+    errorKind: mockErrorKind,
     fetchPredictions,
+    retryLastFetch,
     selectPlace,
     clearSuggestions,
   }),
@@ -29,6 +33,7 @@ describe('AddressInput', () => {
     vi.clearAllMocks();
     mockSuggestions = [];
     mockLoading = false;
+    mockErrorKind = null;
     selectPlace.mockResolvedValue({ lat: -8.838, lng: 13.234 });
   });
 
@@ -42,7 +47,7 @@ describe('AddressInput', () => {
       />,
     );
 
-    const input = screen.getByRole('textbox', { name: /Origem/i });
+    const input = screen.getByRole('combobox', { name: /Origem/i });
     expect(input).toBeRequired();
   });
 
@@ -57,7 +62,7 @@ describe('AddressInput', () => {
       />,
     );
 
-    const input = screen.getByRole('textbox', { name: /Ponto de recolha \(opcional\)/i });
+    const input = screen.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
     expect(input).not.toBeRequired();
   });
 
@@ -100,7 +105,7 @@ describe('AddressInput', () => {
       />,
     );
 
-    const input = screen.getByRole('textbox');
+    const input = screen.getByRole('combobox');
     fireEvent.change(input, { target: { value: 'Mutamba' } });
 
     expect(onChange).toHaveBeenCalledWith({
@@ -203,6 +208,81 @@ describe('AddressInput', () => {
     expect(
       screen.getByRole('button', { name: formatUseFreeTextLabel('XYZZZZ') }),
     ).toBeInTheDocument();
+  });
+
+  it('Enter com lista aberta selecciona sugestão e não submete o formulário', async () => {
+    const onSubmit = vi.fn((e) => e.preventDefault());
+    mockSuggestions = [
+      { place_id: 'photon-1', description: 'Talatona, Luanda' },
+      { place_id: 'photon-2', description: 'Viana, Viana' },
+    ];
+
+    render(
+      <form onSubmit={onSubmit}>
+        <AddressInput
+          name="origin_name"
+          label="Origem"
+          value="Tal"
+          onChange={vi.fn()}
+        />
+        <button type="submit">Guardar</button>
+      </form>,
+    );
+
+    const input = screen.getByRole('combobox', { name: /Origem/i });
+    fireEvent.focus(input);
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(onSubmit).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(selectPlace).toHaveBeenCalledWith('photon-1');
+    });
+  });
+
+  it('setas destacam sugestões via aria-activedescendant', () => {
+    mockSuggestions = [
+      { place_id: 'photon-1', description: 'Talatona, Luanda' },
+      { place_id: 'photon-2', description: 'Viana, Viana' },
+    ];
+
+    render(
+      <AddressInput
+        name="origin_name"
+        label="Origem"
+        value="Tal"
+        onChange={vi.fn()}
+      />,
+    );
+
+    const input = screen.getByRole('combobox', { name: /Origem/i });
+    fireEvent.focus(input);
+    expect(input).toHaveAttribute('aria-activedescendant', 'origin_name-geocoder-listbox-option-0');
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(input).toHaveAttribute('aria-activedescendant', 'origin_name-geocoder-listbox-option-1');
+
+    fireEvent.keyDown(input, { key: 'ArrowUp' });
+    expect(input).toHaveAttribute('aria-activedescendant', 'origin_name-geocoder-listbox-option-0');
+  });
+
+  it('erro de rede mostra painel próprio com tentar novamente', () => {
+    mockErrorKind = 'network';
+    mockSuggestions = [];
+
+    render(
+      <AddressInput
+        name="origin_name"
+        label="Origem"
+        value="Tal"
+        onChange={vi.fn()}
+      />,
+    );
+
+    fireEvent.focus(screen.getByRole('combobox', { name: /Origem/i }));
+    expect(screen.getByTestId('geocoder-network-error')).toBeInTheDocument();
+    expect(screen.queryByTestId('geocoder-empty-state')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(retryLastFetch).toHaveBeenCalled();
   });
 
   it('Usar texto livre fecha sugestões, confirma free-text e mantém coordenadas nulas', () => {
