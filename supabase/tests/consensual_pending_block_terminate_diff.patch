@@ -1,0 +1,31 @@
+--- /tmp/terminate_fn.sql	2026-10-12 08:06:07.165938742 +0000
++++ /dev/fd/63	2026-10-12 08:06:11.254021687 +0000
+@@ -105,6 +105,14 @@
+   v_effective := (date_trunc('month', v_hoje) + interval '1 month')::date;
+ 
+   IF v_modo = 'aviso_previo' THEN
++    IF lower(COALESCE(v_acordo.rescisao_modo, '')) = 'consensual'
++       AND v_acordo.rescisao_solicitada_por IS NOT NULL
++       AND v_acordo.rescisao_confirmada_em IS NULL
++       AND lower(v_acordo.estado) = 'activo' THEN
++      RAISE EXCEPTION
++        'Já existe um pedido de encerramento amigável pendente. Confirma ou recusa antes de escolher outra modalidade.';
++    END IF;
++
+     IF lower(v_acordo.estado) <> 'activo' THEN
+       RAISE EXCEPTION 'Este acordo já não está activo.';
+     END IF;
+@@ -163,6 +171,13 @@
+ 
+     IF NOT v_confirma THEN
+       IF lower(COALESCE(v_acordo.rescisao_modo, '')) = 'consensual'
++         AND v_acordo.rescisao_solicitada_por IS NOT NULL
++         AND v_acordo.rescisao_confirmada_em IS NULL THEN
++        RAISE EXCEPTION
++          'Já existe um pedido de encerramento amigável pendente. Confirma ou recusa antes de iniciar outro pedido.';
++      END IF;
++
++      IF lower(COALESCE(v_acordo.rescisao_modo, '')) = 'consensual'
+          AND v_acordo.rescisao_solicitada_por = v_uid THEN
+         UPDATE public.acordos
+         SET
