@@ -3,20 +3,21 @@
 Base `apply_due_reserva_expiry`: `20261009180000_p0_acordo_pagamento_estados.sql`  
 Base `leave_passenger`: `20261010000000_encerramento_motivo_leave_passenger.sql`
 
-## Nova: `_p0_encerrar_acordo_sem_lugares_vivos_pos_expiracao(uuid)`
+## Nova: `_p0_encerrar_acordo_sem_lugares_vivos_pos_expiracao(uuid, uuid DEFAULT NULL)`
 
 - Conta lugares `activo`/`reservado`; se > 0, return false.
 - `INSERT _acordo_cancel_notif_suppress` (`last_reservation_expired`, true, true).
 - `_maybe_fechar_acordo_sem_lugares_vivos` + `encerramento_motivo = sem_lugares_vivos` (gate consensual pendente igual leave).
 - Limpa colunas rescisão consensual pendente (`rescisao_confirmada_em IS NULL`).
-- Notificação motorista card **v1.8** (sem passageiro).
+- Notificação motorista card **v1.11** (`titulo`: «Acordo encerrado»; corpo com/sem nome; **sem** `link`/CTA).
+- `apply_due_reserva_expiry` continua a chamar `recount_oferta_vagas` — oferta **não** passa a `inactiva`; repõe `disponivel`/`parcial`/`cheia` via trigger (visível em Explorar se `disponivel`|`parcial`).
 
 ## `apply_due_reserva_expiry`
 
 | Antes (prod) | Depois |
 |--------------|--------|
 | Após `_expirar`, **sempre** INSERT notif passageiro «A tua reserva expirou…» | Se `_p0_encerrar…` fechou acordo → **sem** notif passageiro |
-| Fim: `_maybe_fechar_acordo_sem_lugares_vivos(p_acordo_id)` só | Fim: `_p0_encerrar…` (motivo + v1.8 + limpar consensual) |
+| Fim: `_maybe_fechar_acordo_sem_lugares_vivos(p_acordo_id)` só | Fim: `_p0_encerrar…` (motivo + v1.11 + limpar consensual) |
 
 ## `leave_passenger`
 

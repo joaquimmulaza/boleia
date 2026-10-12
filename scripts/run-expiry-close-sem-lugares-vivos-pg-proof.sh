@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prova PG: expiração último lugar (v1.8) + remoção parcial (v1.10).
+# Prova PG: expiração último lugar (v1.11 + oferta Explorar) + remoção parcial (v1.10).
 # PGVERSION/PGPORT configuráveis (CI usa PG17; local pode usar PG16 com PGVERSION=16).
 set -euo pipefail
 

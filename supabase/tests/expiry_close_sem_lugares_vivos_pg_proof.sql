@@ -1,4 +1,4 @@
--- Prova PG: expiração último lugar (v1.8) + motorista remove não-último (v1.10).
+-- Prova PG: expiração último lugar (v1.11 + oferta publicada) + motorista remove não-último (v1.10).
 -- Acções de passageiro com JWT do próprio passageiro (authenticated).
 \set ON_ERROR_STOP on
 
@@ -18,11 +18,18 @@ DECLARE
   v_ap_a uuid := 'f8888888-8888-4888-8888-888888888888';
   v_ap_b uuid := 'f9999999-9999-4999-8999-999999999999';
   v_pg uuid := 'faaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  v_pax_noname uuid := 'fbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  v_acordo_noname uuid := 'fccccccc-cccc-4ccc-8ccc-cccccccccccc';
+  v_ap_noname uuid := 'fddddddd-dddd-4ddd-8ddd-dddddddddddd';
+  v_oferta_noname uuid;
   v_mes date := date_trunc('month', timezone('Africa/Luanda', now()))::date;
   v_n integer;
   v_estado text;
   v_motivo text;
   v_rescisao_modo text;
+  v_oferta_estado text;
+  v_vagas_disp integer;
+  v_vagas_tot integer;
 BEGIN
   PERFORM set_config('session_replication_role', 'replica', true);
 
@@ -30,14 +37,16 @@ BEGIN
     (v_driver, 'ecs-driver@test'),
     (v_pax_last, 'ecs-pax-last@test'),
     (v_pax_a, 'ecs-pax-a@test'),
-    (v_pax_b, 'ecs-pax-b@test')
+    (v_pax_b, 'ecs-pax-b@test'),
+    (v_pax_noname, 'ecs-pax-noname@test')
   ON CONFLICT DO NOTHING;
 
   INSERT INTO public.perfis (id, nome_completo, telefone, tipo_perfil) VALUES
     (v_driver, 'ECS Driver', '951000001', 'Motorista'),
     (v_pax_last, 'ECS Last', '951000002', 'Passageiro'),
     (v_pax_a, 'ECS A', '951000003', 'Passageiro'),
-    (v_pax_b, 'ECS B', '951000004', 'Passageiro')
+    (v_pax_b, 'ECS B', '951000004', 'Passageiro'),
+    (v_pax_noname, NULL, '951000005', 'Passageiro')
   ON CONFLICT (id) DO NOTHING;
 
   INSERT INTO public.veiculos (id_motorista, marca_modelo, matricula, capacidade_total, vagas_passageiros)
@@ -63,7 +72,7 @@ BEGIN
   INSERT INTO public.procuras (owner_id, preferred_time, n_candidato, estado)
   VALUES (v_pax_last, '07:30', 2, 'activa') RETURNING id INTO v_procura;
 
-  -- EC1: único reservado expirado → encerrado sem_lugares_vivos + v1.8 motorista; pax sem notif
+  -- EC1: único reservado expirado → encerrado sem_lugares_vivos + v1.11 motorista; pax sem notif
   INSERT INTO public.acordos (
     id, oferta_id, procura_id, driver_id, modo_preco, n_passageiros_contrato,
     valor_mensal_total_kz, valor_mensal_por_passageiro_kz, estado, dias_uteis_mes,
@@ -85,6 +94,25 @@ BEGIN
   ) VALUES (
     v_pg, v_ap_last, v_acordo_last, v_pax_last, v_driver,
     20000, 20000, 18000, 0.10, v_mes, 'pendente_pagamento'
+  );
+
+  INSERT INTO public.ofertas_capacidade (
+    driver_id, veiculo_id, flexibilidade_rota, departure_time, vagas_disponiveis, vagas_totais,
+    modo_preco, valor_mensal_ask_kz, estado
+  ) VALUES (v_driver, v_veiculo, true, '08:00', 3, 4, 'POR_PASSAGEIRO', 20000, 'parcial')
+  RETURNING id INTO v_oferta_noname;
+
+  INSERT INTO public.acordos (
+    id, oferta_id, procura_id, driver_id, modo_preco, n_passageiros_contrato,
+    valor_mensal_total_kz, valor_mensal_por_passageiro_kz, estado, dias_uteis_mes
+  ) VALUES (
+    v_acordo_noname, v_oferta_noname, v_procura, v_driver, 'POR_PASSAGEIRO', 1, 20000, 20000, 'activo', 22
+  );
+
+  INSERT INTO public.acordos_passageiros (
+    id, acordo_id, passenger_id, estado, quota_mensal_kz, ordem_insercao, reservado_expira_em
+  ) VALUES (
+    v_ap_noname, v_acordo_noname, v_pax_noname, 'reservado', 20000, 0, now() - interval '2 hours'
   );
 
   -- EC2: motorista remove um de dois (v1.10 fixa); outro pax e motorista sem notif
@@ -127,14 +155,30 @@ BEGIN
     RAISE EXCEPTION 'FAIL EC1: passageiro expirado não devia receber notificação (n=%)', v_n;
   END IF;
 
+  SELECT lower(estado), vagas_disponiveis, vagas_totais
+  INTO v_oferta_estado, v_vagas_disp, v_vagas_tot
+  FROM public.ofertas_capacidade
+  WHERE id = v_oferta_last;
+
+  IF v_oferta_estado <> 'disponivel' THEN
+    RAISE EXCEPTION 'FAIL EC1: oferta devia ficar disponivel (Explorar), estado=%', v_oferta_estado;
+  END IF;
+
+  IF v_vagas_disp <> v_vagas_tot OR v_vagas_tot <> 4 THEN
+    RAISE EXCEPTION 'FAIL EC1: vagas deviam repor totais (disp=%, tot=%)', v_vagas_disp, v_vagas_tot;
+  END IF;
+
   SELECT COUNT(*)::integer INTO v_n
   FROM public.notificacoes
   WHERE user_id = v_driver
-    AND mensagem = 'A última reserva expirou e o acordo foi encerrado. A tua oferta continua publicada.'
-    AND metadata->>'card' = 'v1.8';
+    AND mensagem =
+      'A reserva de ECS Last expirou e o acordo foi encerrado. A tua oferta continua publicada.'
+    AND metadata->>'card' = 'v1.11'
+    AND metadata->>'titulo' = 'Acordo encerrado'
+    AND link IS NULL;
 
   IF v_n <> 1 THEN
-    RAISE EXCEPTION 'FAIL EC1: motorista devia receber card v1.8 (n=%)', v_n;
+    RAISE EXCEPTION 'FAIL EC1: motorista devia receber card v1.11 com nome (n=%)', v_n;
   END IF;
 
   SELECT COUNT(*)::integer INTO v_n
@@ -143,6 +187,27 @@ BEGIN
 
   IF v_n <> 0 THEN
     RAISE EXCEPTION 'FAIL EC1: motorista não devia receber cancelamento genérico (n=%)', v_n;
+  END IF;
+
+  DELETE FROM public.notificacoes;
+
+  PERFORM set_config('request.jwt.claim.sub', v_pax_noname::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+  SET LOCAL ROLE authenticated;
+  PERFORM public.apply_due_reserva_expiry(v_acordo_noname);
+  RESET ROLE;
+
+  SELECT COUNT(*)::integer INTO v_n
+  FROM public.notificacoes
+  WHERE user_id = v_driver
+    AND mensagem =
+      'A reserva do último passageiro expirou e o acordo foi encerrado. A tua oferta continua publicada.'
+    AND metadata->>'card' = 'v1.11'
+    AND metadata->>'titulo' = 'Acordo encerrado'
+    AND link IS NULL;
+
+  IF v_n <> 1 THEN
+    RAISE EXCEPTION 'FAIL EC1b: motorista devia receber v1.11 sem nome (n=%)', v_n;
   END IF;
 
   DELETE FROM public.notificacoes;
@@ -180,5 +245,5 @@ BEGIN
     RAISE EXCEPTION 'FAIL EC2: outro passageiro vivo não devia receber notificação (n=%)', v_n;
   END IF;
 
-  RAISE NOTICE 'PASS EC1+EC2: expiry último lugar + driver remove parcial v1.10';
+  RAISE NOTICE 'PASS EC1+EC1b+EC2: expiry último lugar v1.11 + oferta Explorar + driver remove parcial v1.10';
 END $$;

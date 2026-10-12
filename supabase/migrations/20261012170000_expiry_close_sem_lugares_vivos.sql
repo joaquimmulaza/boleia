@@ -1,8 +1,11 @@
--- Expiração do último lugar vivo: encerramento sem_lugares_vivos + card motorista v1.8 (sem notif passageiro).
+-- Expiração do último lugar vivo: encerramento sem_lugares_vivos + card motorista v1.11 (sem notif passageiro).
 -- Motorista remove passageiro não-último: card estado v1.10 ao removido (sem CTA), supressão txid.
 -- Reparação: só is_test; nunca acordo ac722c73-0000-4000-8000-000000000000.
 
-CREATE OR REPLACE FUNCTION public._p0_encerrar_acordo_sem_lugares_vivos_pos_expiracao(p_acordo_id uuid)
+CREATE OR REPLACE FUNCTION public._p0_encerrar_acordo_sem_lugares_vivos_pos_expiracao(
+  p_acordo_id uuid,
+  p_passageiro_expirado_id uuid DEFAULT NULL
+)
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -12,7 +15,8 @@ DECLARE
   v_acordo public.acordos%ROWTYPE;
   v_vivos integer;
   v_estado_antes text;
-  v_link text;
+  v_pax_nome text;
+  v_mensagem text;
 BEGIN
   IF p_acordo_id IS NULL THEN
     RETURN false;
@@ -77,22 +81,35 @@ BEGIN
 
   IF v_estado_antes IN ('activo', 'cancelamento_pendente')
      AND lower((SELECT estado FROM public.acordos WHERE id = p_acordo_id)) = 'cancelado' THEN
-    v_link := '/acordos?openAcordoId=' || p_acordo_id::text;
+    IF p_passageiro_expirado_id IS NOT NULL THEN
+      SELECT NULLIF(trim(nome_completo), '') INTO v_pax_nome
+      FROM public.perfis
+      WHERE id = p_passageiro_expirado_id;
+    END IF;
+
+    IF v_pax_nome IS NOT NULL THEN
+      v_mensagem :=
+        'A reserva de ' || v_pax_nome
+        || ' expirou e o acordo foi encerrado. A tua oferta continua publicada.';
+    ELSE
+      v_mensagem :=
+        'A reserva do último passageiro expirou e o acordo foi encerrado. A tua oferta continua publicada.';
+    END IF;
 
     BEGIN
-      INSERT INTO public.notificacoes (user_id, mensagem, tipo, metadata, link)
+      INSERT INTO public.notificacoes (user_id, mensagem, tipo, metadata)
       VALUES (
         v_acordo.driver_id,
-        'A última reserva expirou e o acordo foi encerrado. A tua oferta continua publicada.',
+        v_mensagem,
         'info',
         jsonb_build_object(
           'type', 'status',
-          'card', 'v1.8',
+          'card', 'v1.11',
+          'titulo', 'Acordo encerrado',
           'acordo_id', p_acordo_id,
           'reason', 'last_reservation_expired',
           'txid', txid_current()
-        ),
-        v_link
+        )
       );
     EXCEPTION
       WHEN OTHERS THEN
@@ -107,9 +124,9 @@ BEGIN
 END;
 $function$;
 
-REVOKE ALL ON FUNCTION public._p0_encerrar_acordo_sem_lugares_vivos_pos_expiracao(uuid) FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public._p0_encerrar_acordo_sem_lugares_vivos_pos_expiracao(uuid) FROM anon, authenticated;
-GRANT EXECUTE ON FUNCTION public._p0_encerrar_acordo_sem_lugares_vivos_pos_expiracao(uuid) TO service_role;
+REVOKE ALL ON FUNCTION public._p0_encerrar_acordo_sem_lugares_vivos_pos_expiracao(uuid, uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public._p0_encerrar_acordo_sem_lugares_vivos_pos_expiracao(uuid, uuid) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._p0_encerrar_acordo_sem_lugares_vivos_pos_expiracao(uuid, uuid) TO service_role;
 
 CREATE OR REPLACE FUNCTION public.apply_due_reserva_expiry(p_acordo_id uuid DEFAULT NULL)
 RETURNS integer
@@ -160,7 +177,10 @@ BEGIN
     v_fechou := false;
     IF v_vivos = 0
        AND lower(v_row.acordo_estado) IN ('activo', 'cancelamento_pendente') THEN
-      v_fechou := public._p0_encerrar_acordo_sem_lugares_vivos_pos_expiracao(v_row.acordo_id);
+      v_fechou := public._p0_encerrar_acordo_sem_lugares_vivos_pos_expiracao(
+        v_row.acordo_id,
+        v_row.passenger_id
+      );
     END IF;
 
     IF NOT v_fechou THEN

@@ -30,13 +30,20 @@ describe('expiry close sem_lugares_vivos — migração 20261012170000', () => {
     expect(existsSync(join(MIGRATIONS, MIGRATION_FIX))).toBe(true);
   });
 
-  it('apply_due_reserva_expiry: card v1.8 motorista e sem notif passageiro no último lugar', () => {
+  it('apply_due_reserva_expiry: card v1.11 motorista e sem notif passageiro no último lugar', () => {
     const sql = readFileSync(join(MIGRATIONS, MIGRATION_FIX), 'utf8');
-    expect(sql).toMatch(/'card',\s*'v1\.8'/);
+    expect(sql).toMatch(/'card',\s*'v1\.11'/);
+    expect(sql).toMatch(/'titulo',\s*'Acordo encerrado'/);
+    expect(sql).toMatch(/A reserva de '/);
+    expect(sql).toMatch(/A reserva do último passageiro expirou/);
     expect(sql).toMatch(/last_reservation_expired/);
+    expect(sql).toMatch(
+      /_p0_encerrar_acordo_sem_lugares_vivos_pos_expiracao[\s\S]*INSERT INTO public\.notificacoes \(user_id, mensagem, tipo, metadata\)[\s\S]*'v1\.11'/,
+    );
     const body = extractApplyDueReservaExpiryBody(sql);
     expect(body).toMatch(/_p0_encerrar_acordo_sem_lugares_vivos_pos_expiracao/);
     expect(body).toMatch(/IF NOT v_fechou THEN/);
+    expect(body).toMatch(/recount_oferta_vagas/);
     expect(sql).toMatch(
       /CREATE OR REPLACE FUNCTION public\._p0_encerrar_acordo_sem_lugares_vivos_pos_expiracao[\s\S]*encerramento_motivo = 'sem_lugares_vivos'/,
     );
@@ -65,7 +72,7 @@ describe('expiry close sem_lugares_vivos — migração 20261012170000', () => {
     expect(body).toMatch(
       /_expirar_lugar_reservado_sem_divida[\s\S]{0,280}A tua reserva expirou por falta de pagamento/,
     );
-    expect(body).not.toMatch(/'card',\s*'v1\.8'/);
+    expect(body).not.toMatch(/'card',\s*'v1\.11'/);
   });
 
   it('FAIL-on-old: leave_passenger prod sem v1.10 motorista remove parcial', () => {
