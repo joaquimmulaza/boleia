@@ -6,6 +6,7 @@ import { Card, CardContent } from './ui/card';
 import {
   PROFILE_APP_INSTALL_CTA,
   PROFILE_APP_IPHONE_HINT,
+  PROFILE_APP_OPEN_IN_SAFARI,
   PROFILE_APP_SECTION_DESC,
   PROFILE_APP_SECTION_TITLE,
 } from '../utils/profileCopy';
@@ -19,6 +20,7 @@ const InstallAppCard = () => {
     isInstalled,
     platform,
     isInApp,
+    isIosSafari,
     promptInstall,
   } = usePwaInstall();
   const [instructionsOpen, setInstructionsOpen] = useState(false);
@@ -28,7 +30,10 @@ const InstallAppCard = () => {
     return null;
   }
 
-  const isIphoneSafari = platform === 'ios' && !canInstallNative;
+  const isIos = platform === 'ios';
+  const showIosSafariHint = isIos && isIosSafari && !canInstallNative;
+  const showIosNonSafariHints = isIos && !isIosSafari && !canInstallNative;
+  const showInstallButton = !showIosSafariHint && !showIosNonSafariHints;
 
   const handlePrimaryClick = async () => {
     if (canInstallNative) {
@@ -40,10 +45,10 @@ const InstallAppCard = () => {
       }
       return;
     }
-    if (!isIphoneSafari) {
-      setInstructionsOpen(true);
-    }
+    setInstructionsOpen(true);
   };
+
+  const modalPlatform = platform === 'ios' ? 'ios' : 'android';
 
   return (
     <>
@@ -57,9 +62,18 @@ const InstallAppCard = () => {
               <p className="font-semibold text-foreground">{PROFILE_APP_SECTION_TITLE}</p>
               <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{PROFILE_APP_SECTION_DESC}</p>
             </div>
-            {isIphoneSafari ? (
-              <p className="text-sm text-foreground leading-relaxed">{PROFILE_APP_IPHONE_HINT}</p>
-            ) : (
+            {showIosSafariHint ? (
+              <p className="text-sm text-foreground leading-relaxed" data-testid="install-ios-safari-hint">
+                {PROFILE_APP_IPHONE_HINT}
+              </p>
+            ) : null}
+            {showIosNonSafariHints ? (
+              <div className="space-y-2" data-testid="install-ios-non-safari-hints">
+                <p className="text-sm text-foreground leading-relaxed">{PROFILE_APP_OPEN_IN_SAFARI}</p>
+                <p className="text-sm text-foreground leading-relaxed">{PROFILE_APP_IPHONE_HINT}</p>
+              </div>
+            ) : null}
+            {showInstallButton ? (
               <Button
                 type="button"
                 variant="outline"
@@ -69,7 +83,7 @@ const InstallAppCard = () => {
               >
                 {busy ? 'A processar…' : PROFILE_APP_INSTALL_CTA}
               </Button>
-            )}
+            ) : null}
           </CardContent>
         </Card>
       </section>
@@ -77,7 +91,7 @@ const InstallAppCard = () => {
       <InstallAppInstructionsModal
         isOpen={instructionsOpen}
         onClose={() => setInstructionsOpen(false)}
-        platform={platform}
+        platform={modalPlatform}
         isInAppBrowser={isInApp}
       />
     </>

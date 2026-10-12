@@ -34,6 +34,9 @@ export const PROFILE_APP_INSTALL_CTA = 'Instalar app';
 export const PROFILE_APP_IPHONE_HINT =
   'No iPhone, no Safari, toca em Partilhar e em Adicionar ao ecrã principal.';
 
+/** Copy provisória (New Bot) — iOS fora do Safari / in-app antes da dica Partilhar. */
+export const PROFILE_APP_OPEN_IN_SAFARI = 'Abre esta página no Safari para instalar';
+
 export const PROFILE_BANK_TITLE = 'Dados bancários';
 
 export const PROFILE_BANK_SUBTITLE = 'Para receber pagamentos das boleias.';
