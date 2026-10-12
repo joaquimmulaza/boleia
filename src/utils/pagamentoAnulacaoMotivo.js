@@ -14,7 +14,10 @@ export const ANULACAO_MOTIVOS_SAIDA_VOLUNTARIA = Object.freeze([
  */
 export function isAnulacaoMotivoAcordoTerminadoAntesActivacao(pagamento) {
   const motivo = String(pagamento?.anulacao_motivo ?? '').trim();
-  return motivo === ANULACAO_MOTIVO.ACORDO_TERMINADO_ANTES_ACTIVACAO;
+  return (
+    motivo === ANULACAO_MOTIVO.ACORDO_TERMINADO_ANTES_ACTIVACAO
+    || motivo === ANULACAO_MOTIVO.RESCISAO_JUSTA_CAUSA
+  );
 }
 
 /**

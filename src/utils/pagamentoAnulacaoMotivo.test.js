@@ -22,6 +22,14 @@ describe('pagamentoAnulacaoMotivo', () => {
     ).toBe(false);
   });
 
+  it('rescisão por justa causa não conta como expiração TTL', () => {
+    expect(
+      isAnulacaoReservaExpiradaPorPagamento({
+        anulacao_motivo: ANULACAO_MOTIVO.RESCISAO_JUSTA_CAUSA,
+      }),
+    ).toBe(false);
+  });
+
   it('expiração TTL — literais exactos e legacy vazio', () => {
     expect(
       isAnulacaoReservaExpiradaPorPagamento({
