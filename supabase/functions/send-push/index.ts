@@ -117,13 +117,8 @@ serve(async (req) => {
       console.error("Error fetching unread notification count:", unreadCountError);
     }
 
-    const tituloPush =
-      typeof metadata?.titulo === "string" && metadata.titulo.trim()
-        ? metadata.titulo.trim()
-        : "Nova Notificação";
-
     const notificationPayload = JSON.stringify({
-      title: tituloPush,
+      title: "Nova Notificação",
       body: mensagem,
       icon: "/pwa-192x192.png",
       badge: "/pwa-512x512.png",
