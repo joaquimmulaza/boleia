@@ -103,7 +103,7 @@ describe('Profile v2', () => {
     expect(screen.queryByText(/Dados bancários/i)).not.toBeInTheDocument();
   });
 
-  it('motorista vê Recebimentos e link para dados bancários', async () => {
+  it('motorista vê Recebimentos desactivado (sem link) e link para dados bancários', async () => {
     ProfileService.getProfile.mockResolvedValue({
       ...baseProfile,
       nome_completo: 'Carlos Motorista',
@@ -118,10 +118,12 @@ describe('Profile v2', () => {
       'href',
       '/perfil/dados-bancarios',
     );
-    expect(screen.getByRole('link', { name: PROFILE_RECEIPTS })).toHaveAttribute(
-      'href',
-      '/perfil/recebimentos',
-    );
+    expect(screen.queryByRole('link', { name: PROFILE_RECEIPTS })).not.toBeInTheDocument();
+    const recebimentosRow = screen.getByText(PROFILE_RECEIPTS).closest('[aria-disabled="true"]');
+    expect(recebimentosRow).toBeTruthy();
+    expect(recebimentosRow).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(recebimentosRow);
+    expect(screen.getByRole('heading', { name: PROFILE_TITLE })).toBeInTheDocument();
   });
 
   it('modo edição: descartar repõe valores e guardar com sucesso', async () => {

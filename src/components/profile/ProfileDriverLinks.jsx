@@ -23,14 +23,13 @@ export default function ProfileDriverLinks() {
           <ChevronRight className="size-5 text-muted-foreground shrink-0" aria-hidden="true" />
         </Link>
         <div className="mx-4 border-t border-border" />
-        <Link
-          to="/perfil/recebimentos"
-          className="flex items-center gap-3 px-4 py-4 hover:bg-accent/40 transition-colors"
+        <div
+          aria-disabled="true"
+          className="flex items-center gap-3 px-4 py-4 opacity-50 pointer-events-none select-none"
         >
           <Wallet className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
           <p className="flex-1 font-semibold text-foreground">{PROFILE_RECEIPTS}</p>
-          <ChevronRight className="size-5 text-muted-foreground shrink-0" aria-hidden="true" />
-        </Link>
+        </div>
       </CardContent>
     </Card>
   );
