@@ -12,13 +12,17 @@ export const LUANDA_NOMINATIM_VIEWBOX = '13.10,-8.72,13.50,-9.08';
 
 /**
  * @param {Record<string, string | undefined>} address
+ * @param {object} [item]
  * @returns {{ bairro: string | null, municipio: string | null }}
  */
-export const extractBairroMunicipio = (address = {}) => {
+export const extractBairroMunicipio = (address = {}, item = {}) => {
+  const villageAsBairro =
+    item.class !== 'boundary' && item.type !== 'administrative' ? address.village : null;
   const bairro =
     address.suburb ||
     address.neighbourhood ||
     address.quarter ||
+    villageAsBairro ||
     null;
   const municipio =
     address.city_district ||
@@ -34,7 +38,7 @@ export const extractBairroMunicipio = (address = {}) => {
  * @returns {{ place_id: string, description: string, lat: number, lng: number, _rank: number }}
  */
 export const mapNominatimResult = (item) => {
-  const { bairro, municipio } = extractBairroMunicipio(item.address);
+  const { bairro, municipio } = extractBairroMunicipio(item.address, item);
   let description;
   let rank;
 
@@ -68,6 +72,49 @@ export const sortNominatimResults = (items) =>
   [...items].sort((a, b) => a._rank - b._rank);
 
 /**
+ * @param {Record<string, string | undefined>} address
+ */
+export const isLuandaMetroAddress = (address = {}) => {
+  const state = address.state || '';
+  if (state.includes('Luanda')) return true;
+  return address['ISO3166-2-lvl4'] === 'AO-LUA';
+};
+
+/**
+ * @param {string} query
+ * @param {AbortSignal | undefined} signal
+ * @returns {Promise<object[]>}
+ */
+const fetchNominatimRaw = async (query, signal) => {
+  const params = new URLSearchParams({
+    format: 'json',
+    q: query,
+    countrycodes: 'ao',
+    viewbox: LUANDA_NOMINATIM_VIEWBOX,
+    addressdetails: '1',
+    limit: String(RESULTS_LIMIT),
+  });
+
+  const url = `${NOMINATIM_SEARCH_URL}?${params.toString()}`;
+  const response = await fetch(url, {
+    signal,
+    headers: {
+      Accept: 'application/json',
+      'Accept-Language': 'pt',
+      'User-Agent': NOMINATIM_USER_AGENT,
+    },
+  });
+
+  if (!response.ok) {
+    console.warn(`[LocationService] Nominatim respondeu com status ${response.status}`);
+    return [];
+  }
+
+  const data = await response.json();
+  return Array.isArray(data) ? data : [];
+};
+
+/**
  * Busca sugestões de locais no Nominatim (Angola + preferência Luanda).
  *
  * @param {string} input
@@ -79,36 +126,30 @@ export const getPlacePredictions = async (input, options = {}) => {
     return [];
   }
 
-  const params = new URLSearchParams({
-    format: 'json',
-    q: input,
-    countrycodes: 'ao',
-    viewbox: LUANDA_NOMINATIM_VIEWBOX,
-    addressdetails: '1',
-    limit: String(RESULTS_LIMIT),
-  });
-
-  const url = `${NOMINATIM_SEARCH_URL}?${params.toString()}`;
+  const trimmed = input.trim();
+  const assistQuery = trimmed.toLowerCase().startsWith('bairro ')
+    ? null
+    : `bairro ${trimmed}`;
 
   try {
-    const response = await fetch(url, {
-      signal: options.signal,
-      headers: {
-        Accept: 'application/json',
-        'Accept-Language': 'pt',
-        'User-Agent': NOMINATIM_USER_AGENT,
-      },
-    });
+    const [primaryRows, assistRows] = await Promise.all([
+      fetchNominatimRaw(trimmed, options.signal),
+      assistQuery
+        ? fetchNominatimRaw(assistQuery, options.signal)
+        : Promise.resolve([]),
+    ]);
 
-    if (!response.ok) {
-      console.warn(`[LocationService] Nominatim respondeu com status ${response.status}`);
-      return [];
+    const byId = new Map();
+    for (const row of [...primaryRows, ...assistRows]) {
+      if (!row?.place_id) continue;
+      const address = row.address || {};
+      if (address.state && !isLuandaMetroAddress(address)) {
+        continue;
+      }
+      byId.set(row.place_id, row);
     }
 
-    const data = await response.json();
-    const rows = Array.isArray(data) ? data : [];
-
-    return sortNominatimResults(rows.map(mapNominatimResult))
+    return sortNominatimResults([...byId.values()].map(mapNominatimResult))
       .slice(0, RESULTS_LIMIT)
       .map(({ _rank, ...rest }) => rest);
   } catch (error) {

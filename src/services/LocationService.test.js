@@ -48,14 +48,14 @@ describe('LocationService (OpenStreetMap / Nominatim)', () => {
     });
 
     it('chama Nominatim com countrycodes=ao e viewbox de Luanda (sem bounded)', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValue({
         ok: true,
         json: async () => [],
       });
 
       await getPlacePredictions('Talatona');
 
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch.mock.calls.length).toBeGreaterThanOrEqual(1);
       const [calledUrl, options] = mockFetch.mock.calls[0];
       expect(calledUrl).toContain('nominatim.openstreetmap.org/search');
       expect(calledUrl).toContain('countrycodes=ao');
@@ -78,12 +78,17 @@ describe('LocationService (OpenStreetMap / Nominatim)', () => {
     });
 
     it('formata sugestões como «Bairro, Município» a partir de suburb e city', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValue({
         ok: true,
         json: async () => [
           makeNominatimItem({
             place_id: 1,
-            address: { suburb: 'Talatona', city: 'Luanda' },
+            address: {
+              suburb: 'Talatona',
+              city: 'Luanda',
+              state: 'Luanda',
+              'ISO3166-2-lvl4': 'AO-LUA',
+            },
           }),
         ],
       });
@@ -96,24 +101,40 @@ describe('LocationService (OpenStreetMap / Nominatim)', () => {
     });
 
     it('ordena resultados ao nível bairro antes de entradas só município', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => [
-          makeNominatimItem({
-            place_id: 10,
-            address: { city: 'Luanda' },
-            display_name: 'Luanda',
-          }),
-          makeNominatimItem({
-            place_id: 11,
-            address: { neighbourhood: 'Viana', county: 'Viana' },
-          }),
-          makeNominatimItem({
-            place_id: 12,
-            address: { quarter: 'Kilamba', city_district: 'Belas' },
-          }),
-        ],
-      });
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => [
+            makeNominatimItem({
+              place_id: 10,
+              address: { city: 'Luanda', state: 'Luanda', 'ISO3166-2-lvl4': 'AO-LUA' },
+              display_name: 'Luanda',
+            }),
+          ],
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => [
+            makeNominatimItem({
+              place_id: 11,
+              address: {
+                neighbourhood: 'Viana',
+                county: 'Município de Viana',
+                state: 'Luanda',
+                'ISO3166-2-lvl4': 'AO-LUA',
+              },
+            }),
+            makeNominatimItem({
+              place_id: 12,
+              address: {
+                quarter: 'Kilamba',
+                city_district: 'Belas',
+                state: 'Luanda',
+                'ISO3166-2-lvl4': 'AO-LUA',
+              },
+            }),
+          ],
+        });
 
       const result = await getPlacePredictions('Viana');
       expect(result.map((r) => r.place_id)).toEqual([
@@ -124,8 +145,45 @@ describe('LocationService (OpenStreetMap / Nominatim)', () => {
       expect(result[2].description).toBe('Luanda');
     });
 
+    it('dispara pesquisa assistida «bairro {termo}» para enriquecer municípios', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => [
+            makeNominatimItem({
+              place_id: 20,
+              address: {
+                county: 'Município do Talatona',
+                state: 'Luanda',
+                'ISO3166-2-lvl4': 'AO-LUA',
+              },
+            }),
+          ],
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => [
+            makeNominatimItem({
+              place_id: 21,
+              address: {
+                neighbourhood: 'Bairro Kifica',
+                suburb: 'Benfica',
+                county: 'Município do Talatona',
+                state: 'Luanda',
+                'ISO3166-2-lvl4': 'AO-LUA',
+              },
+            }),
+          ],
+        });
+
+      await getPlacePredictions('Talatona');
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch.mock.calls[1][0]).toContain('q=bairro+Talatona');
+    });
+
     it('retorna [] quando Nominatim não devolve resultados', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValue({
         ok: true,
         json: async () => [],
       });
