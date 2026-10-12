@@ -90,7 +90,13 @@ export const useAutocomplete = () => {
   }, [suggestions]);
 
   const clearSuggestions = useCallback(() => {
+    requestSeqRef.current += 1;
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
     setSuggestions([]);
+    setLoading(false);
     setError(null);
     setErrorKind(null);
     setResolvedInput(null);

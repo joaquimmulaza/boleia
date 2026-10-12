@@ -57,6 +57,7 @@ const AutocompleteDropdown = ({
         {onRetry ? (
           <button
             type="button"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={onRetry}
             className="w-full rounded-lg bg-primary px-3 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary/90 transition-colors"
           >
@@ -66,6 +67,7 @@ const AutocompleteDropdown = ({
         {freeTextActionLabel && onUseFreeText ? (
           <button
             type="button"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={onUseFreeText}
             className="w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/80 px-3 py-2.5 text-sm font-semibold text-primary hover:bg-primary/10 transition-colors"
           >
@@ -96,6 +98,7 @@ const AutocompleteDropdown = ({
           {freeTextActionLabel && onUseFreeText ? (
             <button
               type="button"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={onUseFreeText}
               className="w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/80 px-3 py-2.5 text-sm font-semibold text-primary hover:bg-primary/10 transition-colors"
             >
