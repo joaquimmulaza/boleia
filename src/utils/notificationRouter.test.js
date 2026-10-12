@@ -7,6 +7,14 @@ import {
 } from './notificationRouter';
 
 describe('notificationRouter', () => {
+  it('status (cards v1.x) abre acordo sem CTA obrigatório', () => {
+    expect(
+      resolveNotificationRoute({
+        metadata: { type: 'status', card: 'v1.12', acordo_id: 'ac-1' },
+      }),
+    ).toBe('/acordos?openAcordoId=ac-1');
+  });
+
   describe('acordosDeepLink (ENG #16)', () => {
     it('monta query openAcordoId + focus', () => {
       expect(acordosDeepLink({ acordo_id: 'abc' }, 'pagamento')).toBe(

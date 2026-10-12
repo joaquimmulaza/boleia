@@ -62,6 +62,7 @@ export function acordosDeepLink(metadata, focus) {
 }
 
 export const notificationRouteMap = {
+  status: (metadata) => acordosDeepLink(metadata, null),
   agreement_update: (metadata) => {
     const adendaEstado = String(metadata?.adenda_estado || '').toLowerCase();
     if (ADENDA_PENDENTE_ESTADOS.has(adendaEstado)) {
