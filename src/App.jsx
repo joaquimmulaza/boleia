@@ -25,6 +25,7 @@ import AcordoRenovar from './pages/AcordoRenovar';
 import AcordoNaoRenovar from './pages/AcordoNaoRenovar';
 import VehicleSetup from './pages/VehicleSetup';
 import Profile from './pages/Profile';
+import ProfileBankDetails from './pages/ProfileBankDetails';
 import AdminPagamentos from './pages/AdminPagamentos';
 import AdminRoute from './components/AdminRoute';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -35,10 +36,9 @@ import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { usePasswordRecoveryRouteRedirect } from './hooks/usePasswordRecoveryRouteRedirect';
 import { needsProfileSetup } from './utils/oauth';
 import ProfileLoadGate from './components/ProfileLoadGate';
+import { isDevCaptureRoutesEnabled } from './utils/devCaptureAccess';
 
-const LazyDevRoutes = import.meta.env.DEV
-  ? lazy(() => import('./dev/DevAppRoutes.jsx'))
-  : null;
+const LazyDevRoutes = lazy(() => import('./dev/DevAppRoutes.jsx'));
 
 const RootRoute = () => {
   const {
@@ -72,7 +72,8 @@ function AppShell() {
   usePasswordRecoveryRouteRedirect();
   const { isOffline } = useNetworkStatus();
   const { pathname } = useLocation();
-  const isDevPublicRoute = import.meta.env.DEV && pathname.startsWith('/__dev/');
+  const devCaptureRoutesEnabled = isDevCaptureRoutesEnabled();
+  const isDevPublicRoute = devCaptureRoutesEnabled && pathname.startsWith('/__dev/');
 
   const isPublicRoute = pathname === '/'
     || pathname === '/auth'
@@ -89,16 +90,14 @@ function AppShell() {
       <Route path="/explorar" element={<MarketplaceExplore />} />
       <Route path="/privacidade" element={<PublicLegalPage page="privacidade" />} />
       <Route path="/eliminacao-de-dados" element={<PublicLegalPage page="eliminacao" />} />
-      {import.meta.env.DEV && LazyDevRoutes ? (
-        <Route
-          path="/__dev/*"
-          element={(
-            <Suspense fallback={null}>
-              <LazyDevRoutes />
-            </Suspense>
-          )}
-        />
-      ) : null}
+      <Route
+        path="/__dev/*"
+        element={(
+          <Suspense fallback={null}>
+            <LazyDevRoutes />
+          </Suspense>
+        )}
+      />
 
       {/* Rotas protegidas envolvidas pelo Layout global (com BottomBar) */}
       <Route element={<Layout />}>
@@ -132,6 +131,7 @@ function AppShell() {
           <Route path="/faltas" element={<AbsenceTracker />} />
           <Route path="/faltas/:acordoId" element={<AbsenceTracker />} />
           <Route path="/perfil" element={<Profile />} />
+          <Route path="/perfil/dados-bancarios" element={<ProfileBankDetails />} />
         </Route>
 
         <Route element={<AdminRoute />}>

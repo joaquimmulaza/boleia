@@ -62,16 +62,16 @@ const PublishRoute = () => {
   const handleSelectOrigin = (coordinates) => {
     setFormData((prev) => ({
       ...prev,
-      origin_lat: coordinates.lat,
-      origin_lng: coordinates.lng,
+      origin_lat: coordinates?.lat ?? null,
+      origin_lng: coordinates?.lng ?? null,
     }));
   };
 
   const handleSelectDestination = (coordinates) => {
     setFormData((prev) => ({
       ...prev,
-      destination_lat: coordinates.lat,
-      destination_lng: coordinates.lng,
+      destination_lat: coordinates?.lat ?? null,
+      destination_lng: coordinates?.lng ?? null,
     }));
   };
 

@@ -10,4 +10,8 @@ describe('Input (shadcn)', () => {
     expect(input.className).toMatch(/bg-background/);
     expect(input.className).toMatch(/border/);
   });
+
+  it('expõe displayName para devtools e testes', () => {
+    expect(Input.displayName).toBe('Input');
+  });
 });

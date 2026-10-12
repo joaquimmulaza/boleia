@@ -36,20 +36,18 @@ vi.mock('../services/ProfileService', () => ({
   findPassageiroByTelefone: vi.fn(),
 }));
 
-vi.mock('./AddressInput', () => ({
-  default: ({ id, name, label, value, onChange, required = true }) => (
-    <label htmlFor={id || name}>
-      {label}
-      <input
-        id={id || name}
-        name={name}
-        value={value || ''}
-        onChange={onChange}
-        required={required}
-        className="h-14 rounded-xl border border-input bg-card pl-4 pr-4 dark:bg-background"
-      />
-    </label>
-  ),
+vi.mock('../hooks/useAutocomplete', () => ({
+  useAutocomplete: () => ({
+    suggestions: [],
+    loading: false,
+    error: null,
+    errorKind: null,
+    resolvedInput: null,
+    fetchPredictions: vi.fn(),
+    retryLastFetch: vi.fn(),
+    selectPlace: vi.fn(),
+    clearSuggestions: vi.fn(),
+  }),
 }));
 
 const procura = {
@@ -248,7 +246,7 @@ describe('GrupoProcuraPanel T31', () => {
       await screen.findByRole('button', { name: /Convidar por telefone/i }),
     );
 
-    const pickup = screen.getByRole('textbox', { name: /Ponto de recolha \(opcional\)/i });
+    const pickup = screen.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
     expect(pickup).not.toBeRequired();
 
     fireEvent.change(screen.getByLabelText(/Telefone do colega/i), {
@@ -726,12 +724,14 @@ describe('GrupoProcuraPanel T31', () => {
     );
     expect(within(sheet).queryByText(/snapshots/i)).not.toBeInTheDocument();
     const tamanhoFieldset = within(dialog).getByRole('group', { name: 'Tamanho desejado' });
-    const tamanhoRow = tamanhoFieldset.querySelector('.flex-nowrap');
-    expect(tamanhoRow).toBeTruthy();
-    expect(tamanhoRow.className).toMatch(/flex-nowrap/);
-    expect(within(tamanhoFieldset).getByRole('button', { name: '8' })).toHaveClass('whitespace-nowrap');
-    const pickup = within(dialog).getByRole('textbox', { name: /Ponto de recolha \(opcional\)/i });
-    expect(pickup.className).toMatch(/border-input/);
+    expect(tamanhoFieldset.className).toMatch(/min-w-0/);
+    const tamanhoGrid = tamanhoFieldset.querySelector('.grid-cols-7');
+    expect(tamanhoGrid).toBeTruthy();
+    expect(tamanhoGrid.className).toMatch(/grid-cols-7/);
+    expect(tamanhoGrid.className).toMatch(/gap-1\.5/);
+    expect(within(tamanhoFieldset).getByRole('button', { name: '8' })).toHaveClass('size-9');
+    const pickup = within(dialog).getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
+    expect(pickup.className).toMatch(/border-\[#718096\]/);
     expect(pickup.className).toMatch(/bg-card/);
     expect(pickup.className).toMatch(/dark:bg-background/);
   });

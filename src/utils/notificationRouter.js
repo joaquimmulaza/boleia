@@ -49,6 +49,21 @@ export function propostaHubDeepLink(metadata) {
   return qs ? `${base}?${qs}` : base;
 }
 
+/**
+ * Cards `metadata.type = status` (v1.10 passageiro removido, v1.11 motorista expiração).
+ * Nunca deduzir hub pelo texto «motorista» no corpo.
+ *
+ * @param {Record<string, unknown> | null | undefined} metadata
+ * @returns {string}
+ */
+export function statusCardDeepLink(metadata) {
+  const card = String(metadata?.card || '').toLowerCase();
+  if (card === 'v1.10' || card === 'v1.11') {
+    return acordosDeepLink(metadata, null);
+  }
+  return acordosDeepLink(metadata, null);
+}
+
 export function acordosDeepLink(metadata, focus) {
   const params = new URLSearchParams();
   if (metadata?.acordo_id) {
@@ -86,6 +101,7 @@ export const notificationRouteMap = {
   proposal_cancelled: (metadata) => notificationRouteMap.proposal_received(metadata),
   waitlist_promoted: () => '/passageiro',
   match_available: () => '/passageiro',
+  status: (metadata) => statusCardDeepLink(metadata),
 };
 
 /**

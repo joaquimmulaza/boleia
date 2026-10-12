@@ -1,10 +1,10 @@
 import React, { useId, useMemo, useState } from 'react';
 import { AlertTriangle, Info } from 'lucide-react';
+import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { usePwaInstall } from '../hooks/usePwaInstall';
 import {
-  PUSH_PROFILE_BLOCKED_HELP,
   PUSH_PROFILE_ERROR,
   PUSH_PROFILE_ERROR_DISABLE,
   PUSH_PROFILE_HELP,
@@ -122,15 +122,7 @@ export default function PushNotificationsToggle() {
   } else if (uiState === 'activating' && pendingAction === 'enable') {
     statusLine = PUSH_PROFILE_STATE_ACTIVATING;
   } else if (uiState === 'bloqueado') {
-    statusPanel = (
-      <div className={STATUS_PANEL_NEUTRAL} data-testid="push-profile-status-bloqueado">
-        <Info className="size-6 shrink-0 text-slate-500 dark:text-slate-400" aria-hidden="true" />
-        <div className="space-y-1">
-          <p className="font-medium text-slate-800 dark:text-slate-100">{PUSH_PROFILE_STATE_BLOCKED}</p>
-          <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{PUSH_PROFILE_BLOCKED_HELP}</p>
-        </div>
-      </div>
-    );
+    statusLine = PUSH_PROFILE_STATE_BLOCKED;
   } else if (uiState === 'erro') {
     statusPanel = (
       <div
@@ -158,15 +150,17 @@ export default function PushNotificationsToggle() {
     );
   }
 
+  const blockedVisual = uiState === 'bloqueado';
+
   return (
     <div className="space-y-4 max-w-[390px] w-full mx-auto" data-testid="push-notifications-toggle">
-      <div className="bg-white dark:bg-slate-800/50 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700/50 p-4 flex flex-col gap-3">
-        <div className="flex items-start gap-3">
+      <div className="rounded-xl border border-border bg-card text-card-foreground shadow-sm p-4 flex flex-col gap-3">
+        <div className={cn('flex items-start gap-3', blockedVisual && 'opacity-50')}>
           <div className="flex-1 min-w-0">
-            <p id={labelId} className="font-semibold text-[15px] text-slate-900 dark:text-slate-100">
+            <p id={labelId} className="font-semibold text-[15px] text-foreground">
               {PUSH_PROFILE_LABEL}
             </p>
-            <p id={helpId} className="mt-0.5 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
+            <p id={helpId} className="mt-0.5 text-[13px] leading-relaxed text-muted-foreground">
               {PUSH_PROFILE_HELP}
             </p>
           </div>

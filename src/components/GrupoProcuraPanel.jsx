@@ -602,9 +602,9 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
                 {getGrupoEditSheetSubtitle()}
               </p>
             ) : null}
-            <fieldset className="space-y-2">
+            <fieldset className="min-w-0 space-y-2">
               <legend className="text-sm font-semibold">Tamanho desejado</legend>
-              <div className="flex flex-nowrap gap-2 overflow-x-auto">
+              <div className="grid grid-cols-7 gap-1.5">
                 {CAPACIDADES.map((n) => {
                   const floor = Math.max(2, membros.length);
                   const abaixo = n < floor;
@@ -617,7 +617,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
                       aria-pressed={activo}
                       aria-label={String(n)}
                       onClick={() => setEditCapacidade(n)}
-                      className={`size-10 shrink-0 whitespace-nowrap rounded-lg text-sm font-bold tabular-nums disabled:opacity-40 ${
+                      className={`size-9 shrink-0 whitespace-nowrap rounded-lg text-sm font-bold tabular-nums disabled:opacity-40 ${
                         activo
                           ? 'bg-primary text-white'
                           : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'

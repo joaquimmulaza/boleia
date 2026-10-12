@@ -24,3 +24,13 @@ export const MIN_PASSWORD_LENGTH = 8;
  */
 export const validatePassword = (password) =>
   typeof password === 'string' && password.length >= MIN_PASSWORD_LENGTH;
+
+/**
+ * IBAN angolano (AO06 + 21 dígitos, 25 caracteres).
+ * @param {string} iban
+ * @returns {boolean}
+ */
+export const validateAngolaIban = (iban) => {
+  const clean = String(iban || '').replace(/\s/g, '').toUpperCase();
+  return /^AO06\d{21}$/.test(clean);
+};

@@ -3,6 +3,8 @@ import {
   isStandalone,
   detectInstallPlatform,
   isInAppBrowser,
+  isIosSafariBrowser,
+  isIpadOsDesktopUa,
   getInstallDismissed,
   setInstallDismissed,
   INSTALL_DISMISS_STORAGE_KEY,
@@ -19,6 +21,14 @@ describe('pwaInstall', () => {
     Object.defineProperty(window.navigator, 'userAgent', {
       configurable: true,
       value: 'Mozilla/5.0',
+    });
+    Object.defineProperty(window.navigator, 'platform', {
+      configurable: true,
+      value: 'Win32',
+    });
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      configurable: true,
+      value: 0,
     });
   });
 
@@ -64,6 +74,49 @@ describe('pwaInstall', () => {
         value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
       });
       expect(detectInstallPlatform()).toBe('desktop');
+    });
+
+    it('identifica iPadOS com UA Macintosh e touch', () => {
+      Object.defineProperty(window.navigator, 'userAgent', {
+        configurable: true,
+        value: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+      });
+      Object.defineProperty(window.navigator, 'platform', {
+        configurable: true,
+        value: 'MacIntel',
+      });
+      Object.defineProperty(window.navigator, 'maxTouchPoints', {
+        configurable: true,
+        value: 5,
+      });
+      expect(isIpadOsDesktopUa()).toBe(true);
+      expect(detectInstallPlatform()).toBe('ios');
+    });
+  });
+
+  describe('isIosSafariBrowser', () => {
+    it('Safari iOS é Safari', () => {
+      Object.defineProperty(window.navigator, 'userAgent', {
+        configurable: true,
+        value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+      });
+      expect(isIosSafariBrowser()).toBe(true);
+    });
+
+    it('Chrome iOS (CriOS) não é Safari', () => {
+      Object.defineProperty(window.navigator, 'userAgent', {
+        configurable: true,
+        value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/120.0.0.0 Mobile/15E148 Safari/604.1',
+      });
+      expect(isIosSafariBrowser()).toBe(false);
+    });
+
+    it('Firefox iOS (FxiOS) não é Safari', () => {
+      Object.defineProperty(window.navigator, 'userAgent', {
+        configurable: true,
+        value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/120.0 Mobile/15E148 Safari/605.1.15',
+      });
+      expect(isIosSafariBrowser()).toBe(false);
     });
   });
 

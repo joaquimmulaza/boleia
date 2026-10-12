@@ -31,5 +31,5 @@ function relativeLuminance(hex) {
 }
 
 /** Tokens :root em src/index.css (modo claro). */
-export const LIGHT_INPUT_BORDER = '#718096';
+export { ADDRESS_INPUT_LIGHT_BORDER as LIGHT_INPUT_BORDER } from './addressInputSurface.js';
 export const LIGHT_INPUT_SURFACE = '#ffffff';
