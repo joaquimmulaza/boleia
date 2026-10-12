@@ -1065,10 +1065,7 @@ const MyAgreements = () => {
    */
   const renderCard = (acordo) => {
     const linhas = acordo.acordos_passageiros || [];
-    const nPax =
-      acordo.n_passageiros_contrato ||
-      linhas.filter((p) => isActivo(p.estado)).length ||
-      0;
+    const nPax = linhas.filter((p) => isActivoPassageiro(p.estado)).length;
     const oferta = acordo.ofertas_capacidade;
     const rota = labelRotaOferta(oferta || {});
     const activo = isActivo(acordo.estado);
@@ -1348,6 +1345,7 @@ const MyAgreements = () => {
             rescisaoModoAcordo={selected.rescisao_modo}
             rescisaoConfirmadaEmAcordo={selected.rescisao_confirmada_em}
             rescisaoSolicitadaPorAcordo={selected.rescisao_solicitada_por}
+            acordosPassageiros={selected.acordos_passageiros}
             minhaLinhaEstado={minhaLinha?.estado}
             minhaLinhaPagamento={pagamentoViewer}
             leavePending={leavePending}

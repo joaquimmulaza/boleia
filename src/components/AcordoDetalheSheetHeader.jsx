@@ -24,6 +24,7 @@ import {
  *   rescisaoModoAcordo?: string | null,
  *   rescisaoConfirmadaEmAcordo?: string | null,
  *   rescisaoSolicitadaPorAcordo?: string | null,
+ *   acordosPassageiros?: Array<{ passenger_id?: string, estado?: string }>,
  *   minhaLinhaEstado?: string | null,
  *   minhaLinhaPagamento?: { anulacao_motivo?: string | null } | null,
  *   leavePending?: boolean,
@@ -45,6 +46,7 @@ export default function AcordoDetalheSheetHeader({
   rescisaoModoAcordo,
   rescisaoConfirmadaEmAcordo,
   rescisaoSolicitadaPorAcordo,
+  acordosPassageiros,
   minhaLinhaEstado,
   minhaLinhaPagamento = null,
   leavePending = false,
@@ -70,6 +72,7 @@ export default function AcordoDetalheSheetHeader({
     rescisao_modo: rescisaoModoAcordo,
     rescisao_confirmada_em: rescisaoConfirmadaEmAcordo,
     rescisao_solicitada_por: rescisaoSolicitadaPorAcordo,
+    acordos_passageiros: acordosPassageiros,
   };
 
   return (

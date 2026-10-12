@@ -1,4 +1,5 @@
 import { formatDateLuandaPt, lastDayOfRescisaoCycle } from './rescisaoDisplay.js';
+import { contagemLugaresVivos } from './estadoPassageiro.js';
 
 /** @typedef {'sem_lugares_vivos'} EncerramentoMotivoAcordo */
 
@@ -10,6 +11,7 @@ import { formatDateLuandaPt, lastDayOfRescisaoCycle } from './rescisaoDisplay.js
  *   rescisao_confirmada_em?: string | null,
  *   rescisao_solicitada_por?: string | null,
  *   rescisao_effective_on?: string | null,
+ *   acordos_passageiros?: Array<{ passenger_id?: string, estado?: string }>,
  * }} AcordoEstadoChipInput
  */
 
@@ -28,6 +30,7 @@ function normalizeAcordoEstadoInput(estado, encerramentoMotivo, rescisaoModo) {
       rescisao_confirmada_em: estado.rescisao_confirmada_em,
       rescisao_solicitada_por: estado.rescisao_solicitada_por,
       rescisao_effective_on: estado.rescisao_effective_on,
+      acordos_passageiros: estado.acordos_passageiros,
       e: String(estado.estado || '').toLowerCase(),
     };
   }
@@ -38,8 +41,24 @@ function normalizeAcordoEstadoInput(estado, encerramentoMotivo, rescisaoModo) {
     rescisao_confirmada_em: undefined,
     rescisao_solicitada_por: undefined,
     rescisao_effective_on: undefined,
+    acordos_passageiros: undefined,
     e: String(estado || '').toLowerCase(),
   };
+}
+
+/**
+ * Cabeçalho `activo` reflecte lugares confirmados vs só reservados.
+ *
+ * @param {AcordoEstadoChipInput & { e?: string }} norm
+ * @returns {{ label: 'Activo' | 'Reservado', variant: 'activo' | 'pendente' } | null}
+ */
+function chipAcordoVigentePorLugares(norm) {
+  const linhas = norm.acordos_passageiros;
+  if (!Array.isArray(linhas) || linhas.length === 0) return null;
+  const { confirmados, reservados } = contagemLugaresVivos(linhas);
+  if (confirmados >= 1) return { label: 'Activo', variant: 'activo' };
+  if (reservados >= 1) return { label: 'Reservado', variant: 'pendente' };
+  return null;
 }
 
 /**
@@ -136,7 +155,7 @@ export function labelChipListaEstadoAcordo(acordo, userId) {
     return 'Encerramento pedido';
   }
 
-  return labelEstadoAcordo(norm);
+  return labelEstadoAcordo(acordo);
 }
 
 /**
@@ -155,7 +174,7 @@ export function variantChipListaEstadoAcordo(acordo, userId) {
   ) {
     return 'aviso';
   }
-  return variantChipEstadoAcordo(norm);
+  return variantChipEstadoAcordo(acordo);
 }
 
 export function labelEstadoAcordo(estado, encerramentoMotivo, rescisaoModo) {
@@ -164,7 +183,11 @@ export function labelEstadoAcordo(estado, encerramentoMotivo, rescisaoModo) {
 
   if (isAcordoEncerradoSemLugaresVivos(norm)) return 'Encerrado';
   if (isChipEncerramentoPedidoConsensual(norm)) return 'Encerramento pedido';
-  if (e === 'activo') return 'Activo';
+  if (e === 'activo') {
+    const porLugares = chipAcordoVigentePorLugares(norm);
+    if (porLugares) return porLugares.label;
+    return 'Activo';
+  }
   if (e === 'cancelamento_pendente') return 'Cancelamento pendente';
   if (e === 'cancelado') return 'Cancelado';
   if (e === 'cancelado_justificado') return 'Cancelado por justa causa';
@@ -186,7 +209,11 @@ export function variantChipEstadoAcordo(estado, encerramentoMotivo, rescisaoModo
   const { e } = norm;
 
   if (isAcordoEncerradoSemLugaresVivos(norm)) return 'encerrado';
-  if (e === 'activo' && !isChipEncerramentoPedidoConsensual(norm)) return 'activo';
+  if (e === 'activo' && !isChipEncerramentoPedidoConsensual(norm)) {
+    const porLugares = chipAcordoVigentePorLugares(norm);
+    if (porLugares) return porLugares.variant;
+    return 'activo';
+  }
   if (e === 'activo' || e === 'cancelamento_pendente') return 'pendente';
   return 'inactivo';
 }
