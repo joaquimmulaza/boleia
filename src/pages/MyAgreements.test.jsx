@@ -1469,14 +1469,14 @@ describe('MyAgreements — marketplace 1:N', () => {
       expect(await screen.findByText('Encerramento pedido')).toBeInTheDocument();
     });
 
-    it('contraparte vê chip Falta a tua confirmação na lista', async () => {
-      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
-      getAgreementsForPassenger.mockResolvedValue([
+    it('motorista vê chip Falta a tua confirmação na lista quando passageiro pediu', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver.mockResolvedValue([
         {
-          ...acordoPassageiro,
+          ...acordoMotorista,
           rescisao_modo: 'consensual',
           rescisao_confirmada_em: null,
-          rescisao_solicitada_por: 'driver-1',
+          rescisao_solicitada_por: 'pax-1',
         },
       ]);
 
@@ -1526,31 +1526,39 @@ describe('MyAgreements — marketplace 1:N', () => {
       resetOverlayStackForTests();
     });
 
-    const acordoComPedidoMotorista = {
+    const acordoComPedidoPassageiro = {
       ...acordoPassageiro,
       rescisao_modo: 'consensual',
-      rescisao_solicitada_por: 'driver-1',
+      rescisao_solicitada_por: 'pax-viewer',
       rescisao_vigencia: 'imediato',
     };
 
-    it('contraparte vê Confirmar e Recusar; confirmar chama terminateAgreement consensual', async () => {
-      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    const acordoComPedidoPassageiroMotorista = {
+      ...acordoMotorista,
+      rescisao_modo: 'consensual',
+      rescisao_solicitada_por: 'pax-1',
+      rescisao_vigencia: 'imediato',
+    };
+
+    it('motorista vê Confirmar e Recusar; confirmar chama terminateAgreement consensual', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
       const encerrado = {
-        ...acordoComPedidoMotorista,
+        ...acordoComPedidoPassageiroMotorista,
         estado: 'cancelado',
         rescisao_modo: null,
         rescisao_solicitada_por: null,
         rescisao_vigencia: null,
       };
-      getAgreementsForPassenger
-        .mockResolvedValueOnce([acordoComPedidoMotorista])
+      getAgreementsForDriver
+        .mockResolvedValueOnce([acordoComPedidoPassageiroMotorista])
         .mockResolvedValue([encerrado]);
+      getAgreementsForPassenger.mockResolvedValue([]);
       terminateAgreement.mockResolvedValue({
-        id: 'acordo-pax',
+        id: 'acordo-1',
         estado: 'cancelado',
       });
 
-      renderPage(['/acordos?openAcordoId=acordo-pax&focus=rescisao']);
+      renderPage(['/acordos?openAcordoId=acordo-1&focus=rescisao']);
 
       const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
       expect(within(dialog).getByTestId('rescisao-consensual-pendente')).toBeInTheDocument();
@@ -1563,7 +1571,7 @@ describe('MyAgreements — marketplace 1:N', () => {
       await waitFor(() => {
         expect(terminateAgreement).toHaveBeenCalledTimes(1);
         expect(terminateAgreement).toHaveBeenCalledWith(
-          'acordo-pax',
+          'acordo-1',
           { modo: 'consensual', vigencia: 'imediato' },
           expect.objectContaining({
             idempotencyKey: expect.stringMatching(
@@ -1580,16 +1588,17 @@ describe('MyAgreements — marketplace 1:N', () => {
       expect(screen.getByRole('dialog', { name: /Detalhe do acordo/i })).toBeInTheDocument();
     });
 
-    it('contraparte recusa pedido consensual via rejectAgreementTermination', async () => {
-      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
-      getAgreementsForPassenger.mockResolvedValue([acordoComPedidoMotorista]);
+    it('motorista recusa pedido consensual via rejectAgreementTermination', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver.mockResolvedValue([acordoComPedidoPassageiroMotorista]);
+      getAgreementsForPassenger.mockResolvedValue([]);
       rejectAgreementTermination.mockResolvedValue({
-        id: 'acordo-pax',
+        id: 'acordo-1',
         estado: 'activo',
         rescisao_modo: null,
       });
 
-      renderPage(['/acordos?openAcordoId=acordo-pax']);
+      renderPage(['/acordos?openAcordoId=acordo-1']);
 
       const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
       fireEvent.click(within(dialog).getByTestId('rescisao-recusar-cta'));
@@ -1597,7 +1606,7 @@ describe('MyAgreements — marketplace 1:N', () => {
       await waitFor(() => {
         expect(rejectAgreementTermination).toHaveBeenCalledTimes(1);
         expect(rejectAgreementTermination).toHaveBeenCalledWith(
-          'acordo-pax',
+          'acordo-1',
           expect.objectContaining({
             idempotencyKey: expect.stringMatching(
               /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
@@ -1706,17 +1715,18 @@ describe('MyAgreements — marketplace 1:N', () => {
     });
 
     it('cliques rápidos no Confirmar só disparam um pedido', async () => {
-      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
       const encerrado = {
-        ...acordoComPedidoMotorista,
+        ...acordoComPedidoPassageiroMotorista,
         estado: 'cancelado',
         rescisao_modo: null,
         rescisao_solicitada_por: null,
         rescisao_vigencia: null,
       };
-      getAgreementsForPassenger
-        .mockResolvedValueOnce([acordoComPedidoMotorista])
+      getAgreementsForDriver
+        .mockResolvedValueOnce([acordoComPedidoPassageiroMotorista])
         .mockResolvedValue([encerrado]);
+      getAgreementsForPassenger.mockResolvedValue([]);
 
       let resolveTerminate;
       terminateAgreement.mockImplementation(
@@ -1726,7 +1736,7 @@ describe('MyAgreements — marketplace 1:N', () => {
           }),
       );
 
-      renderPage(['/acordos?openAcordoId=acordo-pax']);
+      renderPage(['/acordos?openAcordoId=acordo-1']);
 
       const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
       const confirmar = within(dialog).getByTestId('rescisao-confirmar-cta');
@@ -1738,7 +1748,7 @@ describe('MyAgreements — marketplace 1:N', () => {
       });
       expect(confirmar).toBeDisabled();
 
-      resolveTerminate({ id: 'acordo-pax', estado: 'cancelado' });
+      resolveTerminate({ id: 'acordo-1', estado: 'cancelado' });
       await waitFor(() => {
         expect(
           screen.queryByTestId('rescisao-consensual-pendente'),
@@ -1747,12 +1757,13 @@ describe('MyAgreements — marketplace 1:N', () => {
     });
 
     it('sem rescisao_solicitada_em não mostra «Pedido feito a …»', async () => {
-      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
-      getAgreementsForPassenger.mockResolvedValue([
-        { ...acordoComPedidoMotorista, rescisao_solicitada_em: null },
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver.mockResolvedValue([
+        { ...acordoComPedidoPassageiroMotorista, rescisao_solicitada_em: null },
       ]);
+      getAgreementsForPassenger.mockResolvedValue([]);
 
-      renderPage(['/acordos?openAcordoId=acordo-pax&focus=rescisao']);
+      renderPage(['/acordos?openAcordoId=acordo-1&focus=rescisao']);
 
       const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
       expect(within(dialog).queryByTestId('rescisao-pedido-feito-em')).not.toBeInTheDocument();
@@ -1808,10 +1819,11 @@ describe('MyAgreements — marketplace 1:N', () => {
         };
       });
 
-      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
-      getAgreementsForPassenger.mockResolvedValue([acordoComPedidoMotorista]);
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver.mockResolvedValue([acordoComPedidoPassageiroMotorista]);
+      getAgreementsForPassenger.mockResolvedValue([]);
 
-      renderPage(['/acordos?openAcordoId=acordo-pax&focus=rescisao']);
+      renderPage(['/acordos?openAcordoId=acordo-1&focus=rescisao']);
 
       await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
       await waitFor(() => {
@@ -1824,10 +1836,11 @@ describe('MyAgreements — marketplace 1:N', () => {
 
     it('focus=rescisao com pedido pendente: um scroll, remove focus da URL e refresh não repete scroll', async () => {
       const scrollSpy = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {});
-      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
-      getAgreementsForPassenger.mockResolvedValue([acordoComPedidoMotorista]);
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver.mockResolvedValue([acordoComPedidoPassageiroMotorista]);
+      getAgreementsForPassenger.mockResolvedValue([]);
 
-      renderPage(['/acordos?openAcordoId=acordo-pax&focus=rescisao']);
+      renderPage(['/acordos?openAcordoId=acordo-1&focus=rescisao']);
 
       const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
       expect(within(dialog).getByTestId('rescisao-consensual-pendente')).toBeInTheDocument();
@@ -1835,15 +1848,15 @@ describe('MyAgreements — marketplace 1:N', () => {
         expect(scrollSpy).toHaveBeenCalledTimes(1);
       });
       expect(mockNavigate).toHaveBeenCalledWith(
-        expect.objectContaining({ search: '?openAcordoId=acordo-pax' }),
+        expect.objectContaining({ search: '?openAcordoId=acordo-1' }),
         expect.objectContaining({ replace: true }),
       );
 
-      const callsBefore = getAgreementsForPassenger.mock.calls.length;
+      const callsBefore = getAgreementsForDriver.mock.calls.length;
       notifyMarketplaceHubRefresh();
       notifyMarketplaceHubRefresh();
       await waitFor(() => {
-        expect(getAgreementsForPassenger.mock.calls.length).toBeGreaterThan(callsBefore);
+        expect(getAgreementsForDriver.mock.calls.length).toBeGreaterThan(callsBefore);
       });
       expect(scrollSpy).toHaveBeenCalledTimes(1);
 
@@ -1860,7 +1873,7 @@ describe('MyAgreements — marketplace 1:N', () => {
       mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
       getAgreementsForPassenger.mockResolvedValue([
         {
-          ...acordoComPedidoMotorista,
+          ...acordoComPedidoPassageiro,
           estado: 'cancelamento_pendente',
           rescisao_solicitada_por: null,
           rescisao_effective_on: '2026-11-01',
@@ -2230,21 +2243,22 @@ describe('MyAgreements — marketplace 1:N', () => {
     });
 
     it('duplo Confirmar após sucesso: RPC uma vez e sem alerta de erro', async () => {
-      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
-      getAgreementsForPassenger
-        .mockResolvedValueOnce([acordoComPedidoMotorista])
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver
+        .mockResolvedValueOnce([acordoComPedidoPassageiroMotorista])
         .mockResolvedValue([]);
+      getAgreementsForPassenger.mockResolvedValue([]);
 
       let rpcCalls = 0;
       terminateAgreement.mockImplementation(async () => {
         rpcCalls += 1;
         if (rpcCalls === 1) {
-          return { id: 'acordo-pax', estado: 'cancelado' };
+          return { id: 'acordo-1', estado: 'cancelado' };
         }
         throw new Error('Sem permissão para rescindir este acordo.');
       });
 
-      renderPage(['/acordos?openAcordoId=acordo-pax&focus=rescisao']);
+      renderPage(['/acordos?openAcordoId=acordo-1&focus=rescisao']);
 
       const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
       const confirmar = within(dialog).getByTestId('rescisao-confirmar-cta');
@@ -2259,13 +2273,13 @@ describe('MyAgreements — marketplace 1:N', () => {
 
     it('passageiro: acordo fora da lista após refresh fecha detalhe (linha saiu)', async () => {
       mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
-      getAgreementsForPassenger.mockResolvedValue([acordoComPedidoMotorista]);
+      getAgreementsForPassenger.mockResolvedValue([acordoComPedidoPassageiro]);
 
       renderPage();
       fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
       await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
-      expect(screen.getByTestId('rescisao-consensual-pendente')).toBeInTheDocument();
+      expect(screen.getByTestId('rescisao-consensual-enviada')).toBeInTheDocument();
 
       getAgreementsForPassenger.mockResolvedValue([]);
       notifyMarketplaceHubRefresh();
@@ -2276,8 +2290,9 @@ describe('MyAgreements — marketplace 1:N', () => {
     });
 
     it('Fechar detalhe durante Confirmar em curso não reabre o sheet', async () => {
-      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
-      getAgreementsForPassenger.mockResolvedValue([acordoComPedidoMotorista]);
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver.mockResolvedValue([acordoComPedidoPassageiroMotorista]);
+      getAgreementsForPassenger.mockResolvedValue([]);
 
       let resolveTerminate;
       terminateAgreement.mockImplementation(
@@ -2287,7 +2302,7 @@ describe('MyAgreements — marketplace 1:N', () => {
           }),
       );
 
-      renderPage(['/acordos?openAcordoId=acordo-pax&focus=rescisao']);
+      renderPage(['/acordos?openAcordoId=acordo-1&focus=rescisao']);
 
       const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
       fireEvent.click(within(dialog).getByTestId('rescisao-confirmar-cta'));
@@ -2297,15 +2312,15 @@ describe('MyAgreements — marketplace 1:N', () => {
         expect(screen.queryByRole('dialog', { name: /Detalhe do acordo/i })).not.toBeInTheDocument();
       });
 
-      getAgreementsForPassenger.mockResolvedValue([
+      getAgreementsForDriver.mockResolvedValue([
         {
-          ...acordoComPedidoMotorista,
+          ...acordoComPedidoPassageiroMotorista,
           estado: 'cancelado',
           rescisao_modo: null,
           rescisao_solicitada_por: null,
         },
       ]);
-      resolveTerminate({ id: 'acordo-pax', estado: 'cancelado' });
+      resolveTerminate({ id: 'acordo-1', estado: 'cancelado' });
 
       await waitFor(() => {
         expect(terminateAgreement).toHaveBeenCalledTimes(1);
@@ -2314,8 +2329,9 @@ describe('MyAgreements — marketplace 1:N', () => {
     });
 
     it('guard in-flight: duplo clique com RPC pendente só chama terminateAgreement uma vez', async () => {
-      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
-      getAgreementsForPassenger.mockResolvedValue([acordoComPedidoMotorista]);
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver.mockResolvedValue([acordoComPedidoPassageiroMotorista]);
+      getAgreementsForPassenger.mockResolvedValue([]);
 
       let resolveTerminate;
       let rpcCalls = 0;
@@ -2327,7 +2343,7 @@ describe('MyAgreements — marketplace 1:N', () => {
           }),
       );
 
-      renderPage(['/acordos?openAcordoId=acordo-pax&focus=rescisao']);
+      renderPage(['/acordos?openAcordoId=acordo-1&focus=rescisao']);
 
       const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
       const confirmar = within(dialog).getByTestId('rescisao-confirmar-cta');
@@ -2342,43 +2358,45 @@ describe('MyAgreements — marketplace 1:N', () => {
       expect(terminateAgreement).toHaveBeenCalledTimes(1);
 
       await act(async () => {
-        getAgreementsForPassenger.mockResolvedValue([]);
-        resolveTerminate({ id: 'acordo-pax', estado: 'cancelado' });
+        getAgreementsForDriver.mockResolvedValue([]);
+        resolveTerminate({ id: 'acordo-1', estado: 'cancelado' });
         await Promise.resolve();
       });
     });
 
     it('sem permissão: engole erro se refetch confirma acordo fora da lista', async () => {
-      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
-      getAgreementsForPassenger
-        .mockResolvedValueOnce([acordoComPedidoMotorista])
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver
+        .mockResolvedValueOnce([acordoComPedidoPassageiroMotorista])
         .mockResolvedValue([]);
+      getAgreementsForPassenger.mockResolvedValue([]);
 
       terminateAgreement.mockRejectedValue(
         new Error('Sem permissão para rescindir este acordo.'),
       );
 
-      renderPage(['/acordos?openAcordoId=acordo-pax&focus=rescisao']);
+      renderPage(['/acordos?openAcordoId=acordo-1&focus=rescisao']);
 
       const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
       fireEvent.click(within(dialog).getByTestId('rescisao-confirmar-cta'));
 
       await waitFor(() => {
         expect(terminateAgreement).toHaveBeenCalledTimes(1);
-        expect(getAgreementsForPassenger.mock.calls.length).toBeGreaterThanOrEqual(2);
+        expect(getAgreementsForDriver.mock.calls.length).toBeGreaterThanOrEqual(2);
       });
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
 
     it('sem permissão: mostra erro se refetch mantém acordo activo pendente', async () => {
-      mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
-      getAgreementsForPassenger.mockResolvedValue([acordoComPedidoMotorista]);
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver.mockResolvedValue([acordoComPedidoPassageiroMotorista]);
+      getAgreementsForPassenger.mockResolvedValue([]);
 
       terminateAgreement.mockRejectedValue(
         new Error('Sem permissão para rescindir este acordo.'),
       );
 
-      renderPage(['/acordos?openAcordoId=acordo-pax&focus=rescisao']);
+      renderPage(['/acordos?openAcordoId=acordo-1&focus=rescisao']);
 
       const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
       fireEvent.click(within(dialog).getByTestId('rescisao-confirmar-cta'));

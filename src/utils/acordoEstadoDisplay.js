@@ -101,18 +101,9 @@ export function isChipEncerramentoPedidoConsensual(input) {
 }
 
 /**
- * @param {string | null | undefined} estadoPassageiro
- * @returns {boolean}
- */
-function isPassageiroLugarVivoParaRescisao(estadoPassageiro) {
-  const e = String(estadoPassageiro || '').toLowerCase();
-  return e === 'activo' || e === 'reservado';
-}
-
-/**
- * Espelha terminate_agreement: só a contraparte autorizada confirma consensual pendente.
+ * Só o motorista confirma pedido consensual pendente (passageiro requerente).
  *
- * @param {AcordoEstadoChipInput & { driver_id?: string | null, acordos_passageiros?: Array<{ passenger_id?: string | null, estado?: string | null }> }} acordo
+ * @param {AcordoEstadoChipInput & { driver_id?: string | null }} acordo
  * @param {string | null | undefined} userId
  * @returns {boolean}
  */
@@ -124,18 +115,7 @@ export function podeConfirmarRescisaoConsensual(acordo, userId) {
   const driverId = acordo?.driver_id;
   if (!driverId) return false;
 
-  const solicitanteIsDriver =
-    String(norm.rescisao_solicitada_por) === String(driverId);
-  const isDriver = String(userId) === String(driverId);
-
-  const linhas = acordo?.acordos_passageiros || [];
-  const isPaxActivo = linhas.some(
-    (p) =>
-      String(p.passenger_id) === String(userId)
-      && isPassageiroLugarVivoParaRescisao(p.estado),
-  );
-
-  return (solicitanteIsDriver && isPaxActivo) || (!solicitanteIsDriver && isDriver);
+  return String(userId) === String(driverId);
 }
 
 /**
@@ -182,16 +162,14 @@ export function labelChipListaEstadoAcordo(acordo, userId) {
  *
  * @param {string | AcordoEstadoChipInput | null | undefined} acordo
  * @param {string | null | undefined} userId
- * @returns {'activo' | 'pendente' | 'encerrado' | 'inactivo' | 'aviso'}
+ * @returns {'activo' | 'pendente' | 'encerrado' | 'inactivo' | 'aviso' | 'info'}
  */
 export function variantChipListaEstadoAcordo(acordo, userId) {
   const norm = normalizeAcordoEstadoInput(acordo);
-  if (
-    isChipEncerramentoPedidoConsensual(norm)
-    && userId
-    && podeConfirmarRescisaoConsensual(acordo, userId)
-  ) {
-    return 'aviso';
+  if (isChipEncerramentoPedidoConsensual(norm) && userId) {
+    if (podeConfirmarRescisaoConsensual(acordo, userId)) return 'aviso';
+    if (String(norm.rescisao_solicitada_por) !== String(userId)) return 'info';
+    return 'pendente';
   }
   return variantChipEstadoAcordo(norm);
 }
@@ -231,12 +209,15 @@ export function variantChipEstadoAcordo(estado, encerramentoMotivo, rescisaoModo
 
 /**
  * Classes Tailwind do chip de estado do acordo.
- * @param {'activo' | 'pendente' | 'encerrado' | 'inactivo' | 'aviso'} variant
+ * @param {'activo' | 'pendente' | 'encerrado' | 'inactivo' | 'aviso' | 'info'} variant
  * @returns {string}
  */
 export function chipClassEstadoAcordoVariant(variant) {
   if (variant === 'activo') {
     return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200';
+  }
+  if (variant === 'info') {
+    return 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-300';
   }
   if (variant === 'aviso') {
     return 'bg-amber-100 text-amber-950 dark:bg-amber-950/50 dark:text-amber-100 ring-1 ring-amber-300/80 dark:ring-amber-700/80';

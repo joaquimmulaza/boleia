@@ -39,6 +39,7 @@ import {
   variantChipListaEstadoAcordo,
   chipClassEstadoAcordoVariant,
   isChipEncerramentoPedidoConsensual,
+  podeConfirmarRescisaoConsensual,
 } from '../utils/acordoEstadoDisplay';
 import {
   acordoPrecisaLiveRefresh,
@@ -1080,6 +1081,8 @@ const MyAgreements = () => {
     const activo = isActivo(acordo.estado);
     const estadoVariant = variantChipListaEstadoAcordo(acordo, user?.id);
     const estadoLabel = labelChipListaEstadoAcordo(acordo, user?.id);
+    const chipEstadoRole =
+      estadoVariant === 'info' || estadoVariant === 'aviso' ? 'status' : undefined;
     const leavePending = Boolean(pendingLeaveIds[acordo.id]);
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
     const minhaChipCtxCard = minhaLinha
@@ -1117,6 +1120,7 @@ const MyAgreements = () => {
         <div className="flex justify-between items-center gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <span
+              role={chipEstadoRole}
               className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoAcordoVariant(estadoVariant)}`}
             >
               {estadoLabel}
@@ -1238,10 +1242,7 @@ const MyAgreements = () => {
         janelaAberta: janelaPrecoAberta,
       });
     const rescisaoConsensualPendente =
-      activo &&
-      String(selected.rescisao_modo || '').toLowerCase() === 'consensual' &&
-      selected.rescisao_solicitada_por &&
-      selected.rescisao_solicitada_por !== user?.id;
+      activo && podeConfirmarRescisaoConsensual(selected, user?.id);
     const rescisaoConsensualEnviada =
       activo &&
       String(selected.rescisao_modo || '').toLowerCase() === 'consensual' &&
