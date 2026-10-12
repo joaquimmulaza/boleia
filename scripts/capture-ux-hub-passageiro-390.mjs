@@ -23,6 +23,24 @@ for (const width of WIDTHS) {
   await page.goto(`${BASE}/__dev/hub-passageiro-ux`, { waitUntil: 'networkidle' });
   await page.waitForSelector('[data-testid="hub-passageiro-ux-capture-root"]');
 
+  const pickup = page.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
+  await pickup.click();
+  await pickup.fill('Talatona');
+  await page.waitForFunction(
+    () => {
+      const listbox = document.querySelector('[role="listbox"]');
+      if (listbox) {
+        return listbox.querySelectorAll('[role="option"]').length > 0;
+      }
+      return document.querySelector('[data-testid="geocoder-network-error"]') != null;
+    },
+    { timeout: 15000 },
+  );
+  const hasSuggestions = await page.locator('[role="listbox"] [role="option"]').count();
+  if (hasSuggestions === 0) {
+    throw new Error('Captura abortada: sem sugestões Photon visíveis (verificar rede ou lang=pt).');
+  }
+
   for (const theme of ['light', 'dark']) {
     await page.evaluate((isDark) => {
       document.documentElement.classList.toggle('dark', isDark);

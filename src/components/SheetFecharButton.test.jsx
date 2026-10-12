@@ -18,4 +18,15 @@ describe('SheetFecharButton', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('mousedown não propaga (evita document listener do AddressInput fechar só o dropdown)', () => {
+    const onClose = vi.fn();
+    const docListener = vi.fn();
+    document.addEventListener('mousedown', docListener);
+    render(<SheetFecharButton onClick={onClose} />);
+    const btn = screen.getByRole('button', { name: 'Fechar' });
+    fireEvent.mouseDown(btn);
+    expect(docListener).not.toHaveBeenCalled();
+    document.removeEventListener('mousedown', docListener);
+  });
 });

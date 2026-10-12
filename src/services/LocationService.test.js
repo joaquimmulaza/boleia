@@ -6,6 +6,8 @@ import {
   LUANDA_PHOTON_LON,
   mapPhotonFeature,
   photonFeatureHasBairro,
+  resolvePhotonLangParam,
+  buildPhotonSearchParams,
 } from './LocationService';
 
 const mockFetch = vi.fn();
@@ -39,6 +41,27 @@ describe('LocationService (OpenStreetMap / Photon)', () => {
     vi.restoreAllMocks();
   });
 
+  describe('resolvePhotonLangParam / buildPhotonSearchParams', () => {
+    it('omite lang para pt — Photon responde 400 com lang=pt', () => {
+      expect(resolvePhotonLangParam('pt')).toBeNull();
+      expect(resolvePhotonLangParam('PT')).toBeNull();
+      const params = buildPhotonSearchParams('Talatona', 'pt');
+      expect(params.has('lang')).toBe(false);
+      expect(params.toString()).not.toContain('lang=pt');
+    });
+
+    it('só envia lang quando está em default, en, de ou fr', () => {
+      expect(resolvePhotonLangParam('en')).toBe('en');
+      expect(resolvePhotonLangParam('de')).toBe('de');
+      expect(resolvePhotonLangParam('fr')).toBe('fr');
+      expect(resolvePhotonLangParam('default')).toBe('default');
+      expect(resolvePhotonLangParam('es')).toBeNull();
+
+      expect(buildPhotonSearchParams('Luanda', 'en').get('lang')).toBe('en');
+      expect(buildPhotonSearchParams('Luanda', 'es').has('lang')).toBe(false);
+    });
+  });
+
   describe('getPlacePredictions', () => {
     it('retorna [] imediatamente se input for vazio (sem fetch)', async () => {
       const result = await getPlacePredictions('');
@@ -67,6 +90,8 @@ describe('LocationService (OpenStreetMap / Photon)', () => {
       expect(calledUrl).toContain(`lon=${LUANDA_PHOTON_LON}`);
       expect(calledUrl).toContain('q=Talatona');
       expect(calledUrl).toContain('countrycode=ao');
+      expect(calledUrl).not.toContain('lang=pt');
+      expect(calledUrl).not.toMatch(/[?&]lang=/);
       expect(options?.headers?.['User-Agent']).toBeUndefined();
       expect(options?.signal).toBeUndefined();
     });

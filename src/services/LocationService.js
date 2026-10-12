@@ -8,6 +8,47 @@ const PHOTON_BASE_URL = 'https://photon.komoot.io/api/';
 const MIN_INPUT_LENGTH = 3;
 const RESULTS_LIMIT = 8;
 
+/** Idiomas suportados pelo Photon (`lang` query). `pt` devolve HTTP 400. */
+export const PHOTON_ALLOWED_LANGS = new Set(['default', 'en', 'de', 'fr']);
+
+/**
+ * @param {string | null | undefined} preferred
+ * @returns {string | null} valor para `lang` ou null para omitir (default Photon)
+ */
+export function resolvePhotonLangParam(preferred) {
+  if (preferred == null || preferred === '') {
+    return null;
+  }
+  const norm = String(preferred).toLowerCase();
+  if (norm === 'pt') {
+    return null;
+  }
+  if (PHOTON_ALLOWED_LANGS.has(norm)) {
+    return norm;
+  }
+  return null;
+}
+
+/**
+ * @param {string} query
+ * @param {string | null | undefined} [preferredLang]
+ * @returns {URLSearchParams}
+ */
+export function buildPhotonSearchParams(query, preferredLang = null) {
+  const params = new URLSearchParams({
+    q: query,
+    lat: String(LUANDA_PHOTON_LAT),
+    lon: String(LUANDA_PHOTON_LON),
+    limit: String(RESULTS_LIMIT),
+    countrycode: 'ao',
+  });
+  const lang = resolvePhotonLangParam(preferredLang);
+  if (lang) {
+    params.set('lang', lang);
+  }
+  return params;
+}
+
 /** Centro Luanda — viés Photon (lat/lon). */
 export const LUANDA_PHOTON_LAT = -8.839;
 export const LUANDA_PHOTON_LON = 13.289;
@@ -145,14 +186,7 @@ export const photonFeatureHasBairro = (feature) => {
  * @returns {Promise<object[]>}
  */
 const fetchPhotonRaw = async (query, signal) => {
-  const params = new URLSearchParams({
-    q: query,
-    lat: String(LUANDA_PHOTON_LAT),
-    lon: String(LUANDA_PHOTON_LON),
-    limit: String(RESULTS_LIMIT),
-    lang: 'pt',
-    countrycode: 'ao',
-  });
+  const params = buildPhotonSearchParams(query, null);
 
   const url = `${PHOTON_BASE_URL}?${params.toString()}`;
   const response = await fetch(url, { signal });
