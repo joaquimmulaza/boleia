@@ -4,6 +4,9 @@ import NotificationListItem from '../components/NotificationListItem';
 const FIXTURE_CREATED_AT = '2026-10-12T08:00:00.000Z';
 const ACORDO_ID = 'f5555555-5555-4555-8555-555555555555';
 
+/** Copy exacta: `handle_acordo_notifications` — `20261009230000_notif_b4_txid_cancel_suppress.sql` (#252 / B4). */
+const MSG_252_PASSAGEIRO_ULTIMO_CANCELADO = 'O teu acordo de boleia foi cancelado.';
+
 /** @type {Array<{ key: string, label: string, notif: object }>} */
 const FIXTURES = [
   {
@@ -56,6 +59,21 @@ const FIXTURES = [
         type: 'status',
         card: 'v1.10',
         titulo: 'Já não fazes parte deste acordo',
+        acordo_id: ACORDO_ID,
+      },
+    },
+  },
+  {
+    key: '252-ultimo-cancelado',
+    label: '#252 — motorista remove último passageiro (passageiro)',
+    notif: {
+      id: 'n-252-last-removed',
+      mensagem: MSG_252_PASSAGEIRO_ULTIMO_CANCELADO,
+      tipo: 'error',
+      lida: false,
+      created_at: FIXTURE_CREATED_AT,
+      metadata: {
+        type: 'agreement_update',
         acordo_id: ACORDO_ID,
       },
     },

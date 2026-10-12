@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import DevNotifCards269Capture from './DevNotifCards269Capture';
 
 describe('DevNotifCards269Capture', () => {
-  it('mostra as quatro mensagens dos cards v1.11 e v1.10', () => {
+  it('mostra v1.11, v1.10 e #252 (último passageiro removido)', () => {
     render(<DevNotifCards269Capture />);
     expect(
       screen.getByText(/A reserva de Maria Silva expirou e o acordo foi encerrado/),
@@ -17,5 +17,6 @@ describe('DevNotifCards269Capture', () => {
     expect(
       screen.getByText('O motorista retirou-te do acordo. O teu lugar foi libertado.'),
     ).toBeInTheDocument();
+    expect(screen.getByText('O teu acordo de boleia foi cancelado.')).toBeInTheDocument();
   });
 });
