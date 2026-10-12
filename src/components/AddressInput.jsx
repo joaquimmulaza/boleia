@@ -120,7 +120,10 @@ const AddressInput = ({
   }, [name, onChange, onSelectCoordinates, selectPlace]);
 
   const showFreeTextAction =
-    allowFreeTextUse && !loading && !errorKind && inputValue.trim().length > 2;
+    allowFreeTextUse
+    && !loading
+    && inputValue.trim().length > 2
+    && (errorKind === null || errorKind === 'network');
 
   const emptyMessage =
     !loading && !errorKind && inputValue.length > 2 ? EMPTY_GEOCODER_MESSAGE : undefined;

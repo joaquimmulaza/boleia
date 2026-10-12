@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, Clock, Users, Banknote } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AddressInput from '../components/AddressInput';
-import { FLEX_ONLY_FREE_TEXT_WARNING_TODO } from '../utils/addressGeocoderCopy';
+import { FLEX_ONLY_FREE_TEXT_WARNING } from '../utils/addressGeocoderCopy';
 import TimeInput from '../components/TimeInput';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
@@ -1737,7 +1737,7 @@ const PassengerDashboard = () => {
               className="text-sm text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 rounded-xl px-3 py-2.5"
               role="status"
             >
-              {FLEX_ONLY_FREE_TEXT_WARNING_TODO}
+              {FLEX_ONLY_FREE_TEXT_WARNING}
             </p>
           )}
           <AddressInput

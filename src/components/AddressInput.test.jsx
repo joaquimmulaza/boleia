@@ -265,7 +265,7 @@ describe('AddressInput', () => {
     expect(input).toHaveAttribute('aria-activedescendant', 'origin_name-geocoder-listbox-option-0');
   });
 
-  it('erro de rede mostra painel próprio com tentar novamente', () => {
+  it('erro de rede mostra copy final, retry e Usar texto livre', () => {
     mockErrorKind = 'network';
     mockSuggestions = [];
 
@@ -273,16 +273,24 @@ describe('AddressInput', () => {
       <AddressInput
         name="origin_name"
         label="Origem"
-        value="Tal"
+        value="Talatona"
         onChange={vi.fn()}
+        allowFreeTextUse
+        onConfirmFreeText={vi.fn()}
       />,
     );
 
     fireEvent.focus(screen.getByRole('combobox', { name: /Origem/i }));
     expect(screen.getByTestId('geocoder-network-error')).toBeInTheDocument();
+    expect(screen.getByText(
+      'Não foi possível procurar locais. Verifica a ligação e tenta outra vez.',
+    )).toBeInTheDocument();
     expect(screen.queryByTestId('geocoder-empty-state')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar outra vez' }));
     expect(retryLastFetch).toHaveBeenCalled();
+    expect(
+      screen.getByRole('button', { name: formatUseFreeTextLabel('Talatona') }),
+    ).toBeInTheDocument();
   });
 
   it('Usar texto livre fecha sugestões, confirma free-text e mantém coordenadas nulas', () => {

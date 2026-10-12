@@ -1,7 +1,7 @@
 import React from 'react';
 import { MapPin } from 'lucide-react';
 import {
-  GEOCODER_NETWORK_ERROR_TODO,
+  GEOCODER_NETWORK_ERROR_MESSAGE,
   GEOCODER_RETRY_LABEL,
 } from '../utils/addressGeocoderCopy';
 
@@ -52,15 +52,24 @@ const AutocompleteDropdown = ({
         data-testid="geocoder-network-error"
       >
         <p className="text-sm text-amber-900 dark:text-amber-100 text-center text-pretty">
-          {GEOCODER_NETWORK_ERROR_TODO}
+          {GEOCODER_NETWORK_ERROR_MESSAGE}
         </p>
         {onRetry ? (
           <button
             type="button"
             onClick={onRetry}
-            className="w-full rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 px-3 py-2.5 text-sm font-semibold text-amber-950 dark:text-amber-50 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+            className="w-full rounded-lg bg-primary px-3 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary/90 transition-colors"
           >
             {GEOCODER_RETRY_LABEL}
+          </button>
+        ) : null}
+        {freeTextActionLabel && onUseFreeText ? (
+          <button
+            type="button"
+            onClick={onUseFreeText}
+            className="w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/80 px-3 py-2.5 text-sm font-semibold text-primary hover:bg-primary/10 transition-colors"
+          >
+            {freeTextActionLabel}
           </button>
         ) : null}
       </div>

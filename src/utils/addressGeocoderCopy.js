@@ -7,12 +7,12 @@ export const formatUseFreeTextLabel = (text) => {
 export const EMPTY_GEOCODER_MESSAGE =
   'Não encontrámos este local. Podes usar o que escreveste.';
 
-/** Placeholder até copywriter — sem local exacto implica matching flexível. */
-export const FLEX_ONLY_FREE_TEXT_WARNING_TODO =
-  'TODO(Copywriter): aviso de que, sem local exacto, só surgem ofertas flexíveis.';
+/** Aviso após «Usar …» sem coordenadas (criar/editar procura). */
+export const FLEX_ONLY_FREE_TEXT_WARNING =
+  'Como este local não está no mapa, só as ofertas sem percurso fixo aparecem como compatíveis. Para veres mais, escolhe uma sugestão da lista.';
 
-/** Placeholder até copywriter — falha de rede no geocoder (distinct de «sem resultados»). */
-export const GEOCODER_NETWORK_ERROR_TODO =
-  'TODO(Copywriter): mensagem de erro de rede ao procurar locais.';
+/** Falha de rede no geocoder (distinct de «sem resultados»). */
+export const GEOCODER_NETWORK_ERROR_MESSAGE =
+  'Não foi possível procurar locais. Verifica a ligação e tenta outra vez.';
 
-export const GEOCODER_RETRY_LABEL = 'Tentar novamente';
+export const GEOCODER_RETRY_LABEL = 'Tentar outra vez';

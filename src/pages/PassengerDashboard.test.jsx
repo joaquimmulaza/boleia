@@ -1493,6 +1493,11 @@ describe('PassengerDashboard — marketplace', () => {
     );
 
     fireEvent.click(form.getByRole('button', { name: /Usar mock origin_name/i }));
+    expect(
+      screen.getByText(
+        'Como este local não está no mapa, só as ofertas sem percurso fixo aparecem como compatíveis. Para veres mais, escolhe uma sugestão da lista.',
+      ),
+    ).toBeInTheDocument();
     fireEvent.click(form.getByRole('button', { name: /Usar mock destination_name/i }));
     fireEvent.click(form.getByRole('button', { name: /Guardar procura/i }));
 

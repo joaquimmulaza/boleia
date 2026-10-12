@@ -1,7 +1,11 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import AutocompleteDropdown from './AutocompleteDropdown';
-import { GEOCODER_NETWORK_ERROR_TODO } from '../utils/addressGeocoderCopy';
+import {
+  GEOCODER_NETWORK_ERROR_MESSAGE,
+  GEOCODER_RETRY_LABEL,
+  formatUseFreeTextLabel,
+} from '../utils/addressGeocoderCopy';
 
 const LISTBOX_ID = 'test-listbox';
 
@@ -23,8 +27,9 @@ describe('AutocompleteDropdown', () => {
     expect(screen.getByText('A procurar...')).toBeInTheDocument();
   });
 
-  it('estado de rede é distinto de sem resultados e permite tentar novamente', () => {
+  it('estado de rede é distinto de sem resultados, retry primário e Usar texto', () => {
     const onRetry = vi.fn();
+    const onUseFreeText = vi.fn();
     render(
       <AutocompleteDropdown
         errorKind="network"
@@ -33,14 +38,18 @@ describe('AutocompleteDropdown', () => {
         activeIndex={0}
         onSelect={vi.fn()}
         onRetry={onRetry}
+        freeTextActionLabel={formatUseFreeTextLabel('Talatona')}
+        onUseFreeText={onUseFreeText}
       />,
     );
 
     expect(screen.getByTestId('geocoder-network-error')).toBeInTheDocument();
-    expect(screen.getByText(GEOCODER_NETWORK_ERROR_TODO)).toBeInTheDocument();
+    expect(screen.getByText(GEOCODER_NETWORK_ERROR_MESSAGE)).toBeInTheDocument();
     expect(screen.queryByTestId('geocoder-empty-state')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    fireEvent.click(screen.getByRole('button', { name: GEOCODER_RETRY_LABEL }));
     expect(onRetry).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: formatUseFreeTextLabel('Talatona') }));
+    expect(onUseFreeText).toHaveBeenCalledTimes(1);
   });
 
   it('renders error state correctly', () => {
