@@ -7,7 +7,7 @@ import { acordoEstadoListaChipProps } from '../utils/acordoEstadoDisplay';
 import {
   labelChipEstadoPassageiro,
   chipClassEstadoPassageiro,
-  mostrarChipEstadoLugarPassageiro,
+  mostrarChipLugarPassageiroSemDuplicarAcordo,
   estadoPassageiroParaChip,
 } from '../utils/estadoPassageiro';
 
@@ -65,9 +65,6 @@ export default function AcordoDetalheSheetHeader({
   const minhaEstadoLugar = minhaLinhaEstado
     ? estadoPassageiroParaChip(minhaLinhaEstado, minhaLinhaPagamento)
     : null;
-  const mostrarChipLugar = Boolean(
-    minhaLinhaEstado && mostrarChipEstadoLugarPassageiro(minhaLinhaEstado, minhaLinhaPagamento),
-  );
   const acordoEstadoChip = {
     estado: estadoAcordo,
     encerramento_motivo: encerramentoMotivoAcordo,
@@ -79,6 +76,14 @@ export default function AcordoDetalheSheetHeader({
     acordos_passageiros: acordosPassageiros,
   };
   const estadoChip = acordoEstadoListaChipProps(acordoEstadoChip, viewerUserId);
+  const mostrarChipLugar = Boolean(
+    minhaLinhaEstado
+      && mostrarChipLugarPassageiroSemDuplicarAcordo(
+        estadoChip.label,
+        minhaLinhaEstado,
+        minhaLinhaPagamento,
+      ),
+  );
 
   return (
     <header

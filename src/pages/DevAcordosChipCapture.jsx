@@ -24,6 +24,7 @@ function rotuloGrupoListaAcordo(linhas) {
 
 /**
  * Pré-visualização DEV (390px) — chips lista/modal + kebab + #251 + piloto reservado.
+ * Registada via DevAppRoutes (`/__dev/acordos-chip-capture`; vite dev ou preview allowlist).
  *
  * @typedef {Readonly<{}>} DevAcordosChipCaptureProps
  */

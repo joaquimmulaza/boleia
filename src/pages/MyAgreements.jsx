@@ -116,6 +116,7 @@ import {
   chipClassEstadoPassageiro,
   GLOSSARIO_ESTADOS_LUGAR,
   mostrarChipEstadoLugarPassageiro,
+  mostrarChipLugarPassageiroSemDuplicarAcordo,
   estadoPassageiroParaChip,
   lugaresVivosFromLinhas,
   filterMotoristaPagamentosLugaresVivos,
@@ -1086,7 +1087,12 @@ const MyAgreements = () => {
       ? estadoPassageiroParaChip(minhaLinha.estado, minhaChipCtxCard)
       : null;
     const mostrarChipLugarCard = Boolean(
-      minhaLinha && mostrarChipEstadoLugarPassageiro(minhaLinha.estado, minhaChipCtxCard),
+      minhaLinha
+        && mostrarChipLugarPassageiroSemDuplicarAcordo(
+          estadoChipCard.label,
+          minhaLinha.estado,
+          minhaChipCtxCard,
+        ),
     );
     const quotaCard =
       tipoPerfil === 'Passageiro'

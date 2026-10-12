@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { findCompatibleOfertas, findCompatibleProcuras } from './MatchingService.js';
+import {
+  findCompatibleOfertas,
+  findCompatibleProcuras,
+  toProcuraMatchInput,
+} from './MatchingService.js';
 import { supabase } from '../lib/supabase';
 
 vi.mock('../lib/supabase', () => ({
@@ -319,6 +323,65 @@ describe('MatchingService', () => {
     });
     const a = await findCompatibleOfertas(procuraRow);
     expect(a.incompatible.map((o) => o.id)).toEqual(['of-dias']);
+  });
+
+  it('findCompatibleOfertas: procura só com texto (sem lat/lng) não falha e não inventa coordenadas', async () => {
+    supabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        in: vi.fn().mockResolvedValue({
+          data: [
+            {
+              id: 'of-fixa',
+              departure_time: '07:00',
+              vagas_disponiveis: 3,
+              flexibilidade_rota: false,
+              dias_semana: [1, 2, 3, 4, 5],
+              origin_lat: -8.8383,
+              origin_lng: 13.2344,
+              destination_lat: -8.85,
+              destination_lng: 13.25,
+            },
+            {
+              id: 'of-flex',
+              departure_time: '07:00',
+              vagas_disponiveis: 3,
+              flexibilidade_rota: true,
+              dias_semana: [1, 2, 3, 4, 5],
+              origin_lat: null,
+              origin_lng: null,
+              destination_lat: null,
+              destination_lng: null,
+            },
+          ],
+          error: null,
+        }),
+      }),
+    });
+
+    const procura = {
+      preferred_time: '07:05',
+      n_candidato: 1,
+      dias_semana: [1, 2, 3, 4, 5],
+      origin_name: 'Local escrito à mão',
+      origin_lat: null,
+      origin_lng: null,
+      destination_name: 'Outro local manual',
+      destination_lat: null,
+      destination_lng: null,
+    };
+
+    const result = await findCompatibleOfertas(procura);
+
+    expect(result.direct.map((o) => o.id)).toEqual(['of-flex']);
+    expect(result.incompatible.map((o) => o.id)).toEqual(['of-fixa']);
+    expect(toProcuraMatchInput(procura)).toMatchObject({
+      origin_lat: null,
+      origin_lng: null,
+      destination_lat: null,
+      destination_lng: null,
+    });
+    expect(procura.origin_lat).toBeNull();
+    expect(procura.destination_lat).toBeNull();
   });
 
   it('propaga erro do Supabase', async () => {

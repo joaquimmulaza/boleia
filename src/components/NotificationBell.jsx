@@ -1,56 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, CheckCircle, Info, AlertCircle, BellRing, BellOff } from 'lucide-react';
+import { Bell, BellRing, BellOff } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { resolveNotificationRoute } from '../utils/notificationRouter';
 import { useAuth } from '../contexts/AuthContext';
 import OverlayShell from './OverlayShell';
 import SheetDragHandle from './SheetDragHandle';
-import NotificationRowKebab from './NotificationRowKebab';
+import NotificationListItem from './NotificationListItem';
 import { Button } from './ui/button';
-
-/**
- * @param {{ type?: string }} props
- */
-const NotificationIcon = ({ type }) => {
-  switch (type) {
-    case 'success':
-      return (
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
-          <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" strokeWidth={2} aria-hidden="true" />
-        </span>
-      );
-    case 'warning':
-    case 'error':
-      return (
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-          <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" strokeWidth={2} aria-hidden="true" />
-        </span>
-      );
-    case 'info':
-    default:
-      return (
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
-          <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" strokeWidth={2} aria-hidden="true" />
-        </span>
-      );
-  }
-};
-
-const formatTimeAgo = (dateString) => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const seconds = Math.floor((now - date) / 1000);
-
-  if (seconds < 60) return 'agora mesmo';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `há ${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `há ${hours} h`;
-  const days = Math.floor(hours / 24);
-  return `há ${days} d`;
-};
 
 export default function NotificationBell() {
   const { user } = useAuth();
@@ -182,41 +140,12 @@ export default function NotificationBell() {
               ) : (
                 <ul className="divide-y divide-gray-100 dark:divide-gray-800/50">
                   {notifications.map((notif) => (
-                    <li
+                    <NotificationListItem
                       key={notif.id}
-                      role="button"
-                      aria-label={notif.mensagem}
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.target !== e.currentTarget) return;
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleNotificationClick(notif);
-                        }
-                      }}
-                      className={`flex items-start gap-3 px-5 py-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary focus-visible:ring-offset-0 dark:text-foreground ${
-                        !notif.lida ? 'bg-primary/5 dark:bg-primary/10' : ''
-                      }`}
-                      onClick={() => handleNotificationClick(notif)}
-                    >
-                      <div className="mt-0.5 shrink-0">
-                        <NotificationIcon type={notif.tipo} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm leading-relaxed ${!notif.lida ? 'font-semibold text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300'}`}>
-                          {notif.mensagem}
-                        </p>
-                        <p className="mt-1.5 text-xs font-medium text-gray-400 dark:text-gray-500">
-                          {formatTimeAgo(notif.created_at)}
-                        </p>
-                      </div>
-                      {!notif.lida ? (
-                        <div className="w-2 h-2 rounded-full bg-primary shrink-0 mt-2 shadow-sm" aria-hidden="true" />
-                      ) : (
-                        <div className="w-2 shrink-0" aria-hidden="true" />
-                      )}
-                      <NotificationRowKebab onDelete={() => deleteNotification(notif.id)} />
-                    </li>
+                      notif={notif}
+                      onActivate={() => handleNotificationClick(notif)}
+                      onDelete={() => deleteNotification(notif.id)}
+                    />
                   ))}
                 </ul>
               )}

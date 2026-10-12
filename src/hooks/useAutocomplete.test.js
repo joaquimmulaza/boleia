@@ -1,0 +1,157 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderHook, act, waitFor } from '@testing-library/react';
+import { useAutocomplete } from './useAutocomplete';
+
+const getPlacePredictions = vi.fn();
+
+vi.mock('../services/LocationService', () => ({
+  getPlacePredictions: (...args) => getPlacePredictions(...args),
+  getPlaceDetails: vi.fn(),
+}));
+
+describe('useAutocomplete', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('cancela pedido anterior com AbortController ao iniciar novo fetch', async () => {
+    const signals = [];
+    getPlacePredictions.mockImplementation((_input, { signal }) => {
+      signals.push(signal);
+      return new Promise(() => {});
+    });
+
+    const { result } = renderHook(() => useAutocomplete());
+
+    await act(async () => {
+      void result.current.fetchPredictions('Via');
+    });
+    await act(async () => {
+      void result.current.fetchPredictions('Viana');
+    });
+
+    expect(getPlacePredictions).toHaveBeenCalledTimes(2);
+    expect(signals[0].aborted).toBe(true);
+    expect(signals[1].aborted).toBe(false);
+  });
+
+  it('passa AbortSignal ao LocationService e ignora resposta de pedido obsoleto', async () => {
+    let resolveSlow;
+    const slowPromise = new Promise((resolve) => {
+      resolveSlow = resolve;
+    });
+
+    getPlacePredictions
+      .mockReturnValueOnce(slowPromise)
+      .mockResolvedValueOnce([
+        { place_id: 'photon-2', description: 'Viana, Viana', lat: 1, lng: 2 },
+      ]);
+
+    const { result } = renderHook(() => useAutocomplete());
+
+    await act(async () => {
+      void result.current.fetchPredictions('Via');
+    });
+    await act(async () => {
+      void result.current.fetchPredictions('Viana');
+    });
+
+    expect(getPlacePredictions).toHaveBeenNthCalledWith(
+      1,
+      'Via',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    expect(getPlacePredictions).toHaveBeenNthCalledWith(
+      2,
+      'Viana',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+
+    await act(async () => {
+      resolveSlow([{ place_id: 'photon-stale', description: 'Stale', lat: 0, lng: 0 }]);
+    });
+
+    await waitFor(() => {
+      expect(result.current.suggestions).toEqual([
+        { place_id: 'photon-2', description: 'Viana, Viana', lat: 1, lng: 2 },
+      ]);
+    });
+  });
+
+  it('incrementa sequência em cada pedido, incluindo input curto', async () => {
+    getPlacePredictions.mockResolvedValue([]);
+
+    const { result } = renderHook(() => useAutocomplete());
+
+    await act(async () => {
+      void result.current.fetchPredictions('ab');
+    });
+    await act(async () => {
+      void result.current.fetchPredictions('abc');
+    });
+
+    expect(getPlacePredictions).toHaveBeenCalledTimes(1);
+    expect(getPlacePredictions).toHaveBeenCalledWith(
+      'abc',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it('expõe resolvedInput só após concluir pedido do valor actual', async () => {
+    let resolvePredictions;
+    getPlacePredictions.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolvePredictions = resolve;
+        }),
+    );
+
+    const { result } = renderHook(() => useAutocomplete());
+
+    await act(async () => {
+      void result.current.fetchPredictions('Talatona');
+    });
+    expect(result.current.resolvedInput).toBeNull();
+    expect(result.current.loading).toBe(true);
+
+    await act(async () => {
+      resolvePredictions([]);
+    });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+      expect(result.current.resolvedInput).toBe('Talatona');
+    });
+  });
+
+  it('marca errorKind network quando getPlacePredictions falha', async () => {
+    getPlacePredictions.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+    const { result } = renderHook(() => useAutocomplete());
+
+    await act(async () => {
+      await result.current.fetchPredictions('Talatona');
+    });
+
+    expect(result.current.errorKind).toBe('network');
+    expect(result.current.suggestions).toEqual([]);
+  });
+
+  it('marca errorKind network quando Photon responde 429', async () => {
+    getPlacePredictions.mockRejectedValueOnce(
+      Object.assign(new Error('Photon respondeu com status 429'), {
+        status: 429,
+        errorKind: 'network',
+      }),
+    );
+
+    const { result } = renderHook(() => useAutocomplete());
+
+    await act(async () => {
+      await result.current.fetchPredictions('Talatona');
+    });
+
+    expect(result.current.errorKind).toBe('network');
+    expect(result.current.resolvedInput).toBe('Talatona');
+  });
+});

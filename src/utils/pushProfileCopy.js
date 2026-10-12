@@ -13,8 +13,9 @@ export const PUSH_PROFILE_STATE_OFF =
 export const PUSH_PROFILE_STATE_ACTIVATING = 'A activar…';
 
 export const PUSH_PROFILE_STATE_BLOCKED =
-  'As notificações estão bloqueadas neste navegador.';
+  'As notificações estão bloqueadas neste navegador. Permite-as nas definições do navegador.';
 
+/** @deprecated painel longo — perfil v2 usa linha única (PUSH_PROFILE_STATE_BLOCKED). */
 export const PUSH_PROFILE_BLOCKED_HELP =
   'Para voltar a receber, abre as definições do navegador, procura este site e permite as notificações. Depois volta aqui.';
 

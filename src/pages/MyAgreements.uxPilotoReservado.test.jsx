@@ -89,6 +89,34 @@ describe('MyAgreements — UX piloto reservado (lista)', () => {
     });
   });
 
+  it('passageiro reservado: um só chip Reservado (acordo e lugar coincidem)', async () => {
+    useAuth.mockReturnValue({ user: { id: 'p1' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForDriver.mockResolvedValue([]);
+    getAgreementsForPassenger.mockResolvedValue([
+      {
+        ...acordoBase([
+          {
+            id: 'ap-1',
+            passenger_id: 'p1',
+            estado: 'reservado',
+            quota_mensal_kz: 40000,
+            perfis: { nome_completo: 'Maria Passageira' },
+          },
+        ]),
+        ofertas_capacidade: {
+          origin_name: 'Cacuaco',
+          destination_name: 'Kilamba',
+          departure_time: '07:15',
+        },
+      },
+    ]);
+
+    renderPage();
+
+    const card = await screen.findByRole('button', { name: /Cacuaco/i });
+    expect(within(card).getAllByText('Reservado')).toHaveLength(1);
+  });
+
   it('só reservado: chip Reservado e sem linha Grupo (0 activos — nunca «0 pessoas»)', async () => {
     getAgreementsForDriver.mockResolvedValue([
       acordoBase([
