@@ -65,6 +65,7 @@ describe('LocationService (OpenStreetMap / Photon)', () => {
       expect(calledUrl).toContain(`lat=${LUANDA_PHOTON_LAT}`);
       expect(calledUrl).toContain(`lon=${LUANDA_PHOTON_LON}`);
       expect(calledUrl).toContain('q=Talatona');
+      expect(calledUrl).toContain('countrycode=ao');
       expect(options?.headers?.['User-Agent']).toBeUndefined();
       expect(options?.signal).toBeUndefined();
     });
@@ -177,6 +178,43 @@ describe('LocationService (OpenStreetMap / Photon)', () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(2);
       expect(mockFetch.mock.calls[1][0]).toContain('q=bairro+Talatona');
+    });
+
+    it('inclui Angola fora de Luanda e lista Luanda primeiro (sem filtro rígido)', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          features: [
+            makePhotonFeature({
+              osm_id: 50,
+              properties: {
+                name: 'Benguela',
+                state: 'Benguela',
+                countrycode: 'AO',
+                osm_value: 'city',
+                type: 'city',
+              },
+            }),
+            makePhotonFeature({
+              osm_id: 51,
+              properties: {
+                district: 'Viana',
+                county: 'Município de Viana',
+                name: 'Viana',
+                state: 'Luanda',
+                countrycode: 'AO',
+                osm_value: 'suburb',
+                type: 'district',
+              },
+            }),
+          ],
+        }),
+      });
+
+      const result = await getPlacePredictions('Via');
+      expect(result).toHaveLength(2);
+      expect(result[0].place_id).toBe('photon-51');
+      expect(result[1].place_id).toBe('photon-50');
     });
 
     it('exclui resultados fora de Angola no cliente', async () => {

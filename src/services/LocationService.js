@@ -90,15 +90,21 @@ export const mapPhotonFeature = (feature) => {
     description,
     lat: Number(lat),
     lng: Number(lng),
+    _metroLuanda: isLuandaMetroAddress(address) ? 0 : 1,
     _rank: rank,
   };
 };
 
 /**
- * @param {Array<{ _rank: number }>} items
+ * Luanda primeiro (viés), depois granularidade bairro → município.
+ * @param {Array<{ _metroLuanda?: number, _rank: number }>} items
  */
 export const sortNominatimResults = (items) =>
-  [...items].sort((a, b) => a._rank - b._rank);
+  [...items].sort((a, b) => {
+    const metro = (a._metroLuanda ?? 1) - (b._metroLuanda ?? 1);
+    if (metro !== 0) return metro;
+    return a._rank - b._rank;
+  });
 
 /**
  * @param {Record<string, string | undefined>} address
@@ -121,6 +127,7 @@ const fetchPhotonRaw = async (query, signal) => {
     lon: String(LUANDA_PHOTON_LON),
     limit: String(RESULTS_LIMIT),
     lang: 'pt',
+    countrycode: 'ao',
   });
 
   const url = `${PHOTON_BASE_URL}?${params.toString()}`;
@@ -168,16 +175,12 @@ export const getPlacePredictions = async (input, options = {}) => {
       if (properties.countrycode && properties.countrycode !== 'AO') {
         continue;
       }
-      const address = photonPropertiesToAddress(properties);
-      if (address.state && !isLuandaMetroAddress(address)) {
-        continue;
-      }
       byId.set(properties.osm_id, feature);
     }
 
     return sortNominatimResults([...byId.values()].map(mapPhotonFeature))
       .slice(0, RESULTS_LIMIT)
-      .map(({ _rank, ...rest }) => rest);
+      .map(({ _rank, _metroLuanda, ...rest }) => rest);
   } catch (error) {
     if (error?.name === 'AbortError') {
       throw error;
