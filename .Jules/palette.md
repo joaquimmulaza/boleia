@@ -13,3 +13,6 @@
 ## 2024-10-10 - Missing focus states on custom dropdown menu trigger and items
 **Learning:** Kebab menus and dropdown triggers built with plain `<button>` elements (e.g. `GrupoKebabMenu.jsx`) frequently omit explicit focus rings. Since they are central to interacting with complex lists or groups, omitting focus rings severely hampers keyboard navigation, making the active element difficult to track.
 **Action:** When implementing or updating custom dropdown menus, ensure both the trigger button and inner menu item buttons have the standard focus rings (`focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900`) and matching `focus:bg-*` styles for items to equal hover state behavior.
+## 2024-05-24 - Missing focus states on custom bottom sheet action buttons
+**Learning:** Bespoke layout elements in interactive components like bottom sheets and modals often use plain `<button>` elements instead of `<Button />`, making them prone to missing hover and focus-visible states.
+**Action:** Always verify and add standard Tailwind focus rings (`focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900`) and hover classes to plain buttons in these components to maintain accessibility.

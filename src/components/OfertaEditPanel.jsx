@@ -420,7 +420,7 @@ const OfertaEditPanel = ({
         <button
           type="submit"
           disabled={isBusy}
-          className="flex-1 min-h-11 bg-primary text-white font-bold rounded-xl disabled:opacity-60"
+          className="flex-1 min-h-11 bg-primary text-white font-bold rounded-xl disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 hover:bg-primary/90"
         >
           {saving ? 'A guardar…' : 'Guardar alterações'}
         </button>

@@ -161,7 +161,7 @@ function OfertaMatchCard({
             type="button"
             disabled={busy}
             onClick={onPropor}
-            className="bg-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl disabled:opacity-60 shrink-0"
+            className="bg-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl disabled:opacity-60 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 hover:bg-primary/90"
           >
             Propor acordo
           </button>

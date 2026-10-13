@@ -415,7 +415,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
             type="button"
             disabled={busy}
             onClick={handleCriarGrupo}
-            className="w-full flex items-center justify-center gap-2 bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60"
+            className="w-full flex items-center justify-center gap-2 bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 hover:bg-primary/90"
           >
             <UserPlus size={18} aria-hidden="true" />
             Criar grupo
@@ -504,7 +504,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
                 type="button"
                 aria-expanded={telefoneFallbackOpen}
                 onClick={() => setTelefoneFallbackOpen((open) => !open)}
-                className="w-full min-h-12 bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60"
+                className="w-full min-h-12 bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 hover:bg-primary/90"
               >
                 Convidar por telefone
               </button>
@@ -554,7 +554,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
                   <button
                     type="submit"
                     disabled={busy || !telefone.trim()}
-                    className="w-full min-h-12 bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60"
+                    className="w-full min-h-12 bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 hover:bg-primary/90"
                   >
                     Adicionar ao grupo
                   </button>
@@ -628,7 +628,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
               type="button"
               disabled={busy}
               onClick={handleGuardarEdicao}
-              className="w-full min-h-12 bg-primary text-white font-bold rounded-xl disabled:opacity-60"
+              className="w-full min-h-12 bg-primary text-white font-bold rounded-xl disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 hover:bg-primary/90"
             >
               Guardar
             </button>

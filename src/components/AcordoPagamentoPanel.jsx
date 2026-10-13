@@ -142,7 +142,7 @@ function AcordoPagamentoPanel({
         type="button"
         disabled={busy || !ibanConfigurado}
         onClick={() => inputRef.current?.click()}
-        className="w-full min-h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-primary text-white font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+        className="w-full min-h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-primary text-white font-semibold disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 hover:bg-primary/90"
         data-testid="comprovativo-upload-btn"
       >
         {busy ? (
