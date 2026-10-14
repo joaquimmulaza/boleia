@@ -363,7 +363,7 @@ function PropostaReviewCard({
             type="button"
             disabled={busy || !onCancelar}
             onClick={() => setConfirmOpen(true)}
-            className="w-full min-h-12 bg-slate-100 dark:bg-slate-800 font-bold py-3 rounded-xl disabled:opacity-60"
+            className="w-full min-h-12 bg-slate-100 dark:bg-slate-800 font-bold py-3 rounded-xl disabled:opacity-60 transition-colors hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
           >
             Cancelar proposta
           </button>
@@ -374,7 +374,7 @@ function PropostaReviewCard({
             type="button"
             disabled={!canAceitar}
             onClick={() => setConfirmOpen(true)}
-            className="w-full min-h-12 bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60"
+            className="w-full min-h-12 bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60 transition-colors hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
           >
             Aceitar proposta
           </button>
@@ -383,7 +383,7 @@ function PropostaReviewCard({
               type="button"
               disabled={busy || aceitePendenteEnvio}
               onClick={onContraProposta}
-              className="w-full min-h-12 border border-primary/30 bg-primary/5 text-primary font-semibold py-3 rounded-lg disabled:opacity-60"
+              className="w-full min-h-12 border border-primary/30 bg-primary/5 text-primary font-semibold py-3 rounded-lg disabled:opacity-60 transition-colors hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
             >
               Fazer contra-proposta
             </button>
@@ -392,7 +392,7 @@ function PropostaReviewCard({
             type="button"
             disabled={busy || aceitePendenteEnvio || !onRecusar}
             onClick={onRecusar}
-            className="w-full min-h-12 border border-slate-300 dark:border-slate-600 bg-transparent text-slate-700 dark:text-slate-200 font-semibold py-3 rounded-lg disabled:opacity-60"
+            className="w-full min-h-12 border border-slate-300 dark:border-slate-600 bg-transparent text-slate-700 dark:text-slate-200 font-semibold py-3 rounded-lg disabled:opacity-60 transition-colors hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
           >
             Recusar
           </button>

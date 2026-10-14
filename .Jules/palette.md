@@ -13,3 +13,7 @@
 ## 2024-10-10 - Missing focus states on custom dropdown menu trigger and items
 **Learning:** Kebab menus and dropdown triggers built with plain `<button>` elements (e.g. `GrupoKebabMenu.jsx`) frequently omit explicit focus rings. Since they are central to interacting with complex lists or groups, omitting focus rings severely hampers keyboard navigation, making the active element difficult to track.
 **Action:** When implementing or updating custom dropdown menus, ensure both the trigger button and inner menu item buttons have the standard focus rings (`focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900`) and matching `focus:bg-*` styles for items to equal hover state behavior.
+
+## 2024-10-14 - Add focus visible to custom button elements
+**Learning:** Bespoke UI components outside the main UI component library that use native `<button>` tags often miss `focus-visible:ring-2`, `hover` classes, and `transition` properties. This creates an accessibility gap for keyboard navigation and feels "dead" to mouse users.
+**Action:** Always check interactive areas and bespoke buttons (like those inside cards and complex modals) to ensure they have the standard focus rings (`focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900`) and appropriate hover transitions.
