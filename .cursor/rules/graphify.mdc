@@ -30,6 +30,6 @@ Fall back to grep or file reads for literal strings, comments, non-indexed files
 ## This repo (local Cursor and Cloud Agents)
 
 - **Primary:** hosted Graphify MCP tools (`graphify_find`, `graphify_node`, `graphify_callers`, `graphify_callees`, `graphify_impact`, `impact_and_risk`, `graphify_tests_for`, `graph_stats`, …).
-- **Fallback Graphlore:** `.cursor/mcp.json` server `graphlore` (lean toolset, local `graphify-out/`) — `GRAPHLORE_PROJECT_DIR` must be the **absolute** repo root (Cloud Agent: `/workspace`; local Windows example: `C:\\boleia-certa`). Use only if hosted Graphify is unavailable.
+- **Fallback Graphlore:** `.cursor/mcp.json` server `graphlore` (lean toolset) — `GRAPHLORE_PROJECT_DIR`: `${workspaceFolder}`, `GRAPHLORE_OUT_DIR`: `${workspaceFolder}/graphify-out`. Use only if hosted Graphify is unavailable.
 - **Fallback CLI:** `graphify query "<question>"` or `npm run graphify:update` after local code edits.
 - `graphify-out/` is gitignored; Cloud Agents may rebuild via `.cursor/setup-graphlore.sh`.
