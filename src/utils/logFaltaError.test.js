@@ -28,7 +28,7 @@ describe('mapLogFaltaError', () => {
       { code: 'P0001', message: 'Passageiro não activo neste acordo.' },
     ];
 
-    for (const err of otros) {
+    for (const err of outros) {
       expect(mapLogFaltaError(err)).toBeNull();
       expect(getFriendlyErrorMessage(err)).not.toBe(LOG_FALTA_MSG_PRAZO_PASSAGEIRO);
     }
