@@ -136,7 +136,7 @@ const GrupoDescobertaPanel = ({ userId, excludeGrupoId = null, onPedidoEnviado }
                   type="button"
                   disabled={busyId === g.id}
                   onClick={() => handlePedir(g.id)}
-                  className="w-full bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60"
+                  className="w-full bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 enabled:hover:bg-primary/90 transition-colors"
                 >
                   Pedir entrada
                 </button>

@@ -18,4 +18,14 @@ describe('send-push — safe notification URL (B2)', () => {
     expect(src).toContain('../_shared/safeNotificationLink.ts');
     expect(src).not.toMatch(/url:\s*link\s*\|\|/);
   });
+
+  it('push usa metadata.titulo da BD quando existir (fallback Nova Notificação)', () => {
+    const src = readFileSync(
+      join(ROOT, '../../supabase/functions/send-push/index.ts'),
+      'utf8',
+    );
+    expect(src).toMatch(/metadata\.titulo/);
+    expect(src).toContain('Nova Notificação');
+    expect(src).toMatch(/title:\s*tituloPush/);
+  });
 });
