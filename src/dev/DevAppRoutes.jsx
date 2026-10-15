@@ -13,6 +13,7 @@ import DevHotfixProdQaCapture from '../pages/DevHotfixProdQaCapture';
 import DevNotifCards269Capture from '../pages/DevNotifCards269Capture';
 import DevNotifV112Capture from '../pages/DevNotifV112Capture';
 import DevGeocoderEditarProcuraCapture from '../pages/DevGeocoderEditarProcuraCapture';
+import DevGeocoderEditarProcuraLayoutCapture from '../pages/DevGeocoderEditarProcuraLayoutCapture';
 import DevGeocoderEditarGrupoCapture from '../pages/DevGeocoderEditarGrupoCapture';
 import DevFaltasCapture from './DevFaltasCapture';
 
@@ -45,6 +46,10 @@ export default function DevAppRoutes() {
       <Route path="notif-cards-269" element={<DevNotifCards269Capture />} />
       <Route path="notif-v112" element={<DevNotifV112Capture />} />
       <Route path="geocoder-editar-procura" element={<DevGeocoderEditarProcuraCapture />} />
+      <Route
+        path="geocoder-editar-procura-layout"
+        element={<DevGeocoderEditarProcuraLayoutCapture />}
+      />
       <Route path="geocoder-editar-grupo" element={<DevGeocoderEditarGrupoCapture />} />
       <Route path="faltas-capture/:acordoId" element={<DevFaltasCapture />} />
       <Route path="faltas-capture-liquidado/:acordoId" element={<DevFaltasCapture />} />

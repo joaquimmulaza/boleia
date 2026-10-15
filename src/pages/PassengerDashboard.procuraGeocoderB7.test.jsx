@@ -190,7 +190,9 @@ describe('PassengerDashboard — geocoder B7', () => {
     const guardar = screen.getByRole('button', { name: /Guardar alterações/i });
     expect(footer).toContainElement(guardar);
     expect(footer.className).toMatch(/sticky/);
-    expect(screen.getByTestId('procura-form-scroll').className).toMatch(/overflow-y-auto/);
+    expect(footer.className).toMatch(/bottom-\[var\(--shell-bottom-inset\)\]/);
+    expect(screen.queryByTestId('procura-form-scroll')).not.toBeInTheDocument();
+    expect(screen.getByTestId('procura-form').className).not.toMatch(/max-h-/);
   });
 
   it('editar procura: focus no valor guardado sem escrever não mostra Usar nem «Não encontrámos»', async () => {

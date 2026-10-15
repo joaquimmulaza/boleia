@@ -4,6 +4,11 @@ import AddressInput from '../components/AddressInput';
 import TimeInput from '../components/TimeInput';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
+import {
+  PROCURA_FORM_BODY_CLASS,
+  PROCURA_FORM_CLASS,
+  PROCURA_FORM_SUBMIT_FOOTER_CLASS,
+} from '../utils/procuraFormLayout';
 
 const DIAS = [
   { valor: 1, label: 'Seg' },
@@ -14,16 +19,11 @@ const DIAS = [
 ];
 
 /**
- * Captura DEV (390px) — Editar procura alinhado ao form real (Critiquito / #273).
- * ?geocoderError=1 força estado de erro inline na origem (screenshot FAIL 4).
+ * Captura DEV (390px) — shell mínimo; preferir `geocoder-editar-procura-layout` com Layout real.
  */
 export default function DevGeocoderEditarProcuraCapture() {
-  const forceGeocoderError =
-    typeof window !== 'undefined'
-    && new URLSearchParams(window.location.search).get('geocoderError') === '1';
-
   const [form, setForm] = useState({
-    origin_name: forceGeocoderError ? 'Talaton' : 'Talatona',
+    origin_name: 'Talatona',
     destination_name: 'Viana',
     preferred_time: '07:30',
     teto_mensal_kz: '',
@@ -43,25 +43,16 @@ export default function DevGeocoderEditarProcuraCapture() {
       />
       <form
         data-testid="dev-geocoder-editar-procura-form"
-        className="mx-auto flex w-full max-w-[390px] max-h-[calc(100dvh-10rem)] flex-col overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+        className={`mx-auto w-full max-w-[390px] ${PROCURA_FORM_CLASS}`}
       >
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain p-5">
+        <div className={PROCURA_FORM_BODY_CLASS}>
           <AddressInput
             name="origin_name"
             label="Origem"
             value={form.origin_name}
             onChange={handleChange}
             allowFreeTextUse
-            fieldError={forceGeocoderError ? null : null}
           />
-          {forceGeocoderError ? (
-            <p
-              data-testid="geocoder-network-error"
-              className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm dark:border-amber-800 dark:bg-amber-950/40"
-            >
-              Sem ligação. Verifica a rede e tenta outra vez.
-            </p>
-          ) : null}
           <AddressInput
             name="destination_name"
             label="Destino"
@@ -116,7 +107,7 @@ export default function DevGeocoderEditarProcuraCapture() {
             />
           </label>
         </div>
-        <div className="sticky bottom-0 shrink-0 border-t border-slate-100 bg-white p-5 pt-3 dark:border-slate-800 dark:bg-slate-900">
+        <div className={PROCURA_FORM_SUBMIT_FOOTER_CLASS}>
           <button type="button" className="w-full bg-primary py-4 font-bold text-white rounded-xl">
             Guardar alterações
           </button>
