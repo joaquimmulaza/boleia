@@ -11,6 +11,13 @@ import { resolveProcuraOdFieldForPayload } from '../utils/procuraGeocodePayload'
 import TimeInput from '../components/TimeInput';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
+import { DEV_EDIT_PROCURA_CAPTURE_FIXTURE } from '../dev/devEditProcuraCaptureFixture';
+import { isDevEditProcuraLayoutCapture } from '../dev/isDevEditProcuraLayoutCapture';
+import {
+  PROCURA_FORM_BODY_CLASS,
+  PROCURA_FORM_CLASS,
+  PROCURA_FORM_SUBMIT_FOOTER_CLASS,
+} from '../utils/procuraFormLayout';
 import OverlayShell from '../components/OverlayShell';
 import FeedbackAlert from '../components/FeedbackAlert';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -539,8 +546,36 @@ const PassengerDashboard = () => {
   }, [processOfflineSyncSummary]);
 
   useEffect(() => {
+    if (isDevEditProcuraLayoutCapture()) {
+      return;
+    }
     carregar();
   }, [carregar]);
+
+  useEffect(() => {
+    if (!isDevEditProcuraLayoutCapture() || !user?.id) {
+      return;
+    }
+    const p = DEV_EDIT_PROCURA_CAPTURE_FIXTURE;
+    setProcura(p);
+    setForm((prev) => ({
+      ...prev,
+      preferred_time: p.preferred_time,
+      origin_name: p.origin_name,
+      origin_lat: p.origin_lat,
+      origin_lng: p.origin_lng,
+      destination_name: p.destination_name,
+      destination_lat: p.destination_lat,
+      destination_lng: p.destination_lng,
+      dias_semana: [...p.dias_semana],
+      teto_mensal_kz: p.teto_mensal_kz ?? '',
+    }));
+    setModoTeto('POR_PASSAGEIRO');
+    setModoTetoActivo('POR_PASSAGEIRO');
+    setView('form');
+    setEditing(true);
+    setLoading(false);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return undefined;
@@ -1796,7 +1831,12 @@ const PassengerDashboard = () => {
       )}
 
       {!loading && view === 'form' && (
-        <form onSubmit={handleSubmitProcura} className="space-y-4 bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 shadow-sm">
+        <form
+          onSubmit={handleSubmitProcura}
+          data-testid="procura-form"
+          className={PROCURA_FORM_CLASS}
+        >
+          <div className={PROCURA_FORM_BODY_CLASS}>
           {editing ? (
             <button
               type="button"
@@ -1980,7 +2020,6 @@ const PassengerDashboard = () => {
               onChange={handleChange}
               required
               aria-label="Hora preferida"
-              className="h-12 rounded-lg bg-light-gray dark:bg-slate-800 px-3 outline-none focus:ring-2 focus:ring-primary/50"
             />
           </label>
 
@@ -2081,14 +2120,20 @@ const PassengerDashboard = () => {
                 : 'Valor máximo para o carro completo no acordo.'}
             </p>
           </label>
+          </div>
 
-          <button
-            type="submit"
-            className="w-full bg-primary text-white font-bold py-4 rounded-xl"
-            disabled={savingProcura}
+          <div
+            data-testid="procura-form-submit-footer"
+            className={PROCURA_FORM_SUBMIT_FOOTER_CLASS}
           >
-            {editing ? 'Guardar alterações' : 'Guardar procura'}
-          </button>
+            <button
+              type="submit"
+              className="w-full bg-primary text-white font-bold py-4 rounded-xl"
+              disabled={savingProcura}
+            >
+              {editing ? 'Guardar alterações' : 'Guardar procura'}
+            </button>
+          </div>
         </form>
       )}
 

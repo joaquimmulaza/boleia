@@ -10,9 +10,14 @@ import DevAcordosChipCapture from '../pages/DevAcordosChipCapture';
 import DevMotoristaJustaCausaCapture from '../pages/DevMotoristaJustaCausaCapture';
 import DevJustaCausaConfirmCapture from '../pages/DevJustaCausaConfirmCapture';
 import DevHotfixProdQaCapture from '../pages/DevHotfixProdQaCapture';
+import DevFollowup278Capture from '../pages/DevFollowup278Capture';
 import DevNotifCards269Capture from '../pages/DevNotifCards269Capture';
 import DevNotifV112Capture from '../pages/DevNotifV112Capture';
 import DevPost273QaCapture from '../pages/DevPost273QaCapture';
+import DevGeocoderEditarProcuraCapture from '../pages/DevGeocoderEditarProcuraCapture';
+import DevGeocoderEditarProcuraLayoutCapture from '../pages/DevGeocoderEditarProcuraLayoutCapture';
+import DevGeocoderEditarGrupoCapture from '../pages/DevGeocoderEditarGrupoCapture';
+import DevOfertaEditRegressoCapture from '../pages/DevOfertaEditRegressoCapture';
 import DevNotifBellLoadingCapture from '../pages/DevNotifBellLoadingCapture';
 import DevNotifBellErrorCapture from '../pages/DevNotifBellErrorCapture';
 import DevNotifBellErrorBannerCapture from '../pages/DevNotifBellErrorBannerCapture';
@@ -45,9 +50,17 @@ export default function DevAppRoutes() {
       <Route path="motorista-jc-passageiro" element={<DevMotoristaJustaCausaCapture />} />
       <Route path="justa-causa-confirm" element={<DevJustaCausaConfirmCapture />} />
       <Route path="hotfix-prod-qa-acordos" element={<DevHotfixProdQaCapture />} />
+      <Route path="followup-278-acordos" element={<DevFollowup278Capture />} />
       <Route path="notif-cards-269" element={<DevNotifCards269Capture />} />
       <Route path="notif-v112" element={<DevNotifV112Capture />} />
       <Route path="post-273-qa" element={<DevPost273QaCapture />} />
+      <Route path="geocoder-editar-procura" element={<DevGeocoderEditarProcuraCapture />} />
+      <Route
+        path="geocoder-editar-procura-layout"
+        element={<DevGeocoderEditarProcuraLayoutCapture />}
+      />
+      <Route path="geocoder-editar-grupo" element={<DevGeocoderEditarGrupoCapture />} />
+      <Route path="oferta-edit-regresso" element={<DevOfertaEditRegressoCapture />} />
       <Route path="notif-bell-loading" element={<DevNotifBellLoadingCapture />} />
       <Route path="notif-bell-error" element={<DevNotifBellErrorCapture />} />
       <Route path="notif-bell-error-banner" element={<DevNotifBellErrorBannerCapture />} />

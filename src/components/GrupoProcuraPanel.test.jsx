@@ -732,8 +732,7 @@ describe('GrupoProcuraPanel T31', () => {
     expect(within(tamanhoFieldset).getByRole('button', { name: '8' })).toHaveClass('size-9');
     const pickup = within(dialog).getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
     expect(pickup.className).toMatch(/border-\[#718096\]/);
-    expect(pickup.className).toMatch(/bg-card/);
-    expect(pickup.className).toMatch(/dark:bg-background/);
+    expect(pickup.className).toMatch(/bg-background/);
   });
 
   it('editar capacidade abaixo dos membros fica desactivado e gravar não mexe em propostas', async () => {

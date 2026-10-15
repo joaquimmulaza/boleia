@@ -57,12 +57,13 @@ function OverlayShell({
       const top = getTopOverlay();
       if (top?.id !== overlayId) return;
       e.preventDefault();
+      e.stopPropagation();
       onDismissRef.current?.();
     };
 
-    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('keydown', onKeyDown, true);
     return () => {
-      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('keydown', onKeyDown, true);
       popOverlay(overlayId);
     };
   }, [onDismiss, dismissDisabled, overlayId]);

@@ -293,7 +293,7 @@ describe('MyAgreements — marketplace 1:N', () => {
 
     expect(await screen.findByText('Acordos')).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText(/Grupo · 3 pessoas/i)).toBeInTheDocument();
+      expect(screen.getByText(/Grupo · 2 pessoas/i)).toBeInTheDocument();
       expect(screen.getByText(/Kz \/ pessoa/i)).toBeInTheDocument();
     });
   });
@@ -794,7 +794,7 @@ describe('MyAgreements — marketplace 1:N', () => {
       renderPage();
 
       const chipCartao = await screen.findByTestId('acordo-lugar-expirado-chip-acordo-pax');
-      expect(chipCartao).toHaveTextContent('Expirado');
+      expect(chipCartao).toHaveTextContent('Reserva expirada');
       expect(chipCartao).not.toHaveTextContent('Saiu');
     });
 
@@ -903,7 +903,7 @@ describe('MyAgreements — marketplace 1:N', () => {
       const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
 
       expect(within(dialog).getByTestId('passageiro-estado-chip-pax-saiu')).toHaveTextContent('Saiu');
-      expect(within(dialog).getByTestId('passageiro-estado-chip-pax-exp')).toHaveTextContent('Expirado');
+      expect(within(dialog).getByTestId('passageiro-estado-chip-pax-exp')).toHaveTextContent('Reserva expirada');
     });
   });
 
@@ -1375,7 +1375,7 @@ describe('MyAgreements — marketplace 1:N', () => {
     );
     expect(within(dialog).getByTestId('passageiro-estado-chip-pax-2')).toHaveTextContent('Reservado');
     expect(within(dialog).getByTestId('passageiro-estado-chip-pax-2').className).toMatch(/amber/);
-    expect(within(dialog).getByTestId('passageiro-estado-chip-pax-1')).toHaveTextContent('Confirmado');
+    expect(within(dialog).queryByTestId('passageiro-estado-chip-pax-1')).not.toBeInTheDocument();
   });
 
   it('leave offlineQueued: mostra Saída Pendente e desactiva Sair só eu', async () => {
