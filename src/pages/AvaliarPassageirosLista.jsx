@@ -7,10 +7,14 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import FeedbackAlert from '../components/FeedbackAlert';
 import { useAcordoRatingContext, iniciaisNome } from '../hooks/useAcordoRatingContext';
 import { useAuth } from '../contexts/AuthContext';
+import { Badge } from '../components/ui/badge';
 import {
   buildMotoristaRatingPrompts,
   countMotoristaRatingProgress,
   formatMesRatingCurto,
+  labelMotoristaRatingListaBadge,
+  motoristaRatingListaBadgeUi,
+  MOTORISTA_RATING_LISTA_PRAZO_TERMINADO_HINT,
 } from '../utils/ratingGates';
 
 /**
@@ -79,6 +83,7 @@ export default function AvaliarPassageirosLista() {
         <ul className="space-y-3" data-testid="avaliar-passageiros-lista">
           {prompts.map((p) => {
             const pendente = p.estado === 'pendente';
+            const badgeUi = motoristaRatingListaBadgeUi(p.estado);
             return (
               <li key={p.acordoPassageiroId}>
                 <button
@@ -102,15 +107,23 @@ export default function AvaliarPassageirosLista() {
                       {p.lugarLabel} · {p.rotaLabel}
                     </p>
                   </div>
-                  <span
-                    className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${
-                      pendente
-                        ? 'bg-amber-100 text-amber-900'
-                        : 'bg-emerald-100 text-emerald-800'
-                    }`}
-                  >
-                    {pendente ? 'Pendente' : 'Avaliado'}
-                  </span>
+                  <div className="flex flex-col items-end gap-1 shrink-0 max-w-[9.5rem]">
+                    <Badge
+                      variant={badgeUi.variant}
+                      className={badgeUi.className}
+                      data-testid={`avaliar-pax-badge-${p.passengerId}`}
+                    >
+                      {labelMotoristaRatingListaBadge(p.estado)}
+                    </Badge>
+                    {p.estado === 'expirado' ? (
+                      <p
+                        className="text-[10px] leading-snug text-slate-500 dark:text-slate-400 text-right text-pretty"
+                        data-testid={`avaliar-pax-prazo-hint-${p.passengerId}`}
+                      >
+                        {MOTORISTA_RATING_LISTA_PRAZO_TERMINADO_HINT}
+                      </p>
+                    ) : null}
+                  </div>
                   {pendente ? (
                     <ChevronRight size={18} className="text-slate-400 shrink-0" aria-hidden="true" />
                   ) : null}
