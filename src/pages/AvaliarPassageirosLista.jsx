@@ -14,6 +14,7 @@ import {
   formatMesRatingCurto,
   labelMotoristaRatingListaBadge,
   motoristaRatingListaBadgeUi,
+  MOTORISTA_RATING_LISTA_PRAZO_TERMINADO_HINT,
 } from '../utils/ratingGates';
 
 /**
@@ -106,13 +107,23 @@ export default function AvaliarPassageirosLista() {
                       {p.lugarLabel} · {p.rotaLabel}
                     </p>
                   </div>
-                  <Badge
-                    variant={badgeUi.variant}
-                    className={badgeUi.className}
-                    data-testid={`avaliar-pax-badge-${p.passengerId}`}
-                  >
-                    {labelMotoristaRatingListaBadge(p.estado)}
-                  </Badge>
+                  <div className="flex flex-col items-end gap-1 shrink-0 max-w-[9.5rem]">
+                    <Badge
+                      variant={badgeUi.variant}
+                      className={badgeUi.className}
+                      data-testid={`avaliar-pax-badge-${p.passengerId}`}
+                    >
+                      {labelMotoristaRatingListaBadge(p.estado)}
+                    </Badge>
+                    {p.estado === 'expirado' ? (
+                      <p
+                        className="text-[10px] leading-snug text-slate-500 dark:text-slate-400 text-right text-pretty"
+                        data-testid={`avaliar-pax-prazo-hint-${p.passengerId}`}
+                      >
+                        {MOTORISTA_RATING_LISTA_PRAZO_TERMINADO_HINT}
+                      </p>
+                    ) : null}
+                  </div>
                   {pendente ? (
                     <ChevronRight size={18} className="text-slate-400 shrink-0" aria-hidden="true" />
                   ) : null}

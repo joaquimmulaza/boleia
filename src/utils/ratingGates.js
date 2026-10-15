@@ -344,8 +344,12 @@ export function countMotoristaRatingProgress(prompts) {
   };
 }
 
-/** Copy provisória lista motorista — confirmar com Copywriter se não houver SoT. */
-export const MOTORISTA_RATING_LISTA_BADGE_PRAZO_EXPIRADO = 'Prazo expirado';
+/** Copy final (PM + Copywriter + Critiquito) — janela M1 terminada sem avaliação. */
+export const MOTORISTA_RATING_LISTA_BADGE_PRAZO_TERMINADO = 'Prazo terminado';
+
+/** Linha muted por baixo do badge «Prazo terminado». */
+export const MOTORISTA_RATING_LISTA_PRAZO_TERMINADO_HINT =
+  'Já não é possível avaliar este passageiro.';
 
 /**
  * Rótulo do badge na lista «Avaliar passageiros» (motorista).
@@ -353,9 +357,9 @@ export const MOTORISTA_RATING_LISTA_BADGE_PRAZO_EXPIRADO = 'Prazo expirado';
  * @returns {string}
  */
 export function labelMotoristaRatingListaBadge(estado) {
-  if (estado === 'pendente') return 'Pendente';
   if (estado === 'feito') return 'Avaliado';
-  if (estado === 'expirado') return MOTORISTA_RATING_LISTA_BADGE_PRAZO_EXPIRADO;
+  if (estado === 'pendente') return 'Pendente';
+  if (estado === 'expirado') return MOTORISTA_RATING_LISTA_BADGE_PRAZO_TERMINADO;
   return '';
 }
 
@@ -381,9 +385,14 @@ export function motoristaRatingListaBadgeUi(estado) {
   }
   if (estado === 'expirado') {
     return {
-      variant: 'secondary',
-      className: 'shrink-0 font-bold px-2.5 py-1',
+      variant: 'outline',
+      className:
+        'shrink-0 border-transparent bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100 font-bold px-2.5 py-1',
     };
   }
-  return { variant: 'secondary', className: 'shrink-0 font-bold px-2.5 py-1' };
+  return {
+    variant: 'outline',
+    className:
+      'shrink-0 border-transparent bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100 font-bold px-2.5 py-1',
+  };
 }

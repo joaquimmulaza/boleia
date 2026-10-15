@@ -3,7 +3,11 @@ import { render, screen, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import AvaliarPassageirosLista from './AvaliarPassageirosLista';
-import { RATING_MOMENTO } from '../utils/ratingGates';
+import {
+  RATING_MOMENTO,
+  MOTORISTA_RATING_LISTA_BADGE_PRAZO_TERMINADO,
+  MOTORISTA_RATING_LISTA_PRAZO_TERMINADO_HINT,
+} from '../utils/ratingGates';
 
 const mockUseAcordoRatingContext = vi.fn();
 
@@ -21,7 +25,7 @@ vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'mot-1' } }),
 }));
 
-describe('AvaliarPassageirosLista — badges por estado', () => {
+describe('AvaliarPassageirosLista — badges após janela M1 (14 dias)', () => {
   const settledAt = '2026-09-01T10:00:00.000Z';
   const afterWindow = '2026-09-20T12:00:00.000Z';
 
@@ -78,7 +82,7 @@ describe('AvaliarPassageirosLista — badges por estado', () => {
     vi.clearAllMocks();
   });
 
-  it('lugar expirado mostra rótulo neutro e não «Avaliado»', () => {
+  it('não avaliado após prazo → «Prazo terminado» + linha muted', () => {
     render(
       <MemoryRouter initialEntries={['/acordos/acordo-1/avaliar-passageiros']}>
         <AvaliarPassageirosLista />
@@ -86,11 +90,14 @@ describe('AvaliarPassageirosLista — badges por estado', () => {
     );
 
     const rowExp = screen.getByTestId('avaliar-pax-row-p-exp');
-    expect(within(rowExp).getByText('Prazo expirado')).toBeInTheDocument();
+    expect(within(rowExp).getByText(MOTORISTA_RATING_LISTA_BADGE_PRAZO_TERMINADO)).toBeInTheDocument();
+    expect(within(rowExp).getByTestId('avaliar-pax-prazo-hint-p-exp')).toHaveTextContent(
+      MOTORISTA_RATING_LISTA_PRAZO_TERMINADO_HINT,
+    );
     expect(within(rowExp).queryByText('Avaliado')).not.toBeInTheDocument();
   });
 
-  it('lugar avaliado (feito) mantém «Avaliado»', () => {
+  it('já avaliado após prazo → «Avaliado» (prioridade sobre expirado)', () => {
     render(
       <MemoryRouter initialEntries={['/acordos/acordo-1/avaliar-passageiros']}>
         <AvaliarPassageirosLista />
@@ -99,6 +106,7 @@ describe('AvaliarPassageirosLista — badges por estado', () => {
 
     const rowFeito = screen.getByTestId('avaliar-pax-row-p-feito');
     expect(within(rowFeito).getByText('Avaliado')).toBeInTheDocument();
-    expect(within(rowFeito).queryByText('Prazo expirado')).not.toBeInTheDocument();
+    expect(within(rowFeito).queryByText(MOTORISTA_RATING_LISTA_BADGE_PRAZO_TERMINADO)).not.toBeInTheDocument();
+    expect(within(rowFeito).queryByTestId('avaliar-pax-prazo-hint-p-feito')).not.toBeInTheDocument();
   });
 });
