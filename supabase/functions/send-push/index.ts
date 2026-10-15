@@ -1,7 +1,10 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import webpush from "https://esm.sh/web-push@3.6.7";
-import { resolvePushDataUrl } from "../_shared/safeNotificationLink.ts";
+import {
+  resolveNotificationPushDestination,
+  resolveNotificationTitle,
+} from "../_shared/notificationCatalog.js";
 
 /** Comparação timing-safe para segredos webhook. */
 function constantTimeEqual(a: string, b: string): boolean {
@@ -117,10 +120,12 @@ serve(async (req) => {
       console.error("Error fetching unread notification count:", unreadCountError);
     }
 
-    const tituloPush =
-      typeof metadata?.titulo === "string" && metadata.titulo.trim()
-        ? metadata.titulo.trim()
-        : "Nova Notificação";
+    const notifRecord = {
+      mensagem,
+      metadata: (metadata as Record<string, unknown> | null) || {},
+      link,
+    };
+    const tituloPush = resolveNotificationTitle(notifRecord);
 
     const notificationPayload = JSON.stringify({
       title: tituloPush,
@@ -128,7 +133,7 @@ serve(async (req) => {
       icon: "/pwa-192x192.png",
       badge: "/pwa-512x512.png",
       data: {
-        url: resolvePushDataUrl(link, metadata as Record<string, unknown> | null),
+        url: resolveNotificationPushDestination(notifRecord),
         notificationId: record.id,
         metadata: metadata || {},
         unreadCount: unreadCount ?? 1,

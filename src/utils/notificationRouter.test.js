@@ -48,13 +48,13 @@ describe('notificationRouter', () => {
       );
     });
 
-    it('agreement_update com adenda pendente usa focus adenda', () => {
+    it('agreement_update com adenda pendente usa focus preco-proximo-mes', () => {
       expect(
         notificationRouteMap.agreement_update({
           acordo_id: 'a-1',
           adenda_estado: 'pendente_contraparte',
         }),
-      ).toBe('/acordos?openAcordoId=a-1&focus=adenda');
+      ).toBe('/acordos?openAcordoId=a-1&focus=preco-proximo-mes');
     });
 
     it('agreement_update consensual abre detalhe com focus rescisao', () => {
@@ -216,16 +216,24 @@ describe('notificationRouter', () => {
       expect(route).toBe('/acordos');
     });
 
-    it('deve usar notif.link como primeiro fallback se strategy falhar (nao achar o tipo)', () => {
+    it('tipo desconhecido — push abre sino; lista não navega', () => {
       const notif = {
         metadata: {
           type: 'unknown_type',
         },
-        link: '/custom-link'
+        link: '/custom-link',
       };
 
-      const route = resolveNotificationRoute(notif);
-      expect(route).toBe('/custom-link');
+      expect(resolveNotificationRoute(notif)).toBe('/?notificacoes=1');
+    });
+
+    it('reserva_expirada abre acordo com openAcordoId', () => {
+      expect(
+        resolveNotificationRoute({
+          metadata: { type: 'reserva_expirada', acordo_id: 'rx-1' },
+          mensagem: 'expirou',
+        }),
+      ).toBe('/acordos?openAcordoId=rx-1');
     });
 
     it('sem metadata.type: link interno válido passa', () => {

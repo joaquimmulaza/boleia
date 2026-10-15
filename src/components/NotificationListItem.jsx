@@ -1,9 +1,9 @@
 import React from 'react';
 import { CheckCircle, Info, AlertCircle } from 'lucide-react';
 import NotificationRowKebab from './NotificationRowKebab';
+import { resolveNotificationListTitle } from '../utils/notificationCatalog';
 import {
   resolveNotificationMensagem,
-  resolveNotificationTitulo,
   resolveNotificationTipo,
 } from '../utils/notificationDisplayMensagem';
 
@@ -51,7 +51,7 @@ export default function NotificationListItem({
   onDelete,
   showKebab = true,
 }) {
-  const tituloVisivel = resolveNotificationTitulo(notif);
+  const tituloVisivel = resolveNotificationListTitle(notif);
   const mensagemVisivel = resolveNotificationMensagem(notif);
   const tipoIcon = resolveNotificationTipo(notif) || notif.tipo;
   const ariaLabel = tituloVisivel
@@ -106,17 +106,21 @@ export default function NotificationListItem({
       <div className="mt-0.5 shrink-0">
         <NotificationIcon type={tipoIcon} />
       </div>
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 max-w-[390px]">
         {tituloVisivel ? (
           <>
             <p
-              className="text-sm font-semibold text-gray-900 dark:text-gray-100"
+              className={`text-sm leading-snug line-clamp-2 text-pretty ${
+                !notif.lida
+                  ? 'font-semibold text-gray-900 dark:text-gray-100'
+                  : 'font-normal text-gray-600 dark:text-gray-400'
+              }`}
               data-testid={notif.id ? `notif-item-${notif.id}-titulo` : undefined}
             >
               {tituloVisivel}
             </p>
             <p
-              className={`mt-0.5 text-sm leading-relaxed ${
+              className={`mt-0.5 text-sm leading-relaxed text-pretty ${
                 !notif.lida
                   ? 'text-gray-800 dark:text-gray-200'
                   : 'text-gray-600 dark:text-gray-300'
@@ -128,7 +132,7 @@ export default function NotificationListItem({
           </>
         ) : (
           <p
-            className={`text-sm leading-relaxed ${
+            className={`text-sm leading-relaxed text-pretty ${
               !notif.lida
                 ? 'font-semibold text-gray-900 dark:text-gray-100'
                 : 'text-gray-600 dark:text-gray-300'

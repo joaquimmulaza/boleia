@@ -79,6 +79,34 @@ const FIXTURES = [
     },
   },
   {
+    key: 'catalog-titulo-longo',
+    label: 'Catálogo — título longo (390px)',
+    notif: {
+      id: 'n-long-title',
+      mensagem:
+        'Francisca Isabel da Conceição Matos enviou uma proposta para a tua procura com horário compatível.',
+      tipo: 'info',
+      lida: false,
+      created_at: FIXTURE_CREATED_AT,
+      metadata: {
+        type: 'proposal_received',
+        inbox: 'passageiro',
+        nome: 'Francisca Isabel da Conceição Matos',
+      },
+    },
+  },
+  {
+    key: 'catalog-legado-sem-titulo',
+    label: 'Legado — sem metadata.type (só corpo)',
+    notif: {
+      id: 'n-legacy',
+      mensagem: 'Recebeste uma proposta de boleia. Revisa e aceita ou recusa.',
+      tipo: 'info',
+      lida: true,
+      created_at: FIXTURE_CREATED_AT,
+    },
+  },
+  {
     key: 'v110-flexivel',
     label: 'v1.10 — passageiro removido (oferta flexível)',
     notif: {
