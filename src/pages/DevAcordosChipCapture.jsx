@@ -96,6 +96,7 @@ export default function DevAcordosChipCapture() {
       title: 'Piloto — misto (1 activo + 1 reservado)',
       acordo: {
         estado: 'activo',
+        n_passageiros_contrato: 2,
         acordos_passageiros: [
           { passenger_id: 'p1', estado: 'activo' },
           { passenger_id: 'p2', estado: 'reservado' },
@@ -106,7 +107,7 @@ export default function DevAcordosChipCapture() {
         { passenger_id: 'p2', estado: 'reservado' },
       ],
       userId: 'driver-1',
-      grupoLabel: 'Ana',
+      grupoLabel: labelPessoasNoAcordoContrato(2),
     },
     {
       key: 'so-activo',
@@ -279,6 +280,30 @@ export default function DevAcordosChipCapture() {
           <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
             Cacuaco → Kilamba
           </p>
+        </section>
+
+        <section
+          className="rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm"
+          data-testid="dev-pax-a-rls-detail-header"
+        >
+          <p className="text-xs font-semibold text-slate-400 px-4 pt-3">
+            Passageiro A — cabeçalho detalhe (RLS alinhado à lista)
+          </p>
+          <AcordoDetalheSheetHeader
+            acordoId="acordo-misto-rls"
+            estadoAcordo={acordoPaxARls.estado}
+            acordosPassageiros={acordoPaxARls.acordos_passageiros}
+            nPassageirosContrato={acordoPaxARls.n_passageiros_contrato}
+            tipoPerfil="Passageiro"
+            viewerUserId="pax-a"
+            minhaLinhaEstado={paxALugarEstado}
+            onClose={noop}
+            podeRegistarFaltas={false}
+            podeEncerrar={false}
+            onRegistarFalta={noop}
+            onEncerrar={noop}
+            titulo="Detalhe do acordo"
+          />
         </section>
 
         <section

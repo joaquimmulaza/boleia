@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, waitFor } from '@testing-library/react';
+import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import MyAgreements from './MyAgreements';
 
@@ -20,11 +20,15 @@ vi.mock('../services/AgreementService', () => ({
   listAnulacaoMotivoLugarAcordos: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock('../services/PaymentService', () => ({
-  listPagamentosByAcordo: vi.fn().mockResolvedValue([]),
-  getObrigacaoPagamentoPassageiro: vi.fn(),
-  getAcordoContactos: vi.fn(),
-}));
+vi.mock('../services/PaymentService', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    listPagamentosByAcordo: vi.fn().mockResolvedValue([]),
+    getObrigacaoPagamentoPassageiro: vi.fn(),
+    getAcordoContactos: vi.fn(),
+  };
+});
 
 vi.mock('../services/RatingService', () => ({
   listRatingPromptsForAcordo: vi.fn().mockResolvedValue([]),
@@ -87,6 +91,85 @@ describe('MyAgreements — UX piloto reservado (lista)', () => {
       obrigacao: { valor: 0, valor_em_divida: 0, quota: 40000 },
       pagamento: null,
     });
+  });
+
+  it('passageiro RLS — sheet alinha lista (Activo + Reservado + Grupo · 2 no snapshot)', async () => {
+    useAuth.mockReturnValue({ user: { id: 'pax-a' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForDriver.mockResolvedValue([]);
+    getAgreementsForPassenger.mockResolvedValue([
+      {
+        ...acordoBase([
+          {
+            id: 'ap-a',
+            passenger_id: 'pax-a',
+            estado: 'reservado',
+            quota_mensal_kz: 40000,
+            perfis: { nome_completo: 'Passageiro A' },
+          },
+        ]),
+        id: 'acordo-misto-rls',
+        n_passageiros_contrato: 2,
+        ofertas_capacidade: {
+          origin_name: 'Cacuaco',
+          destination_name: 'Kilamba',
+          departure_time: '07:15',
+        },
+      },
+    ]);
+
+    renderPage();
+
+    const card = await screen.findByRole('button', { name: /Cacuaco/i });
+    expect(within(card).getByText('Activo')).toBeInTheDocument();
+    fireEvent.click(card);
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByTestId('acordo-detalhe-estado-chip')).toHaveTextContent('Activo');
+    expect(within(dialog).getByTestId(`acordo-lugar-chip-acordo-misto-rls`)).toHaveTextContent(
+      'Reservado',
+    );
+    expect(within(dialog).getByTestId('acordo-contrato-snapshot')).toHaveTextContent(
+      /Grupo · 2 pessoas/i,
+    );
+  });
+
+  it('passageiro — acordo estado reservado: lista e sheet mostram Reservado (sem chip lugar)', async () => {
+    useAuth.mockReturnValue({ user: { id: 'pax-a' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForDriver.mockResolvedValue([]);
+    getAgreementsForPassenger.mockResolvedValue([
+      {
+        ...acordoBase([
+          {
+            id: 'ap-a',
+            passenger_id: 'pax-a',
+            estado: 'reservado',
+            quota_mensal_kz: 40000,
+            perfis: { nome_completo: 'Passageiro A' },
+          },
+        ]),
+        id: 'acordo-reservado',
+        estado: 'reservado',
+        n_passageiros_contrato: 1,
+        ofertas_capacidade: {
+          origin_name: 'Cacuaco',
+          destination_name: 'Kilamba',
+          departure_time: '07:15',
+        },
+      },
+    ]);
+
+    renderPage();
+
+    const card = await screen.findByRole('button', { name: /Cacuaco/i });
+    expect(within(card).getByText('Reservado')).toBeInTheDocument();
+    expect(within(card).queryByText('Activo')).not.toBeInTheDocument();
+    fireEvent.click(card);
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByTestId('acordo-detalhe-estado-chip')).toHaveTextContent('Reservado');
+    expect(
+      within(dialog).queryByTestId('acordo-lugar-chip-acordo-reservado'),
+    ).not.toBeInTheDocument();
   });
 
   it('passageiro RLS — só linha reservado em grupo (N_contrato=2): lista = Activo + Reservado + Grupo · 2', async () => {

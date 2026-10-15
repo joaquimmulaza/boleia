@@ -3,13 +3,12 @@ import { Loader2 } from 'lucide-react';
 import SheetDragHandle from './SheetDragHandle';
 import AcordoDetalheKebabMenu from './AcordoDetalheKebabMenu';
 import { Button } from './ui/button';
-import { acordoEstadoListaChipProps } from '../utils/acordoEstadoDisplay';
 import {
   labelChipEstadoPassageiro,
   chipClassEstadoPassageiro,
-  mostrarChipLugarPassageiroSemDuplicarAcordo,
   estadoPassageiroParaChip,
 } from '../utils/estadoPassageiro';
+import { resolveAcordoListaCabecalhoUi } from '../utils/resolveAcordoListaCabecalhoUi.js';
 
 /**
  * Cabeçalho fixo (sticky) do sheet «Detalhe do acordo» — puxador, Fechar, estado e título.
@@ -23,6 +22,8 @@ import {
  *   rescisaoEffectiveOnAcordo?: string | null,
  *   driverIdAcordo?: string | null,
  *   acordosPassageiros?: Array<{ passenger_id?: string, estado?: string }>,
+ *   nPassageirosContrato?: number | null,
+ *   tipoPerfil?: string | null,
  *   viewerUserId?: string | null,
  *   minhaLinhaEstado?: string | null,
  *   minhaLinhaPagamento?: { anulacao_motivo?: string | null } | null,
@@ -48,6 +49,8 @@ export default function AcordoDetalheSheetHeader({
   rescisaoEffectiveOnAcordo,
   driverIdAcordo,
   acordosPassageiros,
+  nPassageirosContrato,
+  tipoPerfil,
   viewerUserId,
   minhaLinhaEstado,
   minhaLinhaPagamento = null,
@@ -65,7 +68,7 @@ export default function AcordoDetalheSheetHeader({
   const minhaEstadoLugar = minhaLinhaEstado
     ? estadoPassageiroParaChip(minhaLinhaEstado, minhaLinhaPagamento)
     : null;
-  const acordoEstadoChip = {
+  const acordoCabecalho = {
     estado: estadoAcordo,
     encerramento_motivo: encerramentoMotivoAcordo,
     rescisao_modo: rescisaoModoAcordo,
@@ -73,17 +76,20 @@ export default function AcordoDetalheSheetHeader({
     rescisao_solicitada_por: rescisaoSolicitadaPorAcordo,
     rescisao_effective_on: rescisaoEffectiveOnAcordo,
     driver_id: driverIdAcordo,
+    n_passageiros_contrato: nPassageirosContrato,
     acordos_passageiros: acordosPassageiros,
   };
-  const estadoChip = acordoEstadoListaChipProps(acordoEstadoChip, viewerUserId);
-  const mostrarChipLugar = Boolean(
-    minhaLinhaEstado
-      && mostrarChipLugarPassageiroSemDuplicarAcordo(
-        estadoChip.label,
-        minhaLinhaEstado,
-        minhaLinhaPagamento,
-      ),
-  );
+  const minhaLinha =
+    minhaLinhaEstado && viewerUserId
+      ? { passenger_id: viewerUserId, estado: minhaLinhaEstado }
+      : null;
+  const { estadoChip, mostrarChipLugar } = resolveAcordoListaCabecalhoUi({
+    acordo: acordoCabecalho,
+    viewerUserId,
+    tipoPerfil,
+    minhaLinha,
+    minhaChipCtx: minhaLinhaPagamento,
+  });
 
   return (
     <header
