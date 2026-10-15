@@ -216,7 +216,7 @@ describe('notificationRouter', () => {
       expect(route).toBe('/acordos');
     });
 
-    it('tipo desconhecido na lista não navega (resolveNotificationRoute fallback /acordos)', () => {
+    it('tipo desconhecido — push abre sino; lista não navega', () => {
       const notif = {
         metadata: {
           type: 'unknown_type',
@@ -224,8 +224,7 @@ describe('notificationRouter', () => {
         link: '/custom-link',
       };
 
-      const route = resolveNotificationRoute(notif);
-      expect(route).toBe('/acordos');
+      expect(resolveNotificationRoute(notif)).toBe('/?notificacoes=1');
     });
 
     it('reserva_expirada abre acordo com openAcordoId', () => {

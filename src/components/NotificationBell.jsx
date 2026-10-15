@@ -75,11 +75,11 @@ export default function NotificationBell() {
       refetchOnOpenDoneRef.current = false;
       return;
     }
-    if (listError && !refetchOnOpenDoneRef.current) {
+    if (!refetchOnOpenDoneRef.current) {
       refetchOnOpenDoneRef.current = true;
       void refetchNotifications();
     }
-  }, [isOpen, listError, refetchNotifications]);
+  }, [isOpen, refetchNotifications]);
 
   const handleNotificationClick = (notif) => {
     if (!notif.lida) {

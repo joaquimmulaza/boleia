@@ -585,7 +585,14 @@ export function resolveNotificationListDestination(notif) {
     return null;
   }
 
-  return sanitizeNotificationLink(resolveLegacyDestination(notif), '/acordos');
+  if (notif?.link && notif.link !== '/dashboard' && notif.link !== '/') {
+    const fromLink = sanitizeNotificationLink(notif.link, '');
+    if (fromLink) {
+      return fromLink;
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -652,11 +659,11 @@ export const notificationRouteMap = {
  * @returns {string}
  */
 export function resolveNotificationRoute(notif) {
-  const dest = resolveNotificationListDestination(notif);
-  if (dest) {
-    return dest;
+  const listDest = resolveNotificationListDestination(notif);
+  if (listDest) {
+    return listDest;
   }
-  return '/acordos';
+  return resolveNotificationPushDestination(notif);
 }
 
 /**

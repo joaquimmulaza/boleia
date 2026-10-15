@@ -102,6 +102,7 @@ describe('NotificationBell', () => {
         tipo: 'info',
         lida: false,
         created_at: new Date().toISOString(),
+        metadata: { type: 'proposal_received', inbox: 'passageiro', proposta_id: 'prop-1' },
       },
       {
         id: 'n2',
@@ -171,15 +172,58 @@ describe('NotificationBell', () => {
     expect(screen.queryByText('Sem notificações no momento.')).not.toBeInTheDocument();
   });
 
-  it('abrir o sino com erro dispara refetch', () => {
+  it('abrir o sino dispara refetch (B1b — com ou sem listError)', () => {
     mockListLoading = false;
-    mockListError = 'Não foi possível carregar as notificações.';
-    mockNotifications.length = 0;
+    mockListError = null;
 
     renderBell();
     fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
 
     expect(refetchNotifications).toHaveBeenCalledTimes(1);
+  });
+
+  it('desde /passageiro: notificação sem type/link — marca lida, não navega, painel aberto', () => {
+    mockNotifications.splice(0, mockNotifications.length, {
+      id: 'qa-n',
+      mensagem: 'Aviso QA sem destino',
+      tipo: 'info',
+      lida: false,
+      created_at: new Date().toISOString(),
+      metadata: { qa: true },
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/passageiro']}>
+        <NotificationBell />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+    refetchNotifications.mockClear();
+
+    const row = screen.getByRole('button', { name: /Aviso QA sem destino/i });
+    fireEvent.click(row);
+
+    expect(markAsRead).toHaveBeenCalledWith('qa-n');
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(screen.getByTestId('notification-panel')).toBeInTheDocument();
+  });
+
+  it('reabrir sino com lista — refetch falhado mostra faixa (offline / FAIL 6)', () => {
+    const view = renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+    expect(refetchNotifications).toHaveBeenCalledTimes(1);
+
+    mockListError = 'Não foi possível carregar as notificações.';
+    mockListLoading = false;
+    view.rerender(
+      <MemoryRouter>
+        <NotificationBell />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('notification-list-error-banner')).toBeInTheDocument();
+    expect(screen.getByText('Nova proposta recebida')).toBeInTheDocument();
+    expect(screen.getByTestId('notification-panel')).toBeInTheDocument();
   });
 
   it('erro com lista carregada — faixa Alert e lista visível (sem ecrã inteiro)', () => {
@@ -329,7 +373,7 @@ describe('NotificationBell', () => {
     renderBell();
     fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
 
-    const row = screen.getByRole('button', { name: 'Nova proposta recebida' });
+    const row = screen.getByTestId('notif-item-n1');
     fireEvent.keyDown(row, { key: 'Enter' });
 
     expect(markAsRead).toHaveBeenCalledWith('n1');
@@ -337,7 +381,7 @@ describe('NotificationBell', () => {
 
     markAsRead.mockClear();
     fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
-    fireEvent.keyDown(screen.getByRole('button', { name: 'Nova proposta recebida' }), { key: ' ' });
+    fireEvent.keyDown(screen.getByTestId('notif-item-n1'), { key: ' ' });
 
     expect(markAsRead).toHaveBeenCalledWith('n1');
     expect(screen.queryByTestId('notification-panel')).not.toBeInTheDocument();

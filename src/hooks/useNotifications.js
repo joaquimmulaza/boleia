@@ -2,13 +2,22 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { setAppBadgeCount } from '../utils/appBadge';
 import { NOTIFICATION_LIST_LOAD_ERROR } from '../utils/notificationListCopy';
+import { getNotificationsDevFetchConfig } from '../utils/notificationsDevFetch';
 
 export function useNotifications(userId) {
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [listLoading, setListLoading] = useState(() => Boolean(userId));
+  const devFetchConfig = getNotificationsDevFetchConfig();
+  const [notifications, setNotifications] = useState(() => devFetchConfig?.seed ?? []);
+  const [unreadCount, setUnreadCount] = useState(() =>
+    (devFetchConfig?.seed ?? []).filter((n) => !n.lida).length,
+  );
+  const [listLoading, setListLoading] = useState(() => {
+    if (devFetchConfig?.seed?.length) {
+      return false;
+    }
+    return Boolean(userId);
+  });
   const [listError, setListError] = useState(null);
-  const initialFetchSettledRef = useRef(false);
+  const initialFetchSettledRef = useRef(Boolean(devFetchConfig?.seed?.length));
   const notificationsRef = useRef([]);
 
   useEffect(() => {
@@ -42,12 +51,16 @@ export function useNotifications(userId) {
   const fetchNotifications = useCallback(async (options = {}) => {
     const { showLoading = false } = options;
     if (!userId) return;
+    const devCfg = getNotificationsDevFetchConfig();
     const isInitialLoad = !initialFetchSettledRef.current;
     const shouldShowLoading = isInitialLoad || showLoading;
     if (shouldShowLoading) {
       setListLoading(true);
     }
     try {
+      if (devCfg?.forceFetchError) {
+        throw new Error('DEV: fetch de notificações forçado a falhar');
+      }
       const { data, error } = await supabase
         .from('notificacoes')
         .select('*')
@@ -122,10 +135,22 @@ export function useNotifications(userId) {
       setListError(null);
       return undefined;
     }
-    setListLoading(true);
-    setListError(null);
+    const devCfgOnMount = getNotificationsDevFetchConfig();
+    if (devCfgOnMount?.seed?.length) {
+      setNotifications(devCfgOnMount.seed);
+      setUnreadCount(devCfgOnMount.seed.filter((n) => !n.lida).length);
+      initialFetchSettledRef.current = true;
+      setListLoading(false);
+      setListError(null);
+    } else {
+      setListLoading(true);
+      setListError(null);
+      fetchNotifications();
+    }
 
-    fetchNotifications();
+    if (devCfgOnMount?.forceFetchError) {
+      return undefined;
+    }
 
     const channel = supabase.channel(`notificacoes-${userId}`);
 

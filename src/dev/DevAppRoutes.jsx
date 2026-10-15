@@ -15,6 +15,7 @@ import DevNotifV112Capture from '../pages/DevNotifV112Capture';
 import DevNotifBellLoadingCapture from '../pages/DevNotifBellLoadingCapture';
 import DevNotifBellErrorCapture from '../pages/DevNotifBellErrorCapture';
 import DevNotifBellErrorBannerCapture from '../pages/DevNotifBellErrorBannerCapture';
+import DevNotifBellFetchErrorLive from '../pages/DevNotifBellFetchErrorLive';
 
 /**
  * Rotas relativas a `/__dev/*` (lazy + `<Route path="/__dev/*" />` em App.jsx).
@@ -47,6 +48,8 @@ export default function DevAppRoutes() {
       <Route path="notif-bell-loading" element={<DevNotifBellLoadingCapture />} />
       <Route path="notif-bell-error" element={<DevNotifBellErrorCapture />} />
       <Route path="notif-bell-error-banner" element={<DevNotifBellErrorBannerCapture />} />
+      <Route path="notif-bell-fetch-error" element={<DevNotifBellFetchErrorLive />} />
+      <Route path="notif-bell-fetch-error-with-list" element={<DevNotifBellFetchErrorLive />} />
     </Routes>
   );
 }

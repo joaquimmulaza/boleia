@@ -16,6 +16,12 @@ vi.mock('../utils/appBadge', () => ({
   setAppBadgeCount: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('../utils/notificationsDevFetch', () => ({
+  getNotificationsDevFetchConfig: vi.fn(() => null),
+}));
+
+import { getNotificationsDevFetchConfig } from '../utils/notificationsDevFetch';
+
 describe('useNotifications', () => {
   const mockNotifications = [
     { id: '1', user_id: 'user-123', mensagem: 'Test 1', lida: false },
@@ -200,6 +206,29 @@ describe('useNotifications', () => {
     expect(result.current.listLoading).toBe(false);
     expect(result.current.listError).toBeTruthy();
     expect(result.current.notifications).toEqual([]);
+  });
+
+  it('modo dev force-fetch com lista — refetch falha e mantém cache (FAIL 6)', async () => {
+    getNotificationsDevFetchConfig.mockReturnValue({
+      forceFetchError: true,
+      seed: mockNotifications,
+    });
+
+    const { result } = renderHook(() => useNotifications('user-123'));
+
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    });
+
+    expect(result.current.notifications).toEqual(mockNotifications);
+    expect(supabase.from).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await result.current.refetchNotifications();
+    });
+
+    expect(result.current.listError).toBeTruthy();
+    expect(result.current.notifications).toEqual(mockNotifications);
   });
 
   it('marks a notification as read', async () => {

@@ -341,9 +341,44 @@ describe('notificationCatalog — destinos push e lista (paridade)', () => {
     expect(shouldNavigateOnListTap(notif)).toBe(false);
   });
 
-  it('link inválido sem type — lista cai em /acordos sanitizado', () => {
+  it('link inválido sem type — lista não navega', () => {
     /** @type {Notif} */
     const notif = { link: 'https://evil.com', mensagem: 'Bem-vindo' };
-    expect(resolveNotificationListDestination(notif)).toBe('/acordos');
+    expect(resolveNotificationListDestination(notif)).toBeNull();
+    expect(shouldNavigateOnListTap(notif)).toBe(false);
+  });
+
+  it('sem metadata.type e sem link — lista não navega (QA prod)', () => {
+    /** @type {Notif} */
+    const notif = {
+      link: null,
+      tipo: 'info',
+      mensagem: 'Aviso QA',
+      metadata: { qa: true },
+    };
+    expect(resolveNotificationListDestination(notif)).toBeNull();
+    expect(shouldNavigateOnListTap(notif)).toBe(false);
+  });
+
+  it('metadata.type desconhecido (qa_tipo_desconhecido) — lista não navega', () => {
+    /** @type {Notif} */
+    const notif = {
+      metadata: { type: 'qa_tipo_desconhecido', qa: true },
+      mensagem: 'Tipo QA',
+    };
+    expect(resolveNotificationListDestination(notif)).toBeNull();
+    expect(shouldNavigateOnListTap(notif)).toBe(false);
+  });
+
+  it('reserva_expirada — lista continua para /acordos', () => {
+    /** @type {Notif} */
+    const notif = {
+      metadata: { type: 'reserva_expirada', acordo_id: '00000000-0000-4000-8000-000000000099' },
+      mensagem: 'Reserva expirou',
+    };
+    expect(resolveNotificationListDestination(notif)).toBe(
+      '/acordos?openAcordoId=00000000-0000-4000-8000-000000000099',
+    );
+    expect(shouldNavigateOnListTap(notif)).toBe(true);
   });
 });
