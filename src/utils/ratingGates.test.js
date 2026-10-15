@@ -10,6 +10,9 @@ import {
   buildMotoristaRatingPrompts,
   buildSaidaRatingPrompt,
   counterpartySeesApenasAvaliado,
+  labelMotoristaRatingListaBadge,
+  motoristaRatingListaBadgeUi,
+  MOTORISTA_RATING_LISTA_BADGE_PRAZO_EXPIRADO,
 } from './ratingGates.js';
 
 describe('ratingGates — elegibilidade ENG#32c', () => {
@@ -168,6 +171,18 @@ describe('ratingGates — elegibilidade ENG#32c', () => {
     });
     expect(prompt?.estado).toBe('pendente');
     expect(prompt?.momento).toBe(RATING_MOMENTO.SAIDA);
+  });
+
+  it('labelMotoristaRatingListaBadge distingue pendente, feito e expirado', () => {
+    expect(labelMotoristaRatingListaBadge('pendente')).toBe('Pendente');
+    expect(labelMotoristaRatingListaBadge('feito')).toBe('Avaliado');
+    expect(labelMotoristaRatingListaBadge('expirado')).toBe(MOTORISTA_RATING_LISTA_BADGE_PRAZO_EXPIRADO);
+  });
+
+  it('motoristaRatingListaBadgeUi: expirado usa secondary (neutro)', () => {
+    const ui = motoristaRatingListaBadgeUi('expirado');
+    expect(ui.variant).toBe('secondary');
+    expect(ui.className).not.toMatch(/emerald/);
   });
 
   it('contraparte só vê «avaliado» — comentário nunca exposto', () => {
