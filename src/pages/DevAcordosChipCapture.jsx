@@ -9,7 +9,13 @@ import {
   variantChipListaEstadoAcordo,
   chipClassEstadoAcordoVariant,
 } from '../utils/acordoEstadoDisplay';
-import { isActivoPassageiro } from '../utils/estadoPassageiro';
+import {
+  chipClassEstadoPassageiro,
+  isActivoPassageiro,
+  labelChipEstadoPassageiro,
+  mostrarChipLugarPassageiroSemDuplicarAcordo,
+} from '../utils/estadoPassageiro';
+import { labelPessoasNoAcordoContrato } from '../utils/resolvePessoasAcordoUi';
 
 /**
  * @param {Array<{ estado?: string }>} linhas
@@ -123,6 +129,21 @@ export default function DevAcordosChipCapture() {
 
   const noop = () => {};
 
+  const acordoPaxARls = {
+    estado: 'activo',
+    n_passageiros_contrato: 2,
+    acordos_passageiros: [{ passenger_id: 'pax-a', estado: 'reservado' }],
+  };
+  const paxAChipCabecalho = acordoEstadoListaChipProps(acordoPaxARls, 'pax-a', {
+    ignorarChipPorLugares: true,
+  });
+  const paxALugarEstado = 'reservado';
+  const paxAMostrarLugar = mostrarChipLugarPassageiroSemDuplicarAcordo(
+    paxAChipCabecalho.label,
+    paxALugarEstado,
+  );
+  const paxAGrupo = labelPessoasNoAcordoContrato(acordoPaxARls.n_passageiros_contrato);
+
   return (
     <div
       className="min-h-dvh bg-background-light dark:bg-background-dark p-4"
@@ -228,6 +249,36 @@ export default function DevAcordosChipCapture() {
               </span>
             );
           })}
+        </section>
+
+        <section
+          className="rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-2 shadow-sm"
+          data-testid="dev-pax-a-rls-list-card"
+        >
+          <p className="text-xs font-semibold text-slate-400">
+            Passageiro A — RLS só reservado (lista alinhada ao detalhe)
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`inline-flex text-xs font-bold px-2.5 py-1 rounded-full ${paxAChipCabecalho.className}`}
+            >
+              {paxAChipCabecalho.label}
+            </span>
+            {paxAMostrarLugar ? (
+              <span
+                className={`inline-flex text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoPassageiro(paxALugarEstado)}`}
+              >
+                {labelChipEstadoPassageiro(paxALugarEstado)}
+              </span>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-1 text-sm text-slate-500">
+            <Users size={14} aria-hidden="true" />
+            <span>{paxAGrupo}</span>
+          </div>
+          <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+            Cacuaco → Kilamba
+          </p>
         </section>
 
         <section

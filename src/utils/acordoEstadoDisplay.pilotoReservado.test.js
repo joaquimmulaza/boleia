@@ -4,6 +4,7 @@ import {
   variantChipEstadoAcordo,
   labelChipListaEstadoAcordo,
   variantChipListaEstadoAcordo,
+  acordoEstadoListaChipProps,
 } from './acordoEstadoDisplay';
 
 describe('acordoEstadoDisplay — piloto reservado (chip cabeçalho vs lugares)', () => {
@@ -51,5 +52,17 @@ describe('acordoEstadoDisplay — piloto reservado (chip cabeçalho vs lugares)'
   it('sem linhas de passageiros mantém «Activo» (legado string)', () => {
     expect(labelEstadoAcordo('activo')).toBe('Activo');
     expect(variantChipEstadoAcordo('activo')).toBe('activo');
+  });
+
+  it('ignorarChipPorLugares — RLS só linha reservado mantém chip «Activo» do cabeçalho', () => {
+    const acordoRls = {
+      estado: 'activo',
+      n_passageiros_contrato: 2,
+      acordos_passageiros: [{ passenger_id: 'pax-a', estado: 'reservado' }],
+    };
+    expect(acordoEstadoListaChipProps(acordoRls, 'pax-a').label).toBe('Reservado');
+    expect(acordoEstadoListaChipProps(acordoRls, 'pax-a', { ignorarChipPorLugares: true }).label).toBe(
+      'Activo',
+    );
   });
 });

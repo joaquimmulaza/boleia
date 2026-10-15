@@ -89,7 +89,39 @@ describe('MyAgreements — UX piloto reservado (lista)', () => {
     });
   });
 
-  it('passageiro reservado: um só chip Reservado (acordo e lugar coincidem)', async () => {
+  it('passageiro RLS — só linha reservado em grupo (N_contrato=2): lista = Activo + Reservado + Grupo · 2', async () => {
+    useAuth.mockReturnValue({ user: { id: 'pax-a' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForDriver.mockResolvedValue([]);
+    getAgreementsForPassenger.mockResolvedValue([
+      {
+        ...acordoBase([
+          {
+            id: 'ap-a',
+            passenger_id: 'pax-a',
+            estado: 'reservado',
+            quota_mensal_kz: 40000,
+            perfis: { nome_completo: 'Passageiro A' },
+          },
+        ]),
+        id: 'acordo-misto-rls',
+        n_passageiros_contrato: 2,
+        ofertas_capacidade: {
+          origin_name: 'Cacuaco',
+          destination_name: 'Kilamba',
+          departure_time: '07:15',
+        },
+      },
+    ]);
+
+    renderPage();
+
+    const card = await screen.findByRole('button', { name: /Cacuaco/i });
+    expect(within(card).getByText('Activo')).toBeInTheDocument();
+    expect(within(card).getByText('Reservado')).toBeInTheDocument();
+    expect(within(card).getByText(/Grupo · 2 pessoas/i)).toBeInTheDocument();
+  });
+
+  it('passageiro individual reservado (RLS): Activo + Reservado + Individual', async () => {
     useAuth.mockReturnValue({ user: { id: 'p1' }, tipoPerfil: 'Passageiro' });
     getAgreementsForDriver.mockResolvedValue([]);
     getAgreementsForPassenger.mockResolvedValue([
@@ -114,7 +146,9 @@ describe('MyAgreements — UX piloto reservado (lista)', () => {
     renderPage();
 
     const card = await screen.findByRole('button', { name: /Cacuaco/i });
-    expect(within(card).getAllByText('Reservado')).toHaveLength(1);
+    expect(within(card).getByText('Activo')).toBeInTheDocument();
+    expect(within(card).getByText('Reservado')).toBeInTheDocument();
+    expect(within(card).getByText(/Individual/i)).toBeInTheDocument();
   });
 
   it('só reservado: chip Reservado e sem linha Grupo (0 activos — nunca «0 pessoas»)', async () => {

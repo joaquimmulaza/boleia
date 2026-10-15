@@ -1071,7 +1071,10 @@ const MyAgreements = () => {
     const oferta = acordo.ofertas_capacidade;
     const rota = labelRotaOferta(oferta || {});
     const activo = isActivo(acordo.estado);
-    const estadoChipCard = acordoEstadoListaChipProps(acordo, user?.id);
+    const isListaPassageiro = tipoPerfil === 'Passageiro';
+    const estadoChipCard = acordoEstadoListaChipProps(acordo, user?.id, {
+      ignorarChipPorLugares: isListaPassageiro,
+    });
     const leavePending = Boolean(pendingLeaveIds[acordo.id]);
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
     const minhaChipCtxCard = minhaLinha
@@ -1093,6 +1096,9 @@ const MyAgreements = () => {
         ? (minhaLinha?.quota_mensal_kz ?? acordo.valor_mensal_por_passageiro_kz)
         : acordo.valor_mensal_por_passageiro_kz;
     const rotuloPessoas = (() => {
+      if (isListaPassageiro) {
+        return labelPessoasNoAcordoContrato(acordo.n_passageiros_contrato);
+      }
       if (nPax === 0) return null;
       return (
         labelPessoasNoAcordoContrato(acordo.n_passageiros_contrato)

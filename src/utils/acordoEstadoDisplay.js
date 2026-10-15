@@ -177,7 +177,13 @@ export function podeConfirmarRescisaoConsensual(acordo, userId) {
  * @param {string | null | undefined} userId
  * @returns {string}
  */
-export function labelChipListaEstadoAcordo(acordo, userId) {
+/**
+ * @param {string | AcordoEstadoChipInput | null | undefined} acordo
+ * @param {string | null | undefined} userId
+ * @param {boolean} [ignorarChipPorLugares]
+ * @returns {string}
+ */
+export function labelChipListaEstadoAcordo(acordo, userId, ignorarChipPorLugares = false) {
   const norm = normalizeAcordoEstadoInput(acordo);
 
   if (norm.e === 'cancelamento_pendente') {
@@ -197,7 +203,7 @@ export function labelChipListaEstadoAcordo(acordo, userId) {
     return 'Encerramento pedido';
   }
 
-  return labelEstadoAcordo(acordo);
+  return labelEstadoAcordo(acordo, undefined, undefined, ignorarChipPorLugares);
 }
 
 /**
@@ -205,15 +211,16 @@ export function labelChipListaEstadoAcordo(acordo, userId) {
  *
  * @param {string | AcordoEstadoChipInput | null | undefined} acordo
  * @param {string | null | undefined} userId
+ * @param {boolean} [ignorarChipPorLugares]
  * @returns {'activo' | 'pendente' | 'encerrado' | 'inactivo' | 'aviso' | 'info'}
  */
-export function variantChipListaEstadoAcordo(acordo, userId) {
+export function variantChipListaEstadoAcordo(acordo, userId, ignorarChipPorLugares = false) {
   const norm = normalizeAcordoEstadoInput(acordo);
   if (isChipEncerramentoPedidoConsensual(norm) && userId) {
     if (podeConfirmarRescisaoConsensual(acordo, userId)) return 'aviso';
     return 'info';
   }
-  return variantChipEstadoAcordo(acordo);
+  return variantChipEstadoAcordo(acordo, undefined, undefined, ignorarChipPorLugares);
 }
 
 /**
@@ -221,11 +228,13 @@ export function variantChipListaEstadoAcordo(acordo, userId) {
  *
  * @param {string | AcordoEstadoChipInput | null | undefined} acordo
  * @param {string | null | undefined} userId
+ * @param {{ ignorarChipPorLugares?: boolean }} [options]
  * @returns {{ label: string, variant: string, role?: 'status', className: string, ariaLabel?: string }}
  */
-export function acordoEstadoListaChipProps(acordo, userId) {
-  const variant = variantChipListaEstadoAcordo(acordo, userId);
-  const label = labelChipListaEstadoAcordo(acordo, userId);
+export function acordoEstadoListaChipProps(acordo, userId, options = {}) {
+  const ignorarChipPorLugares = options.ignorarChipPorLugares === true;
+  const variant = variantChipListaEstadoAcordo(acordo, userId, ignorarChipPorLugares);
+  const label = labelChipListaEstadoAcordo(acordo, userId, ignorarChipPorLugares);
   const role = variant === 'info' || variant === 'aviso' ? 'status' : undefined;
   return {
     label,
@@ -236,15 +245,17 @@ export function acordoEstadoListaChipProps(acordo, userId) {
   };
 }
 
-export function labelEstadoAcordo(estado, encerramentoMotivo, rescisaoModo) {
+export function labelEstadoAcordo(estado, encerramentoMotivo, rescisaoModo, ignorarChipPorLugares = false) {
   const norm = normalizeAcordoEstadoInput(estado, encerramentoMotivo, rescisaoModo);
   const { e } = norm;
 
   if (isAcordoEncerradoSemLugaresVivos(norm)) return 'Encerrado';
   if (isChipEncerramentoPedidoConsensual(norm)) return 'Encerramento pedido';
   if (e === 'activo') {
-    const porLugares = chipAcordoVigentePorLugares(norm);
-    if (porLugares) return porLugares.label;
+    if (!ignorarChipPorLugares) {
+      const porLugares = chipAcordoVigentePorLugares(norm);
+      if (porLugares) return porLugares.label;
+    }
     return 'Activo';
   }
   if (e === 'cancelamento_pendente') return 'Cancelamento pendente';
@@ -263,14 +274,16 @@ export function labelEstadoAcordo(estado, encerramentoMotivo, rescisaoModo) {
  * @param {string | null | undefined} [rescisaoModo]
  * @returns {'activo' | 'pendente' | 'encerrado' | 'inactivo' | 'aviso'}
  */
-export function variantChipEstadoAcordo(estado, encerramentoMotivo, rescisaoModo) {
+export function variantChipEstadoAcordo(estado, encerramentoMotivo, rescisaoModo, ignorarChipPorLugares = false) {
   const norm = normalizeAcordoEstadoInput(estado, encerramentoMotivo, rescisaoModo);
   const { e } = norm;
 
   if (isAcordoEncerradoSemLugaresVivos(norm)) return 'encerrado';
   if (e === 'activo' && !isChipEncerramentoPedidoConsensual(norm)) {
-    const porLugares = chipAcordoVigentePorLugares(norm);
-    if (porLugares) return porLugares.variant;
+    if (!ignorarChipPorLugares) {
+      const porLugares = chipAcordoVigentePorLugares(norm);
+      if (porLugares) return porLugares.variant;
+    }
     return 'activo';
   }
   if (e === 'activo' || e === 'cancelamento_pendente') return 'pendente';
