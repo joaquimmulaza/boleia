@@ -182,6 +182,86 @@ describe('notificationCatalog — títulos v1.18', () => {
   it('notificação antiga sem type: lista sem título de catálogo', () => {
     expect(resolveCatalogTitle({ mensagem: 'Texto legado qualquer' })).toBeNull();
   });
+
+  it('status v1.12 usa título de card (#275)', () => {
+    expect(
+      resolveNotificationTitle({
+        metadata: { type: 'status', card: 'v1.12', acordo_id: ACORDO },
+        mensagem: 'A reserva expirou. O acordo continua.',
+      }),
+    ).toBe('Ficou um lugar livre');
+  });
+
+  it('motorista JC passageiro — v1.18 parcial vs encerrado', () => {
+    expect(
+      resolveNotificationTitle({
+        metadata: {
+          type: 'agreement_update',
+          rescisao_modo: 'justa_causa',
+          acordo_estado: 'activo',
+        },
+        mensagem: 'Maria rescindiu o lugar por justa causa. Ficou um lugar livre.',
+      }),
+    ).toBe('Um lugar terminou por justa causa');
+    expect(
+      resolveNotificationTitle({
+        metadata: {
+          type: 'agreement_update',
+          rescisao_modo: 'justa_causa',
+          acordo_estado: 'cancelado',
+        },
+        mensagem: 'Maria rescindiu por justa causa e o acordo foi encerrado.',
+      }),
+    ).toBe('Acordo encerrado');
+  });
+
+  it('agreement_update — metadata.reason e1–e4 (sem heurística de mensagem)', () => {
+    expect(
+      resolveNotificationTitle({
+        metadata: { type: 'agreement_update', reason: 'e2' },
+        mensagem: 'corpo qualquer',
+      }),
+    ).toBe('Encerramento confirmado');
+    expect(
+      resolveNotificationTitle({
+        metadata: { type: 'agreement_update', reason: 'e3' },
+        mensagem: 'corpo qualquer',
+      }),
+    ).toBe('Aviso prévio: o acordo vai terminar');
+    expect(
+      resolveNotificationTitle({
+        metadata: { type: 'agreement_update', reason: 'e4' },
+        mensagem: 'corpo qualquer',
+      }),
+    ).toBe('Acordo terminado por justa causa');
+    expect(
+      resolveNotificationTitle({
+        metadata: { type: 'agreement_update', reason: 'e1', nome: 'João' },
+        mensagem: 'corpo qualquer',
+      }),
+    ).toBe('João pediu para encerrar o acordo');
+  });
+
+  it('justa_causa_passageiro_invocador — título por variant', () => {
+    expect(
+      resolveNotificationTitle({
+        metadata: {
+          type: 'justa_causa_passageiro_invocador',
+          variant: 'parcial',
+        },
+        mensagem: '·',
+      }),
+    ).toBe('Saíste do acordo');
+    expect(
+      resolveNotificationTitle({
+        metadata: {
+          type: 'justa_causa_passageiro_invocador',
+          variant: 'ultimo',
+        },
+        mensagem: '·',
+      }),
+    ).toBe('Acordo encerrado');
+  });
 });
 
 describe('notificationCatalog — destinos push e lista (paridade)', () => {

@@ -11,6 +11,10 @@ import {
   buildSaidaRatingPrompt,
   counterpartySeesApenasAvaliado,
   countMotoristaRatingProgress,
+  labelMotoristaRatingListaBadge,
+  motoristaRatingListaBadgeUi,
+  MOTORISTA_RATING_LISTA_BADGE_PRAZO_TERMINADO,
+  MOTORISTA_RATING_LISTA_PRAZO_TERMINADO_HINT,
 } from './ratingGates.js';
 
 describe('ratingGates — elegibilidade ENG#32c', () => {
@@ -55,6 +59,18 @@ describe('ratingGates — elegibilidade ENG#32c', () => {
     expect(
       resolveRatingPromptEstado({
         now: withinWindow,
+        settledAt,
+        submitted: true,
+        momento: RATING_MOMENTO.PRIMEIRO_PERIODO,
+        passageiroEstado: 'activo',
+      }),
+    ).toBe('feito');
+  });
+
+  it('resolveRatingPromptEstado: feito mantém prioridade sobre expirado após janela M1', () => {
+    expect(
+      resolveRatingPromptEstado({
+        now: afterWindow,
         settledAt,
         submitted: true,
         momento: RATING_MOMENTO.PRIMEIRO_PERIODO,
@@ -191,6 +207,27 @@ describe('ratingGates — elegibilidade ENG#32c', () => {
     expect(prompts.find((p) => p.acordoPassageiroId === 'ap2')?.estado).toBe('feito');
   });
 
+  it('buildMotoristaRatingPrompts: após janela, avaliado permanece feito e outro expirado', () => {
+    const prompts = buildMotoristaRatingPrompts({
+      acordoId: 'a1',
+      passageiros: [
+        { id: 'ap1', passenger_id: 'p1', estado: 'activo', perfis: { nome_completo: 'Maria' } },
+        { id: 'ap2', passenger_id: 'p2', estado: 'activo', perfis: { nome_completo: 'João' } },
+      ],
+      pagamentos: [
+        { acordo_passageiro_id: 'ap1', estado: 'em_custodia', validado_em: settledAt, mes_referencia: '2026-09-01' },
+        { acordo_passageiro_id: 'ap2', estado: 'em_custodia', validado_em: settledAt, mes_referencia: '2026-09-01' },
+      ],
+      avaliacoes: [
+        { acordo_passageiro_id: 'ap1', momento: RATING_MOMENTO.PRIMEIRO_PERIODO, avaliador_id: 'mot-1' },
+      ],
+      now: afterWindow,
+      driverId: 'mot-1',
+    });
+    expect(prompts.find((p) => p.acordoPassageiroId === 'ap1')?.estado).toBe('feito');
+    expect(prompts.find((p) => p.acordoPassageiroId === 'ap2')?.estado).toBe('expirado');
+  });
+
   it('buildSaidaRatingPrompt pendente antes de sair', () => {
     const prompt = buildSaidaRatingPrompt({
       acordoId: 'a1',
@@ -203,6 +240,19 @@ describe('ratingGates — elegibilidade ENG#32c', () => {
     });
     expect(prompt?.estado).toBe('pendente');
     expect(prompt?.momento).toBe(RATING_MOMENTO.SAIDA);
+  });
+
+  it('labelMotoristaRatingListaBadge distingue pendente, feito e expirado', () => {
+    expect(labelMotoristaRatingListaBadge('pendente')).toBe('Pendente');
+    expect(labelMotoristaRatingListaBadge('feito')).toBe('Avaliado');
+    expect(labelMotoristaRatingListaBadge('expirado')).toBe(MOTORISTA_RATING_LISTA_BADGE_PRAZO_TERMINADO);
+    expect(MOTORISTA_RATING_LISTA_PRAZO_TERMINADO_HINT).toMatch(/Já não é possível avaliar/);
+  });
+
+  it('motoristaRatingListaBadgeUi: expirado usa neutro slate (sem emerald)', () => {
+    const ui = motoristaRatingListaBadgeUi('expirado');
+    expect(ui.className).toMatch(/slate/);
+    expect(ui.className).not.toMatch(/emerald/);
   });
 
   it('contraparte só vê «avaliado» — comentário nunca exposto', () => {

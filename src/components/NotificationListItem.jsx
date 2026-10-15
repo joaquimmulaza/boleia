@@ -1,7 +1,11 @@
 import React from 'react';
 import { CheckCircle, Info, AlertCircle } from 'lucide-react';
 import NotificationRowKebab from './NotificationRowKebab';
-import { resolveCatalogTitle } from '../utils/notificationCatalog';
+import { resolveNotificationListTitle } from '../utils/notificationCatalog';
+import {
+  resolveNotificationMensagem,
+  resolveNotificationTipo,
+} from '../utils/notificationDisplayMensagem';
 
 /**
  * @param {{ type?: string }} props
@@ -32,21 +36,7 @@ function NotificationIcon({ type }) {
 }
 
 /**
- * Título visível na lista (sem fallback «Boleia Certa» para notificações antigas).
- *
- * @param {{ metadata?: { titulo?: string }, mensagem?: string }} notif
- * @returns {string | null}
- */
-function resolveListItemTitle(notif) {
-  const metaTitulo = notif?.metadata?.titulo;
-  if (typeof metaTitulo === 'string' && metaTitulo.trim()) {
-    return metaTitulo.trim();
-  }
-  return resolveCatalogTitle(notif);
-}
-
-/**
- * Linha da lista de notificações (sino / sheet).
+ * Linha da lista de notificações (sino / sheet / capturas DEV).
  *
  * @param {{
  *   notif: { id?: string, mensagem: string, tipo?: string, lida?: boolean, created_at?: string, metadata?: object },
@@ -61,8 +51,12 @@ export default function NotificationListItem({
   onDelete,
   showKebab = true,
 }) {
-  const listTitle = resolveListItemTitle(notif);
-  const showTitle = Boolean(listTitle);
+  const tituloVisivel = resolveNotificationListTitle(notif);
+  const mensagemVisivel = resolveNotificationMensagem(notif);
+  const tipoIcon = resolveNotificationTipo(notif) || notif.tipo;
+  const ariaLabel = tituloVisivel
+    ? `${tituloVisivel}. ${mensagemVisivel}`
+    : mensagemVisivel;
 
   let timeLabel = 'agora mesmo';
   if (notif.created_at) {
@@ -87,12 +81,10 @@ export default function NotificationListItem({
     }
   }
 
-  const rowLabel = showTitle ? `${listTitle}. ${notif.mensagem}` : notif.mensagem;
-
   return (
     <li
       role={onActivate ? 'button' : undefined}
-      aria-label={onActivate ? rowLabel : undefined}
+      aria-label={onActivate ? ariaLabel : undefined}
       tabIndex={onActivate ? 0 : undefined}
       onKeyDown={
         onActivate
@@ -109,33 +101,47 @@ export default function NotificationListItem({
         onActivate ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary focus-visible:ring-offset-0 dark:text-foreground' : ''
       } ${!notif.lida ? 'bg-primary/5 dark:bg-primary/10' : ''}`}
       onClick={onActivate}
+      data-testid={notif.id ? `notif-item-${notif.id}` : undefined}
     >
       <div className="mt-0.5 shrink-0">
-        <NotificationIcon type={notif.tipo} />
+        <NotificationIcon type={tipoIcon} />
       </div>
       <div className="flex-1 min-w-0 max-w-[390px]">
-        {showTitle ? (
+        {tituloVisivel ? (
+          <>
+            <p
+              className={`text-sm leading-snug line-clamp-2 text-pretty ${
+                !notif.lida
+                  ? 'font-semibold text-gray-900 dark:text-gray-100'
+                  : 'font-normal text-gray-600 dark:text-gray-400'
+              }`}
+              data-testid={notif.id ? `notif-item-${notif.id}-titulo` : undefined}
+            >
+              {tituloVisivel}
+            </p>
+            <p
+              className={`mt-0.5 text-sm leading-relaxed text-pretty ${
+                !notif.lida
+                  ? 'text-gray-800 dark:text-gray-200'
+                  : 'text-gray-600 dark:text-gray-300'
+              }`}
+              data-testid={notif.id ? `notif-item-${notif.id}-mensagem` : undefined}
+            >
+              {mensagemVisivel}
+            </p>
+          </>
+        ) : (
           <p
-            className={`text-sm font-semibold leading-snug line-clamp-2 text-pretty ${
+            className={`text-sm leading-relaxed text-pretty ${
               !notif.lida
-                ? 'text-gray-900 dark:text-gray-100'
-                : 'text-gray-800 dark:text-gray-200'
-            }`}
-          >
-            {listTitle}
-          </p>
-        ) : null}
-        <p
-          className={`text-sm leading-relaxed text-pretty ${
-            showTitle
-              ? 'mt-1 text-gray-600 dark:text-gray-400'
-              : !notif.lida
                 ? 'font-semibold text-gray-900 dark:text-gray-100'
                 : 'text-gray-600 dark:text-gray-300'
-          }`}
-        >
-          {notif.mensagem}
-        </p>
+            }`}
+            data-testid={notif.id ? `notif-item-${notif.id}-mensagem` : undefined}
+          >
+            {mensagemVisivel}
+          </p>
+        )}
         <p className="mt-1.5 text-xs font-medium text-gray-400 dark:text-gray-500">{timeLabel}</p>
       </div>
       {!notif.lida ? (

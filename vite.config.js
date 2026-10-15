@@ -3,9 +3,17 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'node:path'
+import { createHash } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+function resolveAppBuildId() {
+  if (process.env.VERCEL_GIT_COMMIT_SHA) {
+    return process.env.VERCEL_GIT_COMMIT_SHA
+  }
+  return createHash('sha256').update(String(Date.now())).digest('hex').slice(0, 12)
+}
 
 // https://vite.dev/config/
 export default defineConfig(() => {
@@ -18,7 +26,12 @@ export default defineConfig(() => {
     Object.assign(process.env, envData);
   }
 
+  const appBuildId = resolveAppBuildId()
+
   return {
+    define: {
+      __APP_BUILD_ID__: JSON.stringify(appBuildId),
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),

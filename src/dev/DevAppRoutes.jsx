@@ -1,14 +1,17 @@
 import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { isDevCaptureRoutesEnabled } from '../utils/devCaptureAccess';
 import Profile from '../pages/Profile';
 import DevPerfilPushPreview from '../pages/DevPerfilPushPreview';
 import DevPerfilCaptureShell from '../pages/DevPerfilCapture';
 import DevPerfilCaptureMotoristaShell from '../pages/DevPerfilCaptureMotorista';
 import DevPagamentoPanelCapture from '../pages/DevPagamentoPanelCapture';
 import DevAcordosChipCapture from '../pages/DevAcordosChipCapture';
+import DevMotoristaJustaCausaCapture from '../pages/DevMotoristaJustaCausaCapture';
+import DevJustaCausaConfirmCapture from '../pages/DevJustaCausaConfirmCapture';
 import DevHotfixProdQaCapture from '../pages/DevHotfixProdQaCapture';
 import DevNotifCards269Capture from '../pages/DevNotifCards269Capture';
-import { isDevCaptureRoutesEnabled } from '../utils/devCaptureAccess';
+import DevNotifV112Capture from '../pages/DevNotifV112Capture';
 
 /**
  * Rotas relativas a `/__dev/*` (lazy + `<Route path="/__dev/*" />` em App.jsx).
@@ -33,8 +36,11 @@ export default function DevAppRoutes() {
       </Route>
       <Route path="acordos-chips" element={<DevAcordosChipCapture />} />
       <Route path="acordos-chip-capture" element={<DevAcordosChipCapture />} />
+      <Route path="motorista-jc-passageiro" element={<DevMotoristaJustaCausaCapture />} />
+      <Route path="justa-causa-confirm" element={<DevJustaCausaConfirmCapture />} />
       <Route path="hotfix-prod-qa-acordos" element={<DevHotfixProdQaCapture />} />
       <Route path="notif-cards-269" element={<DevNotifCards269Capture />} />
+      <Route path="notif-v112" element={<DevNotifV112Capture />} />
     </Routes>
   );
 }

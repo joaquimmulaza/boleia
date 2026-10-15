@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
-    "graphify:update": "graphify update . --max-concurrency 2",
+    "graphify:update": "graphify update .",
     "graphify:build": "graphify . --backend gemini --max-concurrency 2 && graphify cluster-only . --backend gemini --max-concurrency 1"
   },
   "dependencies": {

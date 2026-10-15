@@ -37,7 +37,7 @@ Ao receber «Implement the plan»: se o plano omitiu papéis da tabela, **comple
 | UI/UX | ui-designer (UI Skills → Stitch/`boleia-stitch`) → gate design → implementer → ui-qa + code-reviewer (paralelo se scopes OK) |
 | Só lógica/serviço | implementer → code-reviewer |
 | Só docs/rules/skills | implementar → code-reviewer leve |
-| Exploração / arquitectura | **Graphlore primeiro:** `graphlore_overview` ou `graphlore_freshness`, depois `search` → `subgraph`/`neighbors`/`node_details`. Grep só se o mapa não bastar (`.cursor/rules/graphify.mdc`). Sem Spec se não houver mudança. |
+| Exploração / arquitectura | **Graphify hosted MCP primeiro:** `graphify_find` / `graphify_node` → `graphify_callers` / `graphify_callees` → `graphify_impact` ou `impact_and_risk` (por símbolo) → `graphify_tests_for`; `graph_stats` para freshness. Sem tools `graphify_*` na sessão → declarar e usar `rg`; confirmar RPCs dinâmicos/imports lazy com `rg`. Graphlore/CLI só fallback (`.cursor/rules/graphify.mdc`). Sem Spec se não houver mudança. |
 
 Ler o `SKILL.md` do papel correspondente em `.cursor/skills/boleia-agent-loop/<papel>/` e incluir as instruções no prompt do `Task`. Em UI, incluir também `.cursor/skills/boleia-stitch/SKILL.md`.
 

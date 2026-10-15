@@ -124,6 +124,16 @@ import {
   filterContactosPassageirosVivos,
 } from '../utils/estadoPassageiro';
 import { formatPrimeiroNome } from '../utils/primeiroNome';
+import { resolveMotoristaJustaCausaPassageiroAlerts } from '../utils/driverJustaCausaPassageiroCopy';
+import MotoristaJustaCausaPassageiroAlert from '../components/MotoristaJustaCausaPassageiroAlert';
+import {
+  resolveJustaCausaConfirmVariant,
+  copyJustaCausaTerminateIntro,
+  copyJustaCausaTerminateModoMessage,
+  copyJustaCausaTerminateConfirmText,
+  copyJustaCausaTerminateTitle,
+  isJustaCausaConfirmSubmitDisabled,
+} from '../utils/justaCausaTerminateConfirmCopy';
 
 /**
  * @param {string | null | undefined} estado
@@ -277,18 +287,27 @@ function isRescisaoConfirmacaoJaEfectuadaError(err) {
   return /este acordo já não está activo/i.test(msg);
 }
 
-function buildTerminateConfirmBody({ contactos, rota, tipoPerfil, linhas, modoMessage }) {
+function buildTerminateConfirmBody({
+  contactos,
+  rota,
+  tipoPerfil,
+  linhas,
+  modoMessage,
+  terminateModo,
+  justaCausaVariant,
+}) {
   const counterparty = buildTerminateCounterpartyLabel({ contactos, tipoPerfil, linhas });
   const odSuffix =
     rota.origem && rota.destino ? ` (${rota.origem} → ${rota.destino})` : '';
 
+  const introParagraph =
+    terminateModo === 'justa_causa' && justaCausaVariant
+      ? copyJustaCausaTerminateIntro({ variant: justaCausaVariant, counterparty, odSuffix })
+      : `Vais encerrar o acordo com ${counterparty}${odSuffix}. Esta acção não se pode desfazer. O valor acordado deixa de aplicar-se a partir do fecho.`;
+
   return (
     <>
-      <p>
-        Vais encerrar o acordo com {counterparty}
-        {odSuffix}. Esta acção não se pode desfazer. O valor acordado deixa de aplicar-se a
-        partir do fecho.
-      </p>
+      <p>{introParagraph}</p>
       {modoMessage ? <p>{modoMessage}</p> : null}
     </>
   );
@@ -334,6 +353,10 @@ const MyAgreements = () => {
   /** @type {[number | null, React.Dispatch<React.SetStateAction<number | null>>]} */
   const [leaveLugaresVivosCount, setLeaveLugaresVivosCount] = useState(null);
   const [leaveBusy, setLeaveBusy] = useState(false);
+  const [terminateLugaresVivosLoading, setTerminateLugaresVivosLoading] = useState(false);
+  const [terminateLugaresVivosErro, setTerminateLugaresVivosErro] = useState(false);
+  /** @type {[number | null, React.Dispatch<React.SetStateAction<number | null>>]} */
+  const [terminateLugaresVivosCount, setTerminateLugaresVivosCount] = useState(null);
   /** @type {[Record<string, true>, React.Dispatch<React.SetStateAction<Record<string, true>>>]} */
   const [pendingLeaveIds, setPendingLeaveIds] = useState({});
 
@@ -807,6 +830,66 @@ const MyAgreements = () => {
       cancelled = true;
     };
   }, [leaveModalOpen, selected?.id]);
+
+  useEffect(() => {
+    const needsCount =
+      terminateConfirmOpen
+      && terminateModo === 'justa_causa'
+      && tipoPerfil === 'Passageiro'
+      && selected?.id;
+    if (!needsCount) {
+      setTerminateLugaresVivosLoading(false);
+      setTerminateLugaresVivosErro(false);
+      setTerminateLugaresVivosCount(null);
+      return undefined;
+    }
+    let cancelled = false;
+    setTerminateLugaresVivosLoading(true);
+    setTerminateLugaresVivosErro(false);
+    setTerminateLugaresVivosCount(null);
+    countLugaresVivosAcordo(selected.id)
+      .then((n) => {
+        if (!cancelled) {
+          setTerminateLugaresVivosCount(n);
+          setTerminateLugaresVivosLoading(false);
+          setTerminateLugaresVivosErro(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTerminateLugaresVivosCount(null);
+          setTerminateLugaresVivosLoading(false);
+          setTerminateLugaresVivosErro(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [terminateConfirmOpen, terminateModo, tipoPerfil, selected?.id]);
+
+  const justaCausaConfirmVariant = useMemo(
+    () => resolveJustaCausaConfirmVariant({
+      tipoPerfil,
+      lugaresVivosCount: terminateLugaresVivosCount,
+      lugaresVivosLoading: terminateLugaresVivosLoading,
+      lugaresVivosErro: terminateLugaresVivosErro,
+    }),
+    [
+      tipoPerfil,
+      terminateLugaresVivosCount,
+      terminateLugaresVivosLoading,
+      terminateLugaresVivosErro,
+    ],
+  );
+
+  const justaCausaConfirmSubmitDisabled = useMemo(
+    () => (
+      terminateModo === 'justa_causa'
+      && tipoPerfil === 'Passageiro'
+      && isJustaCausaConfirmSubmitDisabled(justaCausaConfirmVariant)
+    ),
+    [terminateModo, tipoPerfil, justaCausaConfirmVariant],
+  );
 
   const activos = acordos.filter((a) => isActivo(a.estado));
   const outros = acordos.filter((a) => !isActivo(a.estado));
@@ -1336,6 +1419,9 @@ const MyAgreements = () => {
           pagamentoLoading,
         })
         : null;
+    const motoristaJcPassageiroAlerts = isMotorista
+      ? resolveMotoristaJustaCausaPassageiroAlerts(selected, linhas)
+      : [];
     const sheetTitulo = pagamentoUiPassageiro?.sheetTitle || 'Detalhe do acordo';
     const linhaJaConfirmadoConsensual =
       rescisaoConsensualPendente
@@ -1512,6 +1598,14 @@ const MyAgreements = () => {
               highlightKz={isPassageiro ? quotaDestaque : null}
               className="border-0 bg-transparent dark:bg-transparent p-0"
             />
+
+            {motoristaJcPassageiroAlerts.map((alerta) => (
+              <MotoristaJustaCausaPassageiroAlert
+                key={alerta.id}
+                variant={alerta.variant}
+                corpo={alerta.corpo}
+              />
+            ))}
 
             {cancelamentoCopy ? (
               <div
@@ -2207,13 +2301,18 @@ const MyAgreements = () => {
               : 'Pedir encerramento agora?'
             : terminateModo === 'aviso_previo'
               ? 'Confirmar aviso prévio?'
-              : 'Confirmar justa causa?'
+              : terminateModo === 'justa_causa'
+                ? copyJustaCausaTerminateTitle({ variant: justaCausaConfirmVariant })
+                : 'Confirmar justa causa?'
         }
         body={buildTerminateConfirmBody({
           contactos,
           rota: labelRotaOferta(selected?.ofertas_capacidade || {}),
           tipoPerfil,
           linhas: selected?.acordos_passageiros || [],
+          terminateModo,
+          justaCausaVariant:
+            terminateModo === 'justa_causa' ? justaCausaConfirmVariant : undefined,
           modoMessage:
             terminateModo === 'consensual'
               ? terminateVigencia === 'fim_ciclo'
@@ -2222,10 +2321,15 @@ const MyAgreements = () => {
               : terminateModo === 'aviso_previo'
                 ? 'O acordo mantém-se activo até ao último dia deste mês. A quota deste mês não é reembolsada.'
                 : terminateModo === 'justa_causa'
-                  ? 'O acordo termina de imediato se o motivo for válido. As quotas deste mês podem ser ajustadas proporcionalmente.'
+                  ? copyJustaCausaTerminateModoMessage({ variant: justaCausaConfirmVariant })
                   : '',
         })}
-        confirmText="Encerrar acordo"
+        confirmText={
+          terminateModo === 'justa_causa'
+            ? copyJustaCausaTerminateConfirmText({ variant: justaCausaConfirmVariant })
+            : 'Encerrar acordo'
+        }
+        confirmDisabled={justaCausaConfirmSubmitDisabled}
         onConfirm={() => handleTerminate()}
         onCancel={() => {
           if (!terminateBusy) {

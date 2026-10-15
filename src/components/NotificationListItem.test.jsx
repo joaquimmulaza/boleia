@@ -19,6 +19,38 @@ describe('NotificationListItem — título + corpo', () => {
     expect(screen.getByText('Ana enviou uma proposta para a tua oferta.')).toBeInTheDocument();
   });
 
+  it('título lido vs não lido — peso e cor (#278)', () => {
+    const { rerender } = render(
+      <NotificationListItem
+        notif={{
+          id: 'n-read-state',
+          mensagem: 'Corpo da notificação.',
+          tipo: 'info',
+          lida: false,
+          metadata: { type: 'proposal_received', nome: 'Ana' },
+        }}
+      />,
+    );
+    const titulo = screen.getByTestId('notif-item-n-read-state-titulo');
+    expect(titulo.className).toMatch(/font-semibold/);
+    expect(titulo.className).toMatch(/text-gray-900/);
+
+    rerender(
+      <NotificationListItem
+        notif={{
+          id: 'n-read-state',
+          mensagem: 'Corpo da notificação.',
+          tipo: 'info',
+          lida: true,
+          metadata: { type: 'proposal_received', nome: 'Ana' },
+        }}
+      />,
+    );
+    expect(titulo.className).toMatch(/font-normal/);
+    expect(titulo.className).toMatch(/text-gray-600/);
+    expect(titulo.className).not.toMatch(/font-semibold/);
+  });
+
   it('notificação antiga sem título: só mensagem (sem linha vazia)', () => {
     render(
       <NotificationListItem

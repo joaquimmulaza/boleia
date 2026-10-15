@@ -1,4 +1,4 @@
-import React, { useEffect, useId } from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 import ModalPortal from './ModalPortal';
 import { useSheetDrag } from '../hooks/useSheetDrag';
 import { getTopOverlay, popOverlay, pushOverlay } from '../utils/overlayStack';
@@ -14,6 +14,7 @@ import { getTopOverlay, popOverlay, pushOverlay } from '../utils/overlayStack';
  *   panelClassName?: string,
  *   testId?: string,
  *   panelTestId?: string,
+ *   dialogLabelledBy?: string,
  * }} props
  */
 function OverlayShell({
@@ -25,28 +26,38 @@ function OverlayShell({
   panelClassName = '',
   testId,
   panelTestId,
+  dialogLabelledBy,
 }) {
   const isBottom = variant === 'bottom';
   const overlayId = useId();
+  const onDismissRef = useRef(onDismiss);
   const dragEnabled = isBottom && Boolean(onDismiss) && !dismissDisabled;
   const { panelRef, backdropRef } = useSheetDrag({ enabled: dragEnabled, onDismiss });
 
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  }, [onDismiss]);
+
   const handleOverlayClick = () => {
-    if (dismissDisabled || !onDismiss) return;
-    onDismiss();
+    if (dismissDisabled || !onDismissRef.current) return;
+    onDismissRef.current();
   };
 
   useEffect(() => {
     if (!onDismiss || dismissDisabled) return undefined;
 
-    pushOverlay(overlayId, onDismiss);
+    const dismissFromStack = () => {
+      onDismissRef.current?.();
+    };
+
+    pushOverlay(overlayId, dismissFromStack);
 
     const onKeyDown = (e) => {
       if (e.key !== 'Escape') return;
       const top = getTopOverlay();
       if (top?.id !== overlayId) return;
       e.preventDefault();
-      onDismiss();
+      onDismissRef.current?.();
     };
 
     document.addEventListener('keydown', onKeyDown);
@@ -55,6 +66,17 @@ function OverlayShell({
       popOverlay(overlayId);
     };
   }, [onDismiss, dismissDisabled, overlayId]);
+
+  const panelInner = (
+    <div
+      ref={panelRef}
+      data-testid={panelTestId}
+      data-geocoder-sheet-boundary
+      className={`relative w-full max-w-md mx-auto max-h-[90dvh] overflow-y-auto overscroll-y-contain touch-pan-y rounded-[34px] ${panelClassName}`}
+    >
+      <div className="pb-sheet">{children}</div>
+    </div>
+  );
 
   return (
     <ModalPortal>
@@ -74,13 +96,23 @@ function OverlayShell({
         />
 
         {isBottom ? (
-          <div
-            ref={panelRef}
-            data-testid={panelTestId}
-            className={`relative w-full max-w-md mx-auto max-h-[90dvh] overflow-y-auto overscroll-y-contain touch-pan-y rounded-[34px] ${panelClassName}`}
-          >
-            <div className="pb-sheet">{children}</div>
-          </div>
+          dialogLabelledBy ? (
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={dialogLabelledBy}
+              className="relative w-full max-w-md mx-auto pointer-events-none"
+            >
+              <div
+                data-geocoder-sheet-portal
+                data-testid="geocoder-sheet-portal"
+                className="pointer-events-none [&_[data-geocoder-floating-list]]:pointer-events-auto"
+              />
+              <div className="pointer-events-auto">{panelInner}</div>
+            </div>
+          ) : (
+            panelInner
+          )
         ) : (
           <div className={`relative w-full max-w-md ${panelClassName}`}>{children}</div>
         )}

@@ -8,6 +8,7 @@ export {
   propostaHubDeepLink,
   statusCardDeepLink,
   resolveNotificationTitle,
+  resolveNotificationListTitle,
   resolveNotificationListDestination,
   resolveNotificationPushDestination,
   shouldNavigateOnListTap,

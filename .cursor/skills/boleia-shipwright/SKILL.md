@@ -44,7 +44,9 @@ DoD: …
 Invariantes: …
 Ficheiros / áreas: …
 Spec/Quick: path
-Obrigatório: tlc-spec-driven se preciso; TDD; VERDICT code-reviewer (+ ui-qa se UI); abrir PR; NÃO merge main
+Obrigatório: tlc-spec-driven se preciso; TDD; antes de código — Graphify: graphify_find/graphify_node → callers/callees → graphify_impact ou impact_and_risk + graphify_tests_for nos símbolos tocados; VERDICT code-reviewer (+ ui-qa se UI); abrir PR; NÃO merge main
+PR — primeira linha exacta: Task: {url Notion da task} (link real da task; nunca TBD/pending/página de projecto; se não existir task, pedir ao Projects Manager primeiro)
+PR — secção Graphify: colar blast radius (impact_and_risk) + lista de testes (graphify_tests_for)
 HANDOFF no fim do trabalho.
 ```
 

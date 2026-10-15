@@ -37,7 +37,50 @@ const KNOWN_METADATA_TYPES = new Set([
   'status',
   'adenda_pending',
   'match_available',
+  'justa_causa_passageiro_invocador',
 ]);
+
+/** Cards estado motorista (#275) — títulos alinhados a `notificationStatusCardCopy`. */
+const STATUS_CARD_TITULO = {
+  'v1.7': 'Ficou um lugar livre',
+  'v1.8': 'Acordo encerrado',
+  'v1.12': 'Ficou um lugar livre',
+  'v1.14': 'Acordo encerrado',
+};
+
+/**
+ * Cancelamentos agreement_update — preferir `metadata.reason` (e1–e4 + aliases futuros).
+ *
+ * @param {Record<string, unknown>} metadata
+ * @param {{ nome?: string | null }} ctx
+ * @returns {string | null}
+ */
+function titleFromAgreementCancellationReason(metadata, ctx) {
+  const reason = String(metadata?.reason || '').toLowerCase();
+  if (!reason) {
+    return null;
+  }
+  switch (reason) {
+    case 'e1':
+    case 'encerramento_pedido':
+    case 'terminate_consensual_pending':
+      return applyTitleTemplate('{nome} pediu para encerrar o acordo', ctx) || 'Pedido de encerramento';
+    case 'e2':
+    case 'encerramento_confirmado':
+    case 'terminate_consensual_immediate':
+      return 'Encerramento confirmado';
+    case 'e3':
+    case 'aviso_previo':
+    case 'terminate_aviso_previo':
+      return 'Aviso prévio: o acordo vai terminar';
+    case 'e4':
+    case 'justa_causa_recipient':
+    case 'terminate_justa_causa_recipient':
+      return 'Acordo terminado por justa causa';
+    default:
+      return null;
+  }
+}
 
 const ADENDA_PENDENTE_ESTADOS = new Set([
   'pendente_passageiro',
@@ -214,6 +257,11 @@ function resolveAgreementUpdateTitle(notif) {
   const nome = metadataNome(metadata);
   const ctx = { nome, mes: formatMesReferenciaPt(metadata.mes_referencia), valor: null };
 
+  const fromReason = titleFromAgreementCancellationReason(metadata, ctx);
+  if (fromReason) {
+    return fromReason;
+  }
+
   const adendaEstado = String(metadata.adenda_estado || '').toLowerCase();
   if (ADENDA_PENDENTE_ESTADOS.has(adendaEstado)) {
     return 'Nova proposta de preço';
@@ -229,6 +277,15 @@ function resolveAgreementUpdateTitle(notif) {
   }
 
   const rescisaoModo = String(metadata.rescisao_modo || '').toLowerCase();
+  if (rescisaoModo === 'justa_causa') {
+    const estadoAcordo = String(metadata.acordo_estado || '').toLowerCase();
+    if (estadoAcordo === 'cancelado' || /acordo foi encerrado/i.test(msg)) {
+      return 'Acordo encerrado';
+    }
+    if (/lugar por justa causa|rescindiu o lugar|ficou um lugar livre/i.test(msg)) {
+      return 'Um lugar terminou por justa causa';
+    }
+  }
   if (rescisaoModo === 'consensual') {
     if (/confirmado|mantém-se activo até/i.test(msg)) {
       return 'Encerramento confirmado';
@@ -303,11 +360,16 @@ function resolvePaymentUpdateTitle(notif) {
  */
 function resolveStatusTitle(notif) {
   const metadata = notif.metadata || {};
-  const card = String(metadata.card || '').toLowerCase();
+  const cardRaw = String(metadata.card || '');
+  const card = cardRaw.toLowerCase();
   const reason = String(metadata.reason || '').toLowerCase();
 
   if (typeof metadata.titulo === 'string' && metadata.titulo.trim()) {
     return metadata.titulo.trim();
+  }
+  const cardTitulo = STATUS_CARD_TITULO[cardRaw] || STATUS_CARD_TITULO[card];
+  if (cardTitulo) {
+    return cardTitulo;
   }
   if (card === 'v1.10') {
     return 'Já não fazes parte deste acordo';
@@ -317,6 +379,22 @@ function resolveStatusTitle(notif) {
   }
   if (reason === 'last_passenger_left' || /último passageiro saiu|ultimo passageiro saiu/i.test(notif.mensagem || '')) {
     return 'Acordo encerrado';
+  }
+  return null;
+}
+
+/**
+ * @param {{ metadata?: Record<string, unknown> }} notif
+ * @returns {string | null}
+ */
+function resolveJustaCausaInvocadorTitle(notif) {
+  const metadata = notif.metadata || {};
+  const variant = metadata.variant;
+  if (variant === 'ultimo') {
+    return 'Acordo encerrado';
+  }
+  if (variant === 'parcial' || variant === 'reservado') {
+    return 'Saíste do acordo';
   }
   return null;
 }
@@ -370,9 +448,29 @@ export function resolveCatalogTitle(notif) {
       return 'Nova proposta de preço';
     case 'match_available':
       return null;
+    case 'justa_causa_passageiro_invocador':
+      return resolveJustaCausaInvocadorTitle(notif);
     default:
       return null;
   }
+}
+
+/**
+ * Título na lista (sem fallback «Boleia Certa»).
+ *
+ * @param {{ metadata?: Record<string, unknown>, mensagem?: string }} notif
+ * @returns {string | null}
+ */
+export function resolveNotificationListTitle(notif) {
+  const fromCatalog = resolveCatalogTitle(notif);
+  if (fromCatalog) {
+    return fromCatalog;
+  }
+  const metaTitulo = notif?.metadata?.titulo;
+  if (typeof metaTitulo === 'string' && metaTitulo.trim()) {
+    return metaTitulo.trim();
+  }
+  return null;
 }
 
 /**
@@ -414,6 +512,8 @@ export function resolveCatalogRawDestination(notif) {
       return statusCardDeepLink(metadata);
     case 'adenda_pending':
       return acordosDeepLink(metadata, 'preco-proximo-mes');
+    case 'justa_causa_passageiro_invocador':
+      return acordosDeepLink(metadata, null);
     default:
       return null;
   }
@@ -544,6 +644,7 @@ export const notificationRouteMap = {
   match_available: () => '/passageiro',
   status: (metadata) => statusCardDeepLink(metadata),
   reserva_expirada: (metadata) => acordosDeepLink(metadata, null),
+  justa_causa_passageiro_invocador: (metadata) => acordosDeepLink(metadata, null),
 };
 
 /**

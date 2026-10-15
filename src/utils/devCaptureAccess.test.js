@@ -38,5 +38,6 @@ describe('devCaptureAccess — allowlist estrita', () => {
       expect(isDevCaptureRoutesEnabled(PREVIEW_SAMPLE)).toBe(true);
       expect(isDevCaptureRoutesEnabled('127.0.0.1')).toBe(true);
     }
+    expect(isDevCaptureRoutesEnabled('boleia-cyan.vercel.app')).toBe(import.meta.env.DEV);
   });
 });

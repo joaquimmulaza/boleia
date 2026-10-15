@@ -23,7 +23,7 @@ describe('GrupoKebabMenu', () => {
       <GrupoKebabMenu
         canEditar
         canApagar={false}
-        canSair={false}
+        canSair
         onEditar={vi.fn()}
         onApagar={vi.fn()}
         onSair={vi.fn()}
@@ -34,6 +34,26 @@ describe('GrupoKebabMenu', () => {
     expect(screen.getByTestId('grupo-kebab-menu')).toBeInTheDocument();
     fireEvent.click(trigger);
     expect(screen.queryByTestId('grupo-kebab-menu')).not.toBeInTheDocument();
+  });
+
+  it('com uma só acção, mostra botão directo (shadcn) em vez do kebab', () => {
+    const onSair = vi.fn();
+    render(
+      <GrupoKebabMenu
+        canEditar={false}
+        canApagar={false}
+        canSair
+        onEditar={vi.fn()}
+        onApagar={vi.fn()}
+        onSair={onSair}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Mais acções do grupo/i })).not.toBeInTheDocument();
+    const direct = screen.getByRole('button', { name: 'Sair do grupo' });
+    expect(direct).toHaveAttribute('data-testid', 'grupo-acao-directa-sair');
+    expect(direct.className).toMatch(/inline-flex/);
+    fireEvent.click(direct);
+    expect(onSair).toHaveBeenCalledTimes(1);
   });
 
   it('omite Apagar em vez de o mostrar desactivado', () => {
@@ -47,9 +67,9 @@ describe('GrupoKebabMenu', () => {
         onSair={vi.fn()}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: /Mais acções do grupo/i }));
-    expect(screen.getByRole('menuitem', { name: 'Editar' })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: /Apagar grupo/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: /Sair do grupo/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Editar' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Apagar grupo/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Sair do grupo/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Mais acções do grupo/i })).not.toBeInTheDocument();
   });
 });

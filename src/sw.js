@@ -1,12 +1,17 @@
-import { precacheAndRoute } from 'workbox-precaching';
+/* global __APP_BUILD_ID__ */
+import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
 import { drainQueue, OFFLINE_SYNC_TAG } from './services/offlineQueue';
 import { resolveNotificationPushDestination } from './utils/notificationCatalog';
 import { networkFirstRuntime } from './utils/swNetworkFirst.js';
 import { SW_RUNTIME_CACHE_NAME } from './utils/swRuntimeCache.js';
 
+/** Build id injectado em compile-time (Vercel SHA ou fallback local). */
+const APP_BUILD_ID = __APP_BUILD_ID__;
+
 // Precaching injetado pelo VitePWA
 precacheAndRoute(self.__WB_MANIFEST || []);
+cleanupOutdatedCaches();
 
 /**
  * Network-first para GET JSON de listagens PostgREST (acordos / grupos):
@@ -27,6 +32,9 @@ registerRoute(
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
+  }
+  if (event.data && event.data.type === 'GET_BUILD_ID') {
+    event.ports?.[0]?.postMessage({ type: 'BUILD_ID', buildId: APP_BUILD_ID });
   }
   if (event.data && event.data.type === 'DRAIN_OFFLINE_QUEUE') {
     event.waitUntil(drainQueue());

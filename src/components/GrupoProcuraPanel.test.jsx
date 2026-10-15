@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import GrupoProcuraPanel from './GrupoProcuraPanel';
 import {
@@ -36,19 +36,18 @@ vi.mock('../services/ProfileService', () => ({
   findPassageiroByTelefone: vi.fn(),
 }));
 
-vi.mock('./AddressInput', () => ({
-  default: ({ id, name, label, value, onChange, required = true }) => (
-    <label htmlFor={id || name}>
-      {label}
-      <input
-        id={id || name}
-        name={name}
-        value={value || ''}
-        onChange={onChange}
-        required={required}
-      />
-    </label>
-  ),
+vi.mock('../hooks/useAutocomplete', () => ({
+  useAutocomplete: () => ({
+    suggestions: [],
+    loading: false,
+    error: null,
+    errorKind: null,
+    resolvedInput: null,
+    fetchPredictions: vi.fn(),
+    retryLastFetch: vi.fn(),
+    selectPlace: vi.fn(),
+    clearSuggestions: vi.fn(),
+  }),
 }));
 
 const procura = {
@@ -247,7 +246,7 @@ describe('GrupoProcuraPanel T31', () => {
       await screen.findByRole('button', { name: /Convidar por telefone/i }),
     );
 
-    const pickup = screen.getByRole('textbox', { name: /Ponto de recolha \(opcional\)/i });
+    const pickup = screen.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
     expect(pickup).not.toBeRequired();
 
     fireEvent.change(screen.getByLabelText(/Telefone do colega/i), {
@@ -400,8 +399,7 @@ describe('GrupoProcuraPanel T31', () => {
       <GrupoProcuraPanel procura={procura} userId="pax-2" onGrupoChange={onGrupoChange} />,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Mais acções do grupo' }));
-    fireEvent.click(await screen.findByRole('menuitem', { name: /Sair do grupo/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Sair do grupo' }));
 
     await waitFor(() => {
       expect(sairDoGrupo).toHaveBeenCalledWith('g-1', 'pax-2');
@@ -644,7 +642,7 @@ describe('GrupoProcuraPanel T31', () => {
     expect(screen.queryByRole('menuitem', { name: 'Apagar grupo' })).not.toBeInTheDocument();
   });
 
-  it('membro: só Sair no kebab', async () => {
+  it('membro: acção Sair directa (sem kebab)', async () => {
     getGrupoByProcura.mockResolvedValue({ id: 'g-1', procura_id: 'pr-1', n_maximo: 4 });
     listMembrosGrupo.mockResolvedValue([
       {
@@ -667,13 +665,13 @@ describe('GrupoProcuraPanel T31', () => {
 
     expect(await screen.findByText('Tu')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Convidar por telefone' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Mais acções do grupo' }));
-    expect(screen.getByRole('menuitem', { name: /Sair do grupo/i })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Editar' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Apagar grupo' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sair do grupo' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mais acções do grupo' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Apagar grupo' })).not.toBeInTheDocument();
   });
 
-  it('acordo activo: dono sozinho só vê Editar', async () => {
+  it('acordo activo: dono sozinho só vê Editar (botão directo)', async () => {
     grupoTemAcordoActivo.mockResolvedValue(true);
     getGrupoByProcura.mockResolvedValue({ id: 'g-1', procura_id: 'pr-1', n_maximo: 4 });
     listMembrosGrupo.mockResolvedValue([
@@ -688,9 +686,54 @@ describe('GrupoProcuraPanel T31', () => {
 
     render(<GrupoProcuraPanel procura={procura} userId="pax-1" />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Mais acções do grupo' }));
-    expect(screen.getByRole('menuitem', { name: 'Editar' })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Apagar grupo' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Editar' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mais acções do grupo' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Apagar grupo' })).not.toBeInTheDocument();
+  });
+
+  it('sheet Editar grupo (H6a): Fechar shadcn e subtítulo aprovado', async () => {
+    getGrupoByProcura.mockResolvedValue({ id: 'g-1', procura_id: 'pr-1', n_maximo: 4 });
+    listMembrosGrupo.mockResolvedValue([
+      {
+        id: 'm-1',
+        passenger_id: 'pax-1',
+        estado: 'activo',
+        ordem_insercao: 0,
+        perfis: { nome_completo: 'Ana' },
+      },
+    ]);
+    grupoTemAcordoActivo.mockResolvedValue(true);
+
+    render(<GrupoProcuraPanel procura={procura} userId="pax-1" />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar' }));
+    const sheet = await screen.findByTestId('editar-grupo-sheet');
+    const fechar = within(sheet).getByTestId('editar-grupo-fechar');
+    expect(fechar).toHaveAccessibleName(/Fechar/i);
+    expect(fechar.className).toMatch(/inline-flex/);
+    expect(screen.queryByText('Fechar')).not.toBeInTheDocument();
+    const dialog = within(sheet).getByRole('dialog');
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    expect(dialog).toHaveAttribute('aria-labelledby', 'editar-grupo-title');
+    expect(within(dialog).getByRole('heading', { name: 'Editar grupo' })).toHaveAttribute(
+      'id',
+      'editar-grupo-title',
+    );
+    expect(within(sheet).getByTestId('editar-grupo-subtitle')).toHaveTextContent(
+      'As propostas que já enviaste não mudam. As próximas usam os dados novos do grupo.',
+    );
+    expect(within(sheet).queryByText(/snapshots/i)).not.toBeInTheDocument();
+    const tamanhoFieldset = within(dialog).getByRole('group', { name: 'Tamanho desejado' });
+    expect(tamanhoFieldset.className).toMatch(/min-w-0/);
+    const tamanhoGrid = tamanhoFieldset.querySelector('.grid-cols-7');
+    expect(tamanhoGrid).toBeTruthy();
+    expect(tamanhoGrid.className).toMatch(/grid-cols-7/);
+    expect(tamanhoGrid.className).toMatch(/gap-1\.5/);
+    expect(within(tamanhoFieldset).getByRole('button', { name: '8' })).toHaveClass('size-9');
+    const pickup = within(dialog).getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
+    expect(pickup.className).toMatch(/border-\[#718096\]/);
+    expect(pickup.className).toMatch(/bg-card/);
+    expect(pickup.className).toMatch(/dark:bg-background/);
   });
 
   it('editar capacidade abaixo dos membros fica desactivado e gravar não mexe em propostas', async () => {
