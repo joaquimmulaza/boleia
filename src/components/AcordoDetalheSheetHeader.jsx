@@ -126,36 +126,40 @@ export default function AcordoDetalheSheetHeader({
         />
       </div>
 
-      <div className="space-y-2 mt-1">
-        <div className="flex items-center justify-between gap-2 pt-0.5">
-          <div className="relative z-10 flex flex-wrap items-center gap-2">
+      <div className="mt-1 space-y-2 pt-0.5">
+        <div
+          data-testid="acordo-detalhe-titulo-chips"
+          className="relative z-10 flex flex-wrap items-center gap-x-2 gap-y-2 min-w-0"
+        >
+          <h2
+            id="acordo-detail-title"
+            className="text-lg font-bold text-balance shrink-0 max-w-full"
+          >
+            {titulo}
+          </h2>
+          <span
+            data-testid="acordo-detalhe-estado-chip"
+            role={estadoChip.role}
+            aria-label={estadoChip.ariaLabel}
+            className={`shrink-0 whitespace-nowrap text-xs font-bold px-2.5 py-1 rounded-full ${estadoChip.className}`}
+          >
+            {estadoChip.label}
+          </span>
+          {mostrarChipLugarHeader ? (
             <span
-              data-testid="acordo-detalhe-estado-chip"
-              role={estadoChip.role}
-              aria-label={estadoChip.ariaLabel}
-              className={`text-xs font-bold px-2.5 py-1 rounded-full ${estadoChip.className}`}
+              className={`shrink-0 whitespace-nowrap text-xs font-bold px-2.5 py-1 rounded-full ${chipClassFimLugar(chipLugarLabel)}`}
+              data-testid={testIdChipLugarAcordo(acordoId, chipLugarLabel)}
             >
-              {estadoChip.label}
+              {chipLugarLabel}
             </span>
-            {mostrarChipLugarHeader ? (
-              <span
-                className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassFimLugar(chipLugarLabel)}`}
-                data-testid={testIdChipLugarAcordo(acordoId, chipLugarLabel)}
-              >
-                {chipLugarLabel}
-              </span>
-            ) : null}
-            {leavePending ? (
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
-                <Loader2 size={12} className="animate-spin shrink-0" aria-hidden="true" />
-                Saída Pendente (A sincronizar...)
-              </span>
-            ) : null}
-          </div>
+          ) : null}
+          {leavePending ? (
+            <span className="inline-flex shrink-0 whitespace-nowrap items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
+              <Loader2 size={12} className="animate-spin shrink-0" aria-hidden="true" />
+              Saída Pendente (A sincronizar...)
+            </span>
+          ) : null}
         </div>
-        <h2 id="acordo-detail-title" className="text-lg font-bold text-balance">
-          {titulo}
-        </h2>
       </div>
     </header>
   );

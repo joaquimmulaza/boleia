@@ -50,6 +50,70 @@ export default function DevFollowup278Capture() {
     <div className="min-h-dvh bg-background-light dark:bg-background-dark p-4">
       <div className="mx-auto max-w-[390px] space-y-8">
         <section
+          data-testid="capture-sheet-header-jc-motorista-355"
+          className="mx-auto w-[355px] overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
+        >
+          <p className="text-xs font-semibold text-slate-500 px-4 pt-3">
+            UX Critiquito — motorista / chip JC · 355px
+          </p>
+          <AcordoDetalheSheetHeader
+            acordoId="acordo-cap-355"
+            estadoAcordo="activo"
+            acordosPassageiros={[
+              { passenger_id: 'pax-jc', estado: 'saiu', lugar_rescisao_modo: 'justa_causa' },
+              { passenger_id: 'driver-1', estado: 'activo' },
+            ]}
+            nPassageirosContrato={2}
+            tipoPerfil="Passageiro"
+            viewerUserId="pax-jc"
+            minhaLinha={{
+              passenger_id: 'pax-jc',
+              estado: 'saiu',
+              lugar_rescisao_modo: 'justa_causa',
+            }}
+            minhaLinhaPagamento={{ estado: 'anulado' }}
+            onClose={() => {}}
+            podeRegistarFaltas={false}
+            podeEncerrar={false}
+            onRegistarFalta={() => {}}
+            onEncerrar={() => {}}
+            titulo="Detalhe do acordo"
+          />
+        </section>
+
+        <section
+          data-testid="capture-sheet-header-jc-motorista-390"
+          className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
+        >
+          <p className="text-xs font-semibold text-slate-500 px-4 pt-3">
+            UX Critiquito — motorista / chip JC · 390px
+          </p>
+          <AcordoDetalheSheetHeader
+            acordoId="acordo-cap-390"
+            estadoAcordo="activo"
+            acordosPassageiros={[
+              { passenger_id: 'pax-jc', estado: 'saiu', lugar_rescisao_modo: 'justa_causa' },
+              { passenger_id: 'driver-1', estado: 'activo' },
+            ]}
+            nPassageirosContrato={2}
+            tipoPerfil="Passageiro"
+            viewerUserId="pax-jc"
+            minhaLinha={{
+              passenger_id: 'pax-jc',
+              estado: 'saiu',
+              lugar_rescisao_modo: 'justa_causa',
+            }}
+            minhaLinhaPagamento={{ estado: 'anulado' }}
+            onClose={() => {}}
+            podeRegistarFaltas={false}
+            podeEncerrar={false}
+            onRegistarFalta={() => {}}
+            onEncerrar={() => {}}
+            titulo="Detalhe do acordo"
+          />
+        </section>
+
+        <section
           data-testid="capture-sheet-header-jc"
           className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
         >

@@ -6,6 +6,10 @@
 export const CONTACTOS_BLOQUEADOS_PROXIMO_PASSO =
   'Próximo passo: envia o comprovativo de transferência na secção Pagamento mensal.';
 
+/** Toast — motorista (ou fallback quando copy passageiro não aplica). */
+export const TOAST_JC_MOTORISTA_ACORDO_RESCINDIDO =
+  'Acordo rescindido por justa causa.';
+
 /** Toast — passageiro JC, acordo continua activo para outros. */
 export const TOAST_JC_PASSAGEIRO_LUGAR_TERMINADO =
   'Terminaste o teu lugar por justa causa.';

@@ -145,7 +145,7 @@ import {
 import {
   LISTA_SECCAO_ACTIVOS,
   LISTA_SECCAO_ENCERRADOS,
-  TOAST_JC_PASSAGEIRO_LUGAR_TERMINADO,
+  TOAST_JC_MOTORISTA_ACORDO_RESCINDIDO,
 } from '../constants/acordoFollowup278Copy.js';
 import { copyToastJustaCausaPassageiro } from '../utils/passageiroJustaCausaToast.js';
 import {
@@ -1064,7 +1064,7 @@ const MyAgreements = () => {
           acordoEstadoApos: estado,
           lugaresVivosAntes: lugaresVivosAntesJc,
         });
-        text = toastJc || TOAST_JC_PASSAGEIRO_LUGAR_TERMINADO;
+        text = toastJc ?? TOAST_JC_MOTORISTA_ACORDO_RESCINDIDO;
       }
 
       setMessage({ type: 'success', text });

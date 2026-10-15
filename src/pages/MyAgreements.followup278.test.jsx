@@ -12,6 +12,7 @@ import MyAgreements from './MyAgreements';
 import {
   TOAST_JC_PASSAGEIRO_ACORDO_ENCERRADO,
   TOAST_JC_PASSAGEIRO_LUGAR_TERMINADO,
+  TOAST_JC_MOTORISTA_ACORDO_RESCINDIDO,
   LISTA_SECCAO_ENCERRADOS,
 } from '../constants/acordoFollowup278Copy.js';
 import {
@@ -148,6 +149,21 @@ async function fluxoJustaCausaPassageiro() {
   });
 }
 
+async function fluxoConsensualImediatoMotorista() {
+  const dialog = await screen.findByTestId('acordo-detalhe-sheet');
+  fireEvent.click(within(dialog).getByRole('button', { name: /Mais acções do acordo/i }));
+  await clickAcordoKebabItem(/Encerrar acordo/i);
+  const picker = await screen.findByTestId('terminate-modality-picker');
+  fireEvent.click(within(picker).getByRole('button', { name: /Acordo amigável/i }));
+  const vigencia = await screen.findByTestId('terminate-vigencia-picker');
+  fireEvent.click(within(vigencia).getByRole('button', { name: /Agora — ajuste proporcional/i }));
+  fireEvent.click(screen.getByRole('button', { name: /^Encerrar acordo$/i }));
+  const confirmSheet = screen.queryByTestId('terminate-confirm-sheet');
+  if (confirmSheet) {
+    await userEvent.click(screen.getByTestId('terminate-confirm-submit'));
+  }
+}
+
 describe('MyAgreements follow-up #278', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -222,6 +238,47 @@ describe('MyAgreements follow-up #278', () => {
       expect(within(sheet).getByTestId('contactos-bloqueados')).toBeInTheDocument();
     });
     expect(within(sheet).queryByText(/P0001/i)).not.toBeInTheDocument();
+  });
+
+  it('B2: motorista JC vê toast «Acordo rescindido por justa causa.»', async () => {
+    terminateAgreement.mockResolvedValue({
+      id: 'acordo-e117',
+      estado: 'cancelado_justificado',
+      rescisao_modo: 'justa_causa',
+      terminate_status: 'ok',
+    });
+
+    renderPage(['/acordos?openAcordoId=acordo-e117']);
+    await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    await fluxoJustaCausaPassageiro();
+    await userEvent.click(screen.getByTestId('terminate-confirm-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('agreements-feedback')).toHaveTextContent(
+        TOAST_JC_MOTORISTA_ACORDO_RESCINDIDO,
+      );
+    });
+    expect(screen.getByTestId('agreements-feedback')).not.toHaveTextContent(
+      TOAST_JC_PASSAGEIRO_LUGAR_TERMINADO,
+    );
+  });
+
+  it('B2: cancelado_justificado sem modo justa_causa usa toast motorista', async () => {
+    terminateAgreement.mockResolvedValue({
+      id: 'acordo-e117',
+      estado: 'cancelado_justificado',
+      terminate_status: 'ok',
+    });
+
+    renderPage(['/acordos?openAcordoId=acordo-e117']);
+    await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    await fluxoConsensualImediatoMotorista();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('agreements-feedback')).toHaveTextContent(
+        TOAST_JC_MOTORISTA_ACORDO_RESCINDIDO,
+      );
+    });
   });
 
   it('P1-c: toast parcial vs encerrado; folha Confirmar não reaparece após JC', async () => {
