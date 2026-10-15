@@ -756,7 +756,10 @@ const MyAgreements = () => {
       if (pagamentoLoading) return undefined;
       const section = document.querySelector('[data-testid="acordo-pagamento-section"]');
       if (!section) {
-        pendingFocusRef.current = null;
+        // Motorista nunca monta acordo-pagamento-section; limpar focus pendente (não abortar scroll passageiro).
+        if (tipoPerfil === 'Motorista') {
+          pendingFocusRef.current = null;
+        }
         return undefined;
       }
     }
@@ -771,7 +774,7 @@ const MyAgreements = () => {
     }
     scrollToAcordoFocus(focus);
     return undefined;
-  }, [selected, scrollToAcordoFocus, pagamentoLoading, pagamento, user?.id]);
+  }, [selected, scrollToAcordoFocus, pagamentoLoading, pagamento, user?.id, tipoPerfil]);
 
   useEffect(() => {
     setRescisaoConfirmadaLocal(false);
