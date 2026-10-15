@@ -170,9 +170,15 @@ function AcordoPagamentosMotoristaPanel({
                   ) : null}
                 </div>
                 <span
-                  className={`shrink-0 text-xs font-semibold px-2 py-1 rounded-full ${chipClassEstadoPagamento(PAYMENT_STATES.COMPROVATIVO)}`}
+                  className={`shrink-0 text-xs font-semibold px-2 py-1 rounded-full ${
+                    acordoTerminado
+                      ? chipClassEstadoPagamentoMotoristaCabecalho(row.estado, { acordoTerminado })
+                      : chipClassEstadoPagamento(PAYMENT_STATES.COMPROVATIVO)
+                  }`}
                 >
-                  Em validação
+                  {acordoTerminado
+                    ? labelEstadoPagamentoMotoristaCabecalho(row.estado, { acordoTerminado })
+                    : 'Em validação'}
                 </span>
               </li>,
             );

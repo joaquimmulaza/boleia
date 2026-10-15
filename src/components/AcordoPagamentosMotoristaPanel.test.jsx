@@ -93,7 +93,8 @@ describe('AcordoPagamentosMotoristaPanel — v1.6', () => {
     expect(screen.getByTestId('motorista-pagamento-comprovativo-pax-2')).toHaveTextContent(
       /comprovativo de 55[\s\u00a0]?000 Kz em validação/,
     );
-    expect(screen.getByText('Em validação')).toBeInTheDocument();
+    expect(screen.getByText('Pagamento cancelado')).toBeInTheDocument();
+    expect(screen.queryByText('Em validação')).not.toBeInTheDocument();
   });
 
   it('S4 acordo activo: comprovativo + prazo até data (sem countdown)', () => {
