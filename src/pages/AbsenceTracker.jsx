@@ -7,13 +7,15 @@ import {
   getAgreementsForDriver,
   getAgreementsForPassenger,
 } from '../services/AgreementService';
-import { listPagamentosByAcordo } from '../services/PaymentService';
+import {
+  getDescontoFaltasPreview,
+  listPagamentosByAcordo,
+} from '../services/PaymentService';
 import { allowsAssiduidadeFaltasForAcordo } from '../utils/paymentStatus';
 import LogAbsenceModal from '../components/LogAbsenceModal';
+import FaltaPrevistaBadge from '../components/FaltaPrevistaBadge';
 import PageShell from '../components/PageShell';
 import LoadingSkeleton from '../components/LoadingSkeleton';
-import { Badge } from '../components/ui/badge';
-import { FALTA_FUTURA_CHIP } from '../copy/faltasFutureChip';
 import { formatFaltaMotoristaRepartidaConta } from '../copy/faltasMotoristaRepartidaConta';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
@@ -27,6 +29,7 @@ import {
   resolveDescontoLinhaFalta,
   resolveFaltasHubCard,
 } from '../utils/faltasDisplay';
+import { resolvePassageiroTotalDescontoFaltasKz } from '../utils/resolveTotalDescontoFaltas';
 
 /**
  * @param {string | null | undefined} viagem
@@ -56,12 +59,14 @@ const AbsenceTracker = () => {
   const [gateLoading, setGateLoading] = useState(false);
   const [acordoDetalhe, setAcordoDetalhe] = useState(null);
   const [pagamentosAcordo, setPagamentosAcordo] = useState([]);
+  const [totalDescontoServidor, setTotalDescontoServidor] = useState(null);
 
   const carregarGatePagamento = useCallback(async () => {
     if (!acordoId || !user?.id) {
       setPodeRegistarFaltas(false);
       setAcordoDetalhe(null);
       setPagamentosAcordo([]);
+      setTotalDescontoServidor(null);
       return;
     }
     setGateLoading(true);
@@ -87,11 +92,28 @@ const AbsenceTracker = () => {
       setPodeRegistarFaltas(
         allowsAssiduidadeFaltasForAcordo(pagamentos, idsRequired),
       );
+
+      if (tipoPerfil === 'Passageiro' && user?.id) {
+        try {
+          const total = await resolvePassageiroTotalDescontoFaltasKz(
+            pagamentos,
+            user.id,
+            { fetchPreview: getDescontoFaltasPreview },
+          );
+          setTotalDescontoServidor(total);
+        } catch (previewErr) {
+          console.error('Erro ao obter preview de desconto de faltas:', previewErr);
+          setTotalDescontoServidor(null);
+        }
+      } else {
+        setTotalDescontoServidor(null);
+      }
     } catch (err) {
       console.error('Erro ao verificar pagamento para faltas:', err);
       setPodeRegistarFaltas(false);
       setAcordoDetalhe(null);
       setPagamentosAcordo([]);
+      setTotalDescontoServidor(null);
     } finally {
       setGateLoading(false);
     }
@@ -145,11 +167,14 @@ const AbsenceTracker = () => {
 
   const faltasEsteMes = filterFaltasEsteMes(faltas);
   const nPassageirosActivos = countPassageirosActivosAcordo(acordoDetalhe);
-  const totalDesconto = resolveDescontoFaltasTotal(pagamentosAcordo, faltasEsteMes, {
+  const totalDescontoCliente = resolveDescontoFaltasTotal(pagamentosAcordo, faltasEsteMes, {
     tipoPerfil,
     passengerId: user?.id,
     nPassageirosActivos,
   });
+  const totalDesconto = totalDescontoServidor != null
+    ? totalDescontoServidor
+    : totalDescontoCliente;
 
   const handleLogAbsence = async (formData) => {
     if (!acordoId) return;
@@ -303,7 +328,7 @@ const AbsenceTracker = () => {
               nPassageirosActivos,
               tipoPerfil,
             );
-            const contaMotoristaRepartida = isMotoristaFalta
+            const contaMotoristaRepartida = isMotoristaFalta && nPassageirosActivos > 0
               ? formatFaltaMotoristaRepartidaConta(nPassageirosActivos, descontoLinhaKz)
               : null;
             return (
@@ -320,15 +345,7 @@ const AbsenceTracker = () => {
                     <span className="rounded-full border border-slate-200 bg-[#f6f8f6] px-2 py-0.5 text-[11px] font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
                       {falta.tipo}
                     </span>
-                    {futura ? (
-                      <Badge
-                        variant="outline"
-                        data-testid="falta-futura-chip"
-                        className="rounded-full border-slate-200 bg-[#f6f8f6] px-2 py-0.5 text-[11px] font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                      >
-                        {FALTA_FUTURA_CHIP}
-                      </Badge>
-                    ) : null}
+                    {futura ? <FaltaPrevistaBadge /> : null}
                     {viagem ? (
                       <span className="text-[13px] leading-[18px] text-slate-500 dark:text-slate-400">
                         {viagem}

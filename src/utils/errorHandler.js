@@ -1,6 +1,11 @@
+import { mapLogFaltaError } from './logFaltaError.js';
+
 export function getFriendlyErrorMessage(error) {
   if (!error) return 'Ocorreu um erro inesperado. Tente novamente.';
-  
+
+  const logFaltaMsg = mapLogFaltaError(error);
+  if (logFaltaMsg) return logFaltaMsg;
+
   const msg = typeof error === 'string' ? error : error.message || '';
   
   if (msg.includes('row-level security policy')) {

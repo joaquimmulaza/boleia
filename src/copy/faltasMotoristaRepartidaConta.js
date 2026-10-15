@@ -14,6 +14,9 @@ export const FALTA_MOTORISTA_CONTA_PLURAL = '{n} passageiros · {total} Kz no to
  */
 export function formatFaltaMotoristaRepartidaConta(nPassageirosActivos, totalKz) {
   const n = Number(nPassageirosActivos) || 0;
+  if (n <= 0) {
+    return '';
+  }
   const total = formatKwanza(totalKz);
   if (n === 1) {
     return FALTA_MOTORISTA_CONTA_SINGULAR.replace('{total}', total);

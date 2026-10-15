@@ -2,10 +2,18 @@ import React, { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import OverlayShell from './OverlayShell';
 import SheetDragHandle from './SheetDragHandle';
-import { firstDayCurrentMonthLuanda } from '../utils/adendaEffectiveFrom';
-import { isFaltaEsteMesAteHoje, todayLuandaISO } from '../utils/faltasDisplay';
+import {
+  isFaltaEsteMesAteHoje,
+  isFutureFaltaDate,
+  resolveLogAbsenceDateBounds,
+} from '../utils/faltasDisplay';
+import {
+  isPassageiroProprioFaltaDataSubmissivel,
+  PASSAGEIRO_FALTA_PRAZO_COPY,
+} from '../utils/passageiroFaltaPrazo';
 import { computeFaltaDesconto } from '../utils/faltaDesconto';
 import { formatKwanza } from '../utils/formatKwanza';
+import FaltaPrevistaBadge from './FaltaPrevistaBadge';
 
 /**
  * @typedef {'ida' | 'regresso' | 'ambas'} ViagemFalta
@@ -59,7 +67,8 @@ const LogAbsenceModal = ({
   const isPassageiro = perfilNorm === 'passageiro';
   const isMotorista = perfilNorm === 'motorista';
   const tipoDefault = isPassageiro ? 'Passageiro' : isMotorista ? 'Motorista' : '';
-  const tipoLocked = isPassageiro;
+  /** Passageiro na própria vaga (não motorista a registar outro). */
+  const isPassageiroLocked = isPassageiro;
 
   const [formData, setFormData] = useState(() => ({
     dataFalta: '',
@@ -70,9 +79,11 @@ const LogAbsenceModal = ({
 
   if (!isOpen) return null;
 
-  const minDataFalta = firstDayCurrentMonthLuanda();
-  const maxDataFalta = todayLuandaISO();
+  const { min: minDataFalta, max: maxDataFalta } = resolveLogAbsenceDateBounds({
+    isPassageiroLocked,
+  });
   const descontoDia = descontoDesteDia(quotaMensalKz, diasUteisMes, formData.viagem);
+  const showPrevista = isPassageiroLocked && isFutureFaltaDate(formData.dataFalta);
 
   const resetForm = () => {
     setFormData({
@@ -91,10 +102,13 @@ const LogAbsenceModal = ({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!tipoDefault) return;
-    if (!isFaltaEsteMesAteHoje(formData.dataFalta)) return;
+    const dataOk = isPassageiroLocked
+      ? isPassageiroProprioFaltaDataSubmissivel(formData.dataFalta)
+      : isFaltaEsteMesAteHoje(formData.dataFalta);
+    if (!dataOk) return;
     onSubmit({
       ...formData,
-      tipo: tipoLocked ? tipoDefault : (formData.tipo || tipoDefault),
+      tipo: isPassageiroLocked ? tipoDefault : (formData.tipo || tipoDefault),
     });
     resetForm();
   };
@@ -128,24 +142,36 @@ const LogAbsenceModal = ({
         <label htmlFor="dataFalta" className="mt-1 text-[13px] font-semibold text-slate-900 dark:text-slate-100">
           Data
         </label>
-        <input
-          id="dataFalta"
-          type="date"
-          min={minDataFalta}
-          max={maxDataFalta}
-          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-1.5 text-[15px] text-slate-900 outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-          value={formData.dataFalta}
-          onChange={(e) => setFormData({ ...formData, dataFalta: e.target.value })}
-          required
-        />
-        <p className="text-xs leading-4 text-slate-500 dark:text-slate-400">
-          Podes registar um dia deste mês, até hoje. Dias futuros e meses já fechados ficam de fora.
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            id="dataFalta"
+            type="date"
+            min={minDataFalta}
+            {...(maxDataFalta ? { max: maxDataFalta } : {})}
+            className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-1.5 text-[15px] text-slate-900 outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+            value={formData.dataFalta}
+            onChange={(e) => setFormData({ ...formData, dataFalta: e.target.value })}
+            required
+          />
+          {showPrevista ? <FaltaPrevistaBadge /> : null}
+        </div>
+        {isPassageiroLocked ? (
+          <p
+            className="text-xs leading-4 text-slate-500 dark:text-slate-400"
+            data-testid="falta-prazo-copy"
+          >
+            {PASSAGEIRO_FALTA_PRAZO_COPY}
+          </p>
+        ) : (
+          <p className="text-xs leading-4 text-slate-500 dark:text-slate-400">
+            Podes registar um dia deste mês, até hoje. Dias futuros e meses já fechados ficam de fora.
+          </p>
+        )}
 
         <label htmlFor="tipoFalta" className="mt-1 text-[13px] font-semibold text-slate-900 dark:text-slate-100">
           Tipo
         </label>
-        {tipoLocked ? (
+        {isPassageiroLocked ? (
           <div
             id="tipoFalta"
             data-testid="falta-tipo-locked"
