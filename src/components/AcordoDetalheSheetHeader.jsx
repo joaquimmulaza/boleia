@@ -4,10 +4,11 @@ import SheetDragHandle from './SheetDragHandle';
 import AcordoDetalheKebabMenu from './AcordoDetalheKebabMenu';
 import { Button } from './ui/button';
 import {
-  labelChipEstadoPassageiro,
-  chipClassEstadoPassageiro,
-  estadoPassageiroParaChip,
-} from '../utils/estadoPassageiro';
+  labelChipFimLugar,
+  chipClassFimLugar,
+  mostrarChipFimLugar,
+  testIdChipLugarAcordo,
+} from '../utils/acordoSeatEndChip.js';
 import { resolveAcordoListaCabecalhoUi } from '../utils/resolveAcordoListaCabecalhoUi.js';
 
 /**
@@ -25,8 +26,8 @@ import { resolveAcordoListaCabecalhoUi } from '../utils/resolveAcordoListaCabeca
  *   nPassageirosContrato?: number | null,
  *   tipoPerfil?: string | null,
  *   viewerUserId?: string | null,
- *   minhaLinhaEstado?: string | null,
- *   minhaLinhaPagamento?: { anulacao_motivo?: string | null } | null,
+ *   minhaLinha?: { passenger_id?: string, estado?: string, lugar_rescisao_modo?: string | null, lugar_saida_iniciador?: string | null } | null,
+ *   minhaLinhaPagamento?: { anulacao_motivo?: string | null, estado?: string | null } | null,
  *   leavePending?: boolean,
  *   isBodyScrolled?: boolean,
  *   fecharRef?: import('react').RefObject<HTMLButtonElement | null>,
@@ -52,7 +53,7 @@ export default function AcordoDetalheSheetHeader({
   nPassageirosContrato,
   tipoPerfil,
   viewerUserId,
-  minhaLinhaEstado,
+  minhaLinha = null,
   minhaLinhaPagamento = null,
   leavePending = false,
   isBodyScrolled = false,
@@ -65,9 +66,6 @@ export default function AcordoDetalheSheetHeader({
   titulo = 'Detalhe do acordo',
   onKebabTriggerRef,
 }) {
-  const minhaEstadoLugar = minhaLinhaEstado
-    ? estadoPassageiroParaChip(minhaLinhaEstado, minhaLinhaPagamento)
-    : null;
   const acordoCabecalho = {
     estado: estadoAcordo,
     encerramento_motivo: encerramentoMotivoAcordo,
@@ -79,17 +77,22 @@ export default function AcordoDetalheSheetHeader({
     n_passageiros_contrato: nPassageirosContrato,
     acordos_passageiros: acordosPassageiros,
   };
-  const minhaLinha =
-    minhaLinhaEstado && viewerUserId
-      ? { passenger_id: viewerUserId, estado: minhaLinhaEstado }
+  const minhaLinhaCabecalho =
+    minhaLinha?.estado && viewerUserId
+      ? { ...minhaLinha, passenger_id: minhaLinha.passenger_id ?? viewerUserId }
       : null;
   const { estadoChip, mostrarChipLugar } = resolveAcordoListaCabecalhoUi({
     acordo: acordoCabecalho,
     viewerUserId,
     tipoPerfil,
-    minhaLinha,
+    minhaLinha: minhaLinhaCabecalho,
     minhaChipCtx: minhaLinhaPagamento,
   });
+  const chipLugarLabel = minhaLinhaCabecalho
+    ? labelChipFimLugar(minhaLinhaCabecalho, minhaLinhaPagamento)
+    : null;
+  const mostrarChipLugarHeader =
+    Boolean(mostrarChipLugar && minhaLinhaCabecalho && mostrarChipFimLugar(chipLugarLabel));
 
   return (
     <header
@@ -134,21 +137,12 @@ export default function AcordoDetalheSheetHeader({
             >
               {estadoChip.label}
             </span>
-            {mostrarChipLugar ? (
+            {mostrarChipLugarHeader ? (
               <span
-                className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoPassageiro(
-                  minhaLinhaEstado,
-                  minhaLinhaPagamento,
-                )}`}
-                data-testid={
-                  minhaEstadoLugar === 'expirado'
-                    ? `acordo-lugar-expirado-chip-${acordoId}`
-                    : minhaEstadoLugar === 'saiu'
-                      ? `acordo-lugar-saiu-chip-${acordoId}`
-                      : `acordo-lugar-chip-${acordoId}`
-                }
+                className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassFimLugar(chipLugarLabel)}`}
+                data-testid={testIdChipLugarAcordo(acordoId, chipLugarLabel)}
               >
-                {labelChipEstadoPassageiro(minhaLinhaEstado, minhaLinhaPagamento)}
+                {chipLugarLabel}
               </span>
             ) : null}
             {leavePending ? (

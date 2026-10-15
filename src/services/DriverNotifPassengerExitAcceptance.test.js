@@ -62,10 +62,11 @@ describe('Driver notif passenger exit — migração', () => {
     expect(sql).not.toMatch(/CREATE OR REPLACE FUNCTION public\.leave_passenger/);
     expect(patched).toContain("'card', 'v1.12'");
     expect(patched.replace(
-      "'reason', 'reserva_expirada_lugar_livre',\n            'txid', txid_current()",
+      "'reason', 'reserva_expirada_lugar_livre',\n            'txid', txid_current()::text",
       "'reason', 'reserva_expirada_lugar_livre'",
     )).toBe(base275);
-    expect(sql).toMatch(/'card',\s*'v1\.12'[\s\S]*'txid',\s*txid_current\(\)/);
+    expect(sql).toMatch(/'txid',\s*txid_current\(\)::text/);
+    expect(sql).toMatch(/'card',\s*'v1\.12'[\s\S]*'txid',\s*txid_current\(\)::text/);
     expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.apply_due_reserva_expiry/);
     expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION public\.apply_due_reserva_expiry\(uuid\) TO authenticated/);
   });

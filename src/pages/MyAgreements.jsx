@@ -151,6 +151,7 @@ import { copyToastJustaCausaPassageiro } from '../utils/passageiroJustaCausaToas
 import {
   labelChipFimLugar,
   chipClassFimLugar,
+  testIdChipLugarAcordo,
   mostrarChipFimLugar,
 } from '../utils/acordoSeatEndChip.js';
 import { Badge } from '../components/ui/badge';
@@ -1202,13 +1203,7 @@ const MyAgreements = () => {
               <Badge
                 variant="secondary"
                 className={`text-xs font-bold ${chipClassFimLugar(chipLugarLabelCard)}`}
-                data-testid={
-                  chipLugarLabelCard === 'Reserva expirada'
-                    ? `acordo-lugar-expirado-chip-${acordo.id}`
-                    : chipLugarLabelCard === 'Saiu' || chipLugarLabelCard === 'Saiu por justa causa'
-                      ? `acordo-lugar-saiu-chip-${acordo.id}`
-                      : `acordo-lugar-chip-${acordo.id}`
-                }
+                data-testid={testIdChipLugarAcordo(acordo.id, chipLugarLabelCard)}
               >
                 {chipLugarLabelCard}
               </Badge>
@@ -1451,7 +1446,7 @@ const MyAgreements = () => {
             nPassageirosContrato={selected.n_passageiros_contrato}
             tipoPerfil={tipoPerfil}
             viewerUserId={user?.id}
-            minhaLinhaEstado={minhaLinha?.estado}
+            minhaLinha={minhaLinha}
             minhaLinhaPagamento={pagamentoViewer}
             leavePending={leavePending}
             isBodyScrolled={acordoSheetHeaderScrolled}

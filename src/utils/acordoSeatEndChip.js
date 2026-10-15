@@ -113,3 +113,25 @@ export function mostrarChipFimLugar(label) {
   if (!label) return false;
   return !['Confirmado'].includes(label);
 }
+
+/**
+ * data-testid alinhado entre cartão da lista e cabeçalho do sheet.
+ *
+ * @param {string} acordoId
+ * @param {string | null | undefined} chipLabel
+ * @returns {string}
+ */
+export function testIdChipLugarAcordo(acordoId, chipLabel) {
+  if (chipLabel === 'Reserva expirada') {
+    return `acordo-lugar-expirado-chip-${acordoId}`;
+  }
+  if (
+    chipLabel === 'Saiu'
+    || chipLabel === 'Saiu por justa causa'
+    || chipLabel === 'Lugar retirado'
+    || chipLabel === 'Já não está no acordo'
+  ) {
+    return `acordo-lugar-saiu-chip-${acordoId}`;
+  }
+  return `acordo-lugar-chip-${acordoId}`;
+}

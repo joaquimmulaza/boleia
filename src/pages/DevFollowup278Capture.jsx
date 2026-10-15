@@ -1,5 +1,6 @@
 import React from 'react';
 import { Users } from 'lucide-react';
+import AcordoDetalheSheetHeader from '../components/AcordoDetalheSheetHeader';
 import AcordoPagamentosMotoristaPanel from '../components/AcordoPagamentosMotoristaPanel';
 import { Badge } from '../components/ui/badge';
 import {
@@ -48,6 +49,63 @@ export default function DevFollowup278Capture() {
   return (
     <div className="min-h-dvh bg-background-light dark:bg-background-dark p-4">
       <div className="mx-auto max-w-[390px] space-y-8">
+        <section
+          data-testid="capture-sheet-header-jc"
+          className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
+        >
+          <p className="text-xs font-semibold text-slate-500 px-4 pt-3">B1 — cabeçalho sheet (justa causa)</p>
+          <AcordoDetalheSheetHeader
+            acordoId="acordo-capture-jc"
+            estadoAcordo="activo"
+            acordosPassageiros={[
+              { passenger_id: 'pax-jc', estado: 'saiu', lugar_rescisao_modo: 'justa_causa' },
+              { passenger_id: 'pax-b', estado: 'activo' },
+            ]}
+            nPassageirosContrato={2}
+            tipoPerfil="Passageiro"
+            viewerUserId="pax-jc"
+            minhaLinha={{
+              passenger_id: 'pax-jc',
+              estado: 'saiu',
+              lugar_rescisao_modo: 'justa_causa',
+            }}
+            minhaLinhaPagamento={{ estado: 'anulado' }}
+            onClose={() => {}}
+            podeRegistarFaltas={false}
+            podeEncerrar={false}
+            onRegistarFalta={() => {}}
+            onEncerrar={() => {}}
+          />
+        </section>
+
+        <section
+          data-testid="capture-sheet-header-expirado"
+          className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
+        >
+          <p className="text-xs font-semibold text-slate-500 px-4 pt-3">B1 — cabeçalho sheet (reserva expirada)</p>
+          <AcordoDetalheSheetHeader
+            acordoId="acordo-capture-exp"
+            estadoAcordo="activo"
+            acordosPassageiros={[
+              { passenger_id: 'pax-exp', estado: 'expirado' },
+              { passenger_id: 'pax-b', estado: 'activo' },
+            ]}
+            nPassageirosContrato={2}
+            tipoPerfil="Passageiro"
+            viewerUserId="pax-exp"
+            minhaLinha={{ passenger_id: 'pax-exp', estado: 'expirado' }}
+            minhaLinhaPagamento={{
+              estado: 'anulado',
+              anulacao_motivo: ANULACAO_MOTIVO.PRAZO_RESERVA_EXPIRADO,
+            }}
+            onClose={() => {}}
+            podeRegistarFaltas={false}
+            podeEncerrar={false}
+            onRegistarFalta={() => {}}
+            onEncerrar={() => {}}
+          />
+        </section>
+
         <section data-testid="capture-p1a-pagamento">
           <p className="text-xs font-semibold text-slate-500 mb-2">P1-a — pagamento pendente (motorista)</p>
           <AcordoPagamentosMotoristaPanel

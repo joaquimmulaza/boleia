@@ -14,7 +14,10 @@ import {
   TOAST_JC_PASSAGEIRO_LUGAR_TERMINADO,
   LISTA_SECCAO_ENCERRADOS,
 } from '../constants/acordoFollowup278Copy.js';
-import { CHIP_LUGAR_SAiu_JUSTA_CAUSA } from '../constants/acordoFollowup278Copy.js';
+import {
+  CHIP_LUGAR_SAiu_JUSTA_CAUSA,
+  CHIP_LUGAR_RESERVA_EXPIRADA,
+} from '../constants/acordoFollowup278Copy.js';
 
 const mockNavigate = vi.fn();
 
@@ -282,6 +285,77 @@ describe('MyAgreements follow-up #278', () => {
         TOAST_JC_PASSAGEIRO_ACORDO_ENCERRADO,
       );
     });
+  });
+
+  it('B1: chip justa causa no header do sheet coincide com a lista (passageiro)', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-jc' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([
+      {
+        ...acordoActivoMulti,
+        acordos_passageiros: [
+          {
+            id: 'ap-jc-me',
+            passenger_id: 'pax-jc',
+            estado: 'saiu',
+            lugar_rescisao_modo: 'justa_causa',
+            quota_mensal_kz: 15000,
+            perfis: { nome_completo: 'Tu' },
+          },
+          acordoActivoMulti.acordos_passageiros[1],
+        ],
+      },
+    ]);
+    getObrigacaoPagamentoPassageiro.mockResolvedValue({
+      pagamento: { estado: 'anulado' },
+      obrigacao: { valor_em_divida: 0 },
+    });
+
+    renderPage(['/acordos?openAcordoId=acordo-e117']);
+    const chipTestId = 'acordo-lugar-saiu-chip-acordo-e117';
+    await waitFor(() => {
+      expect(screen.getAllByTestId(chipTestId).length).toBeGreaterThanOrEqual(2);
+    });
+    const chips = screen.getAllByTestId(chipTestId);
+    chips.forEach((chip) => {
+      expect(chip).toHaveTextContent(CHIP_LUGAR_SAiu_JUSTA_CAUSA);
+    });
+    const header = screen.getByTestId('acordo-detalhe-sheet-header');
+    expect(within(header).getByTestId(chipTestId)).toHaveTextContent(CHIP_LUGAR_SAiu_JUSTA_CAUSA);
+  });
+
+  it('B1: chip reserva expirada no header do sheet coincide com a lista (passageiro)', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-exp' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([
+      {
+        ...acordoActivoMulti,
+        acordos_passageiros: [
+          {
+            id: 'ap-exp-me',
+            passenger_id: 'pax-exp',
+            estado: 'expirado',
+            quota_mensal_kz: 15000,
+            perfis: { nome_completo: 'Tu' },
+          },
+          acordoActivoMulti.acordos_passageiros[1],
+        ],
+      },
+    ]);
+    getObrigacaoPagamentoPassageiro.mockResolvedValue({
+      pagamento: { estado: 'anulado', anulacao_motivo: 'reserva_expirada' },
+      obrigacao: { valor_em_divida: 0 },
+    });
+
+    renderPage(['/acordos?openAcordoId=acordo-e117']);
+    const chipTestId = 'acordo-lugar-expirado-chip-acordo-e117';
+    await waitFor(() => {
+      expect(screen.getAllByTestId(chipTestId).length).toBeGreaterThanOrEqual(2);
+    });
+    const chips = screen.getAllByTestId(chipTestId);
+    chips.forEach((chip) => {
+      expect(chip).toHaveTextContent(CHIP_LUGAR_RESERVA_EXPIRADA);
+    });
+    const header = screen.getByTestId('acordo-detalhe-sheet-header');
+    expect(within(header).getByTestId(chipTestId)).toHaveTextContent(CHIP_LUGAR_RESERVA_EXPIRADA);
   });
 
   it('P1-d: chip justa causa unificado na lista motorista', async () => {

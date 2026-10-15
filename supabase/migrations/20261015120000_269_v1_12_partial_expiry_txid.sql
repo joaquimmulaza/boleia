@@ -126,7 +126,7 @@ BEGIN
             'titulo', 'Ficou um lugar livre',
             'acordo_id', v_row.acordo_id,
             'reason', 'reserva_expirada_lugar_livre',
-            'txid', txid_current()
+            'txid', txid_current()::text
           )
         );
       EXCEPTION
