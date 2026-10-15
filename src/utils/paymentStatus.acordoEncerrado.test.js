@@ -10,6 +10,7 @@ describe('paymentStatus — acordo encerrado prevalece', () => {
     expect(isAcordoEncerradoPagamentoUi('cancelado_justificado')).toBe(true);
     expect(isAcordoEncerradoPagamentoUi('expirado')).toBe(true);
     expect(isAcordoEncerradoPagamentoUi('activo')).toBe(false);
+    expect(isAcordoEncerradoPagamentoUi('cancelamento_pendente')).toBe(false);
   });
 
   it('acordo encerrado + pendente_pagamento: chip não é «Pagamento pendente»', () => {

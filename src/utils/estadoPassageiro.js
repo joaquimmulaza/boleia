@@ -239,6 +239,20 @@ export function mostrarChipEstadoLugarPassageiro(estado, pagamento) {
   return ESTADOS_LUGAR_COM_CHIP_UI.includes(e);
 }
 
+/**
+ * Chip do lugar na lista/modal — omitir se o rótulo coincide com o chip do acordo.
+ *
+ * @param {string} acordoChipLabel
+ * @param {string | null | undefined} estadoLugar
+ * @param {{ anulacao_motivo?: string | null } | null | undefined} [pagamento]
+ * @returns {boolean}
+ */
+export function mostrarChipLugarPassageiroSemDuplicarAcordo(acordoChipLabel, estadoLugar, pagamento) {
+  if (!mostrarChipEstadoLugarPassageiro(estadoLugar, pagamento)) return false;
+  const lugarLabel = labelChipEstadoPassageiro(estadoLugar, pagamento);
+  return lugarLabel !== acordoChipLabel;
+}
+
 /** @returns {string} */
 export function helpGlossarioReservado() {
   return 'Lugar ocupado após aceite — aguarda pagamento validado para confirmar.';

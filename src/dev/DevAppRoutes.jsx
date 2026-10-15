@@ -34,6 +34,7 @@ export default function DevAppRoutes() {
         <Route index element={<Profile />} />
       </Route>
       <Route path="acordos-chips" element={<DevAcordosChipCapture />} />
+      <Route path="acordos-chip-capture" element={<DevAcordosChipCapture />} />
       <Route path="motorista-jc-passageiro" element={<DevMotoristaJustaCausaCapture />} />
       <Route path="justa-causa-confirm" element={<DevJustaCausaConfirmCapture />} />
       <Route path="hotfix-prod-qa-acordos" element={<DevHotfixProdQaCapture />} />

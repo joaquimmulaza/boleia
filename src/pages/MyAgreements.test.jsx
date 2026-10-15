@@ -1742,6 +1742,50 @@ describe('MyAgreements — marketplace 1:N', () => {
     expect(within(dialog).queryByRole('button', { name: /Enviar comprovativo/i })).not.toBeInTheDocument();
   });
 
+  it('cancelamento_pendente: motorista vê chip real de pagamento (não Pagamento cancelado)', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        estado: 'cancelamento_pendente',
+        cancelamento_efectivo_em: '2026-10-31T23:59:59.000Z',
+      },
+    ]);
+    listPagamentosPendentesMotoristaAcordo.mockResolvedValue([
+      {
+        pagamento_id: 'pg-prev',
+        passenger_id: 'pax-1',
+        passenger_nome: 'Ana Costa',
+        estado: 'pendente_pagamento',
+        valor: 40000,
+        valor_em_divida: 40000,
+      },
+    ]);
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+    await waitFor(() => {
+      expect(within(dialog).getByTestId('motorista-pagamento-pax-1')).toBeInTheDocument();
+    });
+    expect(within(dialog).getByText('Pagamento pendente')).toBeInTheDocument();
+    expect(within(dialog).queryByText('Pagamento cancelado')).not.toBeInTheDocument();
+    expect(within(dialog).getByTestId('motorista-pagamentos-titulo')).toHaveTextContent(
+      'Pagamentos do mês',
+    );
+  });
+
+  it('motorista com focus=pagamento abre detalhe (sem secção passageiro)', async () => {
+    renderPage(['/acordos?openAcordoId=acordo-1&focus=pagamento']);
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    await waitFor(() => {
+      expect(within(dialog).getByTestId('motorista-pagamentos-panel')).toBeInTheDocument();
+    });
+    expect(within(dialog).queryByTestId('acordo-pagamento-section')).not.toBeInTheDocument();
+  });
+
   it('motorista não vê Sair só eu', async () => {
     renderPage();
 

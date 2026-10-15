@@ -9,6 +9,7 @@ import {
   labelChipEstadoPassageiro,
   chipClassEstadoPassageiro,
   mostrarChipEstadoLugarPassageiro,
+  mostrarChipLugarPassageiroSemDuplicarAcordo,
 } from './estadoPassageiro.js';
 
 describe('estadoPassageiro — chip por estado', () => {
@@ -25,6 +26,12 @@ describe('estadoPassageiro — chip por estado', () => {
     expect(isReservadoPassageiro('reservado')).toBe(true);
     expect(mostrarChipEstadoLugarPassageiro('reservado')).toBe(true);
     expect(chipClassEstadoPassageiro('reservado')).toMatch(/amber/);
+  });
+
+  it('mostrarChipLugarPassageiroSemDuplicarAcordo oculta lugar quando rótulo = chip acordo', () => {
+    expect(mostrarChipLugarPassageiroSemDuplicarAcordo('Reservado', 'reservado')).toBe(false);
+    expect(mostrarChipLugarPassageiroSemDuplicarAcordo('Activo', 'reservado')).toBe(true);
+    expect(mostrarChipLugarPassageiroSemDuplicarAcordo('Activo', 'saiu')).toBe(true);
   });
 
   it('saiu → Saiu', () => {
