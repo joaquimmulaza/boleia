@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, act, cleanup, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import MyAgreements from './MyAgreements';
@@ -24,6 +24,7 @@ vi.mock('../contexts/AuthContext', () => ({
 vi.mock('../services/AgreementService', () => ({
   getAgreementsForDriver: vi.fn(),
   getAgreementsForPassenger: vi.fn(),
+  getAgreementById: vi.fn(),
   leavePassenger: vi.fn(),
   countLugaresVivosAcordo: vi.fn().mockResolvedValue(2),
   terminateAgreement: vi.fn(),
@@ -40,22 +41,22 @@ vi.mock('../hooks/useNetworkStatus', () => ({
   useNetworkStatus: vi.fn(() => ({ isOnline: true, isOffline: false })),
 }));
 
+vi.mock('../services/RatingService', () => ({
+  listMinhasAvaliacoesAcordo: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock('../services/PaymentService', async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
     listPagamentosByAcordo: vi.fn().mockResolvedValue([]),
     getPagamentoForPassageiro: vi.fn().mockResolvedValue(null),
-    getAcordoContactos: vi.fn().mockResolvedValue([]),
+    getAcordoContactos: vi.fn().mockResolvedValue({ bloqueado: false, passageiros: [], motorista: null }),
     getObrigacaoPagamentoPassageiro: vi.fn().mockResolvedValue(null),
     listAnulacaoMotivoLugarAcordos: vi.fn().mockResolvedValue([]),
     listPagamentosPendentesMotoristaAcordo: vi.fn().mockResolvedValue([]),
   };
 });
-
-vi.mock('../services/RatingService', () => ({
-  listMinhasAvaliacoesAcordo: vi.fn().mockResolvedValue([]),
-}));
 
 vi.mock('../lib/supabase', () => ({
   supabase: {
@@ -145,7 +146,9 @@ describe('MyAgreements — FAIL 1 drag sheet detalhe acordo', () => {
       await Promise.resolve();
     });
 
-    expect(screen.queryByRole('dialog', { name: /Detalhe do acordo/i })).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: /Detalhe do acordo/i })).not.toBeInTheDocument();
+    });
     restoreMotion();
   });
 
@@ -165,7 +168,9 @@ describe('MyAgreements — FAIL 1 drag sheet detalhe acordo', () => {
       await Promise.resolve();
     });
 
-    expect(screen.queryByRole('dialog', { name: /Detalhe do acordo/i })).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: /Detalhe do acordo/i })).not.toBeInTheDocument();
+    });
     restoreMotion();
   });
 });

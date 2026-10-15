@@ -771,6 +771,70 @@ export async function getAgreementsForDriver(driverId) {
 /**
  * @param {string} passengerId
  */
+const ACORDO_DETALHE_SELECT =
+  '*, acordos_passageiros(*, perfis(nome_completo)), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota), acordos_adendas(*)';
+
+/**
+ * Um acordo por ID (deep link) — sem apply_due_* nem lista completa.
+ * @param {string} acordoId
+ * @param {{ tipoPerfil?: string, userId?: string }} ctx
+ * @returns {Promise<object | null>}
+ */
+export async function getAgreementById(acordoId, { tipoPerfil, userId } = {}) {
+  if (!acordoId || !userId) {
+    throw new Error('acordoId e userId são obrigatórios.');
+  }
+
+  const dev = getFaltasCaptureDevBridge();
+  if (dev?.getAgreementById) {
+    return dev.getAgreementById(acordoId, { tipoPerfil, userId });
+  }
+
+  if (tipoPerfil === 'Motorista') {
+    const { data, error } = await withLiveSessionAuthCall(supabase, () =>
+      supabase
+        .from('acordos')
+        .select(ACORDO_DETALHE_SELECT)
+        .eq('id', acordoId)
+        .eq('driver_id', userId)
+        .maybeSingle(),
+    );
+    if (error) throw error;
+    return data ? withPendingAdenda(data) : null;
+  }
+
+  const { data, error } = await withLiveSessionAuthCall(supabase, () =>
+    supabase
+      .from('acordos_passageiros')
+      .select(
+        `id, acordo_id, passenger_id, estado, quota_mensal_kz, acordos(${ACORDO_DETALHE_SELECT})`,
+      )
+      .eq('passenger_id', userId)
+      .eq('acordo_id', acordoId)
+      .in('estado', ['activo', 'reservado', 'expirado', 'saiu'])
+      .maybeSingle(),
+  );
+
+  if (error) throw error;
+  if (!data?.acordos) return null;
+
+  const acordo = withPendingAdenda({ ...data.acordos });
+  const linhas = acordo.acordos_passageiros || [];
+  if (linhas.length === 0 && data.id) {
+    acordo.acordos_passageiros = [{
+      id: data.id,
+      acordo_id: data.acordo_id,
+      passenger_id: data.passenger_id,
+      estado: data.estado,
+      quota_mensal_kz: data.quota_mensal_kz,
+    }];
+  }
+  return acordo;
+}
+
+/**
+ * @param {string} passengerId
+ */
 export async function getAgreementsForPassenger(passengerId) {
   const dev = getFaltasCaptureDevBridge();
   if (dev?.getAgreementsForPassenger) {

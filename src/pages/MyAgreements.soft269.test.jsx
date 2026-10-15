@@ -34,7 +34,7 @@ vi.mock('../services/PaymentService', async (importOriginal) => {
     ...actual,
     listPagamentosByAcordo: vi.fn().mockResolvedValue([]),
     getPagamentoForPassageiro: vi.fn(),
-    getAcordoContactos: vi.fn(),
+    getAcordoContactos: vi.fn().mockResolvedValue({ bloqueado: false, passageiros: [], motorista: null }),
     getObrigacaoPagamentoPassageiro: vi.fn(),
     listAnulacaoMotivoLugarAcordos: vi.fn().mockResolvedValue([
       {
