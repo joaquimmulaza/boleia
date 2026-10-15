@@ -11,6 +11,6 @@ If no `graphify_*` tools are listed in the session, say so explicitly and fall b
 
 **Fallback — local CLI:** when `graphify-out/graph.json` exists, `graphify query "<question>"`, `graphify path`, `graphify explain`; after code edits run `npm run graphify:update` (`graphify update .` — no invalid flags on `update`).
 
-**Fallback — Graphlore:** stdio MCP in `.cursor/mcp.json` (lean toolset, `GRAPHLORE_PROJECT_DIR` absolute repo root). Use only if hosted Graphify is unavailable.
+**Fallback — Graphlore:** stdio MCP in `.cursor/mcp.json` (lean toolset; `${workspaceFolder}` / `${workspaceFolder}/graphify-out`). Use only if hosted Graphify is unavailable.
 
 Read `graphify-out/GRAPH_REPORT.md` only for broad architecture when MCP/CLI subgraph is insufficient.
