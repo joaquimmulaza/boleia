@@ -487,7 +487,22 @@ BEGIN
     END IF;
   END IF;
 
+  UPDATE public.acordos_passageiros
+  SET
+    estado = 'saiu',
+    saiu_em = '2026-10-12 12:00:00+01'::timestamptz
+  WHERE id = v_ap;
+
+  v_desconto := public._desconto_faltas_pagamento(v_acordo, v_pax, v_mes_out);
+  IF v_desconto <> 500 THEN
+    IF v_has_r4 THEN
+      RAISE EXCEPTION 'FAIL R4 saiu depois: esperava 500, obteve %', v_desconto;
+    ELSE
+      RAISE EXCEPTION 'FAIL-on-old R4 saiu depois: esperava 500, obteve %', v_desconto;
+    END IF;
+  END IF;
+
   PERFORM set_config('session_replication_role', 'origin', true);
 
-  RAISE NOTICE 'PASS: Regra 4 motorista × lugar activo na data';
+  RAISE NOTICE 'PASS: Regra 4 motorista × lugar activo (4 casos)';
 END $$;

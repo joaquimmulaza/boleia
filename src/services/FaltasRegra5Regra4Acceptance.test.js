@@ -11,6 +11,7 @@ const MIG = join(
   ROOT,
   '../../supabase/migrations/20261015130000_faltas_regra5_motorista_lugar_activo.sql',
 );
+const PG_PROOF = join(ROOT, '../../supabase/tests/faltas_regra5_pg_proof.sql');
 
 describe('Regra 4 faltas — motorista × lugar activo', () => {
   it('migração filtra motorista com _passageiro_lugar_activo_em_data', () => {
@@ -28,5 +29,14 @@ describe('Regra 4 faltas — motorista × lugar activo', () => {
     expect(sql).toMatch(/saiu_em/);
     expect(sql).toMatch(/trg_acordos_passageiros_set_saiu_em/);
     expect(sql).toMatch(/lugar_rescisao_em/);
+  });
+
+  it('prova PG cobre 4 casos de vigência (activo, saiu antes/depois, entrou depois)', () => {
+    const proof = readFileSync(PG_PROOF, 'utf8');
+    expect(proof).toMatch(/FAIL R4 activo: esperava 500/);
+    expect(proof).toMatch(/FAIL R4 saiu antes: esperava 0/);
+    expect(proof).toMatch(/FAIL R4 entrou depois: esperava 0/);
+    expect(proof).toMatch(/FAIL R4 saiu depois: esperava 500/);
+    expect(proof).toMatch(/Regra 4 motorista × lugar activo \(4 casos\)/);
   });
 });
