@@ -7,6 +7,7 @@ description: Avalia UI implementada (browser/Playwright + UI Skills + fidelidade
 
 ## Passos
 
+0. **Graphify (UI):** nos ficheiros/símbolos alterados, usar `graphify_file_neighbors` / `impact_and_risk` para listar ecrãs e componentes importadores a inspecionar no browser; cruzar com a secção **Graphify** do PR.
 1. Comparar implementação ao Spec/design (flow + estados).
 2. **UI Skills (obrigatório de novo):** `get_skill` `ibelick/baseline-ui` (e outros relevantes) — spacing, hierarquia, tipografia.
 3. **Fidelidade Stitch:** se existir `.stitch/designs/{page}.png` / HTML ou screen id no design.md, comparar layout/hierarquia (não pixel-perfect cego; alinhar intenção + tokens Boleia).

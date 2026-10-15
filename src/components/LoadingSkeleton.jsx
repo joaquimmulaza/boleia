@@ -1,14 +1,17 @@
-import React from 'react';
-import { cn } from '../lib/utils';
+import React, { memo } from "react";
+import { cn } from "../lib/utils";
 
 /**
  * Skeleton de carregamento com variantes reutilizáveis.
  * @param {{ variant?: 'card' | 'list' | 'profile'; count?: number; className?: string }} props
  */
-const LoadingSkeleton = ({ variant = 'card', count = 3, className }) => {
-  if (variant === 'profile') {
+const LoadingSkeleton = memo(({ variant = "card", count = 3, className }) => {
+  if (variant === "profile") {
     return (
-      <div data-testid="skeleton-profile" className={cn('animate-pulse space-y-6 pt-2', className)}>
+      <div
+        data-testid="skeleton-profile"
+        className={cn("animate-pulse space-y-6 pt-2", className)}
+      >
         <div className="flex flex-col items-center gap-3">
           <div className="size-24 rounded-full bg-slate-200 dark:bg-slate-800" />
           <div className="h-5 w-32 rounded bg-slate-200 dark:bg-slate-800" />
@@ -18,9 +21,9 @@ const LoadingSkeleton = ({ variant = 'card', count = 3, className }) => {
     );
   }
 
-  if (variant === 'list') {
+  if (variant === "list") {
     return (
-      <div className={cn('space-y-3 animate-pulse pt-2', className)}>
+      <div className={cn("space-y-3 animate-pulse pt-2", className)}>
         {Array.from({ length: count }, (_, i) => (
           <div
             key={i}
@@ -33,12 +36,18 @@ const LoadingSkeleton = ({ variant = 'card', count = 3, className }) => {
   }
 
   return (
-    <div className={cn('space-y-4 animate-pulse pt-2', className)}>
+    <div className={cn("space-y-4 animate-pulse pt-2", className)}>
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="h-40 bg-slate-200 dark:bg-slate-800/50 rounded-2xl w-full" />
+        <div
+          key={i}
+          className="h-40 bg-slate-200 dark:bg-slate-800/50 rounded-2xl w-full"
+        />
       ))}
     </div>
   );
-};
+});
+
+// Added display name for debugging since memo can make it anonymous in some devtools
+LoadingSkeleton.displayName = "LoadingSkeleton";
 
 export default LoadingSkeleton;

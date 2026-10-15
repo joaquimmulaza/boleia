@@ -6,7 +6,8 @@
     "graphlore": {
       "command": "graphlore",
       "env": {
-        "GRAPHLORE_OUT_DIR": "graphify-out",
+        "GRAPHLORE_PROJECT_DIR": "${workspaceFolder}",
+        "GRAPHLORE_OUT_DIR": "${workspaceFolder}/graphify-out",
         "GRAPHLORE_TOOLSET": "lean"
       }
     },

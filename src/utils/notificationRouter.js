@@ -57,10 +57,6 @@ export function propostaHubDeepLink(metadata) {
  * @returns {string}
  */
 export function statusCardDeepLink(metadata) {
-  const card = String(metadata?.card || '').toLowerCase();
-  if (card === 'v1.10' || card === 'v1.11') {
-    return acordosDeepLink(metadata, null);
-  }
   return acordosDeepLink(metadata, null);
 }
 
@@ -77,6 +73,7 @@ export function acordosDeepLink(metadata, focus) {
 }
 
 export const notificationRouteMap = {
+  status: (metadata) => statusCardDeepLink(metadata),
   agreement_update: (metadata) => {
     const adendaEstado = String(metadata?.adenda_estado || '').toLowerCase();
     if (ADENDA_PENDENTE_ESTADOS.has(adendaEstado)) {
@@ -101,7 +98,6 @@ export const notificationRouteMap = {
   proposal_cancelled: (metadata) => notificationRouteMap.proposal_received(metadata),
   waitlist_promoted: () => '/passageiro',
   match_available: () => '/passageiro',
-  status: (metadata) => statusCardDeepLink(metadata),
 };
 
 /**

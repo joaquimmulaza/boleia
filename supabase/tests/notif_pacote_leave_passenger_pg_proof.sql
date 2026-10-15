@@ -258,10 +258,11 @@ BEGIN
   SELECT COUNT(*)::integer INTO v_n
   FROM public.notificacoes
   WHERE user_id = v_pax2
-    AND mensagem = 'O teu acordo de boleia foi cancelado.';
+    AND mensagem = 'O motorista retirou-te do acordo, que foi encerrado.'
+    AND (metadata->>'card') = 'v1.14';
 
   IF v_n <> 1 THEN
-    RAISE EXCEPTION 'FAIL B4: passageiro removido sem cancelamento exacto (n=%)', v_n;
+    RAISE EXCEPTION 'FAIL B4: passageiro removido sem card v1.14 (n=%)', v_n;
   END IF;
 
   SELECT COUNT(*)::integer INTO v_n FROM public.notificacoes WHERE user_id = v_driver;

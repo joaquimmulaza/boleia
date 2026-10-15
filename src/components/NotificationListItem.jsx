@@ -36,10 +36,10 @@ function NotificationIcon({ type }) {
 }
 
 /**
- * Linha da lista de notificações (sino / sheet).
+ * Linha da lista de notificações (sino / sheet / capturas DEV).
  *
  * @param {{
- *   notif: { id?: string, mensagem: string, tipo?: string, lida?: boolean, created_at?: string },
+ *   notif: { id?: string, mensagem: string, tipo?: string, lida?: boolean, created_at?: string, metadata?: object },
  *   onActivate?: () => void,
  *   onDelete?: () => void,
  *   showKebab?: boolean,
@@ -101,6 +101,7 @@ export default function NotificationListItem({
         onActivate ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary focus-visible:ring-offset-0 dark:text-foreground' : ''
       } ${!notif.lida ? 'bg-primary/5 dark:bg-primary/10' : ''}`}
       onClick={onActivate}
+      data-testid={notif.id ? `notif-item-${notif.id}` : undefined}
     >
       <div className="mt-0.5 shrink-0">
         <NotificationIcon type={tipoIcon} />
@@ -109,20 +110,18 @@ export default function NotificationListItem({
         {tituloVisivel ? (
           <>
             <p
-              className={`text-sm leading-snug ${
-                !notif.lida
-                  ? 'font-semibold text-gray-900 dark:text-gray-100'
-                  : 'font-medium text-gray-800 dark:text-gray-200'
-              }`}
+              className="text-sm font-semibold text-gray-900 dark:text-gray-100"
+              data-testid={notif.id ? `notif-item-${notif.id}-titulo` : undefined}
             >
               {tituloVisivel}
             </p>
             <p
-              className={`mt-1 text-sm leading-relaxed ${
+              className={`mt-0.5 text-sm leading-relaxed ${
                 !notif.lida
                   ? 'text-gray-800 dark:text-gray-200'
                   : 'text-gray-600 dark:text-gray-300'
               }`}
+              data-testid={notif.id ? `notif-item-${notif.id}-mensagem` : undefined}
             >
               {mensagemVisivel}
             </p>
@@ -134,6 +133,7 @@ export default function NotificationListItem({
                 ? 'font-semibold text-gray-900 dark:text-gray-100'
                 : 'text-gray-600 dark:text-gray-300'
             }`}
+            data-testid={notif.id ? `notif-item-${notif.id}-mensagem` : undefined}
           >
             {mensagemVisivel}
           </p>
