@@ -1848,8 +1848,9 @@ describe('PassengerDashboard — marketplace', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Criar procura/i }));
 
     const hora = screen.getByLabelText('Hora preferida');
-    expect(hora).toHaveAttribute('type', 'time');
-    expect(hora).toHaveAttribute('lang', 'pt-PT');
+    expect(hora).toHaveAttribute('type', 'text');
+    expect(hora).toHaveAttribute('inputMode', 'numeric');
+    expect(hora).toHaveAttribute('placeholder', '17:45');
     expect(hora).toHaveClass('time-input-24h');
   });
 

@@ -1,20 +1,24 @@
 /**
- * Layout do form Nova/Editar procura — scroll só no `<main>` do Layout (sem max-h interno).
- * Footer sticky colado ao fundo do scrollport; fundo opaco até à bottom nav (`pb-[shell-bottom-inset]`).
+ * Layout do form Nova/Editar procura — scroll no `<main class="pb-shell">` (Layout + bottom nav).
+ * Footer sticky `bottom-0` com `pb-3` — não repetir altura da nav (pb-shell do main já reserva).
  */
 
 /** @type {string} */
 export const PROCURA_FORM_CLASS =
   'flex flex-col bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm';
 
-/** Corpo com reserva para o footer sticky (último campo + help text não ficam por baixo). */
 /** @type {string} */
-export const PROCURA_FORM_BODY_CLASS =
-  'space-y-4 p-5 pb-[var(--procura-form-sticky-footer-reserve)]';
+export const PROCURA_FORM_BODY_CLASS = 'space-y-4 p-5';
 
 /**
- * Sticky no fundo do `<main>`; padding inferior = inset da nav (fundo tapa a zona da bottom bar).
+ * Footer sticky com bottom nav (PassengerDashboard / Layout). Só `pb-3` — sem shell inset duplicado.
  * @type {string}
  */
 export const PROCURA_FORM_SUBMIT_FOOTER_CLASS =
-  'sticky bottom-0 z-[1] shrink-0 border-t border-slate-100 bg-white px-5 pt-3 pb-[var(--shell-bottom-inset)] dark:border-slate-800 dark:bg-slate-900';
+  'sticky bottom-0 z-[1] shrink-0 border-t border-slate-100 bg-white px-5 pt-3 pb-3 dark:border-slate-800 dark:bg-slate-900';
+
+/**
+ * Safe-area extra quando não há bottom nav (capturas DEV sem Layout).
+ * @type {string}
+ */
+export const PROCURA_FORM_SUBMIT_FOOTER_STANDALONE_SAFE_CLASS = 'pb-safe';

@@ -18,6 +18,7 @@ import DevGeocoderEditarProcuraCapture from '../pages/DevGeocoderEditarProcuraCa
 import DevGeocoderEditarProcuraLayoutCapture from '../pages/DevGeocoderEditarProcuraLayoutCapture';
 import DevGeocoderEditarGrupoCapture from '../pages/DevGeocoderEditarGrupoCapture';
 import DevOfertaEditRegressoCapture from '../pages/DevOfertaEditRegressoCapture';
+import DevPublishRouteTimeCapture from '../pages/DevPublishRouteTimeCapture';
 import DevNotifBellLoadingCapture from '../pages/DevNotifBellLoadingCapture';
 import DevNotifBellErrorCapture from '../pages/DevNotifBellErrorCapture';
 import DevNotifBellErrorBannerCapture from '../pages/DevNotifBellErrorBannerCapture';
@@ -61,6 +62,7 @@ export default function DevAppRoutes() {
       />
       <Route path="geocoder-editar-grupo" element={<DevGeocoderEditarGrupoCapture />} />
       <Route path="oferta-edit-regresso" element={<DevOfertaEditRegressoCapture />} />
+      <Route path="publish-route-time" element={<DevPublishRouteTimeCapture />} />
       <Route path="notif-bell-loading" element={<DevNotifBellLoadingCapture />} />
       <Route path="notif-bell-error" element={<DevNotifBellErrorCapture />} />
       <Route path="notif-bell-error-banner" element={<DevNotifBellErrorBannerCapture />} />

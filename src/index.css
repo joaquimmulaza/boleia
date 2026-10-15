@@ -30,9 +30,6 @@
   --bottom-nav-height: 4rem;
   --bottom-nav-height-sm: 5rem;
   --shell-bottom-inset: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
-  /* Form procura: reserva scroll para footer sticky + safe nav */
-  --procura-form-footer-action-height: 4.75rem;
-  --procura-form-sticky-footer-reserve: calc(var(--procura-form-footer-action-height) + var(--shell-bottom-inset));
   --sheet-bottom-inset: calc(16px + env(safe-area-inset-bottom, 0px));
   /* Altura aproximada do cabeçalho sticky (puxador + Fechar + chips + título) para scrollIntoView */
   --acordo-detalhe-sheet-scroll-margin: 9.5rem;
@@ -163,20 +160,10 @@ body {
   }
 }
 
-/* Hora 24h — ocultar AM/PM em WebKit/Blink; largura mínima para HH:MM */
+/* Hora 24h — input texto HH:MM (TimeInput) */
 .time-input-24h {
   min-width: 6.75rem;
   font-variant-numeric: tabular-nums;
-}
-.time-input-24h::-webkit-datetime-edit-ampm-field {
-  display: none;
-}
-.time-input-24h::-webkit-datetime-edit-fields-wrapper {
-  padding: 0;
-}
-.time-input-24h::-webkit-datetime-edit-hour-field,
-.time-input-24h::-webkit-datetime-edit-minute-field {
-  min-width: 1.35em;
 }
 
 /* TextFade — fade sem ellipsis. 1 linha à direita; 2 linhas cortam a 3.ª. */

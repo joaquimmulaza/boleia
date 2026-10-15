@@ -45,6 +45,9 @@ const PublishRoute = () => {
     return_time: '',
     valor_mensal_ask_kz: '',
   });
+  const [departureTimeValid, setDepartureTimeValid] = useState(false);
+  const [returnTimeValid, setReturnTimeValid] = useState(true);
+  const timesValid = departureTimeValid && returnTimeValid;
 
   useEffect(() => {
     if (!loadingVehicle && !vehicleError && hasVehicle === false) {
@@ -96,6 +99,11 @@ const PublishRoute = () => {
     e.preventDefault();
     setLoading(true);
     setMessage({ type: '', text: '' });
+
+    if (!timesValid) {
+      setLoading(false);
+      return;
+    }
 
     if (
       !ofertaFlexivel &&
@@ -292,6 +300,7 @@ const PublishRoute = () => {
                 name="departure_time"
                 value={formData.departure_time}
                 onChange={handleChange}
+                onValidityChange={setDepartureTimeValid}
                 required
                 aria-label="Hora de ida"
               />
@@ -304,6 +313,7 @@ const PublishRoute = () => {
                 name="return_time"
                 value={formData.return_time}
                 onChange={handleChange}
+                onValidityChange={setReturnTimeValid}
                 aria-label="Hora de regresso"
               />
             </label>
@@ -363,7 +373,7 @@ const PublishRoute = () => {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !timesValid}
           className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-60"
         >
           <Send size={18} aria-hidden="true" />

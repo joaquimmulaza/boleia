@@ -60,10 +60,11 @@ describe('OfertaEditPanel', () => {
     );
 
     const regresso = screen.getByLabelText(/Hora de regresso/i);
-    expect(regresso).toHaveAttribute('type', 'time');
+    expect(regresso).toHaveAttribute('type', 'text');
     expect(regresso).toHaveValue('17:45');
+    expect(regresso).toHaveAttribute('inputMode', 'numeric');
     expect(regresso.className).toMatch(/time-input-24h/);
-    expect(regresso.className).toMatch(/min-w-\[6\.75rem\]/);
+    expect(regresso.className).not.toMatch(/min-w-/);
   });
 
   it('mostra confirm snapshot antes de guardar (copy genérica)', async () => {
