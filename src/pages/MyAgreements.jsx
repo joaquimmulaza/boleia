@@ -101,6 +101,7 @@ import {
 } from '../utils/periodoRenovacao';
 import {
   allowsAssiduidadeFaltasForAcordo,
+  isAcordoEncerradoPagamentoUi,
   RESERVA_TTL_HORAS,
 } from '../utils/paymentStatus';
 import AcordoRatingBanner from '../components/rating/AcordoRatingBanner';
@@ -520,6 +521,7 @@ const MyAgreements = () => {
     (acordo) => {
       if (!acordo?.id) {
         focusConsumedKeyRef.current = null;
+        pendingFocusRef.current = null;
         const returnTo = acordoSheetReturnFocusRef.current;
         acordoSheetReturnFocusRef.current = null;
         setAcordoSheetHeaderScrolled(false);
@@ -753,7 +755,10 @@ const MyAgreements = () => {
     if (focus === 'pagamento') {
       if (pagamentoLoading) return undefined;
       const section = document.querySelector('[data-testid="acordo-pagamento-section"]');
-      if (!section) return undefined;
+      if (!section) {
+        pendingFocusRef.current = null;
+        return undefined;
+      }
     }
 
     pendingFocusRef.current = null;
@@ -1695,7 +1700,7 @@ const MyAgreements = () => {
             <AcordoPagamentosMotoristaPanel
               rows={motoristaPagamentosVivos}
               loading={pagamentoLoading}
-              acordoTerminado={!activo}
+              acordoTerminado={isAcordoEncerradoPagamentoUi(selected.estado)}
               multiplePaymentSections={false}
             />
           ) : null}
