@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import {
   PROCURA_FORM_CLASS,
+  PROCURA_FORM_BODY_CLASS,
   PROCURA_FORM_SUBMIT_FOOTER_CLASS,
 } from './procuraFormLayout.js';
 
@@ -13,15 +14,17 @@ describe('procuraFormLayout', () => {
     'utf8',
   );
 
-  it('footer sticky usa o mesmo inset que pb-shell / bottom nav', () => {
-    expect(PROCURA_FORM_SUBMIT_FOOTER_CLASS).toMatch(
-      /bottom-\[var\(--shell-bottom-inset\)\]/,
-    );
-    expect(indexCss).toMatch(
-      /--shell-bottom-inset:\s*calc\(var\(--bottom-nav-height\)\s*\+\s*env\(safe-area-inset-bottom,\s*0px\)\)/,
-    );
-    expect(indexCss).toMatch(/--bottom-nav-height:\s*4rem/);
+  it('footer sticky colado ao fundo do main com fundo até à nav (pb-shell inset)', () => {
+    expect(PROCURA_FORM_SUBMIT_FOOTER_CLASS).toMatch(/\bbottom-0\b/);
+    expect(PROCURA_FORM_SUBMIT_FOOTER_CLASS).toMatch(/pb-\[var\(--shell-bottom-inset\)\]/);
+    expect(PROCURA_FORM_SUBMIT_FOOTER_CLASS).not.toMatch(/bottom-\[var\(--shell-bottom-inset\)\]/);
+    expect(indexCss).toMatch(/--procura-form-sticky-footer-reserve/);
     expect(dashboardJsx).toMatch(/PROCURA_FORM_SUBMIT_FOOTER_CLASS/);
+  });
+
+  it('corpo do form reserva altura do footer sticky', () => {
+    expect(PROCURA_FORM_BODY_CLASS).toMatch(/pb-\[var\(--procura-form-sticky-footer-reserve\)\]/);
+    expect(dashboardJsx).toMatch(/PROCURA_FORM_BODY_CLASS/);
   });
 
   it('form procura não define max-h nem scroll interno overflow-y-auto', () => {

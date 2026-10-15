@@ -21,6 +21,7 @@ describe('TimeInput', () => {
     expect(input).toHaveClass('time-input-24h');
     expect(input).toHaveAttribute('step', '60');
     expect(input.className).toMatch(/bg-background/);
+    expect(input.className).toMatch(/min-w-\[6\.75rem\]/);
     expect(input.className).toMatch(/border-\[#718096\]/);
     ADDRESS_INPUT_SURFACE_CLASS.split(/\s+/).forEach((token) => {
       if (token) expect(input.className).toContain(token);

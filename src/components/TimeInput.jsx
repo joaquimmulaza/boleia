@@ -34,7 +34,11 @@ const TimeInput = ({
     onChange={onChange}
     required={required}
     aria-label={ariaLabel}
-    className={cn('time-input-24h tabular-nums', ADDRESS_INPUT_SURFACE_CLASS, className)}
+    className={cn(
+      'time-input-24h tabular-nums min-w-[6.75rem]',
+      ADDRESS_INPUT_SURFACE_CLASS,
+      className,
+    )}
   />
 );
 
