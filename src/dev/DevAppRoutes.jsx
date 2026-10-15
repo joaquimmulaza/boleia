@@ -32,6 +32,7 @@ export default function DevAppRoutes() {
         <Route index element={<Profile />} />
       </Route>
       <Route path="acordos-chips" element={<DevAcordosChipCapture />} />
+      <Route path="acordos-chip-capture" element={<DevAcordosChipCapture />} />
       <Route path="hotfix-prod-qa-acordos" element={<DevHotfixProdQaCapture />} />
       <Route path="notif-cards-269" element={<DevNotifCards269Capture />} />
     </Routes>

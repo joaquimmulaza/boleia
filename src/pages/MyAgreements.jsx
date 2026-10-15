@@ -35,20 +35,17 @@ import {
   subscribeMarketplaceHubRefresh,
 } from '../utils/marketplaceHubRefresh';
 import {
-  acordoEstadoListaChipProps,
   isChipEncerramentoPedidoConsensual,
   podeConfirmarRescisaoConsensual,
 } from '../utils/acordoEstadoDisplay';
+import { resolveAcordoListaCabecalhoUi } from '../utils/resolveAcordoListaCabecalhoUi.js';
 import {
   acordoPrecisaLiveRefresh,
   useAcordoDetalheLiveRefresh,
 } from '../hooks/useAcordoDetalheLiveRefresh';
 import { labelRotaOferta } from '../utils/ofertaLabels';
 import { buildAcordoContratoSnapshot } from '../utils/buildAcordoContratoSnapshot';
-import {
-  labelPessoasNoAcordoContrato,
-  resolvePessoasAcordoUi,
-} from '../utils/resolvePessoasAcordoUi';
+import { resolvePessoasAcordoUi } from '../utils/resolvePessoasAcordoUi';
 import AcordoContratoSnapshot from '../components/AcordoContratoSnapshot';
 import { isOfertaFlexivel } from '../services/OfertaService';
 import AcordoPagamentoPanel from '../components/AcordoPagamentoPanel';
@@ -1074,32 +1071,33 @@ const MyAgreements = () => {
    */
   const renderCard = (acordo) => {
     const linhas = acordo.acordos_passageiros || [];
-    const nPax =
-      acordo.n_passageiros_contrato ||
-      linhas.filter((p) => isActivo(p.estado)).length ||
-      0;
     const oferta = acordo.ofertas_capacidade;
     const rota = labelRotaOferta(oferta || {});
     const activo = isActivo(acordo.estado);
-    const estadoChipCard = acordoEstadoListaChipProps(acordo, user?.id);
     const leavePending = Boolean(pendingLeaveIds[acordo.id]);
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
     const minhaChipCtxCard = minhaLinha
       ? chipCtxForAcordoPassageiro(acordo.id, minhaLinha.passenger_id)
       : null;
-    const minhaEstadoLugarCard = minhaLinha
-      ? estadoPassageiroParaChip(minhaLinha.estado, minhaChipCtxCard)
+    const {
+      estadoChip: estadoChipCard,
+      mostrarChipLugar: mostrarChipLugarCard,
+      minhaLinha: minhaLinhaCabecalho,
+      rotuloPessoas,
+    } = resolveAcordoListaCabecalhoUi({
+      acordo,
+      viewerUserId: user?.id,
+      tipoPerfil,
+      minhaLinha,
+      minhaChipCtx: minhaChipCtxCard,
+    });
+    const minhaEstadoLugarCard = minhaLinhaCabecalho
+      ? estadoPassageiroParaChip(minhaLinhaCabecalho.estado, minhaChipCtxCard)
       : null;
-    const mostrarChipLugarCard = Boolean(
-      minhaLinha && mostrarChipEstadoLugarPassageiro(minhaLinha.estado, minhaChipCtxCard),
-    );
     const quotaCard =
       tipoPerfil === 'Passageiro'
         ? (minhaLinha?.quota_mensal_kz ?? acordo.valor_mensal_por_passageiro_kz)
         : acordo.valor_mensal_por_passageiro_kz;
-    const rotuloPessoas =
-      labelPessoasNoAcordoContrato(acordo.n_passageiros_contrato)
-      ?? (nPax === 1 ? 'Individual' : `Grupo · ${nPax} pessoas`);
     return (
       <button
         type="button"
@@ -1120,9 +1118,9 @@ const MyAgreements = () => {
             >
               {estadoChipCard.label}
             </span>
-            {mostrarChipLugarCard ? (
+            {mostrarChipLugarCard && minhaLinhaCabecalho ? (
               <span
-                className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoPassageiro(minhaLinha.estado, minhaChipCtxCard)}`}
+                className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoPassageiro(minhaLinhaCabecalho.estado, minhaChipCtxCard)}`}
                 data-testid={
                   minhaEstadoLugarCard === 'expirado'
                     ? `acordo-lugar-expirado-chip-${acordo.id}`
@@ -1131,7 +1129,7 @@ const MyAgreements = () => {
                       : `acordo-lugar-chip-${acordo.id}`
                 }
               >
-                {labelChipEstadoPassageiro(minhaLinha.estado, minhaChipCtxCard)}
+                {labelChipEstadoPassageiro(minhaLinhaCabecalho.estado, minhaChipCtxCard)}
               </span>
             ) : null}
             {leavePending && (
@@ -1152,10 +1150,14 @@ const MyAgreements = () => {
           <span>{rota.destino}</span>
         </div>
         <div className="flex justify-between items-end gap-2 text-sm text-slate-500">
-          <span className="flex items-center gap-1">
-            <Users size={14} aria-hidden="true" />
-            {rotuloPessoas}
-          </span>
+          {rotuloPessoas ? (
+            <span className="flex items-center gap-1" data-testid={`acordo-grupo-linha-${acordo.id}`}>
+              <Users size={14} aria-hidden="true" />
+              {rotuloPessoas}
+            </span>
+          ) : (
+            <span className="sr-only" data-testid={`acordo-grupo-linha-${acordo.id}`} />
+          )}
           {activo && quotaCard != null ? (
             <strong
               data-testid="card-quota-congelada"
@@ -1362,6 +1364,8 @@ const MyAgreements = () => {
             rescisaoEffectiveOnAcordo={selected.rescisao_effective_on}
             driverIdAcordo={selected.driver_id}
             acordosPassageiros={selected.acordos_passageiros}
+            nPassageirosContrato={selected.n_passageiros_contrato}
+            tipoPerfil={tipoPerfil}
             viewerUserId={user?.id}
             minhaLinhaEstado={minhaLinha?.estado}
             minhaLinhaPagamento={pagamentoViewer}

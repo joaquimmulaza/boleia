@@ -1,12 +1,36 @@
 import React from 'react';
+import { Users } from 'lucide-react';
 import AcordoPagamentoPanel from '../components/AcordoPagamentoPanel';
 import AcordoDetalheSheetHeader from '../components/AcordoDetalheSheetHeader';
 import { Button } from '../components/ui/button';
-import { acordoEstadoListaChipProps } from '../utils/acordoEstadoDisplay';
+import {
+  acordoEstadoListaChipProps,
+  labelChipListaEstadoAcordo,
+  variantChipListaEstadoAcordo,
+  chipClassEstadoAcordoVariant,
+} from '../utils/acordoEstadoDisplay';
+import {
+  chipClassEstadoPassageiro,
+  isActivoPassageiro,
+  labelChipEstadoPassageiro,
+  mostrarChipLugarPassageiroSemDuplicarAcordo,
+} from '../utils/estadoPassageiro';
+import { labelPessoasNoAcordoContrato } from '../utils/resolvePessoasAcordoUi';
 
 /**
- * Pré-visualização DEV (390px) — chips lista/modal + kebab + #251 (light + dark).
- * Registada via DevAppRoutes (`/__dev/acordos-chips`; vite dev ou preview allowlist).
+ * @param {Array<{ estado?: string }>} linhas
+ * @returns {string | null}
+ */
+function rotuloGrupoListaAcordo(linhas) {
+  const nPax = (linhas || []).filter((p) => isActivoPassageiro(p.estado)).length;
+  if (nPax === 0) return null;
+  if (nPax === 1) return 'Grupo · 1 pessoa';
+  return `Grupo · ${nPax} pessoas`;
+}
+
+/**
+ * Pré-visualização DEV (390px) — chips lista/modal + kebab + #251 + piloto reservado.
+ * Registada via DevAppRoutes (`/__dev/acordos-chip-capture`; vite dev ou preview allowlist).
  *
  * @typedef {Readonly<{}>} DevAcordosChipCaptureProps
  */
@@ -49,7 +73,77 @@ export default function DevAcordosChipCapture() {
     },
   ];
 
+  const pilotoFixtures = [
+    {
+      key: 'so-reservado',
+      title: 'Piloto — só reservado (2)',
+      acordo: {
+        estado: 'activo',
+        acordos_passageiros: [
+          { passenger_id: 'p1', estado: 'reservado' },
+          { passenger_id: 'p2', estado: 'reservado' },
+        ],
+      },
+      linhas: [
+        { passenger_id: 'p1', estado: 'reservado' },
+        { passenger_id: 'p2', estado: 'reservado' },
+      ],
+      userId: 'driver-1',
+      grupoLabel: null,
+    },
+    {
+      key: 'misto',
+      title: 'Piloto — misto (1 activo + 1 reservado)',
+      acordo: {
+        estado: 'activo',
+        n_passageiros_contrato: 2,
+        acordos_passageiros: [
+          { passenger_id: 'p1', estado: 'activo' },
+          { passenger_id: 'p2', estado: 'reservado' },
+        ],
+      },
+      linhas: [
+        { passenger_id: 'p1', estado: 'activo' },
+        { passenger_id: 'p2', estado: 'reservado' },
+      ],
+      userId: 'driver-1',
+      grupoLabel: labelPessoasNoAcordoContrato(2),
+    },
+    {
+      key: 'so-activo',
+      title: 'Piloto — só activo (2)',
+      acordo: {
+        estado: 'activo',
+        acordos_passageiros: [
+          { passenger_id: 'p1', estado: 'activo' },
+          { passenger_id: 'p2', estado: 'activo' },
+        ],
+      },
+      linhas: [
+        { passenger_id: 'p1', estado: 'activo' },
+        { passenger_id: 'p2', estado: 'activo' },
+      ],
+      userId: 'driver-1',
+      grupoLabel: 'Grupo · 2 pessoas',
+    },
+  ];
+
   const noop = () => {};
+
+  const acordoPaxARls = {
+    estado: 'activo',
+    n_passageiros_contrato: 2,
+    acordos_passageiros: [{ passenger_id: 'pax-a', estado: 'reservado' }],
+  };
+  const paxAChipCabecalho = acordoEstadoListaChipProps(acordoPaxARls, 'pax-a', {
+    ignorarChipPorLugares: true,
+  });
+  const paxALugarEstado = 'reservado';
+  const paxAMostrarLugar = mostrarChipLugarPassageiroSemDuplicarAcordo(
+    paxAChipCabecalho.label,
+    paxALugarEstado,
+  );
+  const paxAGrupo = labelPessoasNoAcordoContrato(acordoPaxARls.n_passageiros_contrato);
 
   return (
     <div
@@ -154,6 +248,97 @@ export default function DevAcordosChipCapture() {
               >
                 {chip.label}
               </span>
+            );
+          })}
+        </section>
+
+        <section
+          className="rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-2 shadow-sm"
+          data-testid="dev-pax-a-rls-list-card"
+        >
+          <p className="text-xs font-semibold text-slate-400">
+            Passageiro A — RLS só reservado (lista alinhada ao detalhe)
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`inline-flex text-xs font-bold px-2.5 py-1 rounded-full ${paxAChipCabecalho.className}`}
+            >
+              {paxAChipCabecalho.label}
+            </span>
+            {paxAMostrarLugar ? (
+              <span
+                className={`inline-flex text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoPassageiro(paxALugarEstado)}`}
+              >
+                {labelChipEstadoPassageiro(paxALugarEstado)}
+              </span>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-1 text-sm text-slate-500">
+            <Users size={14} aria-hidden="true" />
+            <span>{paxAGrupo}</span>
+          </div>
+          <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+            Cacuaco → Kilamba
+          </p>
+        </section>
+
+        <section
+          className="rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm"
+          data-testid="dev-pax-a-rls-detail-header"
+        >
+          <p className="text-xs font-semibold text-slate-400 px-4 pt-3">
+            Passageiro A — cabeçalho detalhe (RLS alinhado à lista)
+          </p>
+          <AcordoDetalheSheetHeader
+            acordoId="acordo-misto-rls"
+            estadoAcordo={acordoPaxARls.estado}
+            acordosPassageiros={acordoPaxARls.acordos_passageiros}
+            nPassageirosContrato={acordoPaxARls.n_passageiros_contrato}
+            tipoPerfil="Passageiro"
+            viewerUserId="pax-a"
+            minhaLinhaEstado={paxALugarEstado}
+            onClose={noop}
+            podeRegistarFaltas={false}
+            podeEncerrar={false}
+            onRegistarFalta={noop}
+            onEncerrar={noop}
+            titulo="Detalhe do acordo"
+          />
+        </section>
+
+        <section
+          className="space-y-3"
+          data-testid="dev-piloto-reservado-capture"
+        >
+          <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200">
+            Piloto reservado — cartões lista
+          </h2>
+          {pilotoFixtures.map(({ key, title, acordo, linhas, userId, grupoLabel }) => {
+            const variant = variantChipListaEstadoAcordo(acordo, userId);
+            const label = labelChipListaEstadoAcordo(acordo, userId);
+            const grupo = grupoLabel === null ? null : (grupoLabel ?? rotuloGrupoListaAcordo(linhas));
+            return (
+              <div
+                key={key}
+                className="rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-2 shadow-sm"
+                data-testid={`dev-piloto-card-${key}`}
+              >
+                <p className="text-xs font-semibold text-slate-400">{title}</p>
+                <span
+                  className={`inline-flex text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoAcordoVariant(variant)}`}
+                  data-testid={`dev-piloto-chip-${key}`}
+                >
+                  {label}
+                </span>
+                {grupo ? (
+                  <div className="flex items-center gap-1 text-sm text-slate-500">
+                    <Users size={14} aria-hidden="true" />
+                    <span data-testid={`dev-piloto-grupo-${key}`}>{grupo}</span>
+                  </div>
+                ) : (
+                  <span data-testid={`dev-piloto-grupo-${key}`} className="sr-only" />
+                )}
+              </div>
             );
           })}
         </section>
