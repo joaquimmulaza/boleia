@@ -35,10 +35,17 @@ const mockNotifications = [
       },
     ];
 
+let mockListLoading = false;
+let mockListError = null;
+const refetchNotifications = vi.fn();
+
 vi.mock('../hooks/useNotifications', () => ({
   useNotifications: () => ({
     notifications: mockNotifications,
-    unreadCount: 1,
+    unreadCount: mockListLoading ? 0 : 1,
+    listLoading: mockListLoading,
+    listError: mockListError,
+    refetchNotifications,
     markAsRead,
     markAllAsRead,
     deleteNotification,
@@ -84,6 +91,9 @@ const renderBell = () =>
 describe('NotificationBell', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockListLoading = false;
+    mockListError = null;
+    refetchNotifications.mockClear();
     mockNotifications.length = 0;
     mockNotifications.push(
       {
@@ -92,6 +102,7 @@ describe('NotificationBell', () => {
         tipo: 'info',
         lida: false,
         created_at: new Date().toISOString(),
+        metadata: { type: 'proposal_received', inbox: 'passageiro', proposta_id: 'prop-1' },
       },
       {
         id: 'n2',
@@ -101,6 +112,185 @@ describe('NotificationBell', () => {
         created_at: new Date(Date.now() - 3600000).toISOString(),
       },
     );
+  });
+
+  it('primeira carga: skeleton visível e vazio oculto (sem flash «Sem notificações…»)', () => {
+    mockListLoading = true;
+    mockNotifications.length = 0;
+
+    renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+
+    expect(screen.getByTestId('notification-list-skeleton')).toBeInTheDocument();
+    expect(screen.queryByTestId('notification-list-empty')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sem notificações no momento.')).not.toBeInTheDocument();
+  });
+
+  it('?notificacoes=1 no cold load abre o sheet com skeleton enquanto carrega', () => {
+    mockListLoading = true;
+    mockNotifications.length = 0;
+    window.history.replaceState({}, '', '/?notificacoes=1');
+
+    render(
+      <MemoryRouter initialEntries={['/?notificacoes=1']}>
+        <NotificationBell />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('notification-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('notification-list-skeleton')).toBeInTheDocument();
+    expect(screen.queryByText('Sem notificações no momento.')).not.toBeInTheDocument();
+
+    window.history.replaceState({}, '', '/');
+  });
+
+  it('após fetch vazio: mostra estado vazio (não skeleton)', () => {
+    mockListLoading = false;
+    mockNotifications.length = 0;
+
+    renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+
+    expect(screen.getByTestId('notification-list-empty')).toBeInTheDocument();
+    expect(screen.getByText('Sem notificações no momento.')).toBeInTheDocument();
+    expect(screen.queryByTestId('notification-list-skeleton')).not.toBeInTheDocument();
+  });
+
+  it('erro de carga separado do estado vazio', () => {
+    mockListLoading = false;
+    mockListError = 'Não foi possível carregar as notificações.';
+    mockNotifications.length = 0;
+
+    renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+
+    expect(screen.getByTestId('notification-list-error')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar outra vez' })).toBeInTheDocument();
+    expect(screen.queryByTestId('notification-list-error-banner')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Tenta fechar e abrir outra vez/i)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('notification-list-empty')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sem notificações no momento.')).not.toBeInTheDocument();
+  });
+
+  it('abrir o sino dispara refetch (B1b — com ou sem listError)', () => {
+    mockListLoading = false;
+    mockListError = null;
+
+    renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+
+    expect(refetchNotifications).toHaveBeenCalledTimes(1);
+  });
+
+  it('desde /passageiro: notificação sem type/link — marca lida, não navega, painel aberto', () => {
+    mockNotifications.splice(0, mockNotifications.length, {
+      id: 'qa-n',
+      mensagem: 'Aviso QA sem destino',
+      tipo: 'info',
+      lida: false,
+      created_at: new Date().toISOString(),
+      metadata: { qa: true },
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/passageiro']}>
+        <NotificationBell />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+    refetchNotifications.mockClear();
+
+    const row = screen.getByRole('button', { name: /Aviso QA sem destino/i });
+    fireEvent.click(row);
+
+    expect(markAsRead).toHaveBeenCalledWith('qa-n');
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(screen.getByTestId('notification-panel')).toBeInTheDocument();
+  });
+
+  it('reabrir sino com lista — refetch falhado mostra faixa (offline / FAIL 6)', () => {
+    const view = renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+    expect(refetchNotifications).toHaveBeenCalledTimes(1);
+
+    mockListError = 'Não foi possível carregar as notificações.';
+    mockListLoading = false;
+    view.rerender(
+      <MemoryRouter>
+        <NotificationBell />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('notification-list-error-banner')).toBeInTheDocument();
+    expect(screen.getByText('Nova proposta recebida')).toBeInTheDocument();
+    expect(screen.getByTestId('notification-panel')).toBeInTheDocument();
+  });
+
+  it('erro com lista carregada — faixa Alert e lista visível (sem ecrã inteiro)', () => {
+    mockListLoading = false;
+    mockListError = 'Não foi possível carregar as notificações.';
+
+    renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+
+    expect(screen.getByTestId('notification-list-error-banner')).toBeInTheDocument();
+    expect(screen.getByText('Nova proposta recebida')).toBeInTheDocument();
+    expect(screen.queryByTestId('notification-list-error')).not.toBeInTheDocument();
+  });
+
+  it('«Tentar outra vez» dispara refetch; com lista mantém faixa e botão desactivado durante carga', () => {
+    mockListLoading = false;
+    mockListError = 'Não foi possível carregar as notificações.';
+
+    const view = renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+    refetchNotifications.mockClear();
+
+    const retryBtn = screen.getByRole('button', { name: 'Tentar outra vez' });
+    fireEvent.click(retryBtn);
+    expect(refetchNotifications).toHaveBeenCalledTimes(1);
+
+    mockListLoading = true;
+    view.rerender(
+      <MemoryRouter>
+        <NotificationBell />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('notification-list-error-banner')).toBeInTheDocument();
+    expect(screen.getByText('Nova proposta recebida')).toBeInTheDocument();
+    expect(screen.queryByTestId('notification-list-skeleton')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar outra vez' })).toBeDisabled();
+
+    mockListLoading = false;
+    mockListError = null;
+    view.rerender(
+      <MemoryRouter>
+        <NotificationBell />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('Nova proposta recebida')).toBeInTheDocument();
+    expect(screen.queryByTestId('notification-list-error-banner')).not.toBeInTheDocument();
+  });
+
+  it('ecrã inteiro de erro: refetch vazio mostra skeleton (não faixa)', () => {
+    mockListLoading = false;
+    mockListError = 'Não foi possível carregar as notificações.';
+    mockNotifications.length = 0;
+
+    const view = renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar outra vez' }));
+    mockListLoading = true;
+    view.rerender(
+      <MemoryRouter>
+        <NotificationBell />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('notification-list-skeleton')).toBeInTheDocument();
+    expect(screen.queryByTestId('notification-list-error-banner')).not.toBeInTheDocument();
   });
 
   it('renderiza bottom sheet F7 com handle e Fechar (não side drawer)', () => {
@@ -183,7 +373,7 @@ describe('NotificationBell', () => {
     renderBell();
     fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
 
-    const row = screen.getByRole('button', { name: 'Nova proposta recebida' });
+    const row = screen.getByTestId('notif-item-n1');
     fireEvent.keyDown(row, { key: 'Enter' });
 
     expect(markAsRead).toHaveBeenCalledWith('n1');
@@ -191,7 +381,7 @@ describe('NotificationBell', () => {
 
     markAsRead.mockClear();
     fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
-    fireEvent.keyDown(screen.getByRole('button', { name: 'Nova proposta recebida' }), { key: ' ' });
+    fireEvent.keyDown(screen.getByTestId('notif-item-n1'), { key: ' ' });
 
     expect(markAsRead).toHaveBeenCalledWith('n1');
     expect(screen.queryByTestId('notification-panel')).not.toBeInTheDocument();
@@ -261,6 +451,25 @@ describe('NotificationBell', () => {
     expect(screen.queryByTestId('notification-panel')).not.toBeInTheDocument();
   });
 
+  it('tipo desconhecido só marca lida — não navega', () => {
+    mockNotifications.unshift({
+      id: 'n-unk',
+      mensagem: 'Algo estranho',
+      tipo: 'info',
+      lida: false,
+      created_at: new Date().toISOString(),
+      metadata: { type: 'tipo_inventado' },
+    });
+
+    renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+    fireEvent.click(screen.getByRole('button', { name: /Algo estranho/ }));
+
+    expect(markAsRead).toHaveBeenCalledWith('n-unk');
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(screen.getByTestId('notification-panel')).toBeInTheDocument();
+  });
+
   it('notificação consensual navega para openAcordoId com focus=rescisao', () => {
     mockNotifications.unshift({
       id: 'n-res',
@@ -278,7 +487,11 @@ describe('NotificationBell', () => {
 
     renderBell();
     fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Pedido de encerramento amigável' }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Pedido de encerramento\. Pedido de encerramento amigável/,
+      }),
+    );
 
     expect(mockNavigate).toHaveBeenCalledWith('/acordos?openAcordoId=ac-res&focus=rescisao');
   });
