@@ -7,7 +7,10 @@ import {
   getAgreementsForDriver,
   getAgreementsForPassenger,
 } from '../services/AgreementService';
-import { listPagamentosByAcordo } from '../services/PaymentService';
+import {
+  getDescontoFaltasPreview,
+  listPagamentosByAcordo,
+} from '../services/PaymentService';
 import { allowsAssiduidadeFaltasForAcordo } from '../utils/paymentStatus';
 import LogAbsenceModal from '../components/LogAbsenceModal';
 import PageShell from '../components/PageShell';
@@ -21,6 +24,7 @@ import {
   resolveFaltasHubCard,
   sumDescontoFaltas,
 } from '../utils/faltasDisplay';
+import { resolvePassageiroTotalDescontoFaltasKz } from '../utils/resolveTotalDescontoFaltas';
 
 /**
  * @param {string | null | undefined} viagem
@@ -48,6 +52,7 @@ const AbsenceTracker = () => {
   const [podeRegistarFaltas, setPodeRegistarFaltas] = useState(false);
   const [gateLoading, setGateLoading] = useState(false);
   const [acordoDetalhe, setAcordoDetalhe] = useState(null);
+  const [totalDescontoServidor, setTotalDescontoServidor] = useState(null);
 
   const carregarGatePagamento = useCallback(async () => {
     if (!acordoId || !user?.id) {
@@ -77,10 +82,21 @@ const AbsenceTracker = () => {
       setPodeRegistarFaltas(
         allowsAssiduidadeFaltasForAcordo(pagamentos, idsRequired),
       );
+      if (tipoPerfil === 'Passageiro' && user?.id) {
+        const total = await resolvePassageiroTotalDescontoFaltasKz(
+          pagamentos,
+          user.id,
+          { fetchPreview: getDescontoFaltasPreview },
+        );
+        setTotalDescontoServidor(total);
+      } else {
+        setTotalDescontoServidor(null);
+      }
     } catch (err) {
       console.error('Erro ao verificar pagamento para faltas:', err);
       setPodeRegistarFaltas(false);
       setAcordoDetalhe(null);
+      setTotalDescontoServidor(null);
     } finally {
       setGateLoading(false);
     }
@@ -134,7 +150,10 @@ const AbsenceTracker = () => {
 
   const faltasEsteMes = filterFaltasEsteMes(faltas);
   const faltasDescontoMesAtual = filterFaltasDescontoMesAtual(faltas);
-  const totalDesconto = sumDescontoFaltas(faltasDescontoMesAtual);
+  const totalDescontoCliente = sumDescontoFaltas(faltasDescontoMesAtual);
+  const totalDesconto = totalDescontoServidor != null
+    ? totalDescontoServidor
+    : totalDescontoCliente;
 
   const handleLogAbsence = async (formData) => {
     if (!acordoId) return;
@@ -152,6 +171,7 @@ const AbsenceTracker = () => {
       setIsModalOpen(false);
       setMessage({ type: 'success', text: 'Falta registada com sucesso.' });
       await carregarFaltas();
+      await carregarGatePagamento();
     } catch (err) {
       console.error('Erro ao registar falta:', err);
       setMessage({ type: 'error', text: getFriendlyErrorMessage(err) });

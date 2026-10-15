@@ -14,12 +14,14 @@ const {
   mockGetAgreementsForDriver,
   mockGetAgreementsForPassenger,
   mockListPagamentosByAcordo,
+  mockGetDescontoFaltasPreview,
 } = vi.hoisted(() => ({
   mockGetAbsences: vi.fn(),
   mockLogAbsence: vi.fn(),
   mockGetAgreementsForDriver: vi.fn(),
   mockGetAgreementsForPassenger: vi.fn(),
   mockListPagamentosByAcordo: vi.fn(),
+  mockGetDescontoFaltasPreview: vi.fn(),
 }));
 
 vi.mock('../contexts/AuthContext', () => ({
@@ -41,6 +43,7 @@ vi.mock('../services/AgreementService', () => ({
 
 vi.mock('../services/PaymentService', () => ({
   listPagamentosByAcordo: mockListPagamentosByAcordo,
+  getDescontoFaltasPreview: mockGetDescontoFaltasPreview,
 }));
 
 vi.mock('react-router-dom', () => ({
@@ -78,8 +81,14 @@ describe('AbsenceTracker — marketplace', () => {
     vi.spyOn(faltasDisplay, 'filterFaltasEsteMes').mockImplementation((faltas) => faltas || []);
     mockAcordoId = 'acordo-uuid-001';
     mockListPagamentosByAcordo.mockResolvedValue([
-      { passenger_id: 'user-1', estado: 'em_custodia' },
+      {
+        id: 'pg-out',
+        passenger_id: 'user-1',
+        mes_referencia: '2026-10-01',
+        estado: 'em_custodia',
+      },
     ]);
+    mockGetDescontoFaltasPreview.mockResolvedValue(1363.64);
     mockGetAbsences.mockResolvedValue([
       {
         id: 'f1',
@@ -121,35 +130,57 @@ describe('AbsenceTracker — marketplace', () => {
     expect(screen.queryByText(/-1363,64/)).not.toBeInTheDocument();
   });
 
-  it('Total a descontar usa desconto_mes_referencia, não só data_falta', async () => {
-    vi.spyOn(faltasDisplay, 'filterFaltasEsteMes').mockImplementation((faltas) => faltas || []);
-
+  it('Total a descontar em custódia usa preview RPC (não soma cliente)', async () => {
+    mockGetDescontoFaltasPreview.mockResolvedValue(1000);
+    mockListPagamentosByAcordo.mockResolvedValue([
+      {
+        id: 'pg-cust',
+        passenger_id: 'user-1',
+        mes_referencia: '2026-10-01',
+        estado: 'em_custodia',
+      },
+    ]);
     mockGetAbsences.mockResolvedValue([
       {
         id: 'f-set-cred-out',
-        id_acordo: 'acordo-uuid-001',
         data_falta: '2026-09-08',
         desconto_mes_referencia: '2026-10-01',
-        tipo: 'Passageiro',
         desconto_kz: 1000,
-        viagem: 'ambas',
       },
       {
-        id: 'f-set-only',
-        id_acordo: 'acordo-uuid-001',
-        data_falta: '2026-09-20',
-        desconto_mes_referencia: '2026-09-01',
-        tipo: 'Passageiro',
+        id: 'f-extra',
+        data_falta: '2026-10-02',
         desconto_kz: 800,
-        viagem: 'ambas',
       },
     ]);
 
     render(<AbsenceTracker />);
-    expect(await screen.findByText(/Total a descontar/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(mockGetDescontoFaltasPreview).toHaveBeenCalledWith('pg-cust');
+    });
     const totalBlock = screen.getByText(/Total a descontar/i).closest('div');
     expect(totalBlock).toHaveTextContent('1000');
-    expect(totalBlock).not.toHaveTextContent('1800');
+  });
+
+  it('Total a descontar liquidado usa desconto_faltas_kz', async () => {
+    mockGetDescontoFaltasPreview.mockClear();
+    mockListPagamentosByAcordo.mockResolvedValue([
+      {
+        id: 'pg-liq',
+        passenger_id: 'user-1',
+        mes_referencia: '2026-10-01',
+        estado: 'liquidado',
+        desconto_faltas_kz: 750,
+      },
+    ]);
+
+    render(<AbsenceTracker />);
+    await waitFor(() => {
+      expect(screen.getByText(/Total a descontar/i)).toBeInTheDocument();
+    });
+    expect(mockGetDescontoFaltasPreview).not.toHaveBeenCalled();
+    const totalBlock = screen.getByText(/Total a descontar/i).closest('div');
+    expect(totalBlock).toHaveTextContent('750');
   });
 
   it('usa filtro «Este mês» no total e no histórico', async () => {

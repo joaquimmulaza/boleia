@@ -266,3 +266,118 @@ BEGIN
 
   RAISE NOTICE 'PASS: log_falta + _desconto_faltas_pagamento regra 5';
 END $$;
+
+\echo '=== Regra 5 — B2 legacy drop + preview RPC + sem desconto duplo ==='
+DO $$
+DECLARE
+  v_driver uuid := 'f5111111-1111-4111-8111-111111111111';
+  v_pax uuid := 'f5222222-2222-4222-8222-222222222222';
+  v_acordo uuid := 'f5444444-4444-4444-8444-444444444444';
+  v_pg_out uuid := 'f5777777-7777-4777-8777-777777777777';
+  v_mes_out date := '2026-10-01'::date;
+  v_outsider uuid := 'f5999999-9999-4999-8999-999999999999';
+  v_admin uuid := 'f5888888-8888-4888-8888-888888888888';
+  v_legacy_count integer;
+  v_preview integer;
+  v_esperado integer;
+  v_legacy_sep_sum integer;
+  v_row public.pagamentos_acordo%ROWTYPE;
+  v_estado text;
+BEGIN
+  SELECT count(*)::integer INTO v_legacy_count
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public'
+    AND p.proname = 'admin_liquidate_payment'
+    AND pg_get_function_identity_arguments(p.oid) = 'p_pagamento_id uuid';
+
+  IF v_legacy_count <> 0 THEN
+    RAISE EXCEPTION 'FAIL B2: overload admin_liquidate_payment(uuid) ainda existe (%)', v_legacy_count;
+  END IF;
+
+  INSERT INTO auth.users (id, email) VALUES
+    (v_outsider, 'regra5-outsider@test'),
+    (v_admin, 'regra5-admin@test')
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO public.perfis (id, nome_completo, telefone, tipo_perfil, is_admin) VALUES
+    (v_outsider, 'Outsider', '931000099', 'Passageiro', false),
+    (v_admin, 'Admin', '931000098', 'Motorista', true)
+  ON CONFLICT (id) DO UPDATE SET is_admin = EXCLUDED.is_admin;
+
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+
+  PERFORM set_config('request.jwt.claim.sub', v_pax::text, true);
+  SET LOCAL ROLE authenticated;
+  v_preview := public.get_desconto_faltas_preview(v_pg_out);
+  v_esperado := public._desconto_faltas_pagamento(v_acordo, v_pax, v_mes_out);
+  IF v_preview IS DISTINCT FROM v_esperado THEN
+    RAISE EXCEPTION 'FAIL B3 pax: preview % != esperado %', v_preview, v_esperado;
+  END IF;
+
+  PERFORM set_config('request.jwt.claim.sub', v_driver::text, true);
+  v_preview := public.get_desconto_faltas_preview(v_pg_out);
+  IF v_preview IS DISTINCT FROM v_esperado THEN
+    RAISE EXCEPTION 'FAIL B3 motorista: preview % != esperado %', v_preview, v_esperado;
+  END IF;
+
+  PERFORM set_config('request.jwt.claim.sub', v_outsider::text, true);
+  BEGIN
+    PERFORM public.get_desconto_faltas_preview(v_pg_out);
+    RAISE EXCEPTION 'FAIL B3: terceiro devia ser recusado';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM NOT ILIKE '%permiss%' AND SQLERRM NOT ILIKE '%Sem permissão%' THEN
+        RAISE;
+      END IF;
+  END;
+
+  SELECT COALESCE(floor(COALESCE(SUM(f.desconto_kz), 0))::integer, 0)
+  INTO v_legacy_sep_sum
+  FROM public.faltas f
+  WHERE f.id_acordo = v_acordo
+    AND f.desconto_kz > 0
+    AND date_trunc('month', f.data_falta)::date = v_mes_out
+    AND (
+      (lower(f.tipo) = 'passageiro' AND f.passenger_id = v_pax)
+      OR lower(f.tipo) = 'motorista'
+    );
+
+  IF v_legacy_sep_sum = v_esperado THEN
+    RAISE NOTICE 'SKIP B2 duplo: legacy sum igual ao novo neste fixture';
+  ELSIF v_esperado <= 0 THEN
+    RAISE EXCEPTION 'FAIL B2: esperado desconto Out devia ser > 0';
+  END IF;
+
+  IF v_legacy_sep_sum > 0 AND v_legacy_sep_sum <> v_esperado THEN
+    RAISE NOTICE 'PASS B2: desconto_mes_referencia evita duplo (legacy por data_falta=% vs RPC=%)',
+      v_legacy_sep_sum, v_esperado;
+  END IF;
+
+  RESET ROLE;
+
+  UPDATE public.perfis
+  SET iban = 'AO06004000000000000000000', iban_titular = 'Regra5 Driver'
+  WHERE id = v_driver;
+
+  PERFORM set_config('request.jwt.claim.sub', v_admin::text, true);
+  SET LOCAL ROLE authenticated;
+  PERFORM public.admin_liquidate_payment(v_pg_out, NULL);
+
+  RESET ROLE;
+  SELECT desconto_faltas_kz, lower(estado)
+  INTO v_preview, v_estado
+  FROM public.pagamentos_acordo
+  WHERE id = v_pg_out;
+
+  IF v_estado <> 'liquidado' THEN
+    RAISE EXCEPTION 'FAIL B2: admin_liquidate_payment devia liquidar pagamento Out';
+  END IF;
+
+  IF v_preview IS DISTINCT FROM v_esperado THEN
+    RAISE EXCEPTION 'FAIL B2 liquidação: desconto_faltas_kz % != _desconto_faltas %',
+      v_preview, v_esperado;
+  END IF;
+
+  RAISE NOTICE 'PASS: B2 legacy drop + preview RPC + liquidação alinhada';
+END $$;
