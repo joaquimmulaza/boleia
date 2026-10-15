@@ -184,20 +184,6 @@ function isNoAcordo(estado) {
 }
 
 /**
- * Linha activa/reservada para snapshot N=1; só linhas[0] se não houver viva.
- * @param {Array<{ estado?: string }>} linhas
- * @returns {object | null}
- */
-function pickLinhaVivaPassageiro(linhas) {
-  const list = linhas || [];
-  const activo = list.find((p) => isActivoPassageiro(p.estado));
-  if (activo) return activo;
-  const vivos = lugaresVivosFromLinhas(list);
-  if (vivos[0]) return vivos[0];
-  return list[0] ?? null;
-}
-
-/**
  * @param {string | null | undefined} nome
  * @returns {string}
  */
@@ -1108,10 +1094,6 @@ const MyAgreements = () => {
         : acordo.valor_mensal_por_passageiro_kz;
     const rotuloPessoas = (() => {
       if (nPax === 0) return null;
-      if (nPax === 1 && tipoPerfil === 'Motorista') {
-        const pax = pickLinhaVivaPassageiro(linhas);
-        return formatPrimeiroNome(nomePassageiro(pax));
-      }
       return (
         labelPessoasNoAcordoContrato(acordo.n_passageiros_contrato)
         ?? (nPax === 1 ? 'Individual' : `Grupo · ${nPax} pessoas`)

@@ -293,7 +293,7 @@ describe('MyAgreements — marketplace 1:N', () => {
 
     expect(await screen.findByText('Acordos')).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText(/Grupo · 2 pessoas/i)).toBeInTheDocument();
+      expect(screen.getByText(/Grupo · 3 pessoas/i)).toBeInTheDocument();
       expect(screen.getByText(/Kz \/ pessoa/i)).toBeInTheDocument();
     });
   });
@@ -351,7 +351,7 @@ describe('MyAgreements — marketplace 1:N', () => {
 
     await waitFor(() => {
       expect(getAgreementsForPassenger).toHaveBeenCalledTimes(2);
-      expect(screen.getByText(/Grupo · 2 pessoas/i)).toBeInTheDocument();
+      expect(screen.getByText(/Grupo · 3 pessoas/i)).toBeInTheDocument();
     });
   });
 

@@ -150,7 +150,7 @@ describe('MyAgreements — UX piloto reservado (lista)', () => {
     expect(within(card).getByTestId('acordo-grupo-linha-acordo-piloto').textContent?.trim()).toBe('');
   });
 
-  it('misto: chip Activo e Grupo · 1', async () => {
+  it('misto: chip Activo e rótulo N_contrato (Grupo · 2)', async () => {
     getAgreementsForDriver.mockResolvedValue([
       acordoBase([
         {
@@ -174,10 +174,10 @@ describe('MyAgreements — UX piloto reservado (lista)', () => {
 
     const card = await screen.findByRole('button', { name: /Talatona/i });
     expect(estadoChipLista(card)).toHaveTextContent('Activo');
-    expect(within(card).getByText(/Ana/i)).toBeInTheDocument();
+    expect(within(card).getByText(/Grupo · 2 pessoas/i)).toBeInTheDocument();
   });
 
-  it('misto com reservado primeiro na lista: cartão N=1 mostra o activo, não o reservado', async () => {
+  it('misto com reservado primeiro na lista: chip Activo e N_contrato (pickLinhaViva no detalhe)', async () => {
     getAgreementsForDriver.mockResolvedValue([
       acordoBase([
         {
@@ -201,8 +201,7 @@ describe('MyAgreements — UX piloto reservado (lista)', () => {
 
     const card = await screen.findByRole('button', { name: /Talatona/i });
     expect(estadoChipLista(card)).toHaveTextContent('Activo');
-    expect(within(card).getByText(/Ana/i)).toBeInTheDocument();
-    expect(within(card).queryByText(/João/i)).not.toBeInTheDocument();
+    expect(within(card).getByText(/Grupo · 2 pessoas/i)).toBeInTheDocument();
   });
 
   it('só activo: chip Activo e Grupo · 2', async () => {
