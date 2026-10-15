@@ -294,7 +294,6 @@ const PublishRoute = () => {
                 onChange={handleChange}
                 required
                 aria-label="Hora de ida"
-                className="h-12 rounded-lg bg-light-gray dark:bg-slate-800 px-3 outline-none focus:ring-2 focus:ring-primary/50"
               />
             </label>
             <label className="flex flex-col gap-1.5 text-sm font-semibold text-charcoal dark:text-slate-300">
@@ -306,7 +305,6 @@ const PublishRoute = () => {
                 value={formData.return_time}
                 onChange={handleChange}
                 aria-label="Hora de regresso"
-                className="h-12 rounded-lg bg-light-gray dark:bg-slate-800 px-3 outline-none focus:ring-2 focus:ring-primary/50"
               />
             </label>
           </div>

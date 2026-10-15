@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import PassengerDashboard from './PassengerDashboard';
@@ -126,6 +126,74 @@ describe('PassengerDashboard — geocoder B7', () => {
     localStorage.clear();
     getPlacePredictions.mockResolvedValue([]);
     listProcurasByOwner.mockResolvedValue([{ ...procuraBase, n_candidato: 1 }]);
+  });
+
+  it('editar procura: Escape com lista aberta fecha só a lista (form inline)', async () => {
+    getPlacePredictions.mockResolvedValue([
+      { place_id: '1', description: 'Talatona, Luanda', lat: -8.91, lng: 13.19 },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    await abrirMinhaProcura();
+    fireEvent.click(await screen.findByRole('button', { name: /Editar procura/i }));
+
+    const originInput = await screen.findByRole('combobox', { name: /^Origem$/i });
+    fireEvent.change(originInput, { target: { value: 'Talaton' } });
+
+    await waitFor(
+      () => {
+        expect(screen.getByRole('listbox', { name: 'Sugestões de locais' })).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+    expect(originInput).not.toHaveAttribute('aria-activedescendant');
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(screen.queryByRole('listbox', { name: 'Sugestões de locais' })).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole('heading', { name: /Editar procura/i })).toBeInTheDocument();
+  });
+
+  it('editar procura (#273): erro geocoder inline mantém «Guardar alterações» no footer sticky', async () => {
+    getPlacePredictions.mockRejectedValue(new Error('offline'));
+
+    Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true });
+    Object.defineProperty(window, 'innerHeight', { value: 844, configurable: true });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    await abrirMinhaProcura();
+    fireEvent.click(await screen.findByRole('button', { name: /Editar procura/i }));
+
+    const originInput = await screen.findByRole('combobox', { name: /^Origem$/i });
+    fireEvent.change(originInput, { target: { value: 'Talaton' } });
+
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('geocoder-network-error')).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+
+    const footer = screen.getByTestId('procura-form-submit-footer');
+    const guardar = screen.getByRole('button', { name: /Guardar alterações/i });
+    expect(footer).toContainElement(guardar);
+    expect(footer.className).toMatch(/sticky/);
+    expect(footer.className).toMatch(/\bbottom-0\b/);
+    expect(footer.className).toMatch(/pb-\[var\(--shell-bottom-inset\)\]/);
+    expect(screen.queryByTestId('procura-form-scroll')).not.toBeInTheDocument();
+    expect(screen.getByTestId('procura-form').className).not.toMatch(/max-h-/);
   });
 
   it('editar procura: focus no valor guardado sem escrever não mostra Usar nem «Não encontrámos»', async () => {

@@ -50,6 +50,22 @@ describe('OfertaEditPanel', () => {
     updateOferta.mockResolvedValue({ ...ofertaFixa, departure_time: '08:00' });
   });
 
+  it('Regresso 17:45 mantém formato 24h no input (valor DOM, não 05:45)', () => {
+    render(
+      <OfertaEditPanel
+        oferta={{ ...ofertaFixa, return_time: '17:45' }}
+        onCancel={() => {}}
+        onSaved={() => {}}
+      />,
+    );
+
+    const regresso = screen.getByLabelText(/Hora de regresso/i);
+    expect(regresso).toHaveAttribute('type', 'time');
+    expect(regresso).toHaveValue('17:45');
+    expect(regresso.className).toMatch(/time-input-24h/);
+    expect(regresso.className).toMatch(/min-w-\[6\.75rem\]/);
+  });
+
   it('mostra confirm snapshot antes de guardar (copy genérica)', async () => {
     const onSaved = vi.fn();
     render(
