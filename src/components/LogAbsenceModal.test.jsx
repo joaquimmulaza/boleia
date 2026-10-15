@@ -69,7 +69,7 @@ describe('LogAbsenceModal — meia quota', () => {
     vi.useRealTimers();
   });
 
-  it('recusa dia de mês fechado e dia futuro', () => {
+  it('recusa dia de mês fechado e dia futuro (motorista)', () => {
     const onSubmit = vi.fn();
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-10-04T12:00:00Z'));
@@ -90,10 +90,27 @@ describe('LogAbsenceModal — meia quota', () => {
     vi.useRealTimers();
   });
 
-  it('bloqueia tipo Passageiro na sessão de passageiro', () => {
+  it('motorista: ontem activo no calendário', () => {
     const onSubmit = vi.fn();
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-10-04T12:00:00Z'));
+    render(
+      <LogAbsenceModal isOpen onClose={vi.fn()} onSubmit={onSubmit} tipoPerfil="Motorista" />,
+    );
+    const data = screen.getByLabelText(/^Data$/i);
+    expect(data).toHaveAttribute('max', '2026-10-04');
+    fireEvent.change(data, { target: { value: '2026-10-03' } });
+    fireEvent.click(screen.getByRole('button', { name: /Guardar/i }));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ dataFalta: '2026-10-03' }),
+    );
+    vi.useRealTimers();
+  });
+
+  it('bloqueia tipo Passageiro na sessão de passageiro', () => {
+    const onSubmit = vi.fn();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-15T20:59:00Z'));
     render(
       <LogAbsenceModal
         isOpen
@@ -105,24 +122,109 @@ describe('LogAbsenceModal — meia quota', () => {
 
     expect(screen.getByTestId('falta-tipo-locked')).toHaveTextContent('Passageiro');
     expect(screen.queryByRole('combobox', { name: /Tipo/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: 'Motorista' })).not.toBeInTheDocument();
-    expect(screen.getByTestId('falta-tipo-locked')).not.toHaveTextContent('Motorista');
+    expect(screen.getByTestId('falta-prazo-copy')).toHaveTextContent(
+      'Avisa até às 22:00 do dia anterior.',
+    );
 
     fireEvent.change(screen.getByLabelText(/^Data$/i), {
-      target: { value: '2026-10-02' },
+      target: { value: '2026-10-16' },
     });
     fireEvent.click(screen.getByRole('button', { name: /Guardar/i }));
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
         tipo: 'Passageiro',
-        dataFalta: '2026-10-02',
+        dataFalta: '2026-10-16',
       }),
     );
     vi.useRealTimers();
   });
 
-  it('limita data a hoje ou anterior (sem datas futuras)', () => {
+  it('passageiro 21:59 Luanda: amanhã activo (min amanhã)', () => {
+    const onSubmit = vi.fn();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-15T20:59:00Z'));
+
+    render(
+      <LogAbsenceModal
+        isOpen
+        tipoPerfil="Passageiro"
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    const data = screen.getByLabelText(/^Data$/i);
+    expect(data).toHaveAttribute('min', '2026-10-16');
+    expect(data).not.toHaveAttribute('max');
+
+    fireEvent.change(data, { target: { value: '2026-10-15' } });
+    fireEvent.click(screen.getByRole('button', { name: /Guardar/i }));
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    fireEvent.change(data, { target: { value: '2026-10-16' } });
+    expect(screen.getByTestId('falta-chip-prevista')).toHaveTextContent('Prevista');
+    fireEvent.click(screen.getByRole('button', { name: /Guardar/i }));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ dataFalta: '2026-10-16' }),
+    );
+
+    vi.useRealTimers();
+  });
+
+  it('passageiro 22:00 Luanda: amanhã desactivado, depois de amanhã activo', () => {
+    const onSubmit = vi.fn();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-15T21:00:00Z'));
+
+    render(
+      <LogAbsenceModal
+        isOpen
+        tipoPerfil="Passageiro"
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    const data = screen.getByLabelText(/^Data$/i);
+    expect(data).toHaveAttribute('min', '2026-10-17');
+
+    fireEvent.change(data, { target: { value: '2026-10-16' } });
+    fireEvent.click(screen.getByRole('button', { name: /Guardar/i }));
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    fireEvent.change(data, { target: { value: '2026-10-17' } });
+    fireEvent.click(screen.getByRole('button', { name: /Guardar/i }));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ dataFalta: '2026-10-17' }),
+    );
+
+    vi.useRealTimers();
+  });
+
+  it('motorista não mostra a linha de prazo 22:00', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-15T20:59:00Z'));
+    render(
+      <LogAbsenceModal isOpen onClose={vi.fn()} onSubmit={vi.fn()} tipoPerfil="Motorista" />,
+    );
+    expect(screen.queryByTestId('falta-prazo-copy')).not.toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it('passageiro mostra a linha de prazo 22:00', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-15T20:59:00Z'));
+    render(
+      <LogAbsenceModal isOpen onClose={vi.fn()} onSubmit={vi.fn()} tipoPerfil="Passageiro" />,
+    );
+    expect(screen.getByTestId('falta-prazo-copy')).toHaveTextContent(
+      'Avisa até às 22:00 do dia anterior.',
+    );
+    vi.useRealTimers();
+  });
+
+  it('motorista limita data a hoje ou anterior (sem datas futuras)', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-10-01T12:00:00Z'));
 

@@ -57,6 +57,79 @@ export function filterFaltasEsteMes(faltas, refDate = new Date()) {
 }
 
 /**
+ * Primeiro dia do mês (YYYY-MM-01) a partir de YYYY-MM-DD.
+ * @param {string} isoDate
+ * @returns {string}
+ */
+export function firstDayOfMonthFromIso(isoDate) {
+  const iso = String(isoDate || '').slice(0, 10);
+  const match = /^(\d{4})-(\d{2})/.exec(iso);
+  if (!match) return iso;
+  return `${match[1]}-${match[2]}-01`;
+}
+
+/**
+ * Mês de liquidação do desconto (alinhado a `_desconto_faltas_pagamento` SQL).
+ * @param {{ data_falta?: string, desconto_mes_referencia?: string | null }} falta
+ * @returns {string}
+ */
+export function descontoMesReferenciaFalta(falta) {
+  const explicit = String(falta?.desconto_mes_referencia || '').slice(0, 10);
+  if (explicit) return explicit;
+  return firstDayOfMonthFromIso(falta?.data_falta);
+}
+
+/**
+ * Faltas cujo desconto liquida no mês corrente (Luanda), independentemente de `data_falta`.
+ * @param {Array<{ data_falta?: string, desconto_mes_referencia?: string | null }>} faltas
+ * @param {Date} [refDate]
+ * @returns {Array}
+ */
+export function filterFaltasDescontoMesAtual(faltas, refDate = new Date()) {
+  const mesAtual = firstDayCurrentMonthLuanda(refDate);
+  return (faltas || []).filter(
+    (f) => descontoMesReferenciaFalta(f) === mesAtual,
+  );
+}
+
+/**
+ * Amanhã em Luanda (YYYY-MM-DD).
+ * @param {Date} [refDate]
+ * @returns {string}
+ */
+export function tomorrowLuandaISO(refDate = new Date()) {
+  const today = todayLuandaISO(refDate);
+  const d = new Date(`${today}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return luandaDateFmt.format(d);
+}
+
+import {
+  minDataFaltaPassageiroProprioLuanda,
+  isPassageiroProprioFaltaDataSubmissivel,
+} from './passageiroFaltaPrazo';
+
+export {
+  minDataFaltaPassageiroProprioLuanda as minDataFaltaPassageiroLuanda,
+  isPassageiroProprioFaltaDataSubmissivel as isPassageiroFaltaDataSubmissivel,
+};
+
+/**
+ * Limites min/max do input date no modal.
+ * @param {{ isPassageiroLocked: boolean, refDate?: Date }} opts
+ * @returns {{ min: string, max?: string }}
+ */
+export function resolveLogAbsenceDateBounds({ isPassageiroLocked, refDate = new Date() }) {
+  if (isPassageiroLocked) {
+    return { min: minDataFaltaPassageiroProprioLuanda(refDate) };
+  }
+  return {
+    min: firstDayCurrentMonthLuanda(refDate),
+    max: todayLuandaISO(refDate),
+  };
+}
+
+/**
  * @param {Array<{ desconto_kz?: number }>} faltas
  * @returns {number}
  */

@@ -15,6 +15,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import {
+  filterFaltasDescontoMesAtual,
   filterFaltasEsteMes,
   formatFaltaDiaCurto,
   resolveFaltasHubCard,
@@ -132,7 +133,8 @@ const AbsenceTracker = () => {
   }, [acordoId, carregarFaltas, carregarAcordosActivos, carregarGatePagamento]);
 
   const faltasEsteMes = filterFaltasEsteMes(faltas);
-  const totalDesconto = sumDescontoFaltas(faltasEsteMes);
+  const faltasDescontoMesAtual = filterFaltasDescontoMesAtual(faltas);
+  const totalDesconto = sumDescontoFaltas(faltasDescontoMesAtual);
 
   const handleLogAbsence = async (formData) => {
     if (!acordoId) return;

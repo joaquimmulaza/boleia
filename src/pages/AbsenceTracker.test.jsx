@@ -84,7 +84,7 @@ describe('AbsenceTracker — marketplace', () => {
       {
         id: 'f1',
         id_acordo: 'acordo-uuid-001',
-        data_falta: '2026-09-01',
+        data_falta: '2026-10-01',
         tipo: 'Passageiro',
         desconto_kz: 1363.64,
         viagem: 'ambas',
@@ -101,6 +101,7 @@ describe('AbsenceTracker — marketplace', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -118,6 +119,37 @@ describe('AbsenceTracker — marketplace', () => {
     render(<AbsenceTracker />);
     expect(await screen.findAllByText(/1363,64/)).toHaveLength(2);
     expect(screen.queryByText(/-1363,64/)).not.toBeInTheDocument();
+  });
+
+  it('Total a descontar usa desconto_mes_referencia, não só data_falta', async () => {
+    vi.spyOn(faltasDisplay, 'filterFaltasEsteMes').mockImplementation((faltas) => faltas || []);
+
+    mockGetAbsences.mockResolvedValue([
+      {
+        id: 'f-set-cred-out',
+        id_acordo: 'acordo-uuid-001',
+        data_falta: '2026-09-08',
+        desconto_mes_referencia: '2026-10-01',
+        tipo: 'Passageiro',
+        desconto_kz: 1000,
+        viagem: 'ambas',
+      },
+      {
+        id: 'f-set-only',
+        id_acordo: 'acordo-uuid-001',
+        data_falta: '2026-09-20',
+        desconto_mes_referencia: '2026-09-01',
+        tipo: 'Passageiro',
+        desconto_kz: 800,
+        viagem: 'ambas',
+      },
+    ]);
+
+    render(<AbsenceTracker />);
+    expect(await screen.findByText(/Total a descontar/i)).toBeInTheDocument();
+    const totalBlock = screen.getByText(/Total a descontar/i).closest('div');
+    expect(totalBlock).toHaveTextContent('1000');
+    expect(totalBlock).not.toHaveTextContent('1800');
   });
 
   it('usa filtro «Este mês» no total e no histórico', async () => {
