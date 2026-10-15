@@ -92,7 +92,9 @@ import {
   getAcordoContactos,
   listPagamentosPendentesMotoristaAcordo,
   getObrigacaoPagamentoPassageiro,
+  listAnulacaoMotivoLugarAcordos,
 } from '../services/PaymentService';
+import { ANULACAO_MOTIVO } from '../constants/anulacaoMotivos.js';
 import { resetOverlayStackForTests } from '../utils/overlayStack';
 
 const acordoActivoMulti = {
@@ -263,6 +265,33 @@ describe('MyAgreements follow-up #278', () => {
     );
   });
 
+  it('B2: passageiro cancelado_justificado sem JC usa toast passageiro (não motorista)', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-other' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoActivoMulti]);
+    getObrigacaoPagamentoPassageiro.mockResolvedValue({
+      pagamento: { estado: 'em_custodia' },
+      obrigacao: { valor_em_divida: 0 },
+    });
+    terminateAgreement.mockResolvedValue({
+      id: 'acordo-e117',
+      estado: 'cancelado_justificado',
+      terminate_status: 'ok',
+    });
+
+    renderPage(['/acordos?openAcordoId=acordo-e117']);
+    await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    await fluxoConsensualImediatoMotorista();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('agreements-feedback')).toHaveTextContent(
+        TOAST_JC_PASSAGEIRO_ACORDO_ENCERRADO,
+      );
+    });
+    expect(screen.getByTestId('agreements-feedback')).not.toHaveTextContent(
+      TOAST_JC_MOTORISTA_ACORDO_RESCINDIDO,
+    );
+  });
+
   it('B2: cancelado_justificado sem modo justa_causa usa toast motorista', async () => {
     terminateAgreement.mockResolvedValue({
       id: 'acordo-e117',
@@ -342,6 +371,47 @@ describe('MyAgreements follow-up #278', () => {
         TOAST_JC_PASSAGEIRO_ACORDO_ENCERRADO,
       );
     });
+  });
+
+  it('DRY: cartão e header partilham chipCtx — mesma copy no chip de lugar', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-exp' }, tipoPerfil: 'Passageiro' });
+    listAnulacaoMotivoLugarAcordos.mockResolvedValue([
+      {
+        acordo_id: 'acordo-e117',
+        passenger_id: 'pax-exp',
+        anulacao_motivo: ANULACAO_MOTIVO.PRAZO_RESERVA_EXPIRADO,
+        pagamento_estado: 'anulado',
+      },
+    ]);
+    getAgreementsForPassenger.mockResolvedValue([
+      {
+        ...acordoActivoMulti,
+        acordos_passageiros: [
+          {
+            id: 'ap-exp-me',
+            passenger_id: 'pax-exp',
+            estado: 'expirado',
+            quota_mensal_kz: 15000,
+            perfis: { nome_completo: 'Tu' },
+          },
+          acordoActivoMulti.acordos_passageiros[1],
+        ],
+      },
+    ]);
+    getObrigacaoPagamentoPassageiro.mockResolvedValue({
+      pagamento: { estado: 'anulado', anulacao_motivo: ANULACAO_MOTIVO.PRAZO_RESERVA_EXPIRADO },
+      obrigacao: { valor_em_divida: 0 },
+    });
+
+    renderPage(['/acordos?openAcordoId=acordo-e117']);
+    const chipTestId = 'acordo-lugar-expirado-chip-acordo-e117';
+    await waitFor(() => {
+      expect(screen.getAllByTestId(chipTestId).length).toBeGreaterThanOrEqual(2);
+    });
+    const [cardChip, headerChip] = screen.getAllByTestId(chipTestId);
+    expect(cardChip).toHaveTextContent(CHIP_LUGAR_RESERVA_EXPIRADA);
+    expect(headerChip).toHaveTextContent(CHIP_LUGAR_RESERVA_EXPIRADA);
+    expect(cardChip.textContent).toBe(headerChip.textContent);
   });
 
   it('B1: chip justa causa no header do sheet coincide com a lista (passageiro)', async () => {

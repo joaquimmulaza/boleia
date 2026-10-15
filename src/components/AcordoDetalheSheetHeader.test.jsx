@@ -31,6 +31,10 @@ describe('AcordoDetalheSheetHeader — chips sticky', () => {
         onRegistarFalta={() => {}}
         onEncerrar={() => {}}
         titulo="Detalhe do acordo"
+        minhaChipCtx={{
+          estado: 'anulado',
+          anulacao_motivo: 'Rescisão por justa causa',
+        }}
       />,
     );
 

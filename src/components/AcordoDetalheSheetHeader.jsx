@@ -27,7 +27,7 @@ import { resolveAcordoListaCabecalhoUi } from '../utils/resolveAcordoListaCabeca
  *   tipoPerfil?: string | null,
  *   viewerUserId?: string | null,
  *   minhaLinha?: { passenger_id?: string, estado?: string, lugar_rescisao_modo?: string | null, lugar_saida_iniciador?: string | null } | null,
- *   minhaLinhaPagamento?: { anulacao_motivo?: string | null, estado?: string | null } | null,
+ *   minhaChipCtx?: { anulacao_motivo?: string | null, estado?: string | null } | null,
  *   leavePending?: boolean,
  *   isBodyScrolled?: boolean,
  *   fecharRef?: import('react').RefObject<HTMLButtonElement | null>,
@@ -54,7 +54,7 @@ export default function AcordoDetalheSheetHeader({
   tipoPerfil,
   viewerUserId,
   minhaLinha = null,
-  minhaLinhaPagamento = null,
+  minhaChipCtx = null,
   leavePending = false,
   isBodyScrolled = false,
   fecharRef,
@@ -86,10 +86,10 @@ export default function AcordoDetalheSheetHeader({
     viewerUserId,
     tipoPerfil,
     minhaLinha: minhaLinhaCabecalho,
-    minhaChipCtx: minhaLinhaPagamento,
+    minhaChipCtx,
   });
   const chipLugarLabel = minhaLinhaCabecalho
-    ? labelChipFimLugar(minhaLinhaCabecalho, minhaLinhaPagamento)
+    ? labelChipFimLugar(minhaLinhaCabecalho, minhaChipCtx)
     : null;
   const mostrarChipLugarHeader =
     Boolean(mostrarChipLugar && minhaLinhaCabecalho && mostrarChipFimLugar(chipLugarLabel));

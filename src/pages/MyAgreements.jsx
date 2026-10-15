@@ -146,6 +146,8 @@ import {
   LISTA_SECCAO_ACTIVOS,
   LISTA_SECCAO_ENCERRADOS,
   TOAST_JC_MOTORISTA_ACORDO_RESCINDIDO,
+  TOAST_JC_PASSAGEIRO_LUGAR_TERMINADO,
+  TOAST_JC_PASSAGEIRO_ACORDO_ENCERRADO,
 } from '../constants/acordoFollowup278Copy.js';
 import { copyToastJustaCausaPassageiro } from '../utils/passageiroJustaCausaToast.js';
 import {
@@ -1064,7 +1066,19 @@ const MyAgreements = () => {
           acordoEstadoApos: estado,
           lugaresVivosAntes: lugaresVivosAntesJc,
         });
-        text = toastJc ?? TOAST_JC_MOTORISTA_ACORDO_RESCINDIDO;
+        if (toastJc) {
+          text = toastJc;
+        } else if (String(tipoPerfil || '') === 'Motorista') {
+          text = TOAST_JC_MOTORISTA_ACORDO_RESCINDIDO;
+        } else if (
+          estado === 'cancelado'
+          || estado === 'cancelado_justificado'
+          || estado === 'expirado'
+        ) {
+          text = TOAST_JC_PASSAGEIRO_ACORDO_ENCERRADO;
+        } else {
+          text = TOAST_JC_PASSAGEIRO_LUGAR_TERMINADO;
+        }
       }
 
       setMessage({ type: 'success', text });
@@ -1447,7 +1461,7 @@ const MyAgreements = () => {
             tipoPerfil={tipoPerfil}
             viewerUserId={user?.id}
             minhaLinha={minhaLinha}
-            minhaLinhaPagamento={pagamentoViewer}
+            minhaChipCtx={minhaChipCtxSheet}
             leavePending={leavePending}
             isBodyScrolled={acordoSheetHeaderScrolled}
             fecharRef={acordoSheetFecharRef}

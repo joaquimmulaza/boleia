@@ -71,7 +71,7 @@ export default function DevFollowup278Capture() {
               estado: 'saiu',
               lugar_rescisao_modo: 'justa_causa',
             }}
-            minhaLinhaPagamento={{ estado: 'anulado' }}
+            minhaChipCtx={{ estado: 'anulado' }}
             onClose={() => {}}
             podeRegistarFaltas={false}
             podeEncerrar={false}
@@ -103,7 +103,7 @@ export default function DevFollowup278Capture() {
               estado: 'saiu',
               lugar_rescisao_modo: 'justa_causa',
             }}
-            minhaLinhaPagamento={{ estado: 'anulado' }}
+            minhaChipCtx={{ estado: 'anulado' }}
             onClose={() => {}}
             podeRegistarFaltas={false}
             podeEncerrar={false}
@@ -133,7 +133,7 @@ export default function DevFollowup278Capture() {
               estado: 'saiu',
               lugar_rescisao_modo: 'justa_causa',
             }}
-            minhaLinhaPagamento={{ estado: 'anulado' }}
+            minhaChipCtx={{ estado: 'anulado' }}
             onClose={() => {}}
             podeRegistarFaltas={false}
             podeEncerrar={false}
@@ -158,7 +158,7 @@ export default function DevFollowup278Capture() {
             tipoPerfil="Passageiro"
             viewerUserId="pax-exp"
             minhaLinha={{ passenger_id: 'pax-exp', estado: 'expirado' }}
-            minhaLinhaPagamento={{
+            minhaChipCtx={{
               estado: 'anulado',
               anulacao_motivo: ANULACAO_MOTIVO.PRAZO_RESERVA_EXPIRADO,
             }}
