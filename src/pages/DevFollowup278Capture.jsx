@@ -1,0 +1,95 @@
+import React from 'react';
+import { Users } from 'lucide-react';
+import AcordoPagamentosMotoristaPanel from '../components/AcordoPagamentosMotoristaPanel';
+import { Badge } from '../components/ui/badge';
+import {
+  labelChipFimLugar,
+  chipClassFimLugar,
+} from '../utils/acordoSeatEndChip';
+import { LISTA_SECCAO_ACTIVOS, LISTA_SECCAO_ENCERRADOS } from '../constants/acordoFollowup278Copy.js';
+
+/**
+ * Captura DEV 390px — follow-up #278 (PR body only).
+ */
+export default function DevFollowup278Capture() {
+  const pagamentoP1a = {
+    pagamento_id: 'e4f7e6b4',
+    passenger_id: 'pax-debt',
+    passenger_nome: 'Maria Devedora',
+    estado: 'pendente_pagamento',
+    valor: 15000,
+    valor_em_divida: 15000,
+  };
+
+  const chips = [
+    {
+      key: 'jc',
+      linha: { estado: 'saiu', lugar_rescisao_modo: 'justa_causa' },
+      pagamento: null,
+    },
+    {
+      key: 'vol',
+      linha: { estado: 'saiu' },
+      pagamento: null,
+    },
+    {
+      key: 'ret',
+      linha: { estado: 'saiu', lugar_saida_iniciador: 'motorista' },
+      pagamento: null,
+    },
+  ];
+
+  return (
+    <div className="min-h-dvh bg-background-light dark:bg-background-dark p-4">
+      <div className="mx-auto max-w-[390px] space-y-8">
+        <section data-testid="capture-p1a-pagamento">
+          <p className="text-xs font-semibold text-slate-500 mb-2">P1-a — pagamento pendente (motorista)</p>
+          <AcordoPagamentosMotoristaPanel
+            acordoTerminado={false}
+            rows={[pagamentoP1a]}
+          />
+        </section>
+
+        <section data-testid="capture-chips-motorista" className="space-y-2">
+          <p className="text-xs font-semibold text-slate-500">P1-d — chips lugar</p>
+          <ul className="space-y-2">
+            {chips.map(({ key, linha, pagamento }) => {
+              const label = labelChipFimLugar(linha, pagamento);
+              return (
+                <li key={key} className="flex items-center gap-2 text-sm">
+                  <span>{key}</span>
+                  <Badge variant="secondary" className={chipClassFimLugar(label)}>
+                    {label}
+                  </Badge>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
+        <section data-testid="capture-lista-pax" className="space-y-3">
+          <p className="text-xs font-semibold text-slate-500">P1-e — lista passageiro (A saiu)</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+            {LISTA_SECCAO_ENCERRADOS} · 1
+          </p>
+          <div className="rounded-xl border p-4 space-y-2 bg-white dark:bg-slate-900">
+            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100">Activo</span>
+            <div className="flex items-center gap-2 font-bold text-sm">
+              <span>Viana</span>
+              <span>→</span>
+              <span>Centro</span>
+            </div>
+            <div className="flex justify-between text-sm text-slate-500">
+              <span className="flex items-center gap-1">
+                <Users size={14} />
+                Grupo · 2 pessoas
+              </span>
+              <strong className="text-primary">15 000 Kz / pessoa</strong>
+            </div>
+          </div>
+          <p className="text-xs text-slate-400">{LISTA_SECCAO_ACTIVOS} · 0 (outro pax noutra sessão)</p>
+        </section>
+      </div>
+    </div>
+  );
+}

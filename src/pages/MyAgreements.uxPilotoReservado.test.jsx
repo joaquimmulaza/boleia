@@ -234,7 +234,7 @@ describe('MyAgreements — UX piloto reservado (lista)', () => {
     expect(within(card).getByText(/Individual/i)).toBeInTheDocument();
   });
 
-  it('só reservado: chip Reservado e sem linha Grupo (0 activos — nunca «0 pessoas»)', async () => {
+  it('só reservado: chip Reservado e linha Grupo com lugares vivos (Maestro)', async () => {
     getAgreementsForDriver.mockResolvedValue([
       acordoBase([
         {
@@ -261,10 +261,11 @@ describe('MyAgreements — UX piloto reservado (lista)', () => {
     expect(chip).toBeTruthy();
     expect(chip).toHaveTextContent('Reservado');
     expect(chip).not.toHaveTextContent('Activo');
-    expect(within(card).queryByText(/Grupo ·/i)).not.toBeInTheDocument();
+    expect(within(card).getByText(/Grupo · 2 pessoas/i)).toBeInTheDocument();
     expect(within(card).queryByText(/0 pessoas/i)).not.toBeInTheDocument();
-    expect(within(card).getByTestId('acordo-grupo-linha-acordo-piloto')).toBeInTheDocument();
-    expect(within(card).getByTestId('acordo-grupo-linha-acordo-piloto').textContent?.trim()).toBe('');
+    expect(within(card).getByTestId('acordo-grupo-linha-acordo-piloto')).toHaveTextContent(
+      'Grupo · 2 pessoas',
+    );
   });
 
   it('misto: chip Activo e rótulo N_contrato (Grupo · 2)', async () => {
