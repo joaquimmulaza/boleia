@@ -34,7 +34,7 @@ export function useAcordoDetalheLiveRefresh({ enabled, userId, acordoId, onRefre
   useEffect(() => {
     if (!enabled || !userId || !acordoId) return undefined;
 
-    const mountId = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const mountId = `${Date.now()}-${crypto.randomUUID()}`;
     /** @type {ReturnType<typeof setInterval> | null} */
     let intervalId = null;
 
