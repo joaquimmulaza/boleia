@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, BellRing, BellOff } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
@@ -9,6 +9,8 @@ import OverlayShell from './OverlayShell';
 import SheetDragHandle from './SheetDragHandle';
 import NotificationListItem from './NotificationListItem';
 import { Button } from './ui/button';
+import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
+import { focusReturnableElement } from '../utils/focusTrap';
 
 export default function NotificationBell() {
   const { user } = useAuth();
@@ -17,22 +19,29 @@ export default function NotificationBell() {
   const { isSupported, permission, isSubscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const triggerRef = useRef(/** @type {HTMLButtonElement | null} */ (null));
+  const sheetDialogRef = useRef(/** @type {HTMLDivElement | null} */ (null));
+  const fecharRef = useRef(/** @type {HTMLButtonElement | null} */ (null));
   const navigate = useNavigate();
+
+  const handleClose = useCallback(() => {
+    setIsOpen(false);
+    focusReturnableElement(triggerRef.current);
+  }, []);
+
+  useDialogFocusTrap({
+    containerRef: sheetDialogRef,
+    initialFocusRef: fecharRef,
+    active: isOpen,
+  });
 
   useEffect(() => {
     if (!isOpen) return undefined;
 
     document.body.style.overflow = 'hidden';
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
 
     return () => {
       document.body.style.overflow = 'unset';
-      document.removeEventListener('keydown', onKeyDown);
     };
   }, [isOpen]);
 
@@ -40,7 +49,7 @@ export default function NotificationBell() {
     if (!notif.lida) {
       markAsRead(notif.id);
     }
-    setIsOpen(false);
+    handleClose();
 
     const targetUrl = resolveNotificationRoute(notif);
     navigate(targetUrl);
@@ -58,6 +67,7 @@ export default function NotificationBell() {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
+        ref={triggerRef}
         onClick={() => setIsOpen(true)}
         className="relative p-2 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
         aria-label="Notificações"
@@ -74,15 +84,16 @@ export default function NotificationBell() {
       {isOpen ? (
         <OverlayShell
           variant="bottom"
-          onDismiss={() => setIsOpen(false)}
+          onDismiss={handleClose}
           overlayClassName="bg-black/50 backdrop-blur-sm"
           panelTestId="notification-panel"
           panelClassName="bg-white dark:bg-slate-900 shadow-2xl flex flex-col"
           testId="notification-backdrop"
         >
-          <SheetDragHandle onDismiss={() => setIsOpen(false)} />
+          <SheetDragHandle onDismiss={handleClose} />
 
           <div
+            ref={sheetDialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="notification-sheet-title"
@@ -109,10 +120,11 @@ export default function NotificationBell() {
                   </button>
                 ) : null}
                 <Button
+                  ref={fecharRef}
                   type="button"
                   variant="outline"
                   className="h-9 rounded-full px-4 text-sm font-bold border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
-                  onClick={() => setIsOpen(false)}
+                  onClick={handleClose}
                 >
                   Fechar
                 </Button>
