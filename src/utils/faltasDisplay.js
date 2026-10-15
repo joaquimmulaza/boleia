@@ -3,6 +3,10 @@ import {
   firstDayCurrentMonthLuanda,
   firstDayNextMonthLuanda,
 } from './adendaEffectiveFrom';
+import {
+  minDataFaltaPassageiroProprioLuanda,
+  isPassageiroProprioFaltaDataSubmissivel,
+} from './passageiroFaltaPrazo';
 
 const luandaDateFmt = new Intl.DateTimeFormat('en-CA', {
   timeZone: ADENDA_TIMEZONE,
@@ -32,7 +36,23 @@ export function isFutureFaltaDate(dataFalta, refDate = new Date()) {
 }
 
 /**
- * Falta pertence ao mês corrente em Luanda e não é futura.
+ * Falta pertence ao mês corrente em Luanda (inclui datas futuras no mês).
+ * @param {string} dataFalta
+ * @param {Date} [refDate]
+ * @returns {boolean}
+ */
+export function isFaltaEsteMes(dataFalta, refDate = new Date()) {
+  const iso = String(dataFalta || '').slice(0, 10);
+  if (!iso) return false;
+
+  const monthStart = firstDayCurrentMonthLuanda(refDate);
+  const monthEndExclusive = firstDayNextMonthLuanda(refDate);
+
+  return iso >= monthStart && iso < monthEndExclusive;
+}
+
+/**
+ * Falta pertence ao mês corrente em Luanda e não é futura (validação de registo).
  * @param {string} dataFalta
  * @param {Date} [refDate]
  * @returns {boolean}
@@ -40,11 +60,7 @@ export function isFutureFaltaDate(dataFalta, refDate = new Date()) {
 export function isFaltaEsteMesAteHoje(dataFalta, refDate = new Date()) {
   const iso = String(dataFalta || '').slice(0, 10);
   if (!iso) return false;
-
-  const monthStart = firstDayCurrentMonthLuanda(refDate);
-  const monthEndExclusive = firstDayNextMonthLuanda(refDate);
-
-  return iso >= monthStart && iso < monthEndExclusive && iso <= todayLuandaISO(refDate);
+  return isFaltaEsteMes(iso, refDate) && iso <= todayLuandaISO(refDate);
 }
 
 /**
@@ -53,7 +69,7 @@ export function isFaltaEsteMesAteHoje(dataFalta, refDate = new Date()) {
  * @returns {Array}
  */
 export function filterFaltasEsteMes(faltas, refDate = new Date()) {
-  return (faltas || []).filter((f) => isFaltaEsteMesAteHoje(f.data_falta, refDate));
+  return (faltas || []).filter((f) => isFaltaEsteMes(f.data_falta, refDate));
 }
 
 /**
@@ -104,11 +120,6 @@ export function tomorrowLuandaISO(refDate = new Date()) {
   return luandaDateFmt.format(d);
 }
 
-import {
-  minDataFaltaPassageiroProprioLuanda,
-  isPassageiroProprioFaltaDataSubmissivel,
-} from './passageiroFaltaPrazo';
-
 export {
   minDataFaltaPassageiroProprioLuanda as minDataFaltaPassageiroLuanda,
   isPassageiroProprioFaltaDataSubmissivel as isPassageiroFaltaDataSubmissivel,
@@ -128,6 +139,124 @@ export function resolveLogAbsenceDateBounds({ isPassageiroLocked, refDate = new 
     max: todayLuandaISO(refDate),
   };
 }
+
+/**
+ * @param {{ tipo?: string }} falta
+ * @returns {boolean}
+ */
+function isFaltaTipoMotorista(falta) {
+  return String(falta?.tipo || '').toLowerCase() === 'motorista';
+}
+
+/**
+ * Soma descontos das faltas do mês visíveis para um passageiro (inclui faltas do motorista).
+ * @param {Array<{ tipo?: string, passenger_id?: string, desconto_kz?: number }>} faltas
+ * @param {string | null | undefined} passengerId
+ * @returns {number}
+ */
+export function sumDescontoFaltasParaPassageiro(faltas, passengerId) {
+  const pid = passengerId;
+  return (faltas || []).reduce((acc, falta) => {
+    const valor = Number(falta.desconto_kz) || 0;
+    if (isFaltaTipoMotorista(falta)) return acc + valor;
+    if (pid && falta.passenger_id === pid) return acc + valor;
+    return acc;
+  }, 0);
+}
+
+/**
+ * @param {{ acordos_passageiros?: Array<{ estado?: string }> } | null | undefined} acordo
+ * @returns {number}
+ */
+export function countPassageirosActivosAcordo(acordo) {
+  return (acordo?.acordos_passageiros || []).filter(
+    (p) => String(p.estado || '').toLowerCase() === 'activo',
+  ).length;
+}
+
+/**
+ * Total client-side na visão motorista: falta Motorista × passageiros activos; restantes uma vez.
+ * @param {Array<{ tipo?: string, desconto_kz?: number }>} faltas
+ * @param {number} nPassageirosActivos
+ * @returns {number}
+ */
+export function sumDescontoFaltasVisaoMotorista(faltas, nPassageirosActivos) {
+  const n = Math.max(0, Number(nPassageirosActivos) || 0);
+  return (faltas || []).reduce((acc, falta) => {
+    const valor = Number(falta.desconto_kz) || 0;
+    if (isFaltaTipoMotorista(falta)) return acc + valor * n;
+    return acc + valor;
+  }, 0);
+}
+
+/**
+ * Desconto efectivo de uma falta Motorista na lista (motorista) ou unitário (passageiro).
+ * @param {{ tipo?: string, desconto_kz?: number }} falta
+ * @param {number} nPassageirosActivos
+ * @param {'Passageiro' | 'Motorista' | undefined} tipoPerfil
+ * @returns {number}
+ */
+export function resolveDescontoLinhaFalta(falta, nPassageirosActivos, tipoPerfil) {
+  const valor = Number(falta?.desconto_kz) || 0;
+  if (tipoPerfil === 'Motorista' && isFaltaTipoMotorista(falta)) {
+    const n = Math.max(0, Number(nPassageirosActivos) || 0);
+    return valor * n;
+  }
+  return valor;
+}
+
+/**
+ * @param {string | null | undefined} estado
+ * @returns {boolean}
+ */
+function isPagamentoLiquidado(estado) {
+  return String(estado || '').toLowerCase() === 'liquidado';
+}
+
+/**
+ * «Total a descontar» — Maestro (a): liquidado → `desconto_faltas_kz`; senão soma das faltas do mês.
+ * Motorista: falta tipo Motorista desconta por cada passageiro activo (regra 4).
+ *
+ * @param {Array<{ passenger_id?: string, mes_referencia?: string, desconto_faltas_kz?: number, estado?: string }>} pagamentos
+ * @param {Array<{ tipo?: string, passenger_id?: string, desconto_kz?: number }>} faltasEsteMes
+ * @param {{
+ *   tipoPerfil?: 'Passageiro' | 'Motorista',
+ *   passengerId?: string | null,
+ *   nPassageirosActivos?: number,
+ *   refDate?: Date,
+ * }} [options]
+ * @returns {number}
+ */
+export function resolveDescontoFaltasTotal(pagamentos, faltasEsteMes, options = {}) {
+  const mes = firstDayCurrentMonthLuanda(options.refDate ?? new Date());
+  const rows = (pagamentos || []).filter(
+    (row) => String(row.mes_referencia || '').slice(0, 10) === mes,
+  );
+  const faltas = faltasEsteMes || [];
+
+  if (options.tipoPerfil === 'Motorista') {
+    const liquidadoRows = rows.filter((row) => isPagamentoLiquidado(row.estado));
+    if (liquidadoRows.length > 0 && liquidadoRows.length === rows.length) {
+      return liquidadoRows.reduce(
+        (acc, row) => acc + (Number(row.desconto_faltas_kz) || 0),
+        0,
+      );
+    }
+    const nActivos = options.nPassageirosActivos ?? 0;
+    return sumDescontoFaltasVisaoMotorista(faltas, nActivos);
+  }
+
+  const pid = options.passengerId;
+  const row = pid ? rows.find((r) => r.passenger_id === pid) : null;
+  if (row && isPagamentoLiquidado(row.estado)) {
+    return Number(row.desconto_faltas_kz) || 0;
+  }
+  return sumDescontoFaltasParaPassageiro(faltas, pid);
+}
+
+/** Classes partilhadas entre total e linhas do histórico. */
+export const DESCONTO_FALTA_AMOUNT_CLASS =
+  'tabular-nums text-slate-900 dark:text-white';
 
 /**
  * @param {Array<{ desconto_kz?: number }>} faltas

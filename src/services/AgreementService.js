@@ -5,6 +5,7 @@ import {
   resolveIdempotencyKey,
 } from '../utils/callRpcWithOfflineFallback.js';
 import { withLiveSessionAuthCall } from '../utils/authSessionRefresh.js';
+import { getFaltasCaptureDevBridge } from '../dev/faltasCaptureDev.js';
 
 /**
  * Listagens MyAgreements: `acordos.*` inclui encerramento_motivo (TABLE SELECT authenticated).
@@ -743,6 +744,11 @@ export async function listAdendaHistorico(acordoId) {
  * @param {string} driverId
  */
 export async function getAgreementsForDriver(driverId) {
+  const dev = getFaltasCaptureDevBridge();
+  if (dev?.getAgreementsForDriver) {
+    return dev.getAgreementsForDriver(driverId);
+  }
+
   await applyDueAdendasBestEffort(null);
   await applyDueTerminationsBestEffort(null);
   await applyDueNonRenewalsBestEffort(null);
@@ -766,6 +772,11 @@ export async function getAgreementsForDriver(driverId) {
  * @param {string} passengerId
  */
 export async function getAgreementsForPassenger(passengerId) {
+  const dev = getFaltasCaptureDevBridge();
+  if (dev?.getAgreementsForPassenger) {
+    return dev.getAgreementsForPassenger(passengerId);
+  }
+
   await applyDueAdendasBestEffort(null);
   await applyDueTerminationsBestEffort(null);
   await applyDueNonRenewalsBestEffort(null);

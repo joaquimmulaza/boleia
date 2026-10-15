@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { firstDayCurrentMonthLuanda } from '../utils/adendaEffectiveFrom.js';
+import { getFaltasCaptureDevBridge } from '../dev/faltasCaptureDev.js';
 
 const BUCKET = 'comprovativos-pagamento';
 
@@ -64,6 +65,11 @@ export async function getDescontoFaltasPreview(pagamentoId) {
 }
 
 export async function listPagamentosByAcordo(acordoId) {
+  const dev = getFaltasCaptureDevBridge();
+  if (dev?.listPagamentosByAcordo) {
+    return dev.listPagamentosByAcordo(acordoId);
+  }
+
   const { data, error } = await supabase
     .from('pagamentos_acordo')
     .select('*')

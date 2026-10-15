@@ -396,11 +396,21 @@ DECLARE
   v_mes_out date := '2026-10-01'::date;
   v_falta date := '2026-10-10'::date;
   v_desconto integer;
+  v_quota integer;
+  v_dias integer;
+  v_unit integer;
   v_has_r4 boolean := to_regprocedure(
     'public._passageiro_lugar_activo_em_data(uuid,uuid,date)'
   ) IS NOT NULL;
 BEGIN
   PERFORM set_config('session_replication_role', 'replica', true);
+
+  SELECT valor_mensal_por_passageiro_kz, dias_uteis_mes
+  INTO v_quota, v_dias
+  FROM public.acordos
+  WHERE id = v_acordo;
+
+  v_unit := floor(v_quota::numeric / v_dias)::integer;
 
   INSERT INTO auth.users (id, email) VALUES
     (v_pax_late, 'regra5-pax-late@test')
@@ -414,31 +424,36 @@ BEGIN
   WHERE id_acordo = v_acordo
     AND COALESCE(desconto_mes_referencia, date_trunc('month', data_falta)::date) = v_mes_out;
 
+  UPDATE public.acordos
+  SET valor_mensal_por_passageiro_kz = 11000, dias_uteis_mes = 22
+  WHERE id = v_acordo;
+
+  v_quota := 11000;
+  v_dias := 22;
+  v_unit := floor(v_quota::numeric / v_dias)::integer;
+
   UPDATE public.acordos_passageiros
   SET
     estado = 'activo',
     saiu_em = NULL,
     lugar_rescisao_em = NULL,
-    created_at = '2026-09-01 08:00:00+01'::timestamptz
+    created_at = '2026-09-01 08:00:00+01'::timestamptz,
+    quota_mensal_kz = v_quota
   WHERE id = v_ap;
 
   UPDATE public.pagamentos_acordo
-  SET validado_em = '2026-09-02 10:00:00+01'::timestamptz
+  SET estado = 'em_custodia', mes_referencia = v_mes_out
   WHERE id = v_pg_out;
 
   INSERT INTO public.faltas (
     id_acordo, data_falta, tipo, passenger_id, viagem, desconto_kz, desconto_mes_referencia
   ) VALUES (
-    v_acordo, v_falta, 'Motorista', NULL, 'ambas', 500, v_mes_out
+    v_acordo, v_falta, 'Motorista', NULL, 'ambas', v_unit, v_mes_out
   );
 
   v_desconto := public._desconto_faltas_pagamento(v_acordo, v_pax, v_mes_out);
-  IF v_desconto <> 500 THEN
-    IF v_has_r4 THEN
-      RAISE EXCEPTION 'FAIL R4 activo: esperava 500, obteve %', v_desconto;
-    ELSE
-      RAISE EXCEPTION 'FAIL-on-old R4 activo: esperava 500, obteve %', v_desconto;
-    END IF;
+  IF v_desconto <> v_unit THEN
+    RAISE EXCEPTION 'FAIL R4 (1) activo: esperava %, obteve %', v_unit, v_desconto;
   END IF;
 
   UPDATE public.acordos_passageiros
@@ -447,15 +462,11 @@ BEGIN
 
   v_desconto := public._desconto_faltas_pagamento(v_acordo, v_pax, v_mes_out);
   IF v_desconto <> 0 THEN
-    IF v_has_r4 THEN
-      RAISE EXCEPTION 'FAIL R4 saiu antes: esperava 0, obteve %', v_desconto;
-    ELSE
-      RAISE EXCEPTION 'FAIL-on-old R4: motorista falta aplicada após saída (obteve %)', v_desconto;
-    END IF;
+    RAISE EXCEPTION 'FAIL R4 (2) saiu antes: esperava 0, obteve %', v_desconto;
   END IF;
 
   UPDATE public.acordos_passageiros
-  SET estado = 'activo', saiu_em = NULL
+  SET estado = 'activo', saiu_em = NULL, lugar_rescisao_em = NULL
   WHERE id = v_ap;
 
   DELETE FROM public.acordos_passageiros WHERE id = v_ap_late;
@@ -464,27 +475,22 @@ BEGIN
   INSERT INTO public.acordos_passageiros (
     id, acordo_id, passenger_id, estado, quota_mensal_kz, ordem_insercao, created_at
   ) VALUES (
-    v_ap_late, v_acordo, v_pax_late, 'activo', 22000, 1,
-    '2026-10-15 08:00:00+01'::timestamptz
+    v_ap_late, v_acordo, v_pax_late, 'activo', v_quota, 1,
+    '2026-10-20 08:00:00+01'::timestamptz
   );
 
   INSERT INTO public.pagamentos_acordo (
     id, acordo_passageiro_id, acordo_id, passenger_id, driver_id,
     valor_kz, valor_quota_original_kz, valor_payout_liquido_kz, take_rate_pct,
-    mes_referencia, estado, validado_em
+    mes_referencia, estado
   ) VALUES (
     v_pg_late, v_ap_late, v_acordo, v_pax_late, v_driver,
-    22000, 22000, 19800, 0.10, v_mes_out, 'em_custodia',
-    '2026-10-16 09:00:00+01'::timestamptz
+    v_quota, v_quota, (v_quota * 0.9)::integer, 0.10, v_mes_out, 'em_custodia'
   );
 
   v_desconto := public._desconto_faltas_pagamento(v_acordo, v_pax_late, v_mes_out);
   IF v_desconto <> 0 THEN
-    IF v_has_r4 THEN
-      RAISE EXCEPTION 'FAIL R4 entrou depois: esperava 0, obteve %', v_desconto;
-    ELSE
-      RAISE EXCEPTION 'FAIL-on-old R4 entrou depois: obteve %', v_desconto;
-    END IF;
+    RAISE EXCEPTION 'FAIL R4 (3) entrou 20/10 falta 10/10: esperava 0, obteve %', v_desconto;
   END IF;
 
   UPDATE public.acordos_passageiros
@@ -494,15 +500,163 @@ BEGIN
   WHERE id = v_ap;
 
   v_desconto := public._desconto_faltas_pagamento(v_acordo, v_pax, v_mes_out);
-  IF v_desconto <> 500 THEN
-    IF v_has_r4 THEN
-      RAISE EXCEPTION 'FAIL R4 saiu depois: esperava 500, obteve %', v_desconto;
-    ELSE
-      RAISE EXCEPTION 'FAIL-on-old R4 saiu depois: esperava 500, obteve %', v_desconto;
-    END IF;
+  IF v_desconto <> v_unit THEN
+    RAISE EXCEPTION 'FAIL R4 (4) saiu depois: esperava %, obteve %', v_unit, v_desconto;
+  END IF;
+
+  UPDATE public.acordos_passageiros
+  SET estado = 'saiu', saiu_em = NULL, lugar_rescisao_em = NULL
+  WHERE id = v_ap;
+
+  v_desconto := public._desconto_faltas_pagamento(v_acordo, v_pax, v_mes_out);
+  IF v_desconto <> 0 THEN
+    RAISE EXCEPTION 'FAIL R4 (5) saiu sem timestamp: esperava 0, obteve %', v_desconto;
+  END IF;
+
+  UPDATE public.acordos_passageiros
+  SET
+    estado = 'saiu',
+    saiu_em = NULL,
+    lugar_rescisao_em = '2026-10-09 12:00:00+01'::timestamptz
+  WHERE id = v_ap;
+
+  DELETE FROM public.faltas
+  WHERE id_acordo = v_acordo AND data_falta = '2026-10-09'::date;
+
+  INSERT INTO public.faltas (
+    id_acordo, data_falta, tipo, passenger_id, viagem, desconto_kz, desconto_mes_referencia
+  ) VALUES (
+    v_acordo, '2026-10-09'::date, 'Motorista', NULL, 'ambas', v_unit, v_mes_out
+  );
+
+  v_desconto := public._desconto_faltas_pagamento(v_acordo, v_pax, v_mes_out);
+  IF v_desconto <> 0 THEN
+    RAISE EXCEPTION 'FAIL R4 (6) JC dia saída: esperava 0, obteve %', v_desconto;
+  END IF;
+
+  UPDATE public.acordos_passageiros
+  SET estado = 'activo', saiu_em = NULL, lugar_rescisao_em = NULL,
+      created_at = '2026-09-15 08:00:00+01'::timestamptz
+  WHERE id = v_ap;
+
+  DELETE FROM public.faltas WHERE id_acordo = v_acordo AND data_falta = '2026-10-03'::date;
+
+  INSERT INTO public.faltas (
+    id_acordo, data_falta, tipo, passenger_id, viagem, desconto_kz, desconto_mes_referencia
+  ) VALUES (
+    v_acordo, '2026-10-03'::date, 'Motorista', NULL, 'ambas', v_unit, v_mes_out
+  );
+
+  v_desconto := public._desconto_faltas_pagamento(v_acordo, v_pax, v_mes_out);
+  IF v_desconto <> v_unit THEN
+    RAISE EXCEPTION 'FAIL R4 pays Out falta 3/10: esperava %, obteve %', v_unit, v_desconto;
+  END IF;
+
+  UPDATE public.acordos_passageiros
+  SET created_at = '2026-10-05 08:00:00+01'::timestamptz
+  WHERE id = v_ap;
+
+  v_desconto := public._desconto_faltas_pagamento(v_acordo, v_pax, v_mes_out);
+  IF v_desconto <> 0 THEN
+    RAISE EXCEPTION 'FAIL R4 created 5/10 falta 3/10: esperava 0, obteve %', v_desconto;
+  END IF;
+
+  UPDATE public.acordos_passageiros
+  SET
+    estado = 'saiu',
+    saiu_em = '2026-10-12 12:00:00+01'::timestamptz,
+    lugar_rescisao_em = NULL,
+    created_at = '2026-09-01 08:00:00+01'::timestamptz
+  WHERE id = v_ap;
+
+  DELETE FROM public.faltas
+  WHERE id_acordo = v_acordo
+    AND COALESCE(desconto_mes_referencia, date_trunc('month', data_falta)::date) = v_mes_out;
+
+  INSERT INTO public.faltas (
+    id_acordo, data_falta, tipo, passenger_id, viagem, desconto_kz, desconto_mes_referencia
+  ) VALUES (
+    v_acordo, '2026-10-12'::date, 'Motorista', NULL, 'ambas', v_unit, v_mes_out
+  );
+
+  v_desconto := public._desconto_faltas_pagamento(v_acordo, v_pax, v_mes_out);
+  IF v_desconto <> 0 THEN
+    RAISE EXCEPTION 'FAIL R4 (7) falta no dia saída: esperava 0, obteve %', v_desconto;
+  END IF;
+
+  UPDATE public.acordos
+  SET grupo_id = NULL
+  WHERE id = v_acordo;
+
+  IF public._passageiro_membro_grupo_saiu_em(v_acordo, v_pax) IS NOT NULL THEN
+    RAISE EXCEPTION 'FAIL R4 (8) 1:1 sem grupo devia não usar membros_grupo';
   END IF;
 
   PERFORM set_config('session_replication_role', 'origin', true);
 
-  RAISE NOTICE 'PASS: Regra 4 motorista × lugar activo (4 casos)';
+  RAISE NOTICE 'PASS: Regra 4 motorista × lugar activo (casos 1–8 + vigência PM3)';
+END $$;
+
+\echo '=== Regra 4 — Fixture C (5.º passageiro saiu 12/10) ==='
+DO $$
+DECLARE
+  v_driver uuid := 'f5111111-1111-4111-8111-111111111111';
+  v_acordo uuid := 'f5444444-4444-4444-8444-444444444444';
+  v_ap5 uuid := 'f5cccccc-cccc-4ccc-8ccc-cccccccccccc';
+  v_pax5 uuid := 'f5dddddd-dddd-4ddd-8ddd-dddddddddddd';
+  v_pg5 uuid := 'f5eeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+  v_mes_out date := '2026-10-01'::date;
+  v_quota integer := 11000;
+  v_dias integer := 22;
+  v_unit integer;
+  v_desconto integer;
+BEGIN
+  v_unit := floor(v_quota::numeric / v_dias)::integer;
+
+  PERFORM set_config('session_replication_role', 'replica', true);
+
+  INSERT INTO auth.users (id, email) VALUES (v_pax5, 'regra5-pax5@test')
+  ON CONFLICT DO NOTHING;
+  INSERT INTO public.perfis (id, nome_completo, telefone, tipo_perfil) VALUES
+    (v_pax5, 'Regra5 Pax5', '931000004', 'Passageiro')
+  ON CONFLICT (id) DO NOTHING;
+
+  DELETE FROM public.acordos_passageiros WHERE id = v_ap5;
+  DELETE FROM public.pagamentos_acordo WHERE id = v_pg5;
+
+  INSERT INTO public.acordos_passageiros (
+    id, acordo_id, passenger_id, estado, quota_mensal_kz, ordem_insercao,
+    created_at, saiu_em
+  ) VALUES (
+    v_ap5, v_acordo, v_pax5, 'saiu', v_quota, 4,
+    '2026-09-01 08:00:00+01'::timestamptz,
+    '2026-10-12 12:00:00+01'::timestamptz
+  );
+
+  INSERT INTO public.pagamentos_acordo (
+    id, acordo_passageiro_id, acordo_id, passenger_id, driver_id,
+    valor_kz, valor_quota_original_kz, valor_payout_liquido_kz, take_rate_pct,
+    mes_referencia, estado
+  ) VALUES (
+    v_pg5, v_ap5, v_acordo, v_pax5, v_driver,
+    v_quota, v_quota, (v_quota * 0.9)::integer, 0.10, v_mes_out, 'em_custodia'
+  );
+
+  DELETE FROM public.faltas
+  WHERE id_acordo = v_acordo
+    AND COALESCE(desconto_mes_referencia, date_trunc('month', data_falta)::date) = v_mes_out;
+
+  INSERT INTO public.faltas (
+    id_acordo, data_falta, tipo, passenger_id, viagem, desconto_kz, desconto_mes_referencia
+  ) VALUES
+    (v_acordo, '2026-10-08'::date, 'Motorista', NULL, 'ambas', v_unit, v_mes_out),
+    (v_acordo, '2026-10-10'::date, 'Motorista', NULL, 'ambas', v_unit, v_mes_out);
+
+  v_desconto := public._desconto_faltas_pagamento(v_acordo, v_pax5, v_mes_out);
+  IF v_desconto <> v_unit * 2 THEN
+    RAISE EXCEPTION 'FAIL Fixture C pax5: esperava %, obteve %', v_unit * 2, v_desconto;
+  END IF;
+
+  PERFORM set_config('session_replication_role', 'origin', true);
+  RAISE NOTICE 'PASS: Fixture C 5.º passageiro (%) Kz', v_desconto;
 END $$;

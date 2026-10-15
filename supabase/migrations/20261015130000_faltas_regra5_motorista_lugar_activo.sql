@@ -1,9 +1,8 @@
 -- Regra 4 (PM) / Maestro GO: falta Motorista só desconta em pagamento de lugar activo na data_falta.
--- Fontes de vigência (acordos_passageiros):
---   início activo: MIN(validado_em) em pagamentos em_custodia/liquidado; senão created_at se estado activo/saiu/expirado.
---   fim (exclusive, Luanda): lugar_rescisao_em (justa causa) | saiu_em (leave normal, trigger) |
---   inferência valor_devido_kz proporcional (legacy saiu sem timestamp) | reservado_expira_em (expirado).
--- membros_grupo.saiu_em não aplica a acordos_passageiros.
+-- Início activo (PM opção 3): greatest(created_at Luanda, mês do 1.º pagamento em_custodia|liquidado).
+-- Fim exclusivo (Luanda): saiu_em → lugar_rescisao_em → membros_grupo.saiu_em → reservado_expira_em
+--   → acordos.cancelado_em / rescisao_effective_on; senão fim := inicio (exclui lugar).
+-- Falta no dia da saída não conta (p_data_falta >= fim). Reservado→saiu sem pagamento nunca activo.
 
 ALTER TABLE public.acordos_passageiros
   ADD COLUMN IF NOT EXISTS saiu_em timestamptz;
@@ -40,7 +39,8 @@ SET search_path TO public, pg_temp
 AS $function$
 DECLARE
   v_ap public.acordos_passageiros%ROWTYPE;
-  v_inicio date;
+  v_created date;
+  v_primeiro_mes_pago date;
 BEGIN
   SELECT * INTO v_ap
   FROM public.acordos_passageiros
@@ -50,19 +50,45 @@ BEGIN
     RETURN NULL;
   END IF;
 
-  SELECT MIN((timezone('Africa/Luanda', pg.validado_em))::date) INTO v_inicio
-  FROM public.pagamentos_acordo pg
-  WHERE pg.acordo_passageiro_id = v_ap.id
-    AND pg.validado_em IS NOT NULL
-    AND lower(pg.estado) IN ('em_custodia', 'liquidado', 'comprovativo_enviado');
-
-  IF v_inicio IS NULL AND lower(v_ap.estado) IN ('activo', 'saiu', 'expirado') THEN
-    v_inicio := (timezone('Africa/Luanda', v_ap.created_at))::date;
+  IF lower(v_ap.estado) = 'reservado' THEN
+    RETURN NULL;
   END IF;
 
-  RETURN v_inicio;
+  SELECT MIN(pg.mes_referencia) INTO v_primeiro_mes_pago
+  FROM public.pagamentos_acordo pg
+  WHERE pg.acordo_passageiro_id = v_ap.id
+    AND lower(pg.estado) IN ('em_custodia', 'liquidado');
+
+  IF v_primeiro_mes_pago IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  v_created := (timezone('Africa/Luanda', v_ap.created_at))::date;
+
+  RETURN GREATEST(v_created, v_primeiro_mes_pago);
 END;
 $function$;
+
+CREATE OR REPLACE FUNCTION public._passageiro_membro_grupo_saiu_em(
+  p_acordo_id uuid,
+  p_passenger_id uuid
+)
+RETURNS date
+LANGUAGE sql
+STABLE
+SET search_path TO public, pg_temp
+AS $$
+  SELECT (timezone('Africa/Luanda', mg.saiu_em))::date
+  FROM public.acordos a
+  JOIN public.membros_grupo mg
+    ON mg.grupo_id = a.grupo_id
+   AND mg.passenger_id = p_passenger_id
+  WHERE a.id = p_acordo_id
+    AND a.grupo_id IS NOT NULL
+    AND mg.saiu_em IS NOT NULL
+  ORDER BY mg.saiu_em DESC
+  LIMIT 1;
+$$;
 
 CREATE OR REPLACE FUNCTION public._passageiro_lugar_fim_activo_exclusive_em(p_acordo_passageiro_id uuid)
 RETURNS date
@@ -74,11 +100,7 @@ DECLARE
   v_ap public.acordos_passageiros%ROWTYPE;
   v_acordo public.acordos%ROWTYPE;
   v_fim date;
-  v_quota integer;
-  v_dias integer;
-  v_pg record;
-  d date;
-  v_devido integer;
+  v_inicio date;
 BEGIN
   SELECT * INTO v_ap
   FROM public.acordos_passageiros
@@ -98,46 +120,37 @@ BEGIN
     IF v_ap.reservado_expira_em IS NOT NULL THEN
       RETURN (timezone('Africa/Luanda', v_ap.reservado_expira_em))::date;
     END IF;
-    RETURN public._passageiro_lugar_inicio_activo_em(v_ap.id);
-  END IF;
-
-  IF lower(v_ap.estado) <> 'saiu' THEN
-    RETURN NULL;
-  END IF;
-
-  IF v_ap.lugar_rescisao_em IS NOT NULL THEN
-    RETURN (timezone('Africa/Luanda', v_ap.lugar_rescisao_em))::date;
+    v_inicio := public._passageiro_lugar_inicio_activo_em(v_ap.id);
+    RETURN v_inicio;
   END IF;
 
   IF v_ap.saiu_em IS NOT NULL THEN
     RETURN (timezone('Africa/Luanda', v_ap.saiu_em))::date;
   END IF;
 
-  v_fim := NULL;
-  v_quota := v_ap.quota_mensal_kz;
-  v_dias := COALESCE(v_acordo.dias_uteis_mes, 22);
+  IF v_ap.lugar_rescisao_em IS NOT NULL THEN
+    RETURN (timezone('Africa/Luanda', v_ap.lugar_rescisao_em))::date;
+  END IF;
 
-  FOR v_pg IN
-    SELECT mes_referencia, valor_devido_kz, valor_quota_original_kz
-    FROM public.pagamentos_acordo
-    WHERE acordo_passageiro_id = v_ap.id
-      AND valor_devido_kz IS NOT NULL
-      AND valor_devido_kz <
-        COALESCE(valor_quota_original_kz, v_quota, valor_devido_kz + 1)
-  LOOP
-    v_quota := COALESCE(v_pg.valor_quota_original_kz, v_quota);
-    d := v_pg.mes_referencia;
-    WHILE d < (v_pg.mes_referencia + INTERVAL '1 month')::date LOOP
-      v_devido := public.calc_quota_proporcional_kz(v_quota, v_dias, d);
-      IF v_devido = v_pg.valor_devido_kz THEN
-        v_fim := GREATEST(COALESCE(v_fim, d + 1), d + 1);
-        EXIT;
-      END IF;
-      d := d + 1;
-    END LOOP;
-  END LOOP;
+  v_fim := public._passageiro_membro_grupo_saiu_em(v_ap.acordo_id, v_ap.passenger_id);
+  IF v_fim IS NOT NULL THEN
+    RETURN v_fim;
+  END IF;
 
-  RETURN v_fim;
+  IF v_ap.reservado_expira_em IS NOT NULL THEN
+    RETURN (timezone('Africa/Luanda', v_ap.reservado_expira_em))::date;
+  END IF;
+
+  IF v_acordo.cancelado_em IS NOT NULL THEN
+    RETURN (timezone('Africa/Luanda', v_acordo.cancelado_em))::date;
+  END IF;
+
+  IF v_acordo.rescisao_effective_on IS NOT NULL THEN
+    RETURN v_acordo.rescisao_effective_on;
+  END IF;
+
+  v_inicio := public._passageiro_lugar_inicio_activo_em(v_ap.id);
+  RETURN v_inicio;
 END;
 $function$;
 
@@ -195,6 +208,7 @@ CREATE OR REPLACE FUNCTION public._desconto_faltas_pagamento(
 RETURNS integer
 LANGUAGE sql
 STABLE
+SECURITY DEFINER
 SET search_path TO public, pg_temp
 AS $$
   SELECT COALESCE(floor(COALESCE(SUM(f.desconto_kz), 0))::integer, 0)
@@ -222,16 +236,20 @@ REVOKE ALL ON FUNCTION public.trg_acordos_passageiros_set_saiu_em() FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.trg_acordos_passageiros_set_saiu_em() FROM anon, authenticated;
 
 REVOKE ALL ON FUNCTION public._passageiro_lugar_inicio_activo_em(uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public._passageiro_lugar_inicio_activo_em(uuid) TO authenticated;
-REVOKE EXECUTE ON FUNCTION public._passageiro_lugar_inicio_activo_em(uuid) FROM anon;
+REVOKE EXECUTE ON FUNCTION public._passageiro_lugar_inicio_activo_em(uuid) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._passageiro_lugar_inicio_activo_em(uuid) TO service_role;
+
+REVOKE ALL ON FUNCTION public._passageiro_membro_grupo_saiu_em(uuid, uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public._passageiro_membro_grupo_saiu_em(uuid, uuid) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._passageiro_membro_grupo_saiu_em(uuid, uuid) TO service_role;
 
 REVOKE ALL ON FUNCTION public._passageiro_lugar_fim_activo_exclusive_em(uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public._passageiro_lugar_fim_activo_exclusive_em(uuid) TO authenticated;
-REVOKE EXECUTE ON FUNCTION public._passageiro_lugar_fim_activo_exclusive_em(uuid) FROM anon;
+REVOKE EXECUTE ON FUNCTION public._passageiro_lugar_fim_activo_exclusive_em(uuid) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._passageiro_lugar_fim_activo_exclusive_em(uuid) TO service_role;
 
 REVOKE ALL ON FUNCTION public._passageiro_lugar_activo_em_data(uuid, uuid, date) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public._passageiro_lugar_activo_em_data(uuid, uuid, date) TO authenticated;
-REVOKE EXECUTE ON FUNCTION public._passageiro_lugar_activo_em_data(uuid, uuid, date) FROM anon;
+REVOKE EXECUTE ON FUNCTION public._passageiro_lugar_activo_em_data(uuid, uuid, date) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._passageiro_lugar_activo_em_data(uuid, uuid, date) TO service_role;
 
 GRANT EXECUTE ON FUNCTION public._desconto_faltas_pagamento(uuid, uuid, date) TO authenticated;
 REVOKE EXECUTE ON FUNCTION public._desconto_faltas_pagamento(uuid, uuid, date) FROM anon;

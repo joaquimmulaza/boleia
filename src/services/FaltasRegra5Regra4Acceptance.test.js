@@ -24,19 +24,28 @@ describe('Regra 4 faltas — motorista × lugar activo', () => {
     );
   });
 
-  it('persiste saiu_em na saída normal do lugar', () => {
+  it('início activo PM3: greatest(created_at, 1.º mes pago em_custodia|liquidado)', () => {
     const sql = readFileSync(MIG, 'utf8');
-    expect(sql).toMatch(/saiu_em/);
-    expect(sql).toMatch(/trg_acordos_passageiros_set_saiu_em/);
-    expect(sql).toMatch(/lugar_rescisao_em/);
+    expect(sql).toMatch(/GREATEST\(v_created, v_primeiro_mes_pago\)/);
+    expect(sql).not.toMatch(/validado_em/);
+    expect(sql).toMatch(/em_custodia.*liquidado/s);
   });
 
-  it('prova PG cobre 4 casos de vigência (activo, saiu antes/depois, entrou depois)', () => {
+  it('REVOKE EXECUTE dos helpers _passageiro_lugar_* a authenticated', () => {
+    const sql = readFileSync(MIG, 'utf8');
+    expect(sql).toMatch(
+      /REVOKE EXECUTE ON FUNCTION public\._passageiro_lugar_inicio_activo_em\(uuid\) FROM anon, authenticated/,
+    );
+    expect(sql).toMatch(/SECURITY DEFINER/);
+  });
+
+  it('prova PG cobre casos 1–8, Fixture C e vigência', () => {
     const proof = readFileSync(PG_PROOF, 'utf8');
-    expect(proof).toMatch(/FAIL R4 activo: esperava 500/);
-    expect(proof).toMatch(/FAIL R4 saiu antes: esperava 0/);
-    expect(proof).toMatch(/FAIL R4 entrou depois: esperava 0/);
-    expect(proof).toMatch(/FAIL R4 saiu depois: esperava 500/);
-    expect(proof).toMatch(/Regra 4 motorista × lugar activo \(4 casos\)/);
+    expect(proof).toMatch(/FAIL R4 \(1\) activo/);
+    expect(proof).toMatch(/FAIL R4 \(5\) saiu sem timestamp/);
+    expect(proof).toMatch(/FAIL R4 \(6\) JC dia saída/);
+    expect(proof).toMatch(/FAIL R4 \(8\) 1:1 sem grupo/);
+    expect(proof).toMatch(/FAIL Fixture C pax5/);
+    expect(proof).toMatch(/created 5\/10 falta 3\/10/);
   });
 });

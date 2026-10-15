@@ -13,16 +13,21 @@ import {
 } from '../services/PaymentService';
 import { allowsAssiduidadeFaltasForAcordo } from '../utils/paymentStatus';
 import LogAbsenceModal from '../components/LogAbsenceModal';
+import FaltaPrevistaBadge from '../components/FaltaPrevistaBadge';
 import PageShell from '../components/PageShell';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import { formatFaltaMotoristaRepartidaConta } from '../copy/faltasMotoristaRepartidaConta';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import {
-  filterFaltasDescontoMesAtual,
+  DESCONTO_FALTA_AMOUNT_CLASS,
+  countPassageirosActivosAcordo,
   filterFaltasEsteMes,
   formatFaltaDiaCurto,
+  isFutureFaltaDate,
+  resolveDescontoFaltasTotal,
+  resolveDescontoLinhaFalta,
   resolveFaltasHubCard,
-  sumDescontoFaltas,
 } from '../utils/faltasDisplay';
 import { resolvePassageiroTotalDescontoFaltasKz } from '../utils/resolveTotalDescontoFaltas';
 
@@ -41,7 +46,8 @@ function labelViagemFalta(viagem) {
 const AbsenceTracker = () => {
   const { acordoId } = useParams();
   const navigate = useNavigate();
-  const { user, tipoPerfil } = useAuth();
+  const { user, tipoPerfil, profileLoading } = useAuth();
+  const perfilPronto = Boolean(tipoPerfil);
 
   const [faltas, setFaltas] = useState([]);
   const [acordosActivos, setAcordosActivos] = useState([]);
@@ -52,12 +58,15 @@ const AbsenceTracker = () => {
   const [podeRegistarFaltas, setPodeRegistarFaltas] = useState(false);
   const [gateLoading, setGateLoading] = useState(false);
   const [acordoDetalhe, setAcordoDetalhe] = useState(null);
+  const [pagamentosAcordo, setPagamentosAcordo] = useState([]);
   const [totalDescontoServidor, setTotalDescontoServidor] = useState(null);
 
   const carregarGatePagamento = useCallback(async () => {
     if (!acordoId || !user?.id) {
       setPodeRegistarFaltas(false);
       setAcordoDetalhe(null);
+      setPagamentosAcordo([]);
+      setTotalDescontoServidor(null);
       return;
     }
     setGateLoading(true);
@@ -68,6 +77,7 @@ const AbsenceTracker = () => {
           ? getAgreementsForDriver(user.id)
           : getAgreementsForPassenger(user.id),
       ]);
+      setPagamentosAcordo(pagamentos || []);
       const acordo = (acordos || []).find((a) => a.id === acordoId) || null;
       setAcordoDetalhe(acordo);
       let idsRequired = [];
@@ -82,13 +92,19 @@ const AbsenceTracker = () => {
       setPodeRegistarFaltas(
         allowsAssiduidadeFaltasForAcordo(pagamentos, idsRequired),
       );
+
       if (tipoPerfil === 'Passageiro' && user?.id) {
-        const total = await resolvePassageiroTotalDescontoFaltasKz(
-          pagamentos,
-          user.id,
-          { fetchPreview: getDescontoFaltasPreview },
-        );
-        setTotalDescontoServidor(total);
+        try {
+          const total = await resolvePassageiroTotalDescontoFaltasKz(
+            pagamentos,
+            user.id,
+            { fetchPreview: getDescontoFaltasPreview },
+          );
+          setTotalDescontoServidor(total);
+        } catch (previewErr) {
+          console.error('Erro ao obter preview de desconto de faltas:', previewErr);
+          setTotalDescontoServidor(null);
+        }
       } else {
         setTotalDescontoServidor(null);
       }
@@ -96,6 +112,7 @@ const AbsenceTracker = () => {
       console.error('Erro ao verificar pagamento para faltas:', err);
       setPodeRegistarFaltas(false);
       setAcordoDetalhe(null);
+      setPagamentosAcordo([]);
       setTotalDescontoServidor(null);
     } finally {
       setGateLoading(false);
@@ -149,8 +166,12 @@ const AbsenceTracker = () => {
   }, [acordoId, carregarFaltas, carregarAcordosActivos, carregarGatePagamento]);
 
   const faltasEsteMes = filterFaltasEsteMes(faltas);
-  const faltasDescontoMesAtual = filterFaltasDescontoMesAtual(faltas);
-  const totalDescontoCliente = sumDescontoFaltas(faltasDescontoMesAtual);
+  const nPassageirosActivos = countPassageirosActivosAcordo(acordoDetalhe);
+  const totalDescontoCliente = resolveDescontoFaltasTotal(pagamentosAcordo, faltasEsteMes, {
+    tipoPerfil,
+    passengerId: user?.id,
+    nPassageirosActivos,
+  });
   const totalDesconto = totalDescontoServidor != null
     ? totalDescontoServidor
     : totalDescontoCliente;
@@ -265,7 +286,10 @@ const AbsenceTracker = () => {
         <p className="text-[13px] font-semibold leading-[18px] text-slate-500 dark:text-slate-400">
           Total a descontar
         </p>
-        <p className="text-[28px] font-bold leading-[38px] text-slate-900 tabular-nums dark:text-white">
+        <p
+          data-testid="desconto-falta-total"
+          className={`text-[28px] font-bold leading-[38px] ${DESCONTO_FALTA_AMOUNT_CLASS}`}
+        >
           {formatKwanza(totalDesconto)} Kz
         </p>
       </div>
@@ -295,6 +319,18 @@ const AbsenceTracker = () => {
         ) : (
           faltasEsteMes.map((falta) => {
             const viagem = labelViagemFalta(falta.viagem);
+            const futura = isFutureFaltaDate(falta.data_falta);
+            const isMotoristaFalta =
+              tipoPerfil === 'Motorista'
+              && String(falta.tipo || '').toLowerCase() === 'motorista';
+            const descontoLinhaKz = resolveDescontoLinhaFalta(
+              falta,
+              nPassageirosActivos,
+              tipoPerfil,
+            );
+            const contaMotoristaRepartida = isMotoristaFalta && nPassageirosActivos > 0
+              ? formatFaltaMotoristaRepartidaConta(nPassageirosActivos, descontoLinhaKz)
+              : null;
             return (
               <div
                 key={falta.id}
@@ -305,22 +341,32 @@ const AbsenceTracker = () => {
                   <span className="text-[15px] font-semibold leading-5 text-slate-900 dark:text-white">
                     {formatFaltaDiaCurto(falta.data_falta)}
                   </span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full border border-slate-200 bg-[#f6f8f6] px-2 py-0.5 text-[11px] font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
                       {falta.tipo}
                     </span>
+                    {futura ? <FaltaPrevistaBadge /> : null}
                     {viagem ? (
                       <span className="text-[13px] leading-[18px] text-slate-500 dark:text-slate-400">
                         {viagem}
                       </span>
                     ) : null}
+                    {contaMotoristaRepartida ? (
+                      <span
+                        data-testid="falta-motorista-repartida-conta"
+                        className="min-w-0 basis-full whitespace-normal break-words text-[13px] leading-[18px] text-slate-500 dark:text-slate-400"
+                      >
+                        {contaMotoristaRepartida}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
                 <p
-                  className="shrink-0 text-[15px] font-semibold text-slate-900 tabular-nums dark:text-white"
-                  aria-label={`Desconto de ${formatKwanza(falta.desconto_kz)} Kz`}
+                  data-testid="desconto-falta-amount"
+                  className={`shrink-0 text-[15px] font-semibold ${DESCONTO_FALTA_AMOUNT_CLASS}`}
+                  aria-label={`Desconto de ${formatKwanza(descontoLinhaKz)} Kz`}
                 >
-                  {formatKwanza(falta.desconto_kz)} Kz
+                  {formatKwanza(descontoLinhaKz)} Kz
                 </p>
               </div>
             );
@@ -352,7 +398,8 @@ const AbsenceTracker = () => {
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
-            disabled={submitting || gateLoading}
+            disabled={submitting || gateLoading || profileLoading || !perfilPronto}
+            aria-busy={profileLoading || undefined}
             className="rounded-xl bg-primary px-4 py-3.5 text-[15px] font-semibold text-[#06130b] disabled:opacity-60"
           >
             Registar Falta

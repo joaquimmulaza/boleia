@@ -13,6 +13,7 @@ import DevHotfixProdQaCapture from '../pages/DevHotfixProdQaCapture';
 import DevNotifCards269Capture from '../pages/DevNotifCards269Capture';
 import DevNotifV112Capture from '../pages/DevNotifV112Capture';
 import DevLogAbsenceModalCapture from '../pages/DevLogAbsenceModalCapture';
+import DevFaltasCapture from './DevFaltasCapture';
 
 /**
  * Rotas relativas a `/__dev/*` (lazy + `<Route path="/__dev/*" />` em App.jsx).
@@ -43,6 +44,10 @@ export default function DevAppRoutes() {
       <Route path="notif-cards-269" element={<DevNotifCards269Capture />} />
       <Route path="notif-v112" element={<DevNotifV112Capture />} />
       <Route path="log-absence-modal-passageiro" element={<DevLogAbsenceModalCapture />} />
+      <Route path="faltas-capture/:acordoId" element={<DevFaltasCapture />} />
+      <Route path="faltas-capture-liquidado/:acordoId" element={<DevFaltasCapture />} />
+      <Route path="faltas-capture-motorista/:acordoId" element={<DevFaltasCapture />} />
+      <Route path="faltas-capture-motorista-1pax/:acordoId" element={<DevFaltasCapture />} />
     </Routes>
   );
 }

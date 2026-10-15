@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { getFaltasCaptureDevBridge } from '../dev/faltasCaptureDev.js';
 
 const VIAGENS = new Set(['ida', 'regresso', 'ambas']);
 
@@ -10,6 +11,11 @@ const VIAGENS = new Set(['ida', 'regresso', 'ambas']);
 export const getAbsences = async (acordoId) => {
   if (!acordoId) {
     throw new Error('ID do acordo é obrigatório.');
+  }
+
+  const dev = getFaltasCaptureDevBridge();
+  if (dev?.getAbsences) {
+    return dev.getAbsences(acordoId);
   }
 
   const { data, error } = await supabase

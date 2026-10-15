@@ -9,6 +9,7 @@ describe('LogAbsenceModal — meia quota', () => {
     render(
       <LogAbsenceModal
         isOpen
+        tipoPerfil="Motorista"
         onClose={vi.fn()}
         onSubmit={vi.fn()}
         quotaMensalKz={30000}
@@ -31,6 +32,7 @@ describe('LogAbsenceModal — meia quota', () => {
     render(
       <LogAbsenceModal
         isOpen
+        tipoPerfil="Motorista"
         onClose={vi.fn()}
         onSubmit={vi.fn()}
         quotaMensalKz={30000}
@@ -48,6 +50,7 @@ describe('LogAbsenceModal — meia quota', () => {
     render(
       <LogAbsenceModal
         isOpen
+        tipoPerfil="Motorista"
         onClose={vi.fn()}
         onSubmit={onSubmit}
         quotaMensalKz={30000}
@@ -74,7 +77,7 @@ describe('LogAbsenceModal — meia quota', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-10-04T12:00:00Z'));
     render(
-      <LogAbsenceModal isOpen onClose={vi.fn()} onSubmit={onSubmit} />,
+      <LogAbsenceModal isOpen tipoPerfil="Motorista" onClose={vi.fn()} onSubmit={onSubmit} />,
     );
     const data = screen.getByLabelText(/^Data$/i);
     expect(data).toHaveAttribute('min', '2026-10-01');
@@ -224,12 +227,20 @@ describe('LogAbsenceModal — meia quota', () => {
     vi.useRealTimers();
   });
 
+  it('desactiva Guardar sem tipoPerfil conhecido', () => {
+    render(
+      <LogAbsenceModal isOpen onClose={vi.fn()} onSubmit={vi.fn()} />,
+    );
+    expect(screen.getByTestId('modal-registar-falta')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Guardar/i })).toBeDisabled();
+  });
+
   it('motorista limita data a hoje ou anterior (sem datas futuras)', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-10-01T12:00:00Z'));
 
     render(
-      <LogAbsenceModal isOpen onClose={vi.fn()} onSubmit={vi.fn()} />,
+      <LogAbsenceModal isOpen tipoPerfil="Motorista" onClose={vi.fn()} onSubmit={vi.fn()} />,
     );
 
     expect(screen.getByLabelText(/^Data$/i)).toHaveAttribute('min', '2026-10-01');

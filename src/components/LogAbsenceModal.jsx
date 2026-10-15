@@ -59,23 +59,23 @@ const LogAbsenceModal = ({
   isOpen,
   onClose,
   onSubmit,
-  tipoPerfil = 'Motorista',
+  tipoPerfil,
   quotaMensalKz = null,
   diasUteisMes = null,
 }) => {
-  const isPassageiro = String(tipoPerfil || '').toLowerCase() === 'passageiro';
-  const tipoDefault = isPassageiro ? 'Passageiro' : 'Motorista';
+  const perfilNorm = String(tipoPerfil || '').toLowerCase();
+  const isPassageiro = perfilNorm === 'passageiro';
+  const isMotorista = perfilNorm === 'motorista';
+  const tipoDefault = isPassageiro ? 'Passageiro' : isMotorista ? 'Motorista' : '';
   /** Passageiro na própria vaga (não motorista a registar outro). */
   const isPassageiroLocked = isPassageiro;
 
-  const buildInitialForm = () => ({
+  const [formData, setFormData] = useState(() => ({
     dataFalta: '',
     tipo: tipoDefault,
     observacao: '',
     viagem: /** @type {ViagemFalta} */ ('ambas'),
-  });
-
-  const [formData, setFormData] = useState(buildInitialForm);
+  }));
 
   if (!isOpen) return null;
 
@@ -86,7 +86,12 @@ const LogAbsenceModal = ({
   const showPrevista = isPassageiroLocked && isFutureFaltaDate(formData.dataFalta);
 
   const resetForm = () => {
-    setFormData(buildInitialForm());
+    setFormData({
+      dataFalta: '',
+      tipo: tipoDefault,
+      observacao: '',
+      viagem: 'ambas',
+    });
   };
 
   const handleClose = () => {
@@ -96,11 +101,15 @@ const LogAbsenceModal = ({
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!tipoDefault) return;
     const dataOk = isPassageiroLocked
       ? isPassageiroProprioFaltaDataSubmissivel(formData.dataFalta)
       : isFaltaEsteMesAteHoje(formData.dataFalta);
     if (!dataOk) return;
-    onSubmit(formData);
+    onSubmit({
+      ...formData,
+      tipo: isPassageiroLocked ? tipoDefault : (formData.tipo || tipoDefault),
+    });
     resetForm();
   };
 
@@ -175,7 +184,7 @@ const LogAbsenceModal = ({
             <select
               id="tipoFalta"
               className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-1.5 pr-10 text-[15px] text-slate-900 outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-              value={formData.tipo}
+              value={formData.tipo || tipoDefault}
               onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
             >
               <option value="Motorista">Motorista</option>
@@ -260,7 +269,8 @@ const LogAbsenceModal = ({
           </button>
           <button
             type="submit"
-            className="flex-1 rounded-xl bg-primary py-1.5 text-[15px] font-semibold text-[#06130b]"
+            disabled={!tipoDefault}
+            className="flex-1 rounded-xl bg-primary py-1.5 text-[15px] font-semibold text-[#06130b] disabled:opacity-60"
             title="Guardar"
           >
             Guardar
