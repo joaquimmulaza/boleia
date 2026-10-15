@@ -63,7 +63,7 @@ describe('OfertaEditPanel', () => {
     expect(regresso).toHaveAttribute('type', 'time');
     expect(regresso).toHaveValue('17:45');
     expect(regresso.className).toMatch(/time-input-24h/);
-    expect(regresso.className).toMatch(/min-w-\[6\.75rem\]/);
+    expect(regresso.className).not.toMatch(/min-w-/);
   });
 
   it('mostra confirm snapshot antes de guardar (copy genérica)', async () => {

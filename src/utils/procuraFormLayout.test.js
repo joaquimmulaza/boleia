@@ -7,24 +7,28 @@ import {
   PROCURA_FORM_SUBMIT_FOOTER_CLASS,
 } from './procuraFormLayout.js';
 
-describe('procuraFormLayout', () => {
+describe('procuraFormLayout — contrato B1 (#293 follow-up)', () => {
   const indexCss = readFileSync(resolve(process.cwd(), 'src/index.css'), 'utf8');
+  const layoutJsx = readFileSync(resolve(process.cwd(), 'src/layouts/Layout.jsx'), 'utf8');
   const dashboardJsx = readFileSync(
     resolve(process.cwd(), 'src/pages/PassengerDashboard.jsx'),
     'utf8',
   );
 
-  it('footer sticky colado ao fundo do main com fundo até à nav (pb-shell inset)', () => {
-    expect(PROCURA_FORM_SUBMIT_FOOTER_CLASS).toMatch(/\bbottom-0\b/);
-    expect(PROCURA_FORM_SUBMIT_FOOTER_CLASS).toMatch(/pb-\[var\(--shell-bottom-inset\)\]/);
-    expect(PROCURA_FORM_SUBMIT_FOOTER_CLASS).not.toMatch(/bottom-\[var\(--shell-bottom-inset\)\]/);
-    expect(indexCss).toMatch(/--procura-form-sticky-footer-reserve/);
-    expect(dashboardJsx).toMatch(/PROCURA_FORM_SUBMIT_FOOTER_CLASS/);
+  it('corpo do form sem reserva extra (main pb-shell + sticky bastam)', () => {
+    expect(PROCURA_FORM_BODY_CLASS).toBe('space-y-4 p-5');
+    expect(PROCURA_FORM_BODY_CLASS).not.toMatch(/procura-form-sticky-footer-reserve/);
+    expect(indexCss).not.toMatch(/--procura-form-sticky-footer-reserve/);
+    expect(indexCss).not.toMatch(/--procura-form-footer-action-height/);
   });
 
-  it('corpo do form reserva altura do footer sticky', () => {
-    expect(PROCURA_FORM_BODY_CLASS).toMatch(/pb-\[var\(--procura-form-sticky-footer-reserve\)\]/);
-    expect(dashboardJsx).toMatch(/PROCURA_FORM_BODY_CLASS/);
+  it('footer compensa pb-shell do main: bottom-0, pb e -mb shell inset', () => {
+    expect(layoutJsx).toMatch(/pb-shell/);
+    expect(PROCURA_FORM_SUBMIT_FOOTER_CLASS).toMatch(/\bbottom-0\b/);
+    expect(PROCURA_FORM_SUBMIT_FOOTER_CLASS).toMatch(/pb-\[var\(--shell-bottom-inset\)\]/);
+    expect(PROCURA_FORM_SUBMIT_FOOTER_CLASS).toMatch(/-mb-\[var\(--shell-bottom-inset\)\]/);
+    expect(PROCURA_FORM_SUBMIT_FOOTER_CLASS).not.toMatch(/bottom-\[var\(--shell-bottom-inset\)\]/);
+    expect(dashboardJsx).toMatch(/PROCURA_FORM_SUBMIT_FOOTER_CLASS/);
   });
 
   it('form procura não define max-h nem scroll interno overflow-y-auto', () => {

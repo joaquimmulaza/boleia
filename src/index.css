@@ -30,9 +30,6 @@
   --bottom-nav-height: 4rem;
   --bottom-nav-height-sm: 5rem;
   --shell-bottom-inset: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
-  /* Form procura: reserva scroll para footer sticky + safe nav */
-  --procura-form-footer-action-height: 4.75rem;
-  --procura-form-sticky-footer-reserve: calc(var(--procura-form-footer-action-height) + var(--shell-bottom-inset));
   --sheet-bottom-inset: calc(16px + env(safe-area-inset-bottom, 0px));
   /* Altura aproximada do cabeçalho sticky (puxador + Fechar + chips + título) para scrollIntoView */
   --acordo-detalhe-sheet-scroll-margin: 9.5rem;

@@ -1,11 +1,15 @@
 import React from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import TimeInput from './TimeInput';
 import { ADDRESS_INPUT_SURFACE_CLASS } from '../utils/addressInputSurface.js';
 
 describe('TimeInput', () => {
-  it('usa type=time com lang pt-PT e classe 24h', () => {
+  const indexCss = readFileSync(resolve(process.cwd(), 'src/index.css'), 'utf8');
+
+  it('usa type=time com lang pt-PT e classe 24h (min-width só em CSS)', () => {
     render(
       <TimeInput
         name="preferred_time"
@@ -21,7 +25,8 @@ describe('TimeInput', () => {
     expect(input).toHaveClass('time-input-24h');
     expect(input).toHaveAttribute('step', '60');
     expect(input.className).toMatch(/bg-background/);
-    expect(input.className).toMatch(/min-w-\[6\.75rem\]/);
+    expect(input.className).not.toMatch(/min-w-/);
+    expect(indexCss).toMatch(/\.time-input-24h\s*\{[^}]*min-width:\s*6\.75rem/s);
     expect(input.className).toMatch(/border-\[#718096\]/);
     ADDRESS_INPUT_SURFACE_CLASS.split(/\s+/).forEach((token) => {
       if (token) expect(input.className).toContain(token);

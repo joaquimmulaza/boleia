@@ -1,20 +1,19 @@
 /**
- * Layout do form Nova/Editar procura — scroll só no `<main>` do Layout (sem max-h interno).
- * Footer sticky colado ao fundo do scrollport; fundo opaco até à bottom nav (`pb-[shell-bottom-inset]`).
+ * Layout do form Nova/Editar procura — scroll só no `<main class="pb-shell">` do Layout.
+ * Footer sticky `bottom-0` com `-mb-[shell-bottom-inset]` compensa o pb-shell do main;
+ * `pb-[shell-bottom-inset]` no footer mantém o botão acima da nav com fundo opaco.
  */
 
 /** @type {string} */
 export const PROCURA_FORM_CLASS =
   'flex flex-col bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm';
 
-/** Corpo com reserva para o footer sticky (último campo + help text não ficam por baixo). */
 /** @type {string} */
-export const PROCURA_FORM_BODY_CLASS =
-  'space-y-4 p-5 pb-[var(--procura-form-sticky-footer-reserve)]';
+export const PROCURA_FORM_BODY_CLASS = 'space-y-4 p-5';
 
 /**
- * Sticky no fundo do `<main>`; padding inferior = inset da nav (fundo tapa a zona da bottom bar).
+ * Sticky no fundo do scrollport do main; margem negativa anula o pb-shell duplicado.
  * @type {string}
  */
 export const PROCURA_FORM_SUBMIT_FOOTER_CLASS =
-  'sticky bottom-0 z-[1] shrink-0 border-t border-slate-100 bg-white px-5 pt-3 pb-[var(--shell-bottom-inset)] dark:border-slate-800 dark:bg-slate-900';
+  'sticky bottom-0 z-[1] shrink-0 border-t border-slate-100 bg-white px-5 pt-3 pb-[var(--shell-bottom-inset)] -mb-[var(--shell-bottom-inset)] dark:border-slate-800 dark:bg-slate-900';
