@@ -1,3 +1,4 @@
+import { resolveNotificationListTitle } from './notificationCatalog.js';
 import {
   JUSTA_CAUSA_PASSAGEIRO_INVOCADOR_NOTIF_TYPE,
   JUSTA_CAUSA_PASSAGEIRO_INVOCADOR_SQL_PLACEHOLDER,
@@ -32,24 +33,13 @@ function resolveJustaCausaInvocadorCopyFromNotif(notif) {
 }
 
 /**
- * Título apresentado no sino (quando aplicável).
+ * Título apresentado no sino — fonte única: catálogo partilhado.
  *
  * @param {{ mensagem?: string, metadata?: object | null, tipo?: string }} notif
  * @returns {string | null}
  */
 export function resolveNotificationTitulo(notif) {
-  const metadata = notif?.metadata;
-  if (metadata?.type === JUSTA_CAUSA_PASSAGEIRO_INVOCADOR_NOTIF_TYPE) {
-    const tituloMeta = metadata?.titulo;
-    if (typeof tituloMeta === 'string' && tituloMeta.trim()) {
-      return tituloMeta.trim();
-    }
-    const copy = resolveJustaCausaInvocadorCopyFromNotif(notif);
-    if (copy) return copy.titulo;
-  }
-
-  const titulo = notif?.metadata?.titulo;
-  return typeof titulo === 'string' && titulo.trim() ? titulo.trim() : null;
+  return resolveNotificationListTitle(notif);
 }
 
 /**
