@@ -186,7 +186,13 @@ export const photonFeatureHasBairro = (feature) => {
  * @returns {Promise<object[]>}
  */
 const fetchPhotonRaw = async (query, signal) => {
-  const params = buildPhotonSearchParams(query, null);
+  const params = new URLSearchParams({
+    q: query,
+    lat: String(LUANDA_PHOTON_LAT),
+    lon: String(LUANDA_PHOTON_LON),
+    limit: String(RESULTS_LIMIT),
+    countrycode: 'ao',
+  });
 
   const url = `${PHOTON_BASE_URL}?${params.toString()}`;
   const response = await fetch(url, { signal });

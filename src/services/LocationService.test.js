@@ -96,6 +96,19 @@ describe('LocationService (OpenStreetMap / Photon)', () => {
       expect(options?.signal).toBeUndefined();
     });
 
+    it('não envia lang=pt ao Photon (API pública só aceita default, en, de, fr)', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ features: [] }),
+      });
+
+      await getPlacePredictions('Talatona');
+
+      const calledUrl = mockFetch.mock.calls[0][0];
+      expect(calledUrl).not.toMatch(/[?&]lang=pt(?:&|$)/);
+      expect(calledUrl).not.toContain('lang=pt');
+    });
+
     it('propaga AbortSignal ao fetch', async () => {
       const controller = new AbortController();
       mockFetch.mockResolvedValueOnce({

@@ -83,6 +83,19 @@ describe('resolveAcordoPagamentoUi — P0 Figma', () => {
     expect(ui.variant).toBe('S1');
   });
 
+  it('S3 justa causa — após load sem quota no payload mostra motivo (sem skeleton)', () => {
+    const copy = copyCartaoEstadoPagamentoPassageiro('S3', {
+      pagamento: {
+        estado: 'anulado',
+        anulacao_motivo: ANULACAO_MOTIVO.RESCISAO_JUSTA_CAUSA,
+      },
+      obrigacao: { valor_em_divida: 0 },
+      pagamentoLoading: false,
+    });
+    expect(copy.aguardarMontante).toBeFalsy();
+    expect(copy.secundaria).toMatch(/justa causa/i);
+  });
+
   it('S3 não mostra 0 Kz enquanto o montante não está carregado', () => {
     const copy = copyCartaoEstadoPagamentoPassageiro('S3', {
       pagamento: { estado: 'anulado' },
