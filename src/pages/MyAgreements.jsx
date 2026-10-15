@@ -666,7 +666,9 @@ const MyAgreements = () => {
     /** @type {Record<string, string>} */
     const focusTestIds = {
       pagamento: 'acordo-pagamento-section',
-      adenda: 'adenda-pendente',
+      adenda: 'preco-proximo-mes-panel',
+      'preco-proximo-mes': 'preco-proximo-mes-panel',
+      'motorista-pagamentos': 'motorista-pagamentos-panel',
       renovacao: 'renovacao-periodo-panel',
       avaliar: 'acordo-rating-banner',
       rescisao: 'rescisao-consensual-section',
@@ -753,12 +755,14 @@ const MyAgreements = () => {
       if (pagamentoLoading) return undefined;
       const section = document.querySelector('[data-testid="acordo-pagamento-section"]');
       if (!section) {
-        // Motorista nunca monta acordo-pagamento-section; limpar focus pendente (não abortar scroll passageiro).
         if (tipoPerfil === 'Motorista') {
           pendingFocusRef.current = null;
         }
         return undefined;
       }
+    }
+    if (focus === 'motorista-pagamentos' && pagamentoLoading) {
+      return undefined;
     }
 
     pendingFocusRef.current = null;

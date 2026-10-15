@@ -261,6 +261,25 @@ describe('NotificationBell', () => {
     expect(screen.queryByTestId('notification-panel')).not.toBeInTheDocument();
   });
 
+  it('tipo desconhecido só marca lida — não navega', () => {
+    mockNotifications.unshift({
+      id: 'n-unk',
+      mensagem: 'Algo estranho',
+      tipo: 'info',
+      lida: false,
+      created_at: new Date().toISOString(),
+      metadata: { type: 'tipo_inventado' },
+    });
+
+    renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+    fireEvent.click(screen.getByRole('button', { name: /Algo estranho/ }));
+
+    expect(markAsRead).toHaveBeenCalledWith('n-unk');
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(screen.getByTestId('notification-panel')).toBeInTheDocument();
+  });
+
   it('notificação consensual navega para openAcordoId com focus=rescisao', () => {
     mockNotifications.unshift({
       id: 'n-res',
@@ -278,7 +297,11 @@ describe('NotificationBell', () => {
 
     renderBell();
     fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Pedido de encerramento amigável' }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Pedido de encerramento\. Pedido de encerramento amigável/,
+      }),
+    );
 
     expect(mockNavigate).toHaveBeenCalledWith('/acordos?openAcordoId=ac-res&focus=rescisao');
   });

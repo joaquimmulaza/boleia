@@ -1,6 +1,7 @@
 import React from 'react';
 import { CheckCircle, Info, AlertCircle } from 'lucide-react';
 import NotificationRowKebab from './NotificationRowKebab';
+import { resolveCatalogTitle } from '../utils/notificationCatalog';
 
 /**
  * @param {{ type?: string }} props
@@ -31,10 +32,24 @@ function NotificationIcon({ type }) {
 }
 
 /**
+ * Título visível na lista (sem fallback «Boleia Certa» para notificações antigas).
+ *
+ * @param {{ metadata?: { titulo?: string }, mensagem?: string }} notif
+ * @returns {string | null}
+ */
+function resolveListItemTitle(notif) {
+  const metaTitulo = notif?.metadata?.titulo;
+  if (typeof metaTitulo === 'string' && metaTitulo.trim()) {
+    return metaTitulo.trim();
+  }
+  return resolveCatalogTitle(notif);
+}
+
+/**
  * Linha da lista de notificações (sino / sheet).
  *
  * @param {{
- *   notif: { id?: string, mensagem: string, tipo?: string, lida?: boolean, created_at?: string },
+ *   notif: { id?: string, mensagem: string, tipo?: string, lida?: boolean, created_at?: string, metadata?: object },
  *   onActivate?: () => void,
  *   onDelete?: () => void,
  *   showKebab?: boolean,
@@ -46,6 +61,9 @@ export default function NotificationListItem({
   onDelete,
   showKebab = true,
 }) {
+  const listTitle = resolveListItemTitle(notif);
+  const showTitle = Boolean(listTitle);
+
   let timeLabel = 'agora mesmo';
   if (notif.created_at) {
     const date = new Date(notif.created_at);
@@ -69,10 +87,12 @@ export default function NotificationListItem({
     }
   }
 
+  const rowLabel = showTitle ? `${listTitle}. ${notif.mensagem}` : notif.mensagem;
+
   return (
     <li
       role={onActivate ? 'button' : undefined}
-      aria-label={onActivate ? notif.mensagem : undefined}
+      aria-label={onActivate ? rowLabel : undefined}
       tabIndex={onActivate ? 0 : undefined}
       onKeyDown={
         onActivate
@@ -93,12 +113,25 @@ export default function NotificationListItem({
       <div className="mt-0.5 shrink-0">
         <NotificationIcon type={notif.tipo} />
       </div>
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 max-w-[390px]">
+        {showTitle ? (
+          <p
+            className={`text-sm font-semibold leading-snug line-clamp-2 text-pretty ${
+              !notif.lida
+                ? 'text-gray-900 dark:text-gray-100'
+                : 'text-gray-800 dark:text-gray-200'
+            }`}
+          >
+            {listTitle}
+          </p>
+        ) : null}
         <p
-          className={`text-sm leading-relaxed ${
-            !notif.lida
-              ? 'font-semibold text-gray-900 dark:text-gray-100'
-              : 'text-gray-600 dark:text-gray-300'
+          className={`text-sm leading-relaxed text-pretty ${
+            showTitle
+              ? 'mt-1 text-gray-600 dark:text-gray-400'
+              : !notif.lida
+                ? 'font-semibold text-gray-900 dark:text-gray-100'
+                : 'text-gray-600 dark:text-gray-300'
           }`}
         >
           {notif.mensagem}

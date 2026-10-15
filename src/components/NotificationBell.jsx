@@ -1,9 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Bell, BellRing, BellOff } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
 import { usePushNotifications } from '../hooks/usePushNotifications';
-import { resolveNotificationRoute } from '../utils/notificationRouter';
+import {
+  resolveNotificationListDestination,
+  shouldNavigateOnListTap,
+} from '../utils/notificationCatalog';
 import { useAuth } from '../contexts/AuthContext';
 import OverlayShell from './OverlayShell';
 import SheetDragHandle from './SheetDragHandle';
@@ -15,9 +18,28 @@ export default function NotificationBell() {
   const userId = user?.id || null;
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications(userId);
   const { isSupported, permission, isSubscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    return new URLSearchParams(window.location.search).get('notificacoes') === '1';
+  });
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('notificacoes') !== '1') {
+      return;
+    }
+    params.delete('notificacoes');
+    const qs = params.toString();
+    navigate(
+      { pathname: location.pathname, search: qs ? `?${qs}` : '' },
+      { replace: true },
+    );
+  }, [location.search, location.pathname, navigate]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -40,10 +62,14 @@ export default function NotificationBell() {
     if (!notif.lida) {
       markAsRead(notif.id);
     }
+    if (!shouldNavigateOnListTap(notif)) {
+      return;
+    }
     setIsOpen(false);
-
-    const targetUrl = resolveNotificationRoute(notif);
-    navigate(targetUrl);
+    const targetUrl = resolveNotificationListDestination(notif);
+    if (targetUrl) {
+      navigate(targetUrl);
+    }
   };
 
   const handlePushToggle = async () => {
