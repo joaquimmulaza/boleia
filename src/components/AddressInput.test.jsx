@@ -398,6 +398,60 @@ describe('AddressInput', () => {
     expect(input).not.toHaveAttribute('aria-activedescendant');
   });
 
+  it('ao fechar a lista limpa aria-activedescendant e Enter não selecciona opção escondida', async () => {
+    mockSuggestions = [
+      { place_id: 'photon-1', description: 'Talatona, Luanda' },
+      { place_id: 'photon-2', description: 'Viana, Viana' },
+    ];
+
+    render(
+      <AddressInput
+        name="origin_name"
+        label="Origem"
+        value="Tal"
+        onChange={vi.fn()}
+      />,
+    );
+
+    const input = screen.getByRole('combobox', { name: /Origem/i });
+    fireEvent.focus(input);
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(input).toHaveAttribute('aria-activedescendant', 'origin_name-geocoder-listbox-option-0');
+
+    fireEvent.keyDown(input, { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(screen.queryByRole('listbox', { name: 'Sugestões de locais' })).not.toBeInTheDocument();
+    });
+    expect(input).not.toHaveAttribute('aria-activedescendant');
+
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(selectPlace).not.toHaveBeenCalled();
+  });
+
+  it('porta o listbox para dentro do dialog aria-modal', () => {
+    mockSuggestions = [{ place_id: 'photon-1', description: 'Talatona, Luanda' }];
+
+    render(
+      <div role="dialog" aria-modal="true" aria-labelledby="dlg-title">
+        <h2 id="dlg-title">Dialog</h2>
+        <AddressInput
+          name="origin_name"
+          label="Origem"
+          value="Tal"
+          onChange={vi.fn()}
+        />
+      </div>,
+    );
+
+    const dialog = screen.getByRole('dialog');
+    const input = screen.getByRole('combobox', { name: /Origem/i });
+    fireEvent.focus(input);
+
+    const listbox = screen.getByRole('listbox', { name: 'Sugestões de locais' });
+    expect(dialog.contains(listbox)).toBe(true);
+  });
+
   it('erro de rede mostra copy final, retry e Usar texto livre', () => {
     mockErrorKind = 'network';
     mockSuggestions = [];

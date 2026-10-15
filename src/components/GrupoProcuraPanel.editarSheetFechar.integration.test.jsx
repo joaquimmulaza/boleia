@@ -182,4 +182,47 @@ describe('GrupoProcuraPanel — sheet Editar grupo (integração real)', () => {
     });
     expect(getPlaceDetails).not.toHaveBeenCalled();
   });
+
+  it('com lista aberta: listbox fica dentro do dialog modal', async () => {
+    await abrirSheetEditar();
+    const pickup = screen.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
+    fireEvent.change(pickup, { target: { value: 'Talatona' } });
+
+    await waitFor(
+      () => {
+        expect(screen.getByRole('listbox', { name: 'Sugestões de locais' })).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+
+    const dialog = screen.getByRole('dialog');
+    const listbox = screen.getByRole('listbox', { name: 'Sugestões de locais' });
+    expect(dialog.contains(listbox)).toBe(true);
+  });
+
+  it('Escape com lista aberta fecha só a lista; Escape de novo fecha o sheet', async () => {
+    await abrirSheetEditar();
+    const pickup = screen.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
+    fireEvent.change(pickup, { target: { value: 'Talatona' } });
+
+    await waitFor(
+      () => {
+        expect(screen.getByRole('listbox', { name: 'Sugestões de locais' })).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+
+    fireEvent.keyDown(pickup, { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(screen.queryByRole('listbox', { name: 'Sugestões de locais' })).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId('editar-grupo-sheet')).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('editar-grupo-sheet')).not.toBeInTheDocument();
+    });
+  });
 });
