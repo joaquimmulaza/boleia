@@ -15,7 +15,7 @@ ALTER TABLE public.acordos_passageiros
 CREATE OR REPLACE FUNCTION public._format_civil_date_luanda_pt_no_year(p_instant timestamptz)
 RETURNS text
 LANGUAGE plpgsql
-IMMUTABLE
+STABLE
 AS $fmt$
 DECLARE
   v_d date;

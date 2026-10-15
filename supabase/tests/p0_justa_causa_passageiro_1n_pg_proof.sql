@@ -358,7 +358,14 @@ BEGIN
     AND (n.metadata->>'acordo_id')::uuid = v_acordo_solo
     AND n.metadata->>'type' = 'justa_causa_passageiro_invocador';
 
-  RAISE NOTICE 'JC1N-2 (copy B): invocador=% motorista=% titulo=% mensagem=%',
+  IF v_n_pax_a <> 1 THEN
+    RAISE EXCEPTION 'FAIL JC1N-2c: invocador último devia 1 notificação (n=%)', v_n_pax_a;
+  END IF;
+  IF v_n_driver < 1 THEN
+    RAISE EXCEPTION 'FAIL JC1N-2d: motorista último devia ≥1 notificação (n=%)', v_n_driver;
+  END IF;
+
+  RAISE NOTICE 'JC1N-2 (copy B / último): invocador=% motorista=% titulo=% mensagem=%',
     v_n_pax_a, v_n_driver, v_inv_tit, v_inv_msg;
 
   -- Caso 4: passageiro reservado (não activo) — expira só o lugar; outro activo intacto
@@ -398,6 +405,26 @@ BEGIN
   IF v_n_pax_b <> 0 THEN
     RAISE EXCEPTION 'FAIL JC1N-4: passageiro B não devia ser notificado (n=%)', v_n_pax_b;
   END IF;
+
+  SELECT COUNT(*) INTO v_n_pax_a
+  FROM public.notificacoes n
+  WHERE n.user_id = v_pax_a
+    AND (n.metadata->>'acordo_id')::uuid = v_acordo_res
+    AND n.metadata->>'type' = 'justa_causa_passageiro_invocador';
+  IF v_n_pax_a <> 1 THEN
+    RAISE EXCEPTION 'FAIL JC1N-4b: invocador reservado devia 1 notificação (n=%)', v_n_pax_a;
+  END IF;
+
+  SELECT COUNT(*) INTO v_n_driver
+  FROM public.notificacoes n
+  WHERE n.user_id = v_driver
+    AND (n.metadata->>'acordo_id')::uuid = v_acordo_res;
+  IF v_n_driver < 1 THEN
+    RAISE EXCEPTION 'FAIL JC1N-4c: motorista reservado devia ≥1 notificação (n=%)', v_n_driver;
+  END IF;
+
+  RAISE NOTICE 'JC1N-4 (reservado / copy A): invocador=% motorista=% outros_pax=%',
+    v_n_pax_a, v_n_driver, v_n_pax_b;
 
   -- Caso 3: motorista → encerra acordo inteiro (cancelado_justificado)
   PERFORM set_config('request.jwt.claim.sub', v_driver::text, true);
