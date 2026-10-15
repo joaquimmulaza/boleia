@@ -12,6 +12,7 @@ import OverlayShell from './OverlayShell';
 import SheetDragHandle from './SheetDragHandle';
 import NotificationListItem from './NotificationListItem';
 import NotificationListSkeleton from './NotificationListSkeleton';
+import NotificationListErrorPanel from './NotificationListErrorPanel';
 import { Button } from './ui/button';
 
 export default function NotificationBell() {
@@ -22,10 +23,12 @@ export default function NotificationBell() {
     unreadCount,
     listLoading,
     listError,
+    refetchNotifications,
     markAsRead,
     markAllAsRead,
     deleteNotification,
   } = useNotifications(userId);
+  const refetchOnOpenDoneRef = useRef(false);
   const { isSupported, permission, isSubscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications();
   const [isOpen, setIsOpen] = useState(() => {
     if (typeof window === 'undefined') {
@@ -67,6 +70,17 @@ export default function NotificationBell() {
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      refetchOnOpenDoneRef.current = false;
+      return;
+    }
+    if (listError && !refetchOnOpenDoneRef.current) {
+      refetchOnOpenDoneRef.current = true;
+      void refetchNotifications();
+    }
+  }, [isOpen, listError, refetchNotifications]);
+
   const handleNotificationClick = (notif) => {
     if (!notif.lida) {
       markAsRead(notif.id);
@@ -79,6 +93,16 @@ export default function NotificationBell() {
     if (targetUrl) {
       navigate(targetUrl);
     }
+  };
+
+  const hasLoadedList = notifications.length > 0;
+  const showFullSkeleton = listLoading && !hasLoadedList;
+  const showFullError = Boolean(listError) && !listLoading && !hasLoadedList;
+  const showErrorBanner = Boolean(listError) && hasLoadedList;
+  const listRefetching = listLoading && hasLoadedList;
+
+  const handleRetry = () => {
+    void refetchNotifications();
   };
 
   const handlePushToggle = async () => {
@@ -167,38 +191,46 @@ export default function NotificationBell() {
             ) : null}
 
             <div className="flex-1 overflow-y-auto overscroll-none pb-safe min-h-0">
-              {listLoading ? (
+              {showFullSkeleton ? (
                 <NotificationListSkeleton rows={3} />
-              ) : listError ? (
-                <div
-                  role="alert"
-                  className="flex flex-col items-center justify-center h-40 px-6 text-center text-gray-600 dark:text-gray-300"
-                  data-testid="notification-list-error"
-                >
-                  <p className="text-sm font-medium">{listError}</p>
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Tenta fechar e abrir outra vez.
-                  </p>
-                </div>
-              ) : notifications.length === 0 ? (
-                <div
-                  className="flex flex-col items-center justify-center h-40 text-gray-500 dark:text-gray-400"
-                  data-testid="notification-list-empty"
-                >
-                  <Bell size={48} className="mb-4 opacity-20" strokeWidth={1.5} aria-hidden="true" />
-                  <p className="text-sm">Sem notificações no momento.</p>
-                </div>
               ) : (
-                <ul className="divide-y divide-gray-100 dark:divide-gray-800/50">
-                  {notifications.map((notif) => (
-                    <NotificationListItem
-                      key={notif.id}
-                      notif={notif}
-                      onActivate={() => handleNotificationClick(notif)}
-                      onDelete={() => deleteNotification(notif.id)}
+                <>
+                  {showErrorBanner ? (
+                    <NotificationListErrorPanel
+                      layout="banner"
+                      retrying={listRefetching}
+                      onRetry={handleRetry}
                     />
-                  ))}
-                </ul>
+                  ) : null}
+                  {showFullError ? (
+                    <NotificationListErrorPanel
+                      layout="full"
+                      retrying={listLoading}
+                      onRetry={handleRetry}
+                    />
+                  ) : null}
+                  {!showFullError && notifications.length === 0 ? (
+                    <div
+                      className="flex flex-col items-center justify-center h-40 text-gray-500 dark:text-gray-400"
+                      data-testid="notification-list-empty"
+                    >
+                      <Bell size={48} className="mb-4 opacity-20" strokeWidth={1.5} aria-hidden="true" />
+                      <p className="text-sm">Sem notificações no momento.</p>
+                    </div>
+                  ) : null}
+                  {hasLoadedList ? (
+                    <ul className="divide-y divide-gray-100 dark:divide-gray-800/50">
+                      {notifications.map((notif) => (
+                        <NotificationListItem
+                          key={notif.id}
+                          notif={notif}
+                          onActivate={() => handleNotificationClick(notif)}
+                          onDelete={() => deleteNotification(notif.id)}
+                        />
+                      ))}
+                    </ul>
+                  ) : null}
+                </>
               )}
             </div>
           </div>

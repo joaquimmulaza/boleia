@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { setAppBadgeCount } from '../utils/appBadge';
+import { NOTIFICATION_LIST_LOAD_ERROR } from '../utils/notificationListCopy';
 
 export function useNotifications(userId) {
   const [notifications, setNotifications] = useState([]);
@@ -8,6 +9,11 @@ export function useNotifications(userId) {
   const [listLoading, setListLoading] = useState(() => Boolean(userId));
   const [listError, setListError] = useState(null);
   const initialFetchSettledRef = useRef(false);
+  const notificationsRef = useRef([]);
+
+  useEffect(() => {
+    notificationsRef.current = notifications;
+  }, [notifications]);
 
   const deleteNotification = useCallback(async (notificationId) => {
     try {
@@ -30,10 +36,15 @@ export function useNotifications(userId) {
     }
   }, []);
 
-  const fetchNotifications = useCallback(async () => {
+  /**
+   * @param {{ showLoading?: boolean }} [options]
+   */
+  const fetchNotifications = useCallback(async (options = {}) => {
+    const { showLoading = false } = options;
     if (!userId) return;
     const isInitialLoad = !initialFetchSettledRef.current;
-    if (isInitialLoad) {
+    const shouldShowLoading = isInitialLoad || showLoading;
+    if (shouldShowLoading) {
       setListLoading(true);
     }
     try {
@@ -46,21 +57,25 @@ export function useNotifications(userId) {
       if (error) throw error;
       setNotifications(data || []);
       setUnreadCount((data || []).filter(n => !n.lida).length);
-      if (isInitialLoad) {
-        setListError(null);
-      }
+      setListError(null);
     } catch (err) {
       console.error('Erro ao buscar notificações:', err);
-      if (isInitialLoad) {
-        setListError('Não foi possível carregar as notificações.');
+      if (shouldShowLoading || notificationsRef.current.length > 0) {
+        setListError(NOTIFICATION_LIST_LOAD_ERROR);
       }
     } finally {
+      if (shouldShowLoading) {
+        setListLoading(false);
+      }
       if (isInitialLoad) {
         initialFetchSettledRef.current = true;
-        setListLoading(false);
       }
     }
   }, [userId]);
+
+  const refetchNotifications = useCallback(() => {
+    return fetchNotifications({ showLoading: true });
+  }, [fetchNotifications]);
 
   const markAsRead = useCallback(async (notificationId) => {
     try {
@@ -132,22 +147,16 @@ export function useNotifications(userId) {
           setNotifications(prev =>
             prev.map(n => n.id === payload.new.id ? payload.new : n)
           );
-          // Recalculate unread count
           setUnreadCount(prev => {
-             // We can't easily derive from prev without full array,
-             // but since we only update 'lida', if it went from false to true:
              if (payload.old && payload.old.lida === false && payload.new.lida === true) {
                  return Math.max(0, prev - 1);
              }
-             // For safety, just refetch count or map it out. A full fetch is safer but costly.
-             // We'll rely on our manual state updates for now, or just refetch.
              return prev;
           });
-          // Better yet, just fetch all to be safe and accurate or handle it manually
           fetchNotifications();
         } else if (payload.eventType === 'DELETE') {
            setNotifications(prev => prev.filter(n => n.id !== payload.old.id));
-           fetchNotifications(); // Recalculate count
+           fetchNotifications();
         }
       }
     ).subscribe();
@@ -180,6 +189,7 @@ export function useNotifications(userId) {
     unreadCount,
     listLoading,
     listError,
+    refetchNotifications,
     markAsRead,
     markAllAsRead,
     deleteNotification,

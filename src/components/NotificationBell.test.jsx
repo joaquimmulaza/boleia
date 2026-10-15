@@ -37,6 +37,7 @@ const mockNotifications = [
 
 let mockListLoading = false;
 let mockListError = null;
+const refetchNotifications = vi.fn();
 
 vi.mock('../hooks/useNotifications', () => ({
   useNotifications: () => ({
@@ -44,6 +45,7 @@ vi.mock('../hooks/useNotifications', () => ({
     unreadCount: mockListLoading ? 0 : 1,
     listLoading: mockListLoading,
     listError: mockListError,
+    refetchNotifications,
     markAsRead,
     markAllAsRead,
     deleteNotification,
@@ -91,6 +93,7 @@ describe('NotificationBell', () => {
     vi.clearAllMocks();
     mockListLoading = false;
     mockListError = null;
+    refetchNotifications.mockClear();
     mockNotifications.length = 0;
     mockNotifications.push(
       {
@@ -161,8 +164,89 @@ describe('NotificationBell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
 
     expect(screen.getByTestId('notification-list-error')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar outra vez' })).toBeInTheDocument();
+    expect(screen.queryByTestId('notification-list-error-banner')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Tenta fechar e abrir outra vez/i)).not.toBeInTheDocument();
     expect(screen.queryByTestId('notification-list-empty')).not.toBeInTheDocument();
     expect(screen.queryByText('Sem notificações no momento.')).not.toBeInTheDocument();
+  });
+
+  it('abrir o sino com erro dispara refetch', () => {
+    mockListLoading = false;
+    mockListError = 'Não foi possível carregar as notificações.';
+    mockNotifications.length = 0;
+
+    renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+
+    expect(refetchNotifications).toHaveBeenCalledTimes(1);
+  });
+
+  it('erro com lista carregada — faixa Alert e lista visível (sem ecrã inteiro)', () => {
+    mockListLoading = false;
+    mockListError = 'Não foi possível carregar as notificações.';
+
+    renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+
+    expect(screen.getByTestId('notification-list-error-banner')).toBeInTheDocument();
+    expect(screen.getByText('Nova proposta recebida')).toBeInTheDocument();
+    expect(screen.queryByTestId('notification-list-error')).not.toBeInTheDocument();
+  });
+
+  it('«Tentar outra vez» dispara refetch; com lista mantém faixa e botão desactivado durante carga', () => {
+    mockListLoading = false;
+    mockListError = 'Não foi possível carregar as notificações.';
+
+    const view = renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+    refetchNotifications.mockClear();
+
+    const retryBtn = screen.getByRole('button', { name: 'Tentar outra vez' });
+    fireEvent.click(retryBtn);
+    expect(refetchNotifications).toHaveBeenCalledTimes(1);
+
+    mockListLoading = true;
+    view.rerender(
+      <MemoryRouter>
+        <NotificationBell />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('notification-list-error-banner')).toBeInTheDocument();
+    expect(screen.getByText('Nova proposta recebida')).toBeInTheDocument();
+    expect(screen.queryByTestId('notification-list-skeleton')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar outra vez' })).toBeDisabled();
+
+    mockListLoading = false;
+    mockListError = null;
+    view.rerender(
+      <MemoryRouter>
+        <NotificationBell />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('Nova proposta recebida')).toBeInTheDocument();
+    expect(screen.queryByTestId('notification-list-error-banner')).not.toBeInTheDocument();
+  });
+
+  it('ecrã inteiro de erro: refetch vazio mostra skeleton (não faixa)', () => {
+    mockListLoading = false;
+    mockListError = 'Não foi possível carregar as notificações.';
+    mockNotifications.length = 0;
+
+    const view = renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar outra vez' }));
+    mockListLoading = true;
+    view.rerender(
+      <MemoryRouter>
+        <NotificationBell />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('notification-list-skeleton')).toBeInTheDocument();
+    expect(screen.queryByTestId('notification-list-error-banner')).not.toBeInTheDocument();
   });
 
   it('renderiza bottom sheet F7 com handle e Fechar (não side drawer)', () => {
