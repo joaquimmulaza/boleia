@@ -14,6 +14,7 @@ import {
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS = join(ROOT, '../../supabase/migrations');
 const MIGRATION = '20261012220000_driver_notif_passenger_exit.sql';
+const MIGRATION_V112_TXID = '20261015120000_269_v1_12_partial_expiry_txid.sql';
 const MIGRATION_V114 = '20261012221000_passenger_removed_last_v1_14.sql';
 
 function readMigration() {
@@ -31,6 +32,16 @@ describe('Driver notif passenger exit — migração', () => {
     expect(sql).toMatch(
       /lower\(v_estado_acordo\)\s+IN\s*\(\s*'activo'\s*,\s*'cancelamento_pendente'\s*\)/,
     );
+  });
+
+  it('#269 soft: v1.12 partial expiry metadata inclui txid (migração dedicada)', () => {
+    expect(existsSync(join(MIGRATIONS, MIGRATION_V112_TXID))).toBe(true);
+    const sql = readFileSync(join(MIGRATIONS, MIGRATION_V112_TXID), 'utf8');
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\.apply_due_reserva_expiry/);
+    expect(sql).not.toMatch(/CREATE OR REPLACE FUNCTION public\.leave_passenger/);
+    expect(sql).toMatch(/'card',\s*'v1\.12'[\s\S]*'txid',\s*txid_current\(\)/);
+    expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.apply_due_reserva_expiry/);
+    expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION public\.apply_due_reserva_expiry\(uuid\) TO authenticated/);
   });
 
   it('G2: apply_due_reserva_expiry card v1.12 com copy final', () => {
