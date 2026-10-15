@@ -4,6 +4,8 @@ import AddressInput from './AddressInput';
 import OverlayShell from './OverlayShell';
 import SheetDragHandle from './SheetDragHandle';
 import GrupoKebabMenu from './GrupoKebabMenu';
+import SheetFecharButton from './SheetFecharButton';
+import { getGrupoEditSheetSubtitle } from '../copy/grupoEditSheet';
 import {
   createGrupo,
   addMembroGrupo,
@@ -67,6 +69,14 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
     pickup_lat: null,
     pickup_lng: null,
   });
+
+  const dismissEditarSheet = useCallback(() => {
+    if (!busy) setEditarOpen(false);
+  }, [busy]);
+
+  const dismissApagarSheet = useCallback(() => {
+    if (!busy) setApagarOpen(false);
+  }, [busy]);
 
   const carregar = useCallback(async () => {
     if (!procura?.id) {
@@ -571,19 +581,37 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
           overlayClassName="bg-slate-900/60 dark:bg-black/80"
           panelClassName="bg-white dark:bg-slate-900 shadow-2xl"
           testId="editar-grupo-sheet"
-          onDismiss={() => {
-            if (!busy) setEditarOpen(false);
-          }}
+          dialogLabelledBy="editar-grupo-title"
+          onDismiss={dismissEditarSheet}
         >
-          <div className="space-y-4 px-4 pb-sheet">
-            <SheetDragHandle />
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Editar grupo</h2>
-            <p className="text-sm text-slate-500 text-pretty">
-              Só capacidade desejada e ponto de recolha. Não reescreve propostas nem snapshots.
-            </p>
-            <fieldset className="space-y-2">
+          <div className="flex flex-col gap-4 px-4 pb-sheet">
+            <div data-geocoder-sheet-header>
+              <SheetDragHandle />
+              <div
+                className="flex items-center justify-between gap-3"
+                data-geocoder-dismiss-chrome
+              >
+              <h2
+                id="editar-grupo-title"
+                className="text-lg font-bold text-slate-900 dark:text-white"
+              >
+                Editar grupo
+              </h2>
+              <SheetFecharButton
+                disabled={busy}
+                data-testid="editar-grupo-fechar"
+                onClick={() => setEditarOpen(false)}
+              />
+              </div>
+            </div>
+            {getGrupoEditSheetSubtitle() ? (
+              <p className="text-sm text-slate-500 text-pretty" data-testid="editar-grupo-subtitle">
+                {getGrupoEditSheetSubtitle()}
+              </p>
+            ) : null}
+            <fieldset className="min-w-0 space-y-2">
               <legend className="text-sm font-semibold">Tamanho desejado</legend>
-              <div className="flex flex-wrap gap-2" role="group" aria-label="Tamanho desejado">
+              <div className="grid grid-cols-7 gap-1.5">
                 {CAPACIDADES.map((n) => {
                   const floor = Math.max(2, membros.length);
                   const abaixo = n < floor;
@@ -594,8 +622,9 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
                       type="button"
                       disabled={abaixo || busy}
                       aria-pressed={activo}
+                      aria-label={String(n)}
                       onClick={() => setEditCapacidade(n)}
-                      className={`size-10 rounded-lg text-sm font-bold tabular-nums disabled:opacity-40 ${
+                      className={`size-9 shrink-0 whitespace-nowrap rounded-lg text-sm font-bold tabular-nums disabled:opacity-40 ${
                         activo
                           ? 'bg-primary text-white'
                           : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
@@ -642,9 +671,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
           overlayClassName="bg-slate-900/60 dark:bg-black/80"
           panelClassName="bg-white dark:bg-slate-900 shadow-2xl"
           testId="apagar-grupo-sheet"
-          onDismiss={() => {
-            if (!busy) setApagarOpen(false);
-          }}
+          onDismiss={dismissApagarSheet}
         >
           <div className="space-y-4 px-4 pb-sheet">
             <SheetDragHandle />

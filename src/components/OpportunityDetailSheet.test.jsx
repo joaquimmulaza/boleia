@@ -28,6 +28,15 @@ describe('OpportunityDetailSheet', () => {
     resetOverlayStackForTests();
   });
 
+  it('Fechar usa botão shadcn com nome acessível', () => {
+    render(
+      <OpportunityDetailSheet kind="oferta" item={ofertaFlexTotal} onClose={() => {}} onCta={() => {}} />,
+    );
+    const fechar = screen.getByTestId('opportunity-detail-fechar');
+    expect(fechar).toHaveAccessibleName(/Fechar/i);
+    expect(fechar.className).toMatch(/inline-flex/);
+  });
+
   it('ao abrir, foco inicial no Fechar; Tab cicla dentro do sheet', async () => {
     render(
       <div>

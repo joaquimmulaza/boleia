@@ -4,6 +4,17 @@ import {
   GEOCODER_NETWORK_ERROR_MESSAGE,
   GEOCODER_RETRY_LABEL,
 } from '../utils/addressGeocoderCopy';
+import { GEOCODER_FLOATING_LIST_ATTR } from '../utils/geocoderDismissChrome';
+
+/**
+ * @param {boolean} floating
+ * @returns {string}
+ */
+function shellPositionClass(floating) {
+  return floating
+    ? 'rounded-xl shadow-lg overflow-hidden'
+    : 'absolute top-full left-0 right-0 z-50 mt-2 rounded-xl shadow-lg overflow-hidden';
+}
 
 /**
  * Lista de sugestões (padrão combobox shadcn: listbox + option + aria-activedescendant no input).
@@ -20,26 +31,42 @@ import {
  *   emptyMessage?: string,
  *   freeTextActionLabel?: string,
  *   onUseFreeText?: () => void,
+ *   floatingStyle?: import('react').CSSProperties,
+ *   maxListHeight?: number,
  * }} props
  */
-const AutocompleteDropdown = ({
-  suggestions = [],
-  loading,
-  error,
-  errorKind = null,
-  onSelect,
-  onRetry,
-  listboxId,
-  activeIndex,
-  title,
-  emptyMessage,
-  freeTextActionLabel,
-  onUseFreeText,
-}) => {
+const AutocompleteDropdown = React.forwardRef(function AutocompleteDropdown(
+  {
+    suggestions = [],
+    loading,
+    error,
+    errorKind = null,
+    onSelect,
+    onRetry,
+    listboxId,
+    activeIndex,
+    title,
+    emptyMessage,
+    freeTextActionLabel,
+    onUseFreeText,
+    floatingStyle,
+    maxListHeight = 240,
+  },
+  ref,
+) {
+  const floating = Boolean(floatingStyle);
+  const floatingShellAttrs = floating
+    ? { [GEOCODER_FLOATING_LIST_ATTR]: '' }
+    : {};
+  const shellClass = `${shellPositionClass(floating)} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 ${
+    floating ? 'pointer-events-auto' : ''
+  }`;
+  const listMaxStyle = { maxHeight: `${maxListHeight}px` };
+
   if (loading) {
     return (
-      <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg overflow-hidden p-4">
-        <p className="text-sm text-slate-500 text-center animate-pulse">A procurar...</p>
+      <div ref={ref} className={shellClass} style={floatingStyle} {...floatingShellAttrs}>
+        <p className="p-4 text-sm text-slate-500 text-center animate-pulse">A procurar...</p>
       </div>
     );
   }
@@ -47,9 +74,14 @@ const AutocompleteDropdown = ({
   if (errorKind === 'network') {
     return (
       <div
-        className="absolute top-full left-0 right-0 z-50 mt-2 bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-800 rounded-xl shadow-lg overflow-hidden p-4 space-y-3"
+        ref={ref}
+        className={`${shellPositionClass(floating)} bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-800 rounded-xl shadow-lg overflow-hidden p-4 space-y-3 ${
+          floating ? 'pointer-events-auto' : ''
+        }`}
+        style={floatingStyle}
         role="alert"
         data-testid="geocoder-network-error"
+        {...floatingShellAttrs}
       >
         <p className="text-sm text-amber-900 dark:text-amber-100 text-center text-pretty">
           {GEOCODER_NETWORK_ERROR_MESSAGE}
@@ -78,8 +110,8 @@ const AutocompleteDropdown = ({
 
   if (error) {
     return (
-      <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg overflow-hidden p-4">
-        <p className="text-sm text-red-500 text-center">{error}</p>
+      <div ref={ref} className={shellClass} style={floatingStyle} {...floatingShellAttrs}>
+        <p className="p-4 text-sm text-red-500 text-center">{error}</p>
       </div>
     );
   }
@@ -87,7 +119,7 @@ const AutocompleteDropdown = ({
   if (!suggestions || suggestions.length === 0) {
     if (!emptyMessage) return null;
     return (
-      <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg overflow-hidden">
+      <div ref={ref} className={shellClass} style={floatingStyle} {...floatingShellAttrs}>
         {title ? (
           <p className="border-b border-slate-100 px-3 py-2 text-xs font-semibold text-slate-500 dark:border-slate-700">{title}</p>
         ) : null}
@@ -108,14 +140,15 @@ const AutocompleteDropdown = ({
   }
 
   return (
-    <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg overflow-hidden">
+    <div ref={ref} className={shellClass} style={floatingStyle} {...floatingShellAttrs}>
       {title ? (
         <p className="border-b border-slate-100 px-3 py-2 text-xs font-semibold text-slate-500 dark:border-slate-700">{title}</p>
       ) : null}
       <ul
         id={listboxId}
         role="listbox"
-        className="max-h-60 overflow-y-auto"
+        className="overflow-y-auto overscroll-y-contain"
+        style={listMaxStyle}
         aria-label="Sugestões de locais"
       >
         {suggestions.map((suggestion, index) => {
@@ -146,6 +179,6 @@ const AutocompleteDropdown = ({
       </div>
     </div>
   );
-};
+});
 
 export default AutocompleteDropdown;

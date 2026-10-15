@@ -1,6 +1,7 @@
 import React, { useCallback, useLayoutEffect, useRef } from 'react';
 import OverlayShell from './OverlayShell';
 import SheetDragHandle from './SheetDragHandle';
+import SheetFecharButton from './SheetFecharButton';
 import RouteIndicator from './RouteIndicator';
 import { resolveOpportunityCard } from '../utils/opportunityCard';
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
@@ -72,15 +73,11 @@ function OpportunityDetailSheet({ kind, item, onClose, onCta, ctaLabel, ctaDisab
           <h2 id="opportunity-detail-title" className="text-lg font-semibold text-slate-900 dark:text-white">
             {card.tipo}
           </h2>
-          <button
+          <SheetFecharButton
             ref={fecharRef}
-            type="button"
             onClick={handleClose}
             data-testid="opportunity-detail-fechar"
-            className="rounded-lg px-3 py-1.5 text-[15px] font-medium text-slate-900 dark:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
-          >
-            Fechar
-          </button>
+          />
         </div>
 
         {card.rota ? (

@@ -1,10 +1,19 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useId } from 'react';
+import { createPortal } from 'react-dom';
 import { useAutocomplete } from '../hooks/useAutocomplete';
+import { useFloatingGeocoderPanel } from '../hooks/useFloatingGeocoderPanel';
 import AutocompleteDropdown from './AutocompleteDropdown';
+import { Input } from './ui/input';
+import { cn } from '../lib/utils';
 import {
   EMPTY_GEOCODER_MESSAGE,
   formatUseFreeTextLabel,
 } from '../utils/addressGeocoderCopy';
+import { ADDRESS_INPUT_SURFACE_CLASS } from '../utils/addressInputSurface.js';
+import { GEOCODER_DISMISS_CHROME_SELECTOR } from '../utils/geocoderDismissChrome.js';
+import { resolveGeocoderPortalContainer } from '../utils/geocoderPortal.js';
+import { getTopOverlay, popOverlay, pushOverlay } from '../utils/overlayStack.js';
+import { SHEET_DRAG_START_EVENT } from '../utils/sheetDragEvents.js';
 
 /**
  * Campo de endereço com autocomplete Photon/OSM (combobox a11y).
@@ -51,13 +60,31 @@ const AddressInput = ({
 
   const [inputValue, setInputValue] = useState(value || '');
   const [showDropdown, setShowDropdown] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const wrapperRef = useRef(null);
+  const anchorRef = useRef(null);
+  const dropdownPanelRef = useRef(null);
   const inputRef = useRef(null);
   const submitBlockFocusSeenRef = useRef(0);
   const inputId = id || name;
   const listboxId = `${inputId}-geocoder-listbox`;
   const fieldErrorId = `${inputId}-field-error`;
+  const geocoderOverlayId = useId();
+  const [portalContainer, setPortalContainer] = useState(/** @type {HTMLElement | null} */ (null));
+
+  const bindAnchorRef = useCallback((node) => {
+    anchorRef.current = node;
+    if (node instanceof HTMLElement) {
+      setPortalContainer(resolveGeocoderPortalContainer(node));
+    } else {
+      setPortalContainer(null);
+    }
+  }, []);
+
+  const closeDropdown = useCallback(() => {
+    setShowDropdown(false);
+    setActiveIndex(-1);
+  }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -66,18 +93,20 @@ const AddressInput = ({
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setActiveIndex(0);
+    setActiveIndex(-1);
   }, [suggestions, errorKind, loading]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-        setShowDropdown(false);
-      }
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (wrapperRef.current?.contains(target)) return;
+      if (dropdownPanelRef.current?.contains(target)) return;
+      closeDropdown();
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [closeDropdown]);
 
   const debounceTimeoutRef = useRef(null);
 
@@ -97,7 +126,7 @@ const AddressInput = ({
         fetchPredictions(newVal);
       }, 300);
     } else {
-      setShowDropdown(false);
+      closeDropdown();
       clearSuggestions();
     }
   };
@@ -126,7 +155,7 @@ const AddressInput = ({
     if (!allowFreeTextUse || trimmedInputLength <= 2) {
       return;
     }
-    setShowDropdown(false);
+    closeDropdown();
     clearSuggestions();
     onConfirmFreeText?.();
     if (onSelectCoordinates) {
@@ -137,13 +166,13 @@ const AddressInput = ({
   const handleSelect = useCallback(async (suggestion) => {
     setInputValue(suggestion.description);
     onChange({ target: { name, value: suggestion.description } });
-    setShowDropdown(false);
+    closeDropdown();
 
     const details = await selectPlace(suggestion.place_id);
     if (details && onSelectCoordinates) {
       onSelectCoordinates(details);
     }
-  }, [name, onChange, onSelectCoordinates, selectPlace]);
+  }, [name, onChange, onSelectCoordinates, selectPlace, closeDropdown]);
 
   const inputMatchesResolved =
     resolvedInput !== null && resolvedInput.trim() === inputValue.trim();
@@ -165,9 +194,62 @@ const AddressInput = ({
       : undefined;
 
   const listPanelOpen = showDropdown && trimmedInputLength > 2;
+  const floatingLayout = useFloatingGeocoderPanel(anchorRef, listPanelOpen);
+
+  useLayoutEffect(() => {
+    if (!listPanelOpen || !anchorRef.current) return;
+    setPortalContainer(resolveGeocoderPortalContainer(anchorRef.current));
+  }, [listPanelOpen]);
+
+  useEffect(() => {
+    const onSheetDragStart = () => {
+      closeDropdown();
+    };
+    document.addEventListener(SHEET_DRAG_START_EVENT, onSheetDragStart);
+    return () => document.removeEventListener(SHEET_DRAG_START_EVENT, onSheetDragStart);
+  }, [closeDropdown]);
+
+  useEffect(() => {
+    if (!listPanelOpen) return undefined;
+
+    const dismissOnSheetChrome = (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest(GEOCODER_DISMISS_CHROME_SELECTOR)) {
+        closeDropdown();
+      }
+    };
+
+    document.addEventListener('pointerdown', dismissOnSheetChrome, true);
+    return () => document.removeEventListener('pointerdown', dismissOnSheetChrome, true);
+  }, [listPanelOpen, closeDropdown]);
+
+  useLayoutEffect(() => {
+    if (!listPanelOpen) return undefined;
+
+    pushOverlay(geocoderOverlayId, closeDropdown);
+
+    const onDocumentEscape = (event) => {
+      if (event.key !== 'Escape') return;
+      const top = getTopOverlay();
+      if (top?.id !== geocoderOverlayId) return;
+      event.preventDefault();
+      event.stopPropagation();
+      closeDropdown();
+    };
+
+    document.addEventListener('keydown', onDocumentEscape, true);
+    return () => {
+      document.removeEventListener('keydown', onDocumentEscape, true);
+      popOverlay(geocoderOverlayId);
+    };
+  }, [listPanelOpen, geocoderOverlayId, closeDropdown]);
 
   const activeOptionId =
-    suggestions.length > 0 && activeIndex >= 0 && activeIndex < suggestions.length
+    listPanelOpen
+    && suggestions.length > 0
+    && activeIndex >= 0
+    && activeIndex < suggestions.length
       ? `${listboxId}-option-${activeIndex}`
       : undefined;
 
@@ -190,13 +272,14 @@ const AddressInput = ({
 
     if (e.key === 'ArrowUp' && suggestions.length > 0) {
       e.preventDefault();
-      setActiveIndex((prev) => Math.max(prev - 1, 0));
+      setActiveIndex((prev) => Math.max(prev - 1, -1));
       return;
     }
 
     if (e.key === 'Escape') {
       e.preventDefault();
-      setShowDropdown(false);
+      e.stopPropagation();
+      closeDropdown();
       return;
     }
 
@@ -207,9 +290,8 @@ const AddressInput = ({
       if (loading || errorKind === 'network') {
         return;
       }
-      if (suggestions.length > 0) {
-        const pick = suggestions[activeIndex] ?? suggestions[0];
-        void handleSelect(pick);
+      if (suggestions.length > 0 && activeIndex >= 0 && activeIndex < suggestions.length) {
+        void handleSelect(suggestions[activeIndex]);
       }
     }
   };
@@ -222,8 +304,8 @@ const AddressInput = ({
             {label}
           </span>
         )}
-        <div className="relative flex items-center">
-          <input
+        <div ref={bindAnchorRef} className="relative flex items-center">
+          <Input
             ref={inputRef}
             id={inputId}
             type="text"
@@ -239,12 +321,12 @@ const AddressInput = ({
             role="combobox"
             aria-expanded={listPanelOpen}
             aria-controls={listPanelOpen ? listboxId : undefined}
-            aria-activedescendant={listPanelOpen ? activeOptionId : undefined}
+            aria-activedescendant={activeOptionId}
             aria-autocomplete="list"
             aria-invalid={fieldError ? true : undefined}
             aria-describedby={fieldError ? fieldErrorId : undefined}
             autoComplete="off"
-            className="form-input w-full pl-4 pr-4 h-14 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:ring-primary/20 transition-all placeholder:text-slate-400 outline-none"
+            className={cn(ADDRESS_INPUT_SURFACE_CLASS)}
           />
         </div>
       </label>
@@ -263,23 +345,29 @@ const AddressInput = ({
          <div className="mt-1 ml-1 text-xs text-red-500 font-medium">{error}</div>
       )}
 
-      {listPanelOpen && (
-        <AutocompleteDropdown
-          suggestions={suggestions}
-          loading={loading}
-          error={error}
-          errorKind={errorKind}
-          onSelect={handleSelect}
-          onRetry={retryLastFetch}
-          listboxId={listboxId}
-          activeIndex={activeIndex}
-          emptyMessage={emptyMessage}
-          freeTextActionLabel={
-            showFreeTextAction ? formatUseFreeTextLabel(inputValue) : undefined
-          }
-          onUseFreeText={showFreeTextAction ? handleUseFreeText : undefined}
-        />
-      )}
+      {listPanelOpen && portalContainer
+        ? createPortal(
+            <AutocompleteDropdown
+              ref={dropdownPanelRef}
+              suggestions={suggestions}
+              loading={loading}
+              error={error}
+              errorKind={errorKind}
+              onSelect={handleSelect}
+              onRetry={retryLastFetch}
+              listboxId={listboxId}
+              activeIndex={activeIndex}
+              emptyMessage={emptyMessage}
+              floatingStyle={floatingLayout?.style}
+              maxListHeight={floatingLayout?.maxListHeight ?? 240}
+              freeTextActionLabel={
+                showFreeTextAction ? formatUseFreeTextLabel(inputValue) : undefined
+              }
+              onUseFreeText={showFreeTextAction ? handleUseFreeText : undefined}
+            />,
+            portalContainer,
+          )
+        : null}
     </div>
   );
 };
