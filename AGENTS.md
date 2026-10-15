@@ -2,16 +2,16 @@
 
 ## 1. O Projeto (MVP)
 Plataforma de *matchmaking* para rotas de transporte diário e acordos de pagamento partilhado.
-Stack: React + Vite, Tailwind CSS, Lucide React, shadcn/ui (JSX), Supabase (Backend/Auth/DB), **Graphify** (extracção AST → `graphify-out/`) + **Graphlore** MCP (navegação no Cursor). Tudo alojado de forma 100% gratuita.
+Stack: React + Vite, Tailwind CSS, Lucide React, shadcn/ui (JSX), Supabase (Backend/Auth/DB), **Graphify** (grafo hosted MCP + extracção AST local → `graphify-out/`) + **Graphlore** MCP opcional (fallback local). Tudo alojado de forma 100% gratuita.
 
 ### 1.1 Graphify + Graphlore (navegação de código)
 
-* **Graphify** extrai o grafo de conhecimento (AST local, arestas **EXTRACTED**) para `graphify-out/` (`graph.json`, `GRAPH_REPORT.md`). Ignore: `.graphifyignore`. Install: `uv tool install graphifyy` (PyPI, dois y; CLI = `graphify`).
-* **Graphlore** é o **único** MCP de grafo no Cursor (`.cursor/mcp.json`, `GRAPHLORE_TOOLSET=lean`) — tools: overview / search / neighbors / subgraph / node_details / communities / freshness / build. **Não** instalar dual `code-review-graph` + `graphify.serve`.
-* **Install Graphlore:** não está no PyPI — `uv tool install "graphlore[treesitter]" --from git+https://github.com/yasinyaman/graphlore.git` (recibo local confirma Git URL + extra `treesitter`).
-* **Ordem (lean):** `graphlore_overview` / `freshness` (ou `GRAPH_REPORT.md`) → `graphlore_search` → `subgraph` / `neighbors` / `node_details` → Grep/Read só se o mapa estrutural não bastar. Preferir grafo a Grep para arquitectura e blast radius.
-* **Arestas INFERRED** = hipóteses (verificar). Princípios: `graph-doc.md`; regra always-on: `.cursor/rules/graphify.mdc`.
-* **Freshness:** hooks pós-commit refrescam AST; após docs/specs → `npm run graphify:update` (update semântico).
+* **Primary — hosted Graphify MCP:** tools `graphify_find`, `graphify_node`, `graphify_callers`, `graphify_callees`, `graphify_impact`, `impact_and_risk`, `graphify_tests_for`, `graph_stats` (repo `joaquimmulaza/boleia` quando houver vários). Sequência obrigatória antes de editar símbolos em `src/`: find/node → callers/callees → impact/impact_and_risk → tests_for; `graph_stats` para commit indexado. PR com mudanças em `src/` deve incluir secção **Graphify** (blast radius + testes). Se a sessão não listar tools `graphify_*`, o agente declara-o e cai para `rg`, confirmando RPCs dinâmicos e imports lazy com `rg`.
+* **Local AST / CLI:** `graphify` extrai para `graphify-out/` (`graph.json`, `GRAPH_REPORT.md`). Ignore: `.graphifyignore`. Install: `uv tool install graphifyy` (PyPI, dois y; CLI = `graphify`). `npm run graphify:update` = `graphify update .` (sem flags inválidas).
+* **Fallback — Graphlore (stdio):** `.cursor/mcp.json` + `.mcp.json`, `GRAPHLORE_TOOLSET=lean`, `GRAPHLORE_PROJECT_DIR` = raiz **absoluta** do repo (Cloud: `/workspace`; local: caminho do clone). Tools lean: overview / search / neighbors / subgraph / node_details / freshness / build. **Não** instalar dual `code-review-graph` + `graphify.serve`. Install: `uv tool install "graphlore[treesitter]" --from git+https://github.com/yasinyaman/graphlore.git`.
+* **Ordem:** hosted Graphify MCP → (se indisponível) Graphlore ou CLI → `rg`/Read só para o que o grafo não modela. Regra always-on: `.cursor/rules/graphify.mdc`.
+* **Arestas INFERRED** = hipóteses (verificar). Princípios: `graph-doc.md`.
+* **Freshness:** hosted index via `graph_stats`; local hooks pós-commit + `npm run graphify:update` após alterações de código.
 
 ## 2. Princípios de "Vibe Coding" com Disciplina (O Método Akita)
 * **TDD Obrigatório (Test-Driven Development):** Todo o código funcional deve ser precedido por testes no Vitest. É estritamente proibido escrever a implementação antes dos testes. O fluxo é: 1. Escrever Testes (e mockar o necessário) -> 2. Executar (vão falhar) -> 3. Escrever Código -> 4. Passar nos Testes.
@@ -61,7 +61,7 @@ Lê este documento antes de iniciares qualquer nova funcionalidade. Tarefa nova 
 * Serviços canónicos: `OfertaService`, `ProcuraService`, `GrupoService`, `PropostaService`, `AgreementService` (RPC `accept_proposal`), `MatchingService`, `WaitlistService`, `AbsenceService`.
 * Testar fluxo de sessão em produção após deploy no Vercel.
 * **Agent loop:** regras em `.cursor/rules/` (incl. `graphify.mdc`, `multi-agent-loop.mdc` com ponte Plan mode), skills em `.cursor/skills/boleia-agent-loop/`, hooks em `.cursor/hooks.json` (`subagentStop` + `stop` com check VERDICT).
-* **Grafo:** consultar Graphlore **antes** de Grep em massa (ver §1.1).
+* **Grafo:** consultar hosted Graphify MCP **antes** de Grep em massa (ver §1.1).
 
 ## 7. Acordos (Agreements)
 Um Acordo (`acordos`) é **1 motorista : N passageiros** (`acordos_passageiros`). Estados do cabeçalho: `'activo' | 'cancelado'` (e afins); na UI comparar **case-insensitive**. Preços congelados na aceitação (`N_contrato`, `valor_mensal_por_passageiro_kz` / total). Saída de passageiro **não** recalcula quotas do mês. Gestão: **exclusivamente** `MyAgreements.jsx` (`/acordos`). Proibido reintroduzir `requestSeat` / acordo 1:1 com `passenger_id` no cabeçalho.

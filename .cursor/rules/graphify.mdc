@@ -6,19 +6,30 @@ alwaysApply: true
 <!-- graphify-rules-start (managed by `graphify init`) -->
 ## Use Graphify before grep
 
-This repository is indexed by Graphify: a code graph over its call, dependency, and test structure, exposed through a connected Graphify MCP server. Before reaching for grep or reading files, use the Graphify tools your MCP client lists (their exact names and descriptions are in the server's tool list) for what the graph knows and a text search does not:
+This repository is indexed by **hosted Graphify MCP** (primary): a promoted code graph over call, dependency, and test structure. **Graphlore** (stdio MCP over local `graphify-out/`) and the **`graphify` CLI** are fallbacks only when hosted `graphify_*` tools are not listed in the session.
 
-- find where a symbol, function, or class is defined (instead of grepping for it)
-- understand how something works, or where a behavior is handled
-- find who calls a function, or what it calls
-- see what a change affects (its blast radius) and which tests cover it
-- map a file's dependencies and dependents
+### Mandatory sequence (before editing symbols under `src/`)
 
-Fall back to grep or file reads only for what the graph does not model: literal string or comment matches, non-indexed files, or reading a file you have already located. If no Graphify tools are listed, check the MCP server connection.
+1. **Locate definition:** `graphify_find` and/or `graphify_node` (symbol name, not file path).
+2. **Call graph:** `graphify_callers` and `graphify_callees` on each symbol you might change.
+3. **Blast radius:** `graphify_impact` or `impact_and_risk` on **each** symbol to change (prefer `impact_and_risk` when ranking by test links).
+4. **Tests:** `graphify_tests_for` on those symbols — paste blast radius + test list into the PR body (section **Graphify**).
+5. **Freshness:** `graph_stats` (pass `repository_id`: `joaquimmulaza/boleia` if the workspace has multiple repos) — note indexed commit vs `HEAD`.
+
+If **no** hosted `graphify_*` tools appear in the session tool list, **state that explicitly** in your output to the user, then fall back to `rg` / Read. Do not pretend the graph was consulted.
+
+Always **confirm with `rg`** what the graph cannot see reliably:
+
+- string RPC / dynamic calls (e.g. `supabase.rpc('…')`, template literals)
+- dynamic `import()` and lazy routes
+- config-only or generated paths not in the AST index
+
+Fall back to grep or file reads for literal strings, comments, non-indexed files, or after you have already located a file via the graph.
 <!-- graphify-rules-end -->
 
 ## This repo (local Cursor and Cloud Agents)
 
-- The MCP server in `.cursor/mcp.json` is named `graphlore` (reads `graphify-out/`); its tools are the "Graphify tools" mentioned above.
-- If no graphlore tools are listed (e.g. some Cloud Agent sessions), use the CLI instead: `graphify query "<question or symbols>"` before grep/Read.
-- After code edits, run `graphify update .` (or `pnpm graphify:update`) so the graph matches the code for the rest of the session. `graphify-out/` is gitignored; Cloud Agents rebuild it on startup via `.cursor/setup-graphlore.sh`.
+- **Primary:** hosted Graphify MCP tools (`graphify_find`, `graphify_node`, `graphify_callers`, `graphify_callees`, `graphify_impact`, `impact_and_risk`, `graphify_tests_for`, `graph_stats`, …).
+- **Fallback Graphlore:** `.cursor/mcp.json` server `graphlore` (lean toolset, local `graphify-out/`) — `GRAPHLORE_PROJECT_DIR` must be the **absolute** repo root (Cloud Agent: `/workspace`; local Windows example: `C:\\boleia-certa`). Use only if hosted Graphify is unavailable.
+- **Fallback CLI:** `graphify query "<question>"` or `npm run graphify:update` after local code edits.
+- `graphify-out/` is gitignored; Cloud Agents may rebuild via `.cursor/setup-graphlore.sh`.

@@ -3,7 +3,8 @@
     "graphlore": {
       "command": "graphlore",
       "env": {
-        "GRAPHLORE_OUT_DIR": "graphify-out",
+        "GRAPHLORE_PROJECT_DIR": "/workspace",
+        "GRAPHLORE_OUT_DIR": "/workspace/graphify-out",
         "GRAPHLORE_TOOLSET": "lean"
       }
     }
