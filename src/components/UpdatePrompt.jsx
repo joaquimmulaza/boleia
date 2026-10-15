@@ -2,81 +2,43 @@ import React, { useEffect, useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import SheetDragHandle from './SheetDragHandle';
 import { useSheetDrag } from '../hooks/useSheetDrag';
-
-const DISMISS_STORAGE_KEY = 'pwa-update-dismissed';
-
-/**
- * @returns {string | null}
- */
-function getDismissedUpdateVersion() {
-  try {
-    return localStorage.getItem(DISMISS_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * @param {string} version
- */
-function setDismissedUpdateVersion(version) {
-  if (!version) return;
-  try {
-    localStorage.setItem(DISMISS_STORAGE_KEY, version);
-  } catch {
-    // incognito / quota
-  }
-}
-
-function clearDismissedUpdateVersion() {
-  try {
-    localStorage.removeItem(DISMISS_STORAGE_KEY);
-  } catch {
-    // ignore
-  }
-}
-
-/**
- * @param {ServiceWorkerRegistration | null | undefined} registration
- * @returns {string | null}
- */
-function getWaitingUpdateVersion(registration) {
-  return registration?.waiting?.scriptURL ?? null;
-}
+import {
+  clearDismissedBuildId,
+  ensureServiceWorkerUpdateChecks,
+  fetchWaitingBuildId,
+  getDismissedBuildId,
+  setDismissedBuildId,
+} from '../utils/pwaUpdateVersion';
 
 const UpdatePrompt = () => {
-  const [pendingVersion, setPendingVersion] = useState(null);
+  const [pendingBuildId, setPendingBuildId] = useState(null);
 
   const {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW({
     onRegisteredSW(swUrl, r) {
-      if (r) {
-        setInterval(() => {
-          r.update();
-        }, 60 * 60 * 1000);
-      }
-      void applyPendingVersion(r, setPendingVersion, setNeedRefresh);
+      ensureServiceWorkerUpdateChecks(r);
+      void applyPendingBuild(r, setPendingBuildId, setNeedRefresh);
     },
     onNeedRefresh() {
-      void refreshPendingVersion(setNeedRefresh, setPendingVersion);
+      void refreshPendingBuild(setNeedRefresh, setPendingBuildId);
     },
   });
 
   useEffect(() => {
     if (needRefresh) {
-      void refreshPendingVersion(setNeedRefresh, setPendingVersion);
+      void refreshPendingBuild(setNeedRefresh, setPendingBuildId);
     }
   }, [needRefresh, setNeedRefresh]);
 
   const dismissed =
-    pendingVersion != null && getDismissedUpdateVersion() === pendingVersion;
-  const showPrompt = needRefresh && pendingVersion != null && !dismissed;
+    pendingBuildId != null && getDismissedBuildId() === pendingBuildId;
+  const showPrompt = needRefresh && pendingBuildId != null && !dismissed;
 
   const handleDismiss = () => {
-    if (pendingVersion) {
-      setDismissedUpdateVersion(pendingVersion);
+    if (pendingBuildId) {
+      setDismissedBuildId(pendingBuildId);
     }
     setNeedRefresh(false);
   };
@@ -88,7 +50,7 @@ const UpdatePrompt = () => {
   }
 
   const handleUpdate = () => {
-    clearDismissedUpdateVersion();
+    clearDismissedBuildId();
     updateServiceWorker(true);
   };
 
@@ -137,27 +99,27 @@ const UpdatePrompt = () => {
 
 /**
  * @param {ServiceWorkerRegistration | null | undefined} registration
- * @param {React.Dispatch<React.SetStateAction<string | null>>} setPendingVersion
+ * @param {React.Dispatch<React.SetStateAction<string | null>>} setPendingBuildId
  * @param {React.Dispatch<React.SetStateAction<boolean>>} setNeedRefresh
  */
-async function applyPendingVersion(registration, setPendingVersion, setNeedRefresh) {
-  const version = getWaitingUpdateVersion(registration);
-  if (!version) return;
-  setPendingVersion(version);
-  if (getDismissedUpdateVersion() === version) {
+async function applyPendingBuild(registration, setPendingBuildId, setNeedRefresh) {
+  const buildId = await fetchWaitingBuildId(registration);
+  if (!buildId) return;
+  setPendingBuildId(buildId);
+  if (getDismissedBuildId() === buildId) {
     setNeedRefresh(false);
   }
 }
 
 /**
  * @param {React.Dispatch<React.SetStateAction<boolean>>} setNeedRefresh
- * @param {React.Dispatch<React.SetStateAction<string | null>>} setPendingVersion
+ * @param {React.Dispatch<React.SetStateAction<string | null>>} setPendingBuildId
  */
-async function refreshPendingVersion(setNeedRefresh, setPendingVersion) {
+async function refreshPendingBuild(setNeedRefresh, setPendingBuildId) {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
   try {
     const registration = await navigator.serviceWorker.ready;
-    await applyPendingVersion(registration, setPendingVersion, setNeedRefresh);
+    await applyPendingBuild(registration, setPendingBuildId, setNeedRefresh);
   } catch {
     // SW indisponível em testes ou contextos restritos
   }

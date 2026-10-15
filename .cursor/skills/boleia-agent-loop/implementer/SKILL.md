@@ -8,6 +8,7 @@ description: Implementa uma task atómica Boleia com TDD Vitest e JSX. Use após
 ## Regras
 
 - Uma **task atómica** do `.specs/` (ou passo Quick) por invocação.
+- **Antes de código** (símbolos em `src/`): hosted Graphify MCP — `graphify_find` / `graphify_node` → `graphify_callers` / `graphify_callees` → `graphify_impact` ou `impact_and_risk` + `graphify_tests_for` por símbolo; `graph_stats` se freshness relevante. Sem tools `graphify_*` → declarar e usar `rg`; confirmar com `rg` RPCs dinâmicos e imports lazy. Colar evidência na secção **Graphify** do PR.
 - **TDD:** teste primeiro → falha → código → verde.
 - Só `.js` / `.jsx`. Sem TypeScript. Sem Prettier inventado. Ponto-e-vírgula.
 - UI: adaptar Stitch/shadcn à arquitectura do repo (`pages/`, `components/`, `Layout`, rotas em `App.jsx`) — **não** dump cego do HTML Stitch nem do export v0. Só `.js`/`.jsx` + JSDoc.

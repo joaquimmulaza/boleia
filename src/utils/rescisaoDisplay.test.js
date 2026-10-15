@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   acordoTemRescisaoConsensualPendenteParaUser,
+  formatCivilDateLuandaPtFromIso,
   formatDateLuandaPt,
   formatRescisaoSolicitadaEmPt,
   lastDayOfRescisaoCycle,
@@ -14,6 +15,16 @@ describe('rescisaoDisplay', () => {
 
   it('formatDateLuandaPt formata data legível', () => {
     expect(formatDateLuandaPt('2026-09-30')).toMatch(/30 de setembro de 2026/i);
+  });
+
+  it('formatCivilDateLuandaPtFromIso — data civil Luanda (não dia UTC)', () => {
+    // 23:30 UTC = 00:30 do dia seguinte em Africa/Luanda (UTC+1)
+    expect(formatCivilDateLuandaPtFromIso('2026-10-12T23:30:00.000Z')).toMatch(
+      /13 de outubro de 2026/i,
+    );
+    expect(formatCivilDateLuandaPtFromIso('2026-10-12T23:30:00.000Z')).not.toMatch(
+      /12 de outubro de 2026/i,
+    );
   });
 
   it('formatRescisaoSolicitadaEmPt devolve null sem timestamp', () => {

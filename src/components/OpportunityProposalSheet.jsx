@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import OverlayShell from './OverlayShell';
 import SheetDragHandle from './SheetDragHandle';
+import SheetFecharButton from './SheetFecharButton';
 import RouteIndicator from './RouteIndicator';
 import PropostaValorInput from './PropostaValorInput';
 import { resolveOpportunityProposal } from '../utils/opportunityProposal';
@@ -90,13 +91,7 @@ function OpportunityProposalSheet({
 
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{sheet.titulo}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-[15px] font-medium text-slate-900 dark:text-white"
-          >
-            Fechar
-          </button>
+          <SheetFecharButton onClick={onClose} data-testid="opportunity-proposal-fechar" />
         </div>
 
         {papel === 'motorista' ? (

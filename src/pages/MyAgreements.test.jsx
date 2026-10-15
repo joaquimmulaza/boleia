@@ -284,6 +284,7 @@ describe('MyAgreements — marketplace 1:N', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllEnvs();
     resetOverlayStackForTests();
   });
 
@@ -323,13 +324,14 @@ describe('MyAgreements — marketplace 1:N', () => {
 
     renderPage();
 
-    fireEvent.click(await screen.findByRole('button', { name: /João/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
     const snapshot = within(dialog).getByTestId('acordo-contrato-snapshot');
-    expect(within(snapshot).getByText('João')).toBeInTheDocument();
+    expect(within(snapshot).getByText('Individual')).toBeInTheDocument();
     expect(within(snapshot).queryByText('Maria')).not.toBeInTheDocument();
-    expect(within(snapshot).queryByText('Individual')).not.toBeInTheDocument();
+    expect(within(dialog).getByTestId('passenger-row-pax-activo')).toHaveTextContent('João');
+    expect(within(dialog).getByTestId('passenger-row-pax-saiu')).toHaveTextContent('Maria');
   });
 
   it('actualiza lista quando hubRefresh notifica após aceite', async () => {
@@ -353,7 +355,7 @@ describe('MyAgreements — marketplace 1:N', () => {
     });
   });
 
-  it('motorista: detalhe N=1 mostra primeiro nome em Pessoas no acordo', async () => {
+  it('motorista: detalhe N=1 mostra Individual em Pessoas no acordo', async () => {
     getAgreementsForDriver.mockResolvedValue([
       {
         ...acordoMotorista,
@@ -372,17 +374,48 @@ describe('MyAgreements — marketplace 1:N', () => {
 
     renderPage();
 
-    fireEvent.click(await screen.findByRole('button', { name: /Ana/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
     const snapshot = within(dialog).getByTestId('acordo-contrato-snapshot');
-    expect(within(snapshot).getByText('Ana')).toBeInTheDocument();
-    expect(within(snapshot).queryByText('Individual')).not.toBeInTheDocument();
+    expect(within(snapshot).getByText('Individual')).toBeInTheDocument();
     expect(within(dialog).getByTestId('passenger-row-pax-1')).toHaveTextContent('Ana');
     expect(within(dialog).queryByText('Ana Costa')).not.toBeInTheDocument();
   });
 
-  it('motorista: acordo individual na lista mostra primeiro nome do passageiro', async () => {
+  it('b4010c7e — motorista encerrado individual: Individual no contrato e Passageiros · 0', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'driver-qa' }, tipoPerfil: 'Motorista' });
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        id: 'b4010c7e',
+        estado: 'cancelado',
+        n_passageiros_contrato: 1,
+        valor_mensal_por_passageiro_kz: 22000,
+        valor_mensal_total_kz: 22000,
+        acordos_passageiros: [
+          {
+            id: 'ap-crit',
+            passenger_id: 'pax-crit',
+            estado: 'saiu',
+            quota_mensal_kz: 22000,
+            perfis: { nome_completo: 'Critiquito Prod Passenger' },
+          },
+        ],
+      },
+    ]);
+    setupPagamentosDefault(false);
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const snapshot = within(dialog).getByTestId('acordo-contrato-snapshot');
+    expect(within(snapshot).getByText('Individual')).toBeInTheDocument();
+    expect(within(snapshot).queryByText(/Critiquito/i)).not.toBeInTheDocument();
+    expect(within(dialog).getByText(/Passageiros · 0/i)).toBeInTheDocument();
+  });
+
+  it('motorista: acordo individual na lista mostra Individual no rotulo pessoas', async () => {
     getAgreementsForDriver.mockResolvedValue([
       {
         ...acordoMotorista,
@@ -401,8 +434,68 @@ describe('MyAgreements — marketplace 1:N', () => {
 
     renderPage();
 
-    expect(await screen.findByText('Ana')).toBeInTheDocument();
-    expect(screen.queryByText('Individual')).not.toBeInTheDocument();
+    const card = await screen.findByRole('button', { name: /Talatona/i });
+    expect(within(card).getByText('Individual')).toBeInTheDocument();
+  });
+
+  it('aa66b9a6 — passageiro reservado sem IBAN: banner com CTA inactivo alinhado ao painel', async () => {
+    vi.stubEnv('VITE_PLATFORM_IBAN', '');
+    mockAuth.mockReturnValue({ user: { id: 'pax-aa66' }, tipoPerfil: 'Passageiro' });
+    const acordoReservado = {
+      ...acordoPassageiro,
+      id: 'aa66b9a6',
+      acordos_passageiros: [
+        {
+          id: 'ap-aa66',
+          passenger_id: 'pax-aa66',
+          estado: 'reservado',
+          quota_mensal_kz: 22000,
+          perfis: { nome_completo: 'Passageiro QA' },
+        },
+      ],
+    };
+    getAgreementsForPassenger.mockResolvedValue([acordoReservado]);
+    mockPagamentosGate(acordoReservado, 'pax-aa66', false);
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByTestId('lugar-reservado-banner')).toHaveTextContent(
+      /Lugar reservado — aguarda pagamento/i,
+    );
+    expect(within(dialog).getByTestId('iban-nao-configurado')).toBeInTheDocument();
+    const cta = within(dialog).getByTestId('lugar-reservado-pagamento-cta');
+    expect(cta).toHaveTextContent(/Pagamento ainda não disponível/i);
+    expect(cta).toBeDisabled();
+    expect(within(dialog).queryByRole('button', { name: /^Ir para pagamento$/i })).not.toBeInTheDocument();
+  });
+
+  it('passageiro reservado sem pagamento RPC: não mostra CTA e indisponível em simultâneo', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    const acordoReservado = {
+      ...acordoPassageiro,
+      acordos_passageiros: [
+        {
+          id: 'ap-1',
+          passenger_id: 'pax-viewer',
+          estado: 'reservado',
+          quota_mensal_kz: 22000,
+          perfis: { nome_completo: 'Tu Mesmo' },
+        },
+      ],
+    };
+    getAgreementsForPassenger.mockResolvedValue([acordoReservado]);
+    mockPagamentosGate(acordoReservado, 'pax-viewer', false);
+    getObrigacaoPagamentoPassageiro.mockResolvedValue({
+      obrigacao: { valor: 22000, valor_em_divida: 22000, quota: 22000 },
+      pagamento: null,
+    });
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).queryByTestId('lugar-reservado-pagamento-cta')).not.toBeInTheDocument();
+    expect(within(dialog).queryByText(/Pagamento ainda não disponível/i)).not.toBeInTheDocument();
   });
 
   it('acordo com oferta flexível não mostra placeholders Origem/Destino', async () => {
@@ -705,6 +798,72 @@ describe('MyAgreements — marketplace 1:N', () => {
       expect(chipCartao).not.toHaveTextContent('Saiu');
     });
 
+    it('motorista v1.10 — B) justa causa de um passageiro com outros activos', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver.mockResolvedValue([
+        {
+          ...acordoMotorista,
+          acordos_passageiros: [
+            {
+              id: 'ap-jc',
+              passenger_id: 'pax-jc',
+              estado: 'saiu',
+              lugar_rescisao_modo: 'justa_causa',
+              lugar_rescisao_em: '2026-10-12T10:00:00.000Z',
+              quota_mensal_kz: 40000,
+              perfis: { nome_completo: 'Ana Costa' },
+            },
+            {
+              id: 'ap-2',
+              passenger_id: 'pax-2',
+              estado: 'activo',
+              quota_mensal_kz: 40000,
+              perfis: { nome_completo: 'João Pedro' },
+            },
+          ],
+        },
+      ]);
+
+      renderPage(['/acordos?openAcordoId=acordo-1']);
+
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      const banner = within(dialog).getByTestId('motorista-jc-passageiro-B');
+      expect(banner).toHaveTextContent(/Os outros passageiros continuam no acordo/i);
+      expect(banner).toHaveTextContent(/menos a comissão da Boleia Certa/i);
+      expect(banner).toHaveTextContent(/Ana/);
+    });
+
+    it('motorista v1.10 — B2) último passageiro por justa causa', async () => {
+      mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
+      getAgreementsForDriver.mockResolvedValue([
+        {
+          ...acordoMotorista,
+          n_passageiros_contrato: 1,
+          estado: 'cancelado',
+          encerramento_motivo: 'sem_lugares_vivos',
+          acordos_passageiros: [
+            {
+              id: 'ap-solo',
+              passenger_id: 'pax-solo',
+              estado: 'saiu',
+              lugar_rescisao_modo: 'justa_causa',
+              lugar_rescisao_em: '2026-10-12T10:00:00.000Z',
+              quota_mensal_kz: 40000,
+              perfis: { nome_completo: 'Ana Costa' },
+            },
+          ],
+        },
+      ]);
+
+      renderPage(['/acordos?openAcordoId=acordo-1']);
+
+      const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+      const banner = within(dialog).getByTestId('motorista-jc-passageiro-B2');
+      expect(banner).toHaveTextContent(/era o último passageiro/i);
+      expect(banner).toHaveTextContent(/oferta continua publicada/i);
+      expect(banner).toHaveTextContent(/não há penalização para ti/i);
+    });
+
     it('motorista: chips «Saiu» e «Expirado» na lista de passageiros', async () => {
       mockAuth.mockReturnValue({ user: { id: 'driver-1' }, tipoPerfil: 'Motorista' });
       listAnulacaoMotivoLugarAcordos.mockResolvedValue([
@@ -933,6 +1092,7 @@ describe('MyAgreements — marketplace 1:N', () => {
   });
 
   it('passageiro reservado: chip âmbar, glossário, contagens e CTA pagamento', async () => {
+    vi.stubEnv('VITE_PLATFORM_IBAN', 'AO06004000000000000000000');
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     const acordoReservado = {
       ...acordoPassageiro,
@@ -1120,6 +1280,7 @@ describe('MyAgreements — marketplace 1:N', () => {
   });
 
   it('passageiro reservado: CTA pagamento faz scroll ao painel', async () => {
+    vi.stubEnv('VITE_PLATFORM_IBAN', 'AO06004000000000000000000');
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     const acordoReservado = {
       ...acordoPassageiro,
@@ -1272,6 +1433,144 @@ describe('MyAgreements — marketplace 1:N', () => {
     });
     expect(
       await screen.findByText(/Rescisão agendada|mantém-se activo até ao fim do mês/i),
+    ).toBeInTheDocument();
+  });
+
+  it('justa causa passageiro (parcial): confirmação termina só o lugar, não o acordo', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    countLugaresVivosAcordo.mockResolvedValue(2);
+    terminateAgreement.mockResolvedValue({ id: 'acordo-pax', estado: 'activo' });
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    openAcordoKebab(dialog);
+    await clickAcordoKebabItem(/Encerrar acordo/i);
+
+    const picker = await screen.findByTestId('terminate-modality-picker');
+    fireEvent.click(within(picker).getByText('Justa causa imediata'));
+
+    const justaPicker = await screen.findByTestId('terminate-justa-picker');
+    fireEvent.click(within(justaPicker).getByText('Motivo de segurança'));
+    fireEvent.click(within(justaPicker).getByRole('button', { name: /^Continuar$/i }));
+
+    await waitFor(() => {
+      expect(countLugaresVivosAcordo).toHaveBeenCalledWith('acordo-pax');
+    });
+
+    const sheet = await screen.findByTestId('terminate-confirm-sheet');
+    expect(within(sheet).getByText(/terminar o teu lugar/i)).toBeInTheDocument();
+    expect(within(sheet).queryByText(/Vais encerrar o acordo/i)).not.toBeInTheDocument();
+    expect(
+      within(sheet).getByText(/Os outros passageiros continuam no acordo/i),
+    ).toBeInTheDocument();
+    expect(
+      within(sheet).getByRole('button', { name: /^Terminar o meu lugar$/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(sheet).queryByRole('button', { name: /^Encerrar acordo$/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('justa causa passageiro: contagem a carregar — sem copy parcial nem CTA activo', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    /** @type {(n: number) => void} */
+    let resolveCount;
+    countLugaresVivosAcordo.mockImplementation(
+      () => new Promise((resolve) => {
+        resolveCount = resolve;
+      }),
+    );
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    openAcordoKebab(dialog);
+    await clickAcordoKebabItem(/Encerrar acordo/i);
+
+    const picker = await screen.findByTestId('terminate-modality-picker');
+    fireEvent.click(within(picker).getByText('Justa causa imediata'));
+
+    const justaPicker = await screen.findByTestId('terminate-justa-picker');
+    fireEvent.click(within(justaPicker).getByText('Motivo de segurança'));
+    fireEvent.click(within(justaPicker).getByRole('button', { name: /^Continuar$/i }));
+
+    const sheet = await screen.findByTestId('terminate-confirm-sheet');
+    expect(within(sheet).queryByText(/terminar o teu lugar/i)).not.toBeInTheDocument();
+    expect(
+      within(sheet).getByText(/A confirmar quantos passageiros ainda estão no acordo/i),
+    ).toBeInTheDocument();
+    const submit = within(sheet).getByTestId('terminate-confirm-submit');
+    expect(submit).toBeDisabled();
+
+    await act(async () => {
+      resolveCount(2);
+    });
+    await waitFor(() => {
+      expect(within(sheet).getByText(/terminar o teu lugar/i)).toBeInTheDocument();
+    });
+    expect(submit).not.toBeDisabled();
+  });
+
+  it('justa causa passageiro: falha na contagem — erro e CTA desactivado', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    countLugaresVivosAcordo.mockRejectedValue(new Error('Sem permissão'));
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    openAcordoKebab(dialog);
+    await clickAcordoKebabItem(/Encerrar acordo/i);
+
+    const picker = await screen.findByTestId('terminate-modality-picker');
+    fireEvent.click(within(picker).getByText('Justa causa imediata'));
+
+    const justaPicker = await screen.findByTestId('terminate-justa-picker');
+    fireEvent.click(within(justaPicker).getByText('Motivo de segurança'));
+    fireEvent.click(within(justaPicker).getByRole('button', { name: /^Continuar$/i }));
+
+    await waitFor(() => {
+      expect(countLugaresVivosAcordo).toHaveBeenCalledWith('acordo-pax');
+    });
+
+    const sheet = await screen.findByTestId('terminate-confirm-sheet');
+    expect(within(sheet).queryByText(/terminar o teu lugar/i)).not.toBeInTheDocument();
+    expect(
+      within(sheet).getByText(/Não foi possível confirmar quantos passageiros ainda estão no acordo/i),
+    ).toBeInTheDocument();
+    expect(within(sheet).getByTestId('terminate-confirm-submit')).toBeDisabled();
+  });
+
+  it('justa causa passageiro (último): confirma encerramento do acordo', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    getAgreementsForPassenger.mockResolvedValue([acordoPassageiro]);
+    countLugaresVivosAcordo.mockResolvedValue(1);
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    openAcordoKebab(dialog);
+    await clickAcordoKebabItem(/Encerrar acordo/i);
+
+    const picker = await screen.findByTestId('terminate-modality-picker');
+    fireEvent.click(within(picker).getByText('Justa causa imediata'));
+
+    const justaPicker = await screen.findByTestId('terminate-justa-picker');
+    fireEvent.click(within(justaPicker).getByText('Motivo de segurança'));
+    fireEvent.click(within(justaPicker).getByRole('button', { name: /^Continuar$/i }));
+
+    const sheet = await screen.findByTestId('terminate-confirm-sheet');
+    expect(await within(sheet).findByText(/Vais encerrar o acordo/i)).toBeInTheDocument();
+    expect(within(sheet).getByText(/último passageiro/i)).toBeInTheDocument();
+    expect(
+      within(sheet).getByRole('button', { name: /^Encerrar acordo$/i }),
     ).toBeInTheDocument();
   });
 
@@ -1441,6 +1740,50 @@ describe('MyAgreements — marketplace 1:N', () => {
     );
     expect(within(dialog).getByTestId('motorista-pagamento-comprovativo-pax-1')).toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: /Enviar comprovativo/i })).not.toBeInTheDocument();
+  });
+
+  it('cancelamento_pendente: motorista vê chip real de pagamento (não Pagamento cancelado)', async () => {
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        estado: 'cancelamento_pendente',
+        cancelamento_efectivo_em: '2026-10-31T23:59:59.000Z',
+      },
+    ]);
+    listPagamentosPendentesMotoristaAcordo.mockResolvedValue([
+      {
+        pagamento_id: 'pg-prev',
+        passenger_id: 'pax-1',
+        passenger_nome: 'Ana Costa',
+        estado: 'pendente_pagamento',
+        valor: 40000,
+        valor_em_divida: 40000,
+      },
+    ]);
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+
+    await waitFor(() => {
+      expect(within(dialog).getByTestId('motorista-pagamento-pax-1')).toBeInTheDocument();
+    });
+    expect(within(dialog).getByText('Pagamento pendente')).toBeInTheDocument();
+    expect(within(dialog).queryByText('Pagamento cancelado')).not.toBeInTheDocument();
+    expect(within(dialog).getByTestId('motorista-pagamentos-titulo')).toHaveTextContent(
+      'Pagamentos do mês',
+    );
+  });
+
+  it('motorista com focus=pagamento abre detalhe (sem secção passageiro)', async () => {
+    renderPage(['/acordos?openAcordoId=acordo-1&focus=pagamento']);
+
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    await waitFor(() => {
+      expect(within(dialog).getByTestId('motorista-pagamentos-panel')).toBeInTheDocument();
+    });
+    expect(within(dialog).queryByTestId('acordo-pagamento-section')).not.toBeInTheDocument();
   });
 
   it('motorista não vê Sair só eu', async () => {

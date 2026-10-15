@@ -10,6 +10,7 @@ export default function SheetDragHandle({ className = '', onDismiss: _onDismiss 
   return (
     <div
       data-testid="sheet-drag-handle"
+      data-geocoder-dismiss-chrome
       className={`flex justify-center pt-3 pb-1 touch-none ${className}`.trim()}
       aria-hidden="true"
     >

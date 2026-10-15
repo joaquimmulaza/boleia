@@ -14,6 +14,7 @@ description: Revisa qualidade de código Boleia (ESLint, TDD, AGENTS/.cursorrule
 - [ ] Sem secrets; sem toast library; sem `requestSeat` / `routes` legados
 - [ ] Página nova registada em `App.jsx` se aplicável
 - [ ] Alinhamento a `AGENTS.md` (domínio marketplace, acordos 1:N)
+- [ ] PR com alterações em `src/`: corpo inclui secção **Graphify** (blast radius + testes). Revisor re-corre `impact_and_risk` nos símbolos tocados; se a secção faltar ou estiver vazia → **REQUEST CHANGES** / `VERDICT: REJECT` com pedido para colar impacto + `graphify_tests_for`.
 
 Opcional: despachar Task `bugbot` / `security-review` se o utilizador pedir ou o risco for alto.
 

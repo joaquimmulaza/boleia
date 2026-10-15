@@ -1,9 +1,10 @@
 import React from 'react';
 import { LogOut, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Button } from './ui/button';
 import { useKebabMenu } from '../hooks/useKebabMenu';
 
 /**
- * Kebab do grupo — só as acções que o papel permite.
+ * Acções do grupo — kebab com 2+ itens; botão directo quando só há uma.
  * @param {{
  *   canEditar: boolean,
  *   canApagar: boolean,
@@ -25,7 +26,49 @@ function GrupoKebabMenu({
 }) {
   const { open, close, toggle, rootRef, triggerRef, triggerAria, menuProps } = useKebabMenu();
 
-  if (!canEditar && !canApagar && !canSair) return null;
+  const accoes = [
+    canEditar
+      ? { key: 'editar', label: 'Editar', icon: Pencil, onClick: onEditar, destructive: false }
+      : null,
+    canSair
+      ? { key: 'sair', label: 'Sair do grupo', icon: LogOut, onClick: onSair, destructive: false }
+      : null,
+    canApagar
+      ? {
+          key: 'apagar',
+          label: 'Apagar grupo',
+          icon: Trash2,
+          onClick: onApagar,
+          destructive: true,
+        }
+      : null,
+  ].filter(Boolean);
+
+  if (accoes.length === 0) return null;
+
+  if (accoes.length === 1) {
+    const unica = accoes[0];
+    const Icon = unica.icon;
+    return (
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled={disabled}
+        aria-label={unica.label}
+        data-testid={`grupo-acao-directa-${unica.key}`}
+        className={`h-9 gap-1.5 px-2 font-semibold ${
+          unica.destructive
+            ? 'text-red-600 hover:text-red-700 dark:text-red-400'
+            : 'text-slate-700 dark:text-slate-200'
+        }`}
+        onClick={unica.onClick}
+      >
+        <Icon size={16} aria-hidden="true" />
+        {unica.label}
+      </Button>
+    );
+  }
 
   const fecharE = (action) => {
     close();

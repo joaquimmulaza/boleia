@@ -1,0 +1,277 @@
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import GrupoProcuraPanel from './GrupoProcuraPanel';
+import {
+  getGrupoByProcura,
+  listMembrosGrupo,
+  grupoTemAcordoActivo,
+} from '../services/GrupoService';
+import { getPlacePredictions, getPlaceDetails } from '../services/LocationService';
+
+vi.mock('../services/GrupoService', () => ({
+  createGrupo: vi.fn(),
+  addMembroGrupo: vi.fn(),
+  getGrupoByProcura: vi.fn(),
+  listMembrosGrupo: vi.fn(),
+  listPedidosPendentes: vi.fn().mockResolvedValue([]),
+  aprovarEntrada: vi.fn(),
+  rejeitarEntrada: vi.fn(),
+  sairDoGrupo: vi.fn(),
+  grupoTemAcordoActivo: vi.fn().mockResolvedValue(false),
+  updateGrupoCapacidade: vi.fn(),
+  updateMembroRecolha: vi.fn(),
+  apagarGrupo: vi.fn(),
+}));
+
+vi.mock('../services/ProfileService', () => ({
+  findPassageiroByTelefone: vi.fn(),
+}));
+
+vi.mock('../services/LocationService', () => ({
+  getPlacePredictions: vi.fn(),
+  getPlaceDetails: vi.fn(),
+}));
+
+const procura = {
+  id: 'pr-1',
+  n_candidato: 1,
+  origin_name: 'Talatona',
+  origin_lat: -8.9,
+  origin_lng: 13.1,
+  destination_name: 'Miramar',
+};
+
+describe('GrupoProcuraPanel — sheet Editar grupo (integração real)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getGrupoByProcura.mockResolvedValue({ id: 'g-1', procura_id: 'pr-1', n_maximo: 4 });
+    listMembrosGrupo.mockResolvedValue([
+      {
+        id: 'm-1',
+        passenger_id: 'pax-1',
+        estado: 'activo',
+        ordem_insercao: 0,
+        pickup_name: '',
+        perfis: { nome_completo: 'Ana' },
+      },
+    ]);
+    grupoTemAcordoActivo.mockResolvedValue(true);
+    getPlacePredictions.mockResolvedValue([
+      {
+        place_id: '1',
+        description: 'Talatona, Município do Talatona',
+        lat: -8.91,
+        lng: 13.19,
+      },
+      {
+        place_id: '2',
+        description: 'Viana, Município de Viana',
+        lat: -8.9,
+        lng: 13.18,
+      },
+      {
+        place_id: '3',
+        description: 'Kilamba, Município de Belas',
+        lat: -8.99,
+        lng: 13.27,
+      },
+      {
+        place_id: '4',
+        description: 'Cazenga, Município de Cazenga',
+        lat: -8.83,
+        lng: 13.28,
+      },
+    ]);
+    getPlaceDetails.mockResolvedValue({ lat: -8.91, lng: 13.19 });
+  });
+
+  async function abrirSheetEditar() {
+    render(<GrupoProcuraPanel procura={procura} userId="pax-1" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar' }));
+    return screen.findByTestId('editar-grupo-sheet');
+  }
+
+  it('clicar Fechar fecha o sheet (sem dropdown)', async () => {
+    await abrirSheetEditar();
+    const fechar = screen.getByTestId('editar-grupo-fechar');
+    fireEvent.pointerDown(fechar);
+    fireEvent.click(fechar);
+    await waitFor(() => {
+      expect(screen.queryByTestId('editar-grupo-sheet')).not.toBeInTheDocument();
+    });
+  });
+
+  it('clicar Fechar fecha o sheet com dropdown de sugestões aberto', async () => {
+    await abrirSheetEditar();
+    const pickup = screen.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
+    fireEvent.change(pickup, { target: { value: 'Talatona' } });
+
+    await waitFor(
+      () => {
+        expect(screen.getByRole('listbox', { name: 'Sugestões de locais' })).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+
+    expect(pickup).not.toHaveAttribute('aria-activedescendant');
+
+    const fechar = screen.getByTestId('editar-grupo-fechar');
+    const listbox = screen.getByRole('listbox', { name: 'Sugestões de locais' });
+    const listRect = listbox.getBoundingClientRect();
+    const fecharRect = fechar.getBoundingClientRect();
+    expect(listRect.top).toBeGreaterThan(fecharRect.bottom - 1);
+
+    fireEvent.pointerDown(fechar);
+    fireEvent.click(fechar);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('editar-grupo-sheet')).not.toBeInTheDocument();
+    });
+    expect(getPlaceDetails).not.toHaveBeenCalled();
+  });
+
+  it('com lista aberta: dropdown fica abaixo do campo e não tapa o header', async () => {
+    await abrirSheetEditar();
+    const pickup = screen.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
+    fireEvent.change(pickup, { target: { value: 'Talatona' } });
+
+    await waitFor(
+      () => {
+        expect(screen.getByRole('listbox', { name: 'Sugestões de locais' })).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+
+    expect(pickup).not.toHaveAttribute('aria-activedescendant');
+
+    const sheet = screen.getByTestId('editar-grupo-sheet');
+    const header = sheet.querySelector('[data-geocoder-sheet-header]');
+    expect(header).toBeTruthy();
+
+    const fechar = screen.getByTestId('editar-grupo-fechar');
+    const listbox = screen.getByRole('listbox', { name: 'Sugestões de locais' });
+    const fecharRect = fechar.getBoundingClientRect();
+    const listRect = listbox.getBoundingClientRect();
+    const inputRect = pickup.getBoundingClientRect();
+    const sheetRect = sheet.getBoundingClientRect();
+    const headerRect = header.getBoundingClientRect();
+
+    expect(listRect.top).toBeGreaterThanOrEqual(inputRect.bottom - 1);
+    expect(listRect.top).toBeGreaterThan(fecharRect.bottom - 1);
+    expect(listRect.top).toBeGreaterThanOrEqual(sheetRect.top - 1);
+    expect(listRect.top).toBeGreaterThanOrEqual(headerRect.bottom - 1);
+  });
+
+  it('pointerdown no handle fecha a lista sem seleccionar sugestão', async () => {
+    await abrirSheetEditar();
+    const pickup = screen.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
+    fireEvent.change(pickup, { target: { value: 'Talatona' } });
+
+    await waitFor(
+      () => {
+        expect(screen.getByRole('listbox', { name: 'Sugestões de locais' })).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+
+    fireEvent.pointerDown(screen.getByTestId('sheet-drag-handle'));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('listbox', { name: 'Sugestões de locais' })).not.toBeInTheDocument();
+    });
+    expect(getPlaceDetails).not.toHaveBeenCalled();
+  });
+
+  it('com lista aberta: listbox fica dentro do dialog modal', async () => {
+    await abrirSheetEditar();
+    const pickup = screen.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
+    fireEvent.change(pickup, { target: { value: 'Talatona' } });
+
+    await waitFor(
+      () => {
+        expect(screen.getByRole('listbox', { name: 'Sugestões de locais' })).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+
+    const dialog = screen.getByRole('dialog');
+    const listbox = screen.getByRole('listbox', { name: 'Sugestões de locais' });
+    const portal = screen.getByTestId('geocoder-sheet-portal');
+    expect(dialog.contains(listbox)).toBe(true);
+    expect(portal.contains(listbox)).toBe(true);
+  });
+
+  it('arrastar na listbox não move nem fecha o sheet', async () => {
+    await abrirSheetEditar();
+    const pickup = screen.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
+    fireEvent.change(pickup, { target: { value: 'Talatona' } });
+
+    await waitFor(
+      () => {
+        expect(screen.getByRole('listbox', { name: 'Sugestões de locais' })).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+
+    const sheet = screen.getByTestId('editar-grupo-sheet');
+    const panel = sheet.querySelector('[data-geocoder-sheet-boundary]');
+    expect(panel).toBeTruthy();
+
+    const option = screen.getByRole('option', { name: /Talatona, Município do Talatona/i });
+    fireEvent.pointerDown(option, { clientX: 120, clientY: 420, button: 0, pointerId: 11 });
+    fireEvent.pointerMove(window, { clientX: 120, clientY: 720, button: 0, pointerId: 11 });
+    fireEvent.pointerUp(window, { clientX: 120, clientY: 720, button: 0, pointerId: 11 });
+
+    expect(screen.getByTestId('editar-grupo-sheet')).toBeInTheDocument();
+    expect(screen.getByRole('listbox', { name: 'Sugestões de locais' })).toBeInTheDocument();
+    expect(panel.style.transform).toBe('');
+  });
+
+  it('iniciar drag no handle fecha a lista de sugestões', async () => {
+    await abrirSheetEditar();
+    const pickup = screen.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
+    fireEvent.change(pickup, { target: { value: 'Talatona' } });
+
+    await waitFor(
+      () => {
+        expect(screen.getByRole('listbox', { name: 'Sugestões de locais' })).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+
+    const handle = screen.getByTestId('sheet-drag-handle');
+    fireEvent.pointerDown(handle, { clientX: 200, clientY: 300, button: 0, pointerId: 12 });
+    fireEvent.pointerMove(window, { clientX: 200, clientY: 420, button: 0, pointerId: 12 });
+
+    await waitFor(() => {
+      expect(screen.queryByRole('listbox', { name: 'Sugestões de locais' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('Escape com lista aberta fecha só a lista; Escape de novo fecha o sheet', async () => {
+    await abrirSheetEditar();
+    const pickup = screen.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
+    fireEvent.change(pickup, { target: { value: 'Talatona' } });
+
+    await waitFor(
+      () => {
+        expect(screen.getByRole('listbox', { name: 'Sugestões de locais' })).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+
+    fireEvent.keyDown(pickup, { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(screen.queryByRole('listbox', { name: 'Sugestões de locais' })).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId('editar-grupo-sheet')).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('editar-grupo-sheet')).not.toBeInTheDocument();
+    });
+  });
+});

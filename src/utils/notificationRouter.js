@@ -49,6 +49,17 @@ export function propostaHubDeepLink(metadata) {
   return qs ? `${base}?${qs}` : base;
 }
 
+/**
+ * Cards `metadata.type = status` (v1.10 passageiro removido, v1.11 motorista expiração).
+ * Nunca deduzir hub pelo texto «motorista» no corpo.
+ *
+ * @param {Record<string, unknown> | null | undefined} metadata
+ * @returns {string}
+ */
+export function statusCardDeepLink(metadata) {
+  return acordosDeepLink(metadata, null);
+}
+
 export function acordosDeepLink(metadata, focus) {
   const params = new URLSearchParams();
   if (metadata?.acordo_id) {
@@ -62,6 +73,7 @@ export function acordosDeepLink(metadata, focus) {
 }
 
 export const notificationRouteMap = {
+  status: (metadata) => statusCardDeepLink(metadata),
   agreement_update: (metadata) => {
     const adendaEstado = String(metadata?.adenda_estado || '').toLowerCase();
     if (ADENDA_PENDENTE_ESTADOS.has(adendaEstado)) {
