@@ -14,14 +14,17 @@ import PageShell from '../components/PageShell';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import { Badge } from '../components/ui/badge';
 import { FALTA_FUTURA_CHIP } from '../copy/faltasFutureChip';
+import { formatFaltaMotoristaRepartidaConta } from '../copy/faltasMotoristaRepartidaConta';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import {
   DESCONTO_FALTA_AMOUNT_CLASS,
+  countPassageirosActivosAcordo,
   filterFaltasEsteMes,
   formatFaltaDiaCurto,
   isFutureFaltaDate,
   resolveDescontoFaltasTotal,
+  resolveDescontoLinhaFalta,
   resolveFaltasHubCard,
 } from '../utils/faltasDisplay';
 
@@ -141,9 +144,11 @@ const AbsenceTracker = () => {
   }, [acordoId, carregarFaltas, carregarAcordosActivos, carregarGatePagamento]);
 
   const faltasEsteMes = filterFaltasEsteMes(faltas);
+  const nPassageirosActivos = countPassageirosActivosAcordo(acordoDetalhe);
   const totalDesconto = resolveDescontoFaltasTotal(pagamentosAcordo, faltasEsteMes, {
     tipoPerfil,
     passengerId: user?.id,
+    nPassageirosActivos,
   });
 
   const handleLogAbsence = async (formData) => {
@@ -290,6 +295,20 @@ const AbsenceTracker = () => {
           faltasEsteMes.map((falta) => {
             const viagem = labelViagemFalta(falta.viagem);
             const futura = isFutureFaltaDate(falta.data_falta);
+            const isMotoristaFalta =
+              tipoPerfil === 'Motorista'
+              && String(falta.tipo || '').toLowerCase() === 'motorista';
+            const descontoLinhaKz = resolveDescontoLinhaFalta(
+              falta,
+              nPassageirosActivos,
+              tipoPerfil,
+            );
+            const contaMotoristaRepartida = isMotoristaFalta
+              ? formatFaltaMotoristaRepartidaConta(
+                nPassageirosActivos,
+                formatKwanza(descontoLinhaKz),
+              )
+              : null;
             return (
               <div
                 key={falta.id}
@@ -318,14 +337,22 @@ const AbsenceTracker = () => {
                         {viagem}
                       </span>
                     ) : null}
+                    {contaMotoristaRepartida ? (
+                      <span
+                        data-testid="falta-motorista-repartida-conta"
+                        className="text-[13px] leading-[18px] text-slate-500 dark:text-slate-400"
+                      >
+                        {contaMotoristaRepartida}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
                 <p
                   data-testid="desconto-falta-amount"
                   className={`shrink-0 text-[15px] font-semibold ${DESCONTO_FALTA_AMOUNT_CLASS}`}
-                  aria-label={`Desconto de ${formatKwanza(falta.desconto_kz)} Kz`}
+                  aria-label={`Desconto de ${formatKwanza(descontoLinhaKz)} Kz`}
                 >
-                  {formatKwanza(falta.desconto_kz)} Kz
+                  {formatKwanza(descontoLinhaKz)} Kz
                 </p>
               </div>
             );

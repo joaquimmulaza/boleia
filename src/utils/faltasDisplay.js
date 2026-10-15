@@ -93,15 +93,44 @@ export function sumDescontoFaltasParaPassageiro(faltas, passengerId) {
 }
 
 /**
- * Soma descontos de faltas tipo Motorista no mês (para deduplicar totais liquidados).
- * @param {Array<{ tipo?: string, desconto_kz?: number }>} faltas
+ * @param {{ acordos_passageiros?: Array<{ estado?: string }> } | null | undefined} acordo
  * @returns {number}
  */
-export function sumDescontoFaltasMotorista(faltas) {
-  return (faltas || []).reduce(
-    (acc, falta) => (isFaltaTipoMotorista(falta) ? acc + (Number(falta.desconto_kz) || 0) : acc),
-    0,
-  );
+export function countPassageirosActivosAcordo(acordo) {
+  return (acordo?.acordos_passageiros || []).filter(
+    (p) => String(p.estado || '').toLowerCase() === 'activo',
+  ).length;
+}
+
+/**
+ * Total client-side na visão motorista: falta Motorista × passageiros activos; restantes uma vez.
+ * @param {Array<{ tipo?: string, desconto_kz?: number }>} faltas
+ * @param {number} nPassageirosActivos
+ * @returns {number}
+ */
+export function sumDescontoFaltasVisaoMotorista(faltas, nPassageirosActivos) {
+  const n = Math.max(0, Number(nPassageirosActivos) || 0);
+  return (faltas || []).reduce((acc, falta) => {
+    const valor = Number(falta.desconto_kz) || 0;
+    if (isFaltaTipoMotorista(falta)) return acc + valor * n;
+    return acc + valor;
+  }, 0);
+}
+
+/**
+ * Desconto efectivo de uma falta Motorista na lista (motorista) ou unitário (passageiro).
+ * @param {{ tipo?: string, desconto_kz?: number }} falta
+ * @param {number} nPassageirosActivos
+ * @param {'Passageiro' | 'Motorista' | undefined} tipoPerfil
+ * @returns {number}
+ */
+export function resolveDescontoLinhaFalta(falta, nPassageirosActivos, tipoPerfil) {
+  const valor = Number(falta?.desconto_kz) || 0;
+  if (tipoPerfil === 'Motorista' && isFaltaTipoMotorista(falta)) {
+    const n = Math.max(0, Number(nPassageirosActivos) || 0);
+    return valor * n;
+  }
+  return valor;
 }
 
 /**
@@ -114,13 +143,14 @@ function isPagamentoLiquidado(estado) {
 
 /**
  * «Total a descontar» — Maestro (a): liquidado → `desconto_faltas_kz`; senão soma das faltas do mês.
- * Motorista liquidado: deduplica faltas Motorista (contam uma vez, não por passageiro).
+ * Motorista: falta tipo Motorista desconta por cada passageiro activo (regra 4).
  *
  * @param {Array<{ passenger_id?: string, mes_referencia?: string, desconto_faltas_kz?: number, estado?: string }>} pagamentos
  * @param {Array<{ tipo?: string, passenger_id?: string, desconto_kz?: number }>} faltasEsteMes
  * @param {{
  *   tipoPerfil?: 'Passageiro' | 'Motorista',
  *   passengerId?: string | null,
+ *   nPassageirosActivos?: number,
  *   refDate?: Date,
  * }} [options]
  * @returns {number}
@@ -135,14 +165,13 @@ export function resolveDescontoFaltasTotal(pagamentos, faltasEsteMes, options = 
   if (options.tipoPerfil === 'Motorista') {
     const liquidadoRows = rows.filter((row) => isPagamentoLiquidado(row.estado));
     if (liquidadoRows.length > 0 && liquidadoRows.length === rows.length) {
-      const motoristaDesconto = sumDescontoFaltasMotorista(faltas);
-      const somaLinhas = liquidadoRows.reduce(
+      return liquidadoRows.reduce(
         (acc, row) => acc + (Number(row.desconto_faltas_kz) || 0),
         0,
       );
-      return somaLinhas - Math.max(0, liquidadoRows.length - 1) * motoristaDesconto;
     }
-    return sumDescontoFaltas(faltas);
+    const nActivos = options.nPassageirosActivos ?? 0;
+    return sumDescontoFaltasVisaoMotorista(faltas, nActivos);
   }
 
   const pid = options.passengerId;

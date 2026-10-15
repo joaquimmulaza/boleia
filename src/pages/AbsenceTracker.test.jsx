@@ -253,6 +253,62 @@ describe('AbsenceTracker — marketplace', () => {
     expect(screen.queryByText('500')).not.toBeInTheDocument();
   });
 
+  it('motorista: 3 passageiros activos, 1 falta Motorista 500 Kz — conta e total 1500 Kz', async () => {
+    mockAuth = {
+      user: { id: 'driver-1' },
+      tipoPerfil: 'Motorista',
+      profileLoading: false,
+    };
+    mockListPagamentosByAcordo.mockResolvedValue([
+      {
+        passenger_id: 'pax-1',
+        estado: 'em_custodia',
+        mes_referencia: MES_REF_OUT,
+        desconto_faltas_kz: 0,
+      },
+      {
+        passenger_id: 'pax-2',
+        estado: 'em_custodia',
+        mes_referencia: MES_REF_OUT,
+        desconto_faltas_kz: 0,
+      },
+      {
+        passenger_id: 'pax-3',
+        estado: 'em_custodia',
+        mes_referencia: MES_REF_OUT,
+        desconto_faltas_kz: 0,
+      },
+    ]);
+    mockGetAgreementsForDriver.mockResolvedValue([
+      {
+        id: 'acordo-uuid-001',
+        estado: 'activo',
+        acordos_passageiros: [
+          { passenger_id: 'pax-1', estado: 'activo' },
+          { passenger_id: 'pax-2', estado: 'activo' },
+          { passenger_id: 'pax-3', estado: 'activo' },
+        ],
+      },
+    ]);
+    mockGetAbsences.mockResolvedValue([
+      {
+        id: 'f-mot',
+        id_acordo: 'acordo-uuid-001',
+        data_falta: FALTA_ONTEM,
+        tipo: 'Motorista',
+        desconto_kz: 500,
+        viagem: 'ambas',
+      },
+    ]);
+    render(<AbsenceTracker />);
+    expect(await screen.findAllByTestId('absence-card')).toHaveLength(1);
+    expect(screen.getByTestId('desconto-falta-total')).toHaveTextContent('1500');
+    expect(screen.getByTestId('falta-motorista-repartida-conta')).toHaveTextContent(
+      '3 passageiros · 1500 Kz',
+    );
+    expect(screen.getByTestId('desconto-falta-amount')).toHaveTextContent('1500');
+  });
+
   it('refetch pagamentos após registar falta', async () => {
     mockLogAbsence.mockResolvedValue({ id: 'f2' });
     render(<AbsenceTracker />);

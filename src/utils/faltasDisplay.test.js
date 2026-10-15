@@ -71,7 +71,7 @@ describe('faltasDisplay', () => {
     ).toBe(3000);
   });
 
-  it('motorista: uma falta Motorista conta uma vez com 2 passageiros liquidados', () => {
+  it('motorista liquidado: soma desconto_faltas_kz de cada passageiro (sem dedupe)', () => {
     const faltas = [
       { tipo: 'Passageiro', passenger_id: 'pax-1', desconto_kz: 400 },
       { tipo: 'Passageiro', passenger_id: 'pax-2', desconto_kz: 300 },
@@ -96,10 +96,10 @@ describe('faltasDisplay', () => {
         tipoPerfil: 'Motorista',
         refDate: refOct15,
       }),
-    ).toBe(1200);
+    ).toBe(1700);
   });
 
-  it('motorista em custódia soma todas as faltas do mês uma vez', () => {
+  it('motorista em custódia: falta Motorista × passageiros activos + faltas pax', () => {
     const faltas = [
       { tipo: 'Passageiro', passenger_id: 'pax-1', desconto_kz: 400 },
       { tipo: 'Motorista', desconto_kz: 500 },
@@ -107,9 +107,21 @@ describe('faltasDisplay', () => {
     expect(
       resolveDescontoFaltasTotal([], faltas, {
         tipoPerfil: 'Motorista',
+        nPassageirosActivos: 3,
         refDate: refOct15,
       }),
-    ).toBe(900);
+    ).toBe(1900);
+  });
+
+  it('motorista: 3 activos e 1 falta Motorista 500 Kz → total 1500 Kz', () => {
+    const faltas = [{ tipo: 'Motorista', desconto_kz: 500 }];
+    expect(
+      resolveDescontoFaltasTotal([], faltas, {
+        tipoPerfil: 'Motorista',
+        nPassageirosActivos: 3,
+        refDate: refOct15,
+      }),
+    ).toBe(1500);
   });
 
   it('sumDescontoFaltasParaPassageiro inclui motorista e só o passageiro alvo', () => {
