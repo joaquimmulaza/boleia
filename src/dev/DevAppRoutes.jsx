@@ -43,6 +43,7 @@ export default function DevAppRoutes() {
       <Route path="notif-cards-269" element={<DevNotifCards269Capture />} />
       <Route path="notif-v112" element={<DevNotifV112Capture />} />
       <Route path="faltas-capture/:acordoId" element={<DevFaltasCapture />} />
+      <Route path="faltas-capture-liquidado/:acordoId" element={<DevFaltasCapture />} />
     </Routes>
   );
 }

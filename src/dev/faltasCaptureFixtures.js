@@ -1,4 +1,4 @@
-/** Fixture QA Critiquito — acordo 3d9b352b (captura DEV /__dev/faltas-capture). */
+/** Fixture QA Critiquito — acordo 3d9b352b (captura DEV). */
 export const FALTAS_CAPTURE_ACORDO_ID = '3d9b352b-0000-0000-0000-000000000001';
 
 export const FALTAS_CAPTURE_USER_ID = 'critiquito-pax-faltas';
@@ -17,6 +17,12 @@ export const FALTAS_CAPTURE_AUTH = {
 
 const MES_REF = '2026-10-01';
 
+/** @returns {boolean} */
+function isLiquidadoCaptureUrl() {
+  if (typeof window === 'undefined') return false;
+  return window.location.pathname.includes('/__dev/faltas-capture-liquidado/');
+}
+
 /**
  * @param {string} acordoId
  * @returns {Promise<object[]>}
@@ -29,6 +35,7 @@ export async function faltasCaptureGetAbsences(acordoId) {
       id_acordo: acordoId,
       data_falta: '2026-10-08',
       tipo: 'Passageiro',
+      passenger_id: FALTAS_CAPTURE_USER_ID,
       desconto_kz: 900,
       viagem: 'ida',
     },
@@ -45,7 +52,8 @@ export async function faltasCaptureGetAbsences(acordoId) {
       id_acordo: acordoId,
       data_falta: '2026-10-28',
       tipo: 'Passageiro',
-      desconto_kz: 1272.73,
+      passenger_id: FALTAS_CAPTURE_USER_ID,
+      desconto_kz: 450,
       viagem: 'regresso',
     },
   ];
@@ -57,13 +65,22 @@ export async function faltasCaptureGetAbsences(acordoId) {
  */
 export async function faltasCaptureListPagamentos(acordoId) {
   if (acordoId !== FALTAS_CAPTURE_ACORDO_ID) return [];
+  if (isLiquidadoCaptureUrl()) {
+    return [
+      {
+        passenger_id: FALTAS_CAPTURE_USER_ID,
+        estado: 'liquidado',
+        mes_referencia: MES_REF,
+        desconto_faltas_kz: 2000,
+      },
+    ];
+  }
   return [
     {
       passenger_id: FALTAS_CAPTURE_USER_ID,
       estado: 'em_custodia',
       mes_referencia: MES_REF,
-      /** Valor servidor (coluna alimentada por `_desconto_faltas_pagamento` na liquidação / sync BD). */
-      desconto_faltas_kz: 3000,
+      desconto_faltas_kz: 0,
     },
   ];
 }

@@ -5,12 +5,12 @@ import {
   faltasCaptureListPagamentos,
 } from './faltasCaptureFixtures';
 
-const CAPTURE_PATH = '/__dev/faltas-capture/';
-
 /** @returns {boolean} */
 function isFaltasCaptureUrl() {
   if (typeof window === 'undefined') return false;
-  return window.location.pathname.includes(CAPTURE_PATH);
+  const path = window.location.pathname;
+  return path.includes('/__dev/faltas-capture/')
+    || path.includes('/__dev/faltas-capture-liquidado/');
 }
 
 /**
