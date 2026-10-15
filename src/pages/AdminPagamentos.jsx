@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Copy, ExternalLink, FileText, Loader2 } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
@@ -35,6 +35,7 @@ import {
   computeExcessoReembolsoKz,
   copyTextToClipboard,
   formatAcordoIdCurto,
+  formatExcessoReembolsoPrincipal,
   valorPagoEfectivoKz,
 } from '../utils/adminResolucaoPagamento';
 import { Card, CardContent, CardHeader } from '../components/ui/card';
@@ -53,11 +54,11 @@ const TABS = /** @type {const} */ ([
  * Cartão de resolução manual (excesso a devolver) — reutilizado na página admin e captura dev.
  * @param {{
  *   row: Record<string, unknown>,
- *   copiedAcordoId?: string | null,
- *   onCopyAcordoId: (acordoId: string) => void | Promise<void>,
+ *   copiedPagamentoId?: string | null,
+ *   onCopyAcordoId: (pagamentoId: string, acordoId: string) => void | Promise<void>,
  * }} props
  */
-export function AdminResolucaoPagamentoCard({ row, copiedAcordoId, onCopyAcordoId }) {
+export function AdminResolucaoPagamentoCard({ row, copiedPagamentoId, onCopyAcordoId }) {
   const excessoKz = computeExcessoReembolsoKz(row);
   const quotaPagaKz = valorPagoEfectivoKz(row);
   const acordoCurto = formatAcordoIdCurto(/** @type {string | undefined} */ (row.acordo_id));
@@ -70,10 +71,10 @@ export function AdminResolucaoPagamentoCard({ row, copiedAcordoId, onCopyAcordoI
             className="text-xs font-medium text-amber-900/80 dark:text-amber-100/80"
             data-testid="resolucao-label-excesso"
           >
-            <span className="max-[390px]:hidden">
+            <span className="hidden min-[391px]:inline">
               {ADMIN_RESOLUCAO_COPY.excessoReembolso}
             </span>
-            <span className="hidden max-[390px]:inline">
+            <span className="inline min-[391px]:hidden">
               {ADMIN_RESOLUCAO_COPY.excessoReembolsoCurto}
             </span>
           </p>
@@ -81,7 +82,7 @@ export function AdminResolucaoPagamentoCard({ row, copiedAcordoId, onCopyAcordoI
             className="text-xl font-bold tabular-nums text-slate-900 dark:text-white"
             data-testid="resolucao-excesso-principal"
           >
-            {formatKwanza(excessoKz)} Kz
+            {formatExcessoReembolsoPrincipal(excessoKz)}
           </p>
           <p
             className="text-sm text-muted-foreground tabular-nums"
@@ -110,16 +111,19 @@ export function AdminResolucaoPagamentoCard({ row, copiedAcordoId, onCopyAcordoI
               type="button"
               variant="ghost"
               size="icon"
-              className="h-8 w-8 shrink-0"
+              className="h-11 w-11 shrink-0"
               aria-label={ADMIN_RESOLUCAO_COPY.copiarIdAcordoAria}
               data-testid={`resolucao-copiar-acordo-${row.id}`}
-              onClick={() => void onCopyAcordoId(/** @type {string} */ (row.acordo_id))}
+              onClick={() => void onCopyAcordoId(
+                /** @type {string} */ (row.id),
+                /** @type {string} */ (row.acordo_id),
+              )}
             >
               <Copy className="size-4" aria-hidden="true" />
             </Button>
           </div>
         ) : null}
-        {copiedAcordoId === row.acordo_id ? (
+        {copiedPagamentoId === row.id ? (
           <FeedbackAlert
             type="success"
             text={TOAST_ID_ACORDO_COPIADO}
@@ -156,7 +160,8 @@ const AdminPagamentos = () => {
   const [previewUrls, setPreviewUrls] = useState(/** @type {Record<string, string>} */ ({}));
   const [previewLoading, setPreviewLoading] = useState(/** @type {Record<string, boolean>} */ ({}));
   const [rejeicaoTarget, setRejeicaoTarget] = useState(/** @type {string | null} */ (null));
-  const [copiedAcordoId, setCopiedAcordoId] = useState(/** @type {string | null} */ (null));
+  const [copiedPagamentoId, setCopiedPagamentoId] = useState(/** @type {string | null} */ (null));
+  const copyToastTimeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null));
 
   const mesReferenciaAtual = useMemo(() => getMesReferenciaAtual(), []);
   const mesReferenciaLabel = useMemo(
@@ -196,6 +201,12 @@ const AdminPagamentos = () => {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => () => {
+    if (copyToastTimeoutRef.current) {
+      clearTimeout(copyToastTimeoutRef.current);
+    }
+  }, []);
 
   const handlePreview = async (pagamentoId, storagePath) => {
     if (previewUrls[pagamentoId] || previewLoading[pagamentoId]) return;
@@ -259,13 +270,17 @@ const AdminPagamentos = () => {
     }
   };
 
-  const handleCopyAcordoId = async (acordoId) => {
-    if (!acordoId) return;
+  const handleCopyAcordoId = async (pagamentoId, acordoId) => {
+    if (!pagamentoId || !acordoId) return;
     try {
       await copyTextToClipboard(acordoId);
-      setCopiedAcordoId(acordoId);
-      window.setTimeout(() => {
-        setCopiedAcordoId((current) => (current === acordoId ? null : current));
+      if (copyToastTimeoutRef.current) {
+        clearTimeout(copyToastTimeoutRef.current);
+      }
+      setCopiedPagamentoId(pagamentoId);
+      copyToastTimeoutRef.current = setTimeout(() => {
+        setCopiedPagamentoId((current) => (current === pagamentoId ? null : current));
+        copyToastTimeoutRef.current = null;
       }, 3000);
     } catch (error) {
       console.error('Erro ao copiar ID do acordo:', error);
@@ -631,7 +646,7 @@ const AdminPagamentos = () => {
                 <li key={row.id} data-testid={`resolucao-pagamento-${row.id}`}>
                   <AdminResolucaoPagamentoCard
                     row={row}
-                    copiedAcordoId={copiedAcordoId}
+                    copiedPagamentoId={copiedPagamentoId}
                     onCopyAcordoId={handleCopyAcordoId}
                   />
                 </li>

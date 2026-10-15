@@ -1,3 +1,5 @@
+import { formatKwanza } from './formatKwanza.js';
+
 /** Toast após copiar UUID do acordo (FeedbackAlert). */
 export const TOAST_ID_ACORDO_COPIADO = 'ID copiado.';
 
@@ -22,6 +24,28 @@ export async function copyTextToClipboard(text) {
 }
 
 /**
+ * @param {unknown} value
+ * @returns {value is number}
+ */
+function isPresentKz(value) {
+  return value !== null && value !== undefined && value !== '';
+}
+
+/**
+ * Espelha COALESCE SQL (0 é valor válido).
+ * @param {Array<unknown>} values
+ * @returns {number}
+ */
+function coalesceKz(...values) {
+  for (const value of values) {
+    if (!isPresentKz(value)) continue;
+    const n = Number(value);
+    if (Number.isFinite(n)) return Math.max(0, n);
+  }
+  return 0;
+}
+
+/**
  * Espelha `public._valor_pago_efectivo_kz` (estados relevantes para resolução admin).
  * @param {{ estado?: string, valor_pago_confirmado_kz?: number | null, valor_quota_original_kz?: number | null, valor_kz?: number | null } | null | undefined} pagamento
  * @returns {number}
@@ -30,36 +54,51 @@ export function valorPagoEfectivoKz(pagamento) {
   if (!pagamento) return 0;
   const estado = String(pagamento.estado || '').toLowerCase();
   if (estado === 'em_custodia' || estado === 'liquidado') {
-    const confirmado = Number(pagamento.valor_pago_confirmado_kz);
-    if (Number.isFinite(confirmado) && confirmado > 0) return confirmado;
-    const quotaOrig = Number(pagamento.valor_quota_original_kz);
-    if (Number.isFinite(quotaOrig) && quotaOrig > 0) return quotaOrig;
-    const valor = Number(pagamento.valor_kz);
-    return Number.isFinite(valor) ? Math.max(0, valor) : 0;
+    return coalesceKz(
+      pagamento.valor_pago_confirmado_kz,
+      pagamento.valor_quota_original_kz,
+      pagamento.valor_kz,
+    );
   }
   if (estado === 'comprovativo_enviado') {
-    const valor = Number(pagamento.valor_kz);
-    return Number.isFinite(valor) ? Math.max(0, valor) : 0;
+    return coalesceKz(pagamento.valor_kz);
   }
   return 0;
 }
 
 /**
+ * @param {{ valor_devido_kz?: number | null } | null | undefined} pagamento
+ * @returns {boolean}
+ */
+export function isValorDevidoKzKnown(pagamento) {
+  if (!pagamento || !Object.prototype.hasOwnProperty.call(pagamento, 'valor_devido_kz')) {
+    return false;
+  }
+  if (pagamento.valor_devido_kz == null) return false;
+  return Number.isFinite(Number(pagamento.valor_devido_kz));
+}
+
+/**
  * `valor_devido_kz` na BD = quota proporcional devida (não é o reembolso).
- * Excesso a devolver ao passageiro = max(0, pago − devido).
+ * Excesso a devolver = max(0, pago − devido) quando devido é conhecido; senão `null`.
  *
  * @param {{ estado?: string, valor_devido_kz?: number | null, valor_pago_confirmado_kz?: number | null, valor_quota_original_kz?: number | null, valor_kz?: number | null } | null | undefined} pagamento
- * @returns {number}
+ * @returns {number | null}
  */
 export function computeExcessoReembolsoKz(pagamento) {
-  if (!pagamento) return 0;
+  if (!isValorDevidoKzKnown(pagamento)) return null;
   const pago = valorPagoEfectivoKz(pagamento);
-  const devidoRaw = pagamento.valor_devido_kz;
-  const devido = Number(devidoRaw);
-  if (!Number.isFinite(devido)) {
-    return 0;
-  }
+  const devido = Number(pagamento.valor_devido_kz);
   return Math.max(0, pago - devido);
+}
+
+/**
+ * @param {number | null} excessoKz
+ * @returns {string}
+ */
+export function formatExcessoReembolsoPrincipal(excessoKz) {
+  if (excessoKz === null) return '—';
+  return `${formatKwanza(excessoKz)} Kz`;
 }
 
 /**

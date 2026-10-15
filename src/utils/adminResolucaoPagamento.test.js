@@ -48,6 +48,36 @@ describe('adminResolucaoPagamento', () => {
     ).toBe(0);
   });
 
+  it('B1: valor_devido_kz null — não calcula excesso (null, não quota paga)', () => {
+    expect(
+      computeExcessoReembolsoKz({
+        estado: 'em_custodia',
+        valor_pago_confirmado_kz: 22000,
+        valor_devido_kz: null,
+      }),
+    ).toBeNull();
+  });
+
+  it('B1: valor_devido_kz ausente — não calcula excesso', () => {
+    expect(
+      computeExcessoReembolsoKz({
+        estado: 'em_custodia',
+        valor_pago_confirmado_kz: 22000,
+      }),
+    ).toBeNull();
+  });
+
+  it('S2: valor_pago_confirmado_kz 0 não cai para quota_original (COALESCE SQL)', () => {
+    expect(
+      valorPagoEfectivoKz({
+        estado: 'em_custodia',
+        valor_pago_confirmado_kz: 0,
+        valor_quota_original_kz: 22000,
+        valor_kz: 22000,
+      }),
+    ).toBe(0);
+  });
+
   it('formatAcordoIdCurto trunca UUID para 8 caracteres', () => {
     expect(formatAcordoIdCurto('79687aac-b123-4567-89ab-cdef01234567')).toBe('79687aac');
   });

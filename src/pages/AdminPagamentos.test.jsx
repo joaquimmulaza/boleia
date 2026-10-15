@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import AdminPagamentos from './AdminPagamentos.jsx';
 import {
   ADMIN_RESOLUCAO_COPY,
@@ -523,6 +523,170 @@ describe('AdminPagamentos', () => {
         expect(screen.getByTestId('resolucao-excesso-principal')).toBeInTheDocument();
       });
       expect(screen.getByTestId('resolucao-excesso-principal')).toHaveTextContent(/0/);
+    });
+
+    it('B1: valor_devido_kz null mostra «—» no valor principal (não 22 000 Kz)', async () => {
+      listPagamentosPendentesValidacao.mockResolvedValue([]);
+      listPagamentosResolucaoAdmin.mockResolvedValue([
+        {
+          id: pagamentoId,
+          acordo_id: acordoId,
+          estado: 'em_custodia',
+          valor_kz: 22000,
+          valor_pago_confirmado_kz: 22000,
+          valor_devido_kz: null,
+          requer_resolucao_admin: true,
+        },
+      ]);
+
+      render(<AdminPagamentos />);
+      fireEvent.click(screen.getByRole('tab', { name: /Resolução manual/i }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('resolucao-excesso-principal')).toBeInTheDocument();
+      });
+      const principal = screen.getByTestId('resolucao-excesso-principal');
+      expect(principal).toHaveTextContent('—');
+      expect(principal).not.toHaveTextContent(/22\s?000/);
+    });
+
+    it('S5: toast de cópia keyed por pagamento — dois rows mesmo acordo, só um toast', async () => {
+      const pagamentoA = '79687aac-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+      const pagamentoB = '79687aac-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+      vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
+
+      listPagamentosPendentesValidacao.mockResolvedValue([]);
+      listPagamentosResolucaoAdmin.mockResolvedValue([
+        {
+          id: pagamentoA,
+          acordo_id: acordoId,
+          estado: 'em_custodia',
+          valor_kz: 22000,
+          valor_pago_confirmado_kz: 22000,
+          valor_devido_kz: 11000,
+          requer_resolucao_admin: true,
+        },
+        {
+          id: pagamentoB,
+          acordo_id: acordoId,
+          estado: 'em_custodia',
+          valor_kz: 22000,
+          valor_pago_confirmado_kz: 22000,
+          valor_devido_kz: 11000,
+          requer_resolucao_admin: true,
+        },
+      ]);
+
+      render(<AdminPagamentos />);
+      fireEvent.click(screen.getByRole('tab', { name: /Resolução manual/i }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId(`resolucao-copiar-acordo-${pagamentoA}`)).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTestId(`resolucao-copiar-acordo-${pagamentoA}`));
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId('resolucao-id-copiado-toast')).toHaveLength(1);
+      });
+
+      const cardB = screen.getByTestId(`resolucao-pagamento-${pagamentoB}`);
+      expect(within(cardB).queryByTestId('resolucao-id-copiado-toast')).not.toBeInTheDocument();
+    });
+
+    it('S4: segundo clique copiar reinicia timeout (fake timers)', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
+
+      listPagamentosPendentesValidacao.mockResolvedValue([]);
+      listPagamentosResolucaoAdmin.mockResolvedValue([
+        {
+          id: pagamentoId,
+          acordo_id: acordoId,
+          estado: 'em_custodia',
+          valor_kz: 22000,
+          valor_pago_confirmado_kz: 22000,
+          valor_devido_kz: 11000,
+          requer_resolucao_admin: true,
+        },
+      ]);
+
+      render(<AdminPagamentos />);
+      fireEvent.click(screen.getByRole('tab', { name: /Resolução manual/i }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId(`resolucao-copiar-acordo-${pagamentoId}`)).toBeInTheDocument();
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId(`resolucao-copiar-acordo-${pagamentoId}`));
+      });
+      await waitFor(() => {
+        expect(screen.getByTestId('resolucao-id-copiado-toast')).toBeInTheDocument();
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(2000);
+        fireEvent.click(screen.getByTestId(`resolucao-copiar-acordo-${pagamentoId}`));
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(2500);
+      });
+      expect(screen.getByTestId('resolucao-id-copiado-toast')).toBeInTheDocument();
+      await act(async () => {
+        vi.advanceTimersByTime(600);
+      });
+      expect(screen.queryByTestId('resolucao-id-copiado-toast')).not.toBeInTheDocument();
+    });
+
+    it('S6: breakpoint inclui 390px (min-[391px] no label longo)', async () => {
+      listPagamentosPendentesValidacao.mockResolvedValue([]);
+      listPagamentosResolucaoAdmin.mockResolvedValue([
+        {
+          id: pagamentoId,
+          acordo_id: acordoId,
+          estado: 'em_custodia',
+          valor_kz: 22000,
+          valor_pago_confirmado_kz: 22000,
+          valor_devido_kz: 11000,
+          requer_resolucao_admin: true,
+        },
+      ]);
+
+      render(<AdminPagamentos />);
+      fireEvent.click(screen.getByRole('tab', { name: /Resolução manual/i }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('resolucao-label-excesso')).toBeInTheDocument();
+      });
+      const label = screen.getByTestId('resolucao-label-excesso');
+      expect(label.querySelector('.min-\\[391px\\]\\:inline')).toBeTruthy();
+      expect(label.querySelector('.min-\\[391px\\]\\:hidden')).toBeTruthy();
+    });
+
+    it('S8: botão copiar tem touch target >=44px (h-11 w-11)', async () => {
+      listPagamentosPendentesValidacao.mockResolvedValue([]);
+      listPagamentosResolucaoAdmin.mockResolvedValue([
+        {
+          id: pagamentoId,
+          acordo_id: acordoId,
+          estado: 'em_custodia',
+          valor_kz: 22000,
+          valor_pago_confirmado_kz: 22000,
+          valor_devido_kz: 11000,
+          requer_resolucao_admin: true,
+        },
+      ]);
+
+      render(<AdminPagamentos />);
+      fireEvent.click(screen.getByRole('tab', { name: /Resolução manual/i }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId(`resolucao-copiar-acordo-${pagamentoId}`)).toBeInTheDocument();
+      });
+      const btn = screen.getByTestId(`resolucao-copiar-acordo-${pagamentoId}`);
+      expect(btn.className).toMatch(/\bh-11\b/);
+      expect(btn.className).toMatch(/\bw-11\b/);
     });
   });
 });
