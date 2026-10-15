@@ -69,10 +69,55 @@ export function filterFaltasEsteMes(faltas, refDate = new Date()) {
 }
 
 /**
- * «Total a descontar» — valor persistido em pagamentos_acordo.desconto_faltas_kz
- * (calculado na BD via _desconto_faltas_pagamento); nunca somar faltas no cliente.
+ * @param {{ tipo?: string }} falta
+ * @returns {boolean}
+ */
+function isFaltaTipoMotorista(falta) {
+  return String(falta?.tipo || '').toLowerCase() === 'motorista';
+}
+
+/**
+ * Soma descontos das faltas do mês visíveis para um passageiro (inclui faltas do motorista).
+ * @param {Array<{ tipo?: string, passenger_id?: string, desconto_kz?: number }>} faltas
+ * @param {string | null | undefined} passengerId
+ * @returns {number}
+ */
+export function sumDescontoFaltasParaPassageiro(faltas, passengerId) {
+  const pid = passengerId;
+  return (faltas || []).reduce((acc, falta) => {
+    const valor = Number(falta.desconto_kz) || 0;
+    if (isFaltaTipoMotorista(falta)) return acc + valor;
+    if (pid && falta.passenger_id === pid) return acc + valor;
+    return acc;
+  }, 0);
+}
+
+/**
+ * Soma descontos de faltas tipo Motorista no mês (para deduplicar totais liquidados).
+ * @param {Array<{ tipo?: string, desconto_kz?: number }>} faltas
+ * @returns {number}
+ */
+export function sumDescontoFaltasMotorista(faltas) {
+  return (faltas || []).reduce(
+    (acc, falta) => (isFaltaTipoMotorista(falta) ? acc + (Number(falta.desconto_kz) || 0) : acc),
+    0,
+  );
+}
+
+/**
+ * @param {string | null | undefined} estado
+ * @returns {boolean}
+ */
+function isPagamentoLiquidado(estado) {
+  return String(estado || '').toLowerCase() === 'liquidado';
+}
+
+/**
+ * «Total a descontar» — Maestro (a): liquidado → `desconto_faltas_kz`; senão soma das faltas do mês.
+ * Motorista liquidado: deduplica faltas Motorista (contam uma vez, não por passageiro).
  *
- * @param {Array<{ passenger_id?: string, mes_referencia?: string, desconto_faltas_kz?: number }>} pagamentos
+ * @param {Array<{ passenger_id?: string, mes_referencia?: string, desconto_faltas_kz?: number, estado?: string }>} pagamentos
+ * @param {Array<{ tipo?: string, passenger_id?: string, desconto_kz?: number }>} faltasEsteMes
  * @param {{
  *   tipoPerfil?: 'Passageiro' | 'Motorista',
  *   passengerId?: string | null,
@@ -80,23 +125,32 @@ export function filterFaltasEsteMes(faltas, refDate = new Date()) {
  * }} [options]
  * @returns {number}
  */
-export function resolveDescontoFaltasTotalServidor(pagamentos, options = {}) {
+export function resolveDescontoFaltasTotal(pagamentos, faltasEsteMes, options = {}) {
   const mes = firstDayCurrentMonthLuanda(options.refDate ?? new Date());
   const rows = (pagamentos || []).filter(
     (row) => String(row.mes_referencia || '').slice(0, 10) === mes,
   );
+  const faltas = faltasEsteMes || [];
 
   if (options.tipoPerfil === 'Motorista') {
-    return rows.reduce(
-      (acc, row) => acc + (Number(row.desconto_faltas_kz) || 0),
-      0,
-    );
+    const liquidadoRows = rows.filter((row) => isPagamentoLiquidado(row.estado));
+    if (liquidadoRows.length > 0 && liquidadoRows.length === rows.length) {
+      const motoristaDesconto = sumDescontoFaltasMotorista(faltas);
+      const somaLinhas = liquidadoRows.reduce(
+        (acc, row) => acc + (Number(row.desconto_faltas_kz) || 0),
+        0,
+      );
+      return somaLinhas - Math.max(0, liquidadoRows.length - 1) * motoristaDesconto;
+    }
+    return sumDescontoFaltas(faltas);
   }
 
   const pid = options.passengerId;
-  if (!pid) return 0;
-  const row = rows.find((r) => r.passenger_id === pid);
-  return Number(row?.desconto_faltas_kz) || 0;
+  const row = pid ? rows.find((r) => r.passenger_id === pid) : null;
+  if (row && isPagamentoLiquidado(row.estado)) {
+    return Number(row.desconto_faltas_kz) || 0;
+  }
+  return sumDescontoFaltasParaPassageiro(faltas, pid);
 }
 
 /** Classes partilhadas entre total e linhas do histórico. */

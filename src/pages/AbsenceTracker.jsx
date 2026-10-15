@@ -21,7 +21,7 @@ import {
   filterFaltasEsteMes,
   formatFaltaDiaCurto,
   isFutureFaltaDate,
-  resolveDescontoFaltasTotalServidor,
+  resolveDescontoFaltasTotal,
   resolveFaltasHubCard,
 } from '../utils/faltasDisplay';
 
@@ -141,7 +141,7 @@ const AbsenceTracker = () => {
   }, [acordoId, carregarFaltas, carregarAcordosActivos, carregarGatePagamento]);
 
   const faltasEsteMes = filterFaltasEsteMes(faltas);
-  const totalDesconto = resolveDescontoFaltasTotalServidor(pagamentosAcordo, {
+  const totalDesconto = resolveDescontoFaltasTotal(pagamentosAcordo, faltasEsteMes, {
     tipoPerfil,
     passengerId: user?.id,
   });
@@ -162,6 +162,7 @@ const AbsenceTracker = () => {
       setIsModalOpen(false);
       setMessage({ type: 'success', text: 'Falta registada com sucesso.' });
       await carregarFaltas();
+      await carregarGatePagamento();
     } catch (err) {
       console.error('Erro ao registar falta:', err);
       setMessage({ type: 'error', text: getFriendlyErrorMessage(err) });
