@@ -35,9 +35,9 @@ import {
   subscribeMarketplaceHubRefresh,
 } from '../utils/marketplaceHubRefresh';
 import {
-  labelChipListaEstadoAcordo,
-  variantChipListaEstadoAcordo,
-  chipClassEstadoAcordoVariant,
+  acordoEstadoListaChipProps,
+  isChipEncerramentoPedidoConsensual,
+  podeConfirmarRescisaoConsensual,
 } from '../utils/acordoEstadoDisplay';
 import {
   acordoPrecisaLiveRefresh,
@@ -45,6 +45,10 @@ import {
 } from '../hooks/useAcordoDetalheLiveRefresh';
 import { labelRotaOferta } from '../utils/ofertaLabels';
 import { buildAcordoContratoSnapshot } from '../utils/buildAcordoContratoSnapshot';
+import {
+  labelPessoasNoAcordoContrato,
+  resolvePessoasAcordoUi,
+} from '../utils/resolvePessoasAcordoUi';
 import AcordoContratoSnapshot from '../components/AcordoContratoSnapshot';
 import { isOfertaFlexivel } from '../services/OfertaService';
 import AcordoPagamentoPanel from '../components/AcordoPagamentoPanel';
@@ -53,6 +57,7 @@ import AcordoPagamentosHistorico from '../components/AcordoPagamentosHistorico';
 import AcordoPagamentosMotoristaPanel from '../components/AcordoPagamentosMotoristaPanel';
 import {
   resolveAcordoPagamentoUiPassageiro,
+  resolvePassageiroReservaPagamento,
   copyCartaoEstadoPagamentoPassageiro,
   linhaJaConfirmadoRescisaoConsensual,
 } from '../utils/resolveAcordoPagamentoUi';
@@ -110,7 +115,6 @@ import {
   isActivoPassageiro,
   isReservadoPassageiro,
   isExpiradoPassageiro,
-  contagemLugaresVivos,
   formatContagemPassageiros,
   labelChipEstadoPassageiro,
   chipClassEstadoPassageiro,
@@ -176,18 +180,6 @@ function isExpirado(estado, pagamento) {
 function isNoAcordo(estado) {
   const e = String(estado || '').toLowerCase();
   return e === 'activo' || e === 'reservado';
-}
-
-/**
- * Linha activa/reservada para snapshot N=1; só linhas[0] se não houver viva.
- * @param {Array<{ estado?: string }>} linhas
- * @returns {object | null}
- */
-function pickLinhaVivaPassageiro(linhas) {
-  const vivos = lugaresVivosFromLinhas(linhas);
-  if (vivos[0]) return vivos[0];
-  const list = linhas || [];
-  return list[0] ?? null;
 }
 
 /**
@@ -758,7 +750,11 @@ const MyAgreements = () => {
     if (!selected || !pendingFocusRef.current) return undefined;
 
     const focus = pendingFocusRef.current;
-    if (focus === 'pagamento' && pagamentoLoading) return undefined;
+    if (focus === 'pagamento') {
+      if (pagamentoLoading) return undefined;
+      const section = document.querySelector('[data-testid="acordo-pagamento-section"]');
+      if (!section) return undefined;
+    }
 
     pendingFocusRef.current = null;
     // focus=rescisao: scroll só para a contraparte (quem confirma/recusa), nunca para o requerente.
@@ -811,6 +807,11 @@ const MyAgreements = () => {
     const minhaLinha = (selected.acordos_passageiros || []).find((p) => p.passenger_id === user?.id);
     return isActivo(selected.estado) && (!minhaLinha || isNoAcordo(minhaLinha.estado));
   }, [selected, tipoPerfil, user?.id]);
+
+  const temRescisaoConsensualAberta = useMemo(
+    () => Boolean(selected && isChipEncerramentoPedidoConsensual(selected)),
+    [selected],
+  );
 
   const handleSairSoEu = useCallback(() => {
     if (!selected || !user?.id) return;
@@ -1072,8 +1073,7 @@ const MyAgreements = () => {
     const oferta = acordo.ofertas_capacidade;
     const rota = labelRotaOferta(oferta || {});
     const activo = isActivo(acordo.estado);
-    const estadoVariant = variantChipListaEstadoAcordo(acordo, user?.id);
-    const estadoLabel = labelChipListaEstadoAcordo(acordo, user?.id);
+    const estadoChipCard = acordoEstadoListaChipProps(acordo, user?.id);
     const leavePending = Boolean(pendingLeaveIds[acordo.id]);
     const minhaLinha = linhas.find((p) => p.passenger_id === user?.id);
     const minhaChipCtxCard = minhaLinha
@@ -1089,14 +1089,9 @@ const MyAgreements = () => {
       tipoPerfil === 'Passageiro'
         ? (minhaLinha?.quota_mensal_kz ?? acordo.valor_mensal_por_passageiro_kz)
         : acordo.valor_mensal_por_passageiro_kz;
-    const rotuloPessoas = (() => {
-      if (nPax === 1 && tipoPerfil === 'Motorista') {
-        const pax = pickLinhaVivaPassageiro(linhas);
-        return formatPrimeiroNome(nomePassageiro(pax));
-      }
-      if (nPax === 1) return 'Individual';
-      return `Grupo · ${nPax} pessoas`;
-    })();
+    const rotuloPessoas =
+      labelPessoasNoAcordoContrato(acordo.n_passageiros_contrato)
+      ?? (nPax === 1 ? 'Individual' : `Grupo · ${nPax} pessoas`);
     return (
       <button
         type="button"
@@ -1111,9 +1106,11 @@ const MyAgreements = () => {
         <div className="flex justify-between items-center gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoAcordoVariant(estadoVariant)}`}
+              role={estadoChipCard.role}
+              aria-label={estadoChipCard.ariaLabel}
+              className={`text-xs font-bold px-2.5 py-1 rounded-full ${estadoChipCard.className}`}
             >
-              {estadoLabel}
+              {estadoChipCard.label}
             </span>
             {mostrarChipLugarCard ? (
               <span
@@ -1183,11 +1180,12 @@ const MyAgreements = () => {
       ? chipCtxForAcordoPassageiro(selected.id, minhaLinha.passenger_id)
       : null;
     const pagamentoViewer = mergePagamentoComChipContexto(pagamento, minhaChipCtxSheet);
+    const pessoasAcordoUi = resolvePessoasAcordoUi(selected, linhas);
     const {
-      total: nPassageirosVivos,
-      confirmados: nConfirmados,
-      reservados: nReservados,
-    } = contagemLugaresVivos(linhas);
+      nPassageirosVivos,
+      nConfirmados,
+      nReservados,
+    } = pessoasAcordoUi;
     const quotaDestaque =
       minhaLinha?.quota_mensal_kz ?? selected.valor_mensal_por_passageiro_kz;
     const podeSair =
@@ -1232,10 +1230,7 @@ const MyAgreements = () => {
         janelaAberta: janelaPrecoAberta,
       });
     const rescisaoConsensualPendente =
-      activo &&
-      String(selected.rescisao_modo || '').toLowerCase() === 'consensual' &&
-      selected.rescisao_solicitada_por &&
-      selected.rescisao_solicitada_por !== user?.id;
+      activo && podeConfirmarRescisaoConsensual(selected, user?.id);
     const rescisaoConsensualEnviada =
       activo &&
       String(selected.rescisao_modo || '').toLowerCase() === 'consensual' &&
@@ -1311,6 +1306,14 @@ const MyAgreements = () => {
         obrigacao: obrigacaoPagamento,
       })
       : null;
+    const reservaPagamentoUi = isPassageiro
+      ? resolvePassageiroReservaPagamento({
+        minhaLinha,
+        pagamento: pagamentoViewer,
+        pagamentoLoading,
+        obrigacao: obrigacaoPagamento,
+      })
+      : null;
     const cartaoEstadoPagamento =
       pagamentoUiPassageiro?.mostrarCartaoEstado && pagamentoUiPassageiro.variant
         ? copyCartaoEstadoPagamentoPassageiro(pagamentoUiPassageiro.variant, {
@@ -1348,6 +1351,10 @@ const MyAgreements = () => {
             rescisaoModoAcordo={selected.rescisao_modo}
             rescisaoConfirmadaEmAcordo={selected.rescisao_confirmada_em}
             rescisaoSolicitadaPorAcordo={selected.rescisao_solicitada_por}
+            rescisaoEffectiveOnAcordo={selected.rescisao_effective_on}
+            driverIdAcordo={selected.driver_id}
+            acordosPassageiros={selected.acordos_passageiros}
+            viewerUserId={user?.id}
             minhaLinhaEstado={minhaLinha?.estado}
             minhaLinhaPagamento={pagamentoViewer}
             leavePending={leavePending}
@@ -1418,8 +1425,7 @@ const MyAgreements = () => {
                 Detalhe do acordo
               </p>
             ) : null}
-            {minhaReservada
-            && Number(obrigacaoPagamento?.valor ?? obrigacaoPagamento?.valor_em_divida ?? -1) !== 0 ? (
+            {reservaPagamentoUi?.mostrarBannerReserva ? (
               <div
                 role="status"
                 data-testid="lugar-reservado-banner"
@@ -1433,9 +1439,10 @@ const MyAgreements = () => {
                   type="button"
                   className="w-full min-h-11"
                   data-testid="lugar-reservado-pagamento-cta"
+                  disabled={!reservaPagamentoUi.ctaReservaPagamentoAtivo}
                   onClick={() => scrollToAcordoFocus('pagamento')}
                 >
-                  Ir para pagamento
+                  {reservaPagamentoUi.ctaReservaPagamentoLabel}
                 </Button>
               </div>
             ) : null}
@@ -1484,12 +1491,7 @@ const MyAgreements = () => {
 
             <AcordoContratoSnapshot
               snapshot={buildAcordoContratoSnapshot(selected, {
-                primeiroNomePassageiro: (() => {
-                  if (!isMotorista || selected.n_passageiros_contrato !== 1) return undefined;
-                  const pax = pickLinhaVivaPassageiro(linhas);
-                  const raw = nomePassageiro(pax);
-                  return raw === 'Passageiro' ? undefined : raw;
-                })(),
+                nLabel: pessoasAcordoUi.nLabel ?? undefined,
               })}
               highlightKz={isPassageiro ? quotaDestaque : null}
               className="border-0 bg-transparent dark:bg-transparent p-0"
@@ -1662,16 +1664,26 @@ const MyAgreements = () => {
 
           {isPassageiro
             && passageiroMostraPainelPagamento(minhaLinha, pagamento, obrigacaoPagamento)
-            && !pagamentoUiPassageiro?.ocultarPainelPagamento ? (
+            && !pagamentoUiPassageiro?.ocultarPainelPagamento
+            && reservaPagamentoUi?.mostrarPainelPagamentoMensal !== false ? (
             <div data-testid="acordo-pagamento-section" className="scroll-mt-acordo-detalhe">
+              {reservaPagamentoUi?.aguardarCarregamentoPagamento ? (
+                <p
+                  className="text-sm text-slate-500"
+                  data-testid="pagamento-passageiro-loading"
+                >
+                  A carregar pagamento…
+                </p>
+              ) : (
               <AcordoPagamentoPanel
-                pagamento={pagamentoLoading ? null : pagamento}
+                pagamento={reservaPagamentoUi?.pagamentoParaPainel ?? pagamento}
                 obrigacao={obrigacaoPagamento}
                 lugarEstado={minhaLinha?.estado}
                 pagamentoUiVariant={pagamentoUiPassageiro?.variant ?? null}
                 onUpdated={() => carregarPagamentoContactos(selected)}
                 layout={pagamentoUiPassageiro?.variant === 'S2' ? 'acoes' : 'completo'}
               />
+              )}
               <AcordoPagamentosHistorico
                 pagamentos={pagamentosAcordo.filter((p) => p.passenger_id === user?.id)}
                 mesActual={getMesReferenciaAtual()}
@@ -1903,7 +1915,17 @@ const MyAgreements = () => {
               </div>
 
               <div className="space-y-2">
-                {podeSairSoloAcordo ? (
+                {temRescisaoConsensualAberta ? (
+                  <p
+                    className="text-sm text-amber-900 dark:text-amber-100 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2 text-pretty"
+                    data-testid="terminate-picker-consensual-pendente-aviso"
+                  >
+                    Há um pedido de encerramento amigável pendente. Só podes usar justa causa até
+                    confirmar ou recusar esse pedido.
+                  </p>
+                ) : null}
+
+                {!temRescisaoConsensualAberta && podeSairSoloAcordo ? (
                   <button
                     type="button"
                     className="w-full text-left rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/80 dark:bg-emerald-950/20 p-4 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
@@ -1922,41 +1944,45 @@ const MyAgreements = () => {
                   </button>
                 ) : null}
 
-                <button
-                  type="button"
-                  className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                  disabled={terminateBusy}
-                  onClick={() => {
-                    setTerminateModo('consensual');
-                    setTerminatePickerOpen(false);
-                    setTerminateVigenciaPickerOpen(true);
-                  }}
-                >
-                  <p className="font-bold text-slate-900 dark:text-white text-balance">
-                    Acordo amigável
-                  </p>
-                  <p className="text-sm text-slate-500 mt-1 text-pretty">
-                    Pedes o encerramento e a outra parte confirma. Escolhes se termina agora ou no fim
-                    deste mês.
-                  </p>
-                </button>
+                {!temRescisaoConsensualAberta ? (
+                  <button
+                    type="button"
+                    className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                    disabled={terminateBusy}
+                    onClick={() => {
+                      setTerminateModo('consensual');
+                      setTerminatePickerOpen(false);
+                      setTerminateVigenciaPickerOpen(true);
+                    }}
+                  >
+                    <p className="font-bold text-slate-900 dark:text-white text-balance">
+                      Acordo amigável
+                    </p>
+                    <p className="text-sm text-slate-500 mt-1 text-pretty">
+                      Pedes o encerramento e a outra parte confirma. Escolhes se termina agora ou no fim
+                      deste mês.
+                    </p>
+                  </button>
+                ) : null}
 
-                <button
-                  type="button"
-                  className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                  disabled={terminateBusy}
-                  onClick={() => {
-                    setTerminateModo('aviso_previo');
-                    setTerminatePickerOpen(false);
-                    setTerminateConfirmOpen(true);
-                  }}
-                >
-                  <p className="font-bold text-slate-900 dark:text-white">Aviso prévio</p>
-                  <p className="text-sm text-slate-500 mt-1 text-pretty">
-                    O acordo mantém-se activo até ao fim deste mês. A partir do próximo mês fica
-                    cancelado.
-                  </p>
-                </button>
+                {!temRescisaoConsensualAberta ? (
+                  <button
+                    type="button"
+                    className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                    disabled={terminateBusy}
+                    onClick={() => {
+                      setTerminateModo('aviso_previo');
+                      setTerminatePickerOpen(false);
+                      setTerminateConfirmOpen(true);
+                    }}
+                  >
+                    <p className="font-bold text-slate-900 dark:text-white">Aviso prévio</p>
+                    <p className="text-sm text-slate-500 mt-1 text-pretty">
+                      O acordo mantém-se activo até ao fim deste mês. A partir do próximo mês fica
+                      cancelado.
+                    </p>
+                  </button>
+                ) : null}
 
                 <button
                   type="button"

@@ -1,19 +1,33 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getPlacePredictions, getPlaceDetails } from './LocationService';
+import {
+  getPlacePredictions,
+  getPlaceDetails,
+  LUANDA_PHOTON_LAT,
+  LUANDA_PHOTON_LON,
+  mapPhotonFeature,
+  photonFeatureHasBairro,
+} from './LocationService';
 
-// Mock global fetch
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-// Photon GeoJSON response factory
-const makePhotonResponse = (features = []) => ({
-  type: 'FeatureCollection',
-  features,
-});
-
-const makeFeature = ({ osm_id = 123456, name = 'Talatona', city = 'Luanda', country = 'Angola', street = null, lat = -8.838, lng = 13.234 } = {}) => ({
-  geometry: { coordinates: [lng, lat], type: 'Point' },
-  properties: { osm_id, name, city, country, ...(street ? { street } : {}) },
+/**
+ * @param {object} overrides
+ */
+const makePhotonFeature = ({
+  osm_id = 100,
+  lat = -8.838,
+  lng = 13.234,
+  properties = {},
+} = {}) => ({
+  type: 'Feature',
+  geometry: { type: 'Point', coordinates: [lng, lat] },
+  properties: {
+    osm_id,
+    countrycode: 'AO',
+    state: 'Luanda',
+    ...properties,
+  },
 });
 
 describe('LocationService (OpenStreetMap / Photon)', () => {
@@ -24,8 +38,6 @@ describe('LocationService (OpenStreetMap / Photon)', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
-
-  // ─── getPlacePredictions ───────────────────────────────────────────────────
 
   describe('getPlacePredictions', () => {
     it('retorna [] imediatamente se input for vazio (sem fetch)', async () => {
@@ -40,84 +52,469 @@ describe('LocationService (OpenStreetMap / Photon)', () => {
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it('chama a API Photon com query e filtro countrycode=ao', async () => {
+    it('chama Photon com viés Luanda (lat/lon) e sem header User-Agent', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ features: [] }),
+      });
+
+      await getPlacePredictions('Talatona');
+
+      expect(mockFetch.mock.calls.length).toBeGreaterThanOrEqual(1);
+      const [calledUrl, options] = mockFetch.mock.calls[0];
+      expect(calledUrl).toContain('photon.komoot.io/api/');
+      expect(calledUrl).toContain(`lat=${LUANDA_PHOTON_LAT}`);
+      expect(calledUrl).toContain(`lon=${LUANDA_PHOTON_LON}`);
+      expect(calledUrl).toContain('q=Talatona');
+      expect(calledUrl).toContain('countrycode=ao');
+      expect(options?.headers?.['User-Agent']).toBeUndefined();
+      expect(options?.signal).toBeUndefined();
+    });
+
+    it('não envia lang=pt ao Photon (API pública só aceita default, en, de, fr)', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ features: [] }),
+      });
+
+      await getPlacePredictions('Talatona');
+
+      const calledUrl = mockFetch.mock.calls[0][0];
+      expect(calledUrl).not.toMatch(/[?&]lang=pt(?:&|$)/);
+      expect(calledUrl).not.toContain('lang=pt');
+    });
+
+    it('propaga AbortSignal ao fetch', async () => {
+      const controller = new AbortController();
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => makePhotonResponse([makeFeature()]),
+        json: async () => ({ features: [] }),
+      });
+
+      await getPlacePredictions('Viana', { signal: controller.signal });
+
+      expect(mockFetch.mock.calls[0][1].signal).toBe(controller.signal);
+    });
+
+    it('formata sugestões como «Bairro, Município» a partir de district e county', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          features: [
+            makePhotonFeature({
+              osm_id: 1,
+              properties: {
+                district: 'Talatona',
+                county: 'Município do Talatona',
+                name: 'Talatona',
+                osm_key: 'place',
+                osm_value: 'suburb',
+                type: 'district',
+              },
+            }),
+          ],
+        }),
+      });
+
+      const result = await getPlacePredictions('Talatona');
+      expect(result[0].description).toBe('Talatona, Município do Talatona');
+      expect(result[0].place_id).toBe('photon-1');
+      expect(result[0].lat).toBeCloseTo(-8.838);
+      expect(result[0].lng).toBeCloseTo(13.234);
+    });
+
+    it('ordena resultados ao nível bairro antes de entradas só município', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            features: [
+              makePhotonFeature({
+                osm_id: 10,
+                properties: {
+                  name: 'Luanda',
+                  county: 'Luanda',
+                  osm_key: 'boundary',
+                  osm_value: 'administrative',
+                  type: 'county',
+                },
+              }),
+            ],
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            features: [
+              makePhotonFeature({
+                osm_id: 11,
+                properties: {
+                  name: 'Viana',
+                  district: 'Viana',
+                  county: 'Município de Viana',
+                  osm_value: 'suburb',
+                  type: 'district',
+                },
+              }),
+              makePhotonFeature({
+                osm_id: 12,
+                properties: {
+                  name: 'Kilamba',
+                  district: 'Kilamba',
+                  county: 'Belas',
+                  type: 'locality',
+                },
+              }),
+            ],
+          }),
+        });
+
+      const result = await getPlacePredictions('Viana');
+      expect(result.map((r) => r.place_id)).toEqual([
+        'photon-11',
+        'photon-12',
+        'photon-10',
+      ]);
+    });
+
+    it('dispara pesquisa assistida «bairro {termo}» só se o principal não trouxer bairro', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ features: [] }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ features: [] }),
+        });
+
+      await getPlacePredictions('Talatona');
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch.mock.calls[1][0]).toContain('q=bairro+Talatona');
+    });
+
+    it('não dispara «bairro …» quando o pedido principal já inclui bairro', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          features: [
+            makePhotonFeature({
+              osm_id: 1,
+              properties: {
+                district: 'Talatona',
+                county: 'Município do Talatona',
+                state: 'Luanda',
+                countrycode: 'AO',
+                type: 'district',
+              },
+            }),
+          ],
+        }),
       });
 
       await getPlacePredictions('Talatona');
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
-      const calledUrl = mockFetch.mock.calls[0][0];
-      expect(calledUrl).toContain('photon.komoot.io');
-      expect(calledUrl).toContain('q=Talatona');
-      expect(calledUrl).toContain('countrycode=ao');
+      expect(mockFetch.mock.calls[0][0]).toContain('q=Talatona');
+      expect(mockFetch.mock.calls[0][0]).not.toMatch(/q=bairro\+/);
     });
 
-    it('mapeia features do GeoJSON para o formato interno { place_id, description, lat, lng }', async () => {
-      mockFetch.mockResolvedValueOnce({
+    it('inclui Angola fora de Luanda e lista Luanda primeiro (sem filtro rígido)', async () => {
+      mockFetch.mockResolvedValue({
         ok: true,
-        json: async () => makePhotonResponse([
-          makeFeature({ osm_id: 111, name: 'Talatona', city: 'Luanda', country: 'Angola', lat: -8.838, lng: 13.234 }),
-        ]),
+        json: async () => ({
+          features: [
+            makePhotonFeature({
+              osm_id: 50,
+              properties: {
+                name: 'Benguela',
+                state: 'Benguela',
+                countrycode: 'AO',
+                osm_value: 'city',
+                type: 'city',
+              },
+            }),
+            makePhotonFeature({
+              osm_id: 51,
+              properties: {
+                district: 'Viana',
+                county: 'Município de Viana',
+                name: 'Viana',
+                state: 'Luanda',
+                countrycode: 'AO',
+                osm_value: 'suburb',
+                type: 'district',
+              },
+            }),
+          ],
+        }),
       });
 
-      const result = await getPlacePredictions('Talatona');
+      const result = await getPlacePredictions('Via');
+      expect(result).toHaveLength(2);
+      expect(result[0].place_id).toBe('photon-51');
+      expect(result[1].place_id).toBe('photon-50');
+    });
 
+    it('exclui resultados fora de Angola no cliente', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          features: [
+            makePhotonFeature({
+              osm_id: 99,
+              properties: { countrycode: 'PT', state: 'Lisboa', name: 'Lisboa' },
+            }),
+            makePhotonFeature({
+              osm_id: 1,
+              properties: {
+                district: 'Talatona',
+                county: 'Município do Talatona',
+                countrycode: 'AO',
+                state: 'Luanda',
+              },
+            }),
+          ],
+        }),
+      });
+
+      const result = await getPlacePredictions('Tal');
       expect(result).toHaveLength(1);
-      expect(result[0]).toMatchObject({
-        place_id: 'osm-111',
-        description: expect.stringContaining('Talatona'),
-        lat: -8.838,
-        lng: 13.234,
-      });
+      expect(result[0].place_id).toBe('photon-1');
     });
 
-    it('retorna [] quando a API retorna FeatureCollection vazia (sem resultados)', async () => {
-      mockFetch.mockResolvedValueOnce({
+    it('retorna [] quando Photon não devolve resultados', async () => {
+      mockFetch.mockResolvedValue({
         ok: true,
-        json: async () => makePhotonResponse([]),
+        json: async () => ({ features: [] }),
       });
 
       const result = await getPlacePredictions('XYZ_Inexistente');
       expect(result).toEqual([]);
     });
 
-    it('retorna [] e não lança exceção em caso de erro de rede', async () => {
-      mockFetch.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    it('deduplica sugestões com o mesmo label normalizado', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          features: [
+            makePhotonFeature({
+              osm_id: 1,
+              properties: {
+                district: 'Benfica',
+                county: 'Município do Talatona',
+                state: 'Luanda',
+                countrycode: 'AO',
+                type: 'district',
+              },
+            }),
+            makePhotonFeature({
+              osm_id: 2,
+              properties: {
+                name: 'Benfica',
+                county: 'Município do Talatona',
+                state: 'Luanda',
+                countrycode: 'AO',
+                type: 'locality',
+              },
+            }),
+          ],
+        }),
+      });
 
-      const result = await getPlacePredictions('Mutamba');
-      expect(result).toEqual([]);
+      const result = await getPlacePredictions('Benfica');
+      expect(result).toHaveLength(1);
+      expect(result[0].description).toMatch(/Benfica/i);
     });
 
-    it('retorna [] e não lança exceção se a API responde com HTTP 500', async () => {
+    it('propaga erro de rede para a UI (não confundir com lista vazia)', async () => {
+      mockFetch.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+      await expect(getPlacePredictions('Mutamba')).rejects.toThrow(/Failed to fetch/);
+    });
+
+    it('lança erro quando Photon responde 429 (não devolve lista vazia)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        json: async () => ({}),
+      });
+
+      await expect(getPlacePredictions('Talatona')).rejects.toMatchObject({
+        errorKind: 'network',
+        status: 429,
+      });
+    });
+
+    it('lança erro com errorKind network quando Photon responde 503', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        json: async () => ({}),
+      });
+
+      await expect(getPlacePredictions('Viana')).rejects.toMatchObject({
+        errorKind: 'network',
+        status: 503,
+      });
+    });
+
+    it('lança erro quando Photon responde 500 (não devolve lista vazia)', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 500,
         json: async () => ({}),
       });
 
-      const result = await getPlacePredictions('Kilamba');
-      expect(result).toEqual([]);
+      await expect(getPlacePredictions('Viana')).rejects.toMatchObject({
+        errorKind: 'network',
+        status: 500,
+      });
     });
 
-    it('monta description composta com street, city e country quando street está presente', async () => {
+    it('exclui sugestões sem coordenadas válidas', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => makePhotonResponse([
-          makeFeature({ osm_id: 999, name: 'Mutamba', city: 'Luanda', country: 'Angola', street: 'Rua da Missão', lat: -8.82, lng: 13.24 }),
-        ]),
+        json: async () => ({
+          features: [
+            {
+              type: 'Feature',
+              geometry: { type: 'Point', coordinates: [13.1, -8.9] },
+              properties: {
+                osm_id: 99,
+                name: 'Com coords',
+                district: 'Talatona',
+                county: 'Município do Talatona',
+                countrycode: 'AO',
+                state: 'Luanda',
+                osm_key: 'place',
+                osm_value: 'suburb',
+                type: 'district',
+              },
+            },
+            {
+              type: 'Feature',
+              geometry: { type: 'Point', coordinates: [] },
+              properties: {
+                osm_id: 100,
+                name: 'Sem coords',
+                countrycode: 'AO',
+                state: 'Luanda',
+              },
+            },
+            {
+              type: 'Feature',
+              properties: {
+                osm_id: 101,
+                name: 'Outro sem geometry',
+                countrycode: 'AO',
+                state: 'Luanda',
+              },
+            },
+          ],
+        }),
       });
 
-      const result = await getPlacePredictions('Mutamba');
-      expect(result[0].description).toContain('Mutamba');
-      expect(result[0].description).toContain('Luanda');
-      expect(result[0].description).toContain('Angola');
+      const result = await getPlacePredictions('Tal');
+      expect(result).toHaveLength(1);
+      expect(result[0].place_id).toBe('photon-99');
+    });
+
+    it('falha na pesquisa assistida «bairro …» não descarta resultados principais', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            features: [
+              makePhotonFeature({
+                osm_id: 10,
+                properties: {
+                  name: 'Luanda',
+                  county: 'Luanda',
+                  state: 'Luanda',
+                  countrycode: 'AO',
+                  osm_key: 'boundary',
+                  osm_value: 'administrative',
+                  type: 'county',
+                },
+              }),
+            ],
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 503,
+          json: async () => ({}),
+        });
+
+      const result = await getPlacePredictions('Luanda');
+      expect(result).toHaveLength(1);
+      expect(result[0].place_id).toBe('photon-10');
+    });
+
+    it('re-lança AbortError para o hook cancelar pedidos obsoletos', async () => {
+      mockFetch.mockRejectedValueOnce(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
+
+      await expect(getPlacePredictions('Talatona', { signal: new AbortController().signal }))
+        .rejects.toMatchObject({ name: 'AbortError' });
     });
   });
 
-  // ─── getPlaceDetails ───────────────────────────────────────────────────────
+  describe('photonFeatureHasBairro', () => {
+    it('detecta district/suburb como bairro', () => {
+      expect(
+        photonFeatureHasBairro(
+          makePhotonFeature({
+            properties: {
+              district: 'Viana',
+              county: 'Município de Viana',
+              countrycode: 'AO',
+              state: 'Luanda',
+              type: 'district',
+            },
+          }),
+        ),
+      ).toBe(true);
+    });
+
+    it('entrada só município não conta como bairro', () => {
+      expect(
+        photonFeatureHasBairro(
+          makePhotonFeature({
+            properties: {
+              name: 'Luanda',
+              county: 'Luanda',
+              countrycode: 'AO',
+              state: 'Luanda',
+              osm_key: 'boundary',
+              osm_value: 'administrative',
+              type: 'county',
+            },
+          }),
+        ),
+      ).toBe(false);
+    });
+  });
+
+  describe('mapPhotonFeature', () => {
+    it('mapeia coordenadas GeoJSON [lng, lat]', () => {
+      const mapped = mapPhotonFeature(
+        makePhotonFeature({ lat: -9.1, lng: 13.5, properties: { osm_id: 7, name: 'Teste' } }),
+      );
+      expect(mapped.lat).toBeCloseTo(-9.1);
+      expect(mapped.lng).toBeCloseTo(13.5);
+    });
+
+    it('sem geometry devolve lat e lng null (nunca 0,0)', () => {
+      const mapped = mapPhotonFeature({
+        type: 'Feature',
+        properties: { osm_id: 99, name: 'Sem ponto', countrycode: 'AO', state: 'Luanda' },
+      });
+      expect(mapped.lat).toBeNull();
+      expect(mapped.lng).toBeNull();
+    });
+  });
 
   describe('getPlaceDetails', () => {
     it('retorna null se placeId for nulo ou vazio', async () => {
@@ -126,30 +523,14 @@ describe('LocationService (OpenStreetMap / Photon)', () => {
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it('resolve coordenadas instantaneamente a partir do cache local (cachedSuggestions)', async () => {
+    it('resolve coordenadas a partir do cache local', async () => {
       const cachedSuggestions = [
-        { place_id: 'osm-111', description: 'Talatona, Luanda, Angola', lat: -8.838, lng: 13.234 },
-        { place_id: 'osm-222', description: 'Mutamba, Luanda, Angola', lat: -8.82, lng: 13.24 },
+        { place_id: 'photon-111', description: 'Talatona, Luanda', lat: -8.838, lng: 13.234 },
       ];
 
-      const result = await getPlaceDetails('osm-111', cachedSuggestions);
-
+      const result = await getPlaceDetails('photon-111', cachedSuggestions);
       expect(result).toEqual({ lat: -8.838, lng: 13.234 });
-      expect(mockFetch).not.toHaveBeenCalled(); // sem chamada extra à API
-    });
-
-    it('retorna null se placeId não é encontrado no cache e não existe fallback', async () => {
-      const cachedSuggestions = [
-        { place_id: 'osm-111', description: 'Talatona, Luanda, Angola', lat: -8.838, lng: 13.234 },
-      ];
-
-      const result = await getPlaceDetails('osm-999', cachedSuggestions);
-      expect(result).toBeNull();
-    });
-
-    it('retorna null quando cachedSuggestions está vazio e placeId não é resolvível', async () => {
-      const result = await getPlaceDetails('osm-999', []);
-      expect(result).toBeNull();
+      expect(mockFetch).not.toHaveBeenCalled();
     });
   });
 });

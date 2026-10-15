@@ -4,7 +4,7 @@ import {
   DEV_CAPTURE_PREVIEW_HOST_PATTERN,
   isDevCaptureAllowedHost,
   isDevCaptureRoutesEnabled,
-} from './devCaptureAccess.js';
+} from './devCaptureAccess';
 
 const PREVIEW_SAMPLE = 'boleia-4khaffcwr-joaquim-mulazas-projects.vercel.app';
 
@@ -21,16 +21,22 @@ describe('devCaptureAccess — allowlist estrita', () => {
     expect(isDevCaptureAllowedHost('127.0.0.1')).toBe(true);
   });
 
-  it('boleia-cyan e git previews negados', () => {
+  it('três hosts de produção / git negados', () => {
     expect(isDevCaptureAllowedHost('boleia-cyan.vercel.app')).toBe(false);
     expect(isDevCaptureAllowedHost('boleia-joaquim-mulazas-projects.vercel.app')).toBe(false);
     expect(isDevCaptureAllowedHost('boleia-git-main-joaquim-mulazas-projects.vercel.app')).toBe(false);
+  });
+
+  it('domínio desconhecido negado', () => {
+    expect(isDevCaptureAllowedHost('evil.example')).toBe(false);
+    expect(isDevCaptureAllowedHost('boleia-git-main-joaquim.vercel.app')).toBe(false);
   });
 
   it('isDevCaptureRoutesEnabled respeita allowlist fora vite dev', () => {
     if (!import.meta.env.DEV) {
       expect(isDevCaptureRoutesEnabled('boleia-cyan.vercel.app')).toBe(false);
       expect(isDevCaptureRoutesEnabled(PREVIEW_SAMPLE)).toBe(true);
+      expect(isDevCaptureRoutesEnabled('127.0.0.1')).toBe(true);
     }
     expect(isDevCaptureRoutesEnabled('boleia-cyan.vercel.app')).toBe(import.meta.env.DEV);
   });

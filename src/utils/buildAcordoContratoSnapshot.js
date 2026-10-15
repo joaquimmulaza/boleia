@@ -1,6 +1,4 @@
 import { labelModoPreco } from './ofertaLabels';
-import { formatPrimeiroNome } from './primeiroNome';
-
 /**
  * @typedef {object} ContratoSnapshot
  * @property {boolean} complete
@@ -22,11 +20,8 @@ const MODOS_VALIDOS = new Set(['POR_PASSAGEIRO', 'TOTAL_ACORDO']);
  * @param {string | null | undefined} [primeiroNomePassageiro]
  * @returns {string | null}
  */
-export function labelNContrato(n, primeiroNomePassageiro) {
+export function labelNContrato(n, _primeiroNomePassageiro) {
   if (!Number.isInteger(n) || n < 1) return null;
-  if (n === 1 && primeiroNomePassageiro) {
-    return formatPrimeiroNome(primeiroNomePassageiro);
-  }
   return n === 1 ? 'Individual' : `Grupo · ${n} pessoas`;
 }
 
@@ -86,12 +81,16 @@ export function buildAcordoContratoSnapshot(acordo, options = {}) {
   const temResto =
     modoPreco === 'TOTAL_ACORDO' && totalMensalKz % nContrato !== 0;
 
+  const nLabelResolved =
+    options.nLabel
+    ?? labelNContrato(nContrato, options.primeiroNomePassageiro)
+    ?? `Grupo · ${nContrato} pessoas`;
+
   return {
     complete: true,
     modalidade: labelModoPreco(modoPreco),
     nContrato,
-    nLabel: labelNContrato(nContrato, options.primeiroNomePassageiro)
-      ?? `Grupo · ${nContrato} pessoas`,
+    nLabel: nLabelResolved,
     totalMensalKz,
     porPassageiroKz,
     valorReferenciaKz:

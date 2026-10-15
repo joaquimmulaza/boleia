@@ -2,7 +2,7 @@
 
 ## `apply_due_reserva_expiry`
 
-**Base:** `20261009180000_p0_acordo_pagamento_estados.sql` (última redefinição em `main` antes desta migração)
+**Base:** `20261012181000_expiry_close_sem_lugares_vivos.sql` (#269 — v1.10/v1.11)
 
 ```diff
  DECLARE
@@ -28,7 +28,7 @@
 
 ## `leave_passenger`
 
-**Base:** `20261010000000_encerramento_motivo_leave_passenger.sql`
+**Base:** `20261012181000_expiry_close_sem_lugares_vivos.sql` (mantém bloco v1.10)
 
 ```diff
 -    ELSIF v_estado_acordo = 'activo' THEN
@@ -49,7 +49,7 @@
 
 ## `leave_passenger` — v1.14 (passageiro removido, último)
 
-**Base:** `20261012180000_driver_notif_passenger_exit.sql`
+**Base:** `20261012220000_driver_notif_passenger_exit.sql`
 
 ```diff
 + v_oferta_flex, v_origem, v_destino, v_corpo_v114

@@ -106,7 +106,7 @@ describe('Pacote notificações — último passageiro (PM)', () => {
     expect(body).toContain('last_passenger_driver_removed');
     expect(body).toMatch(/last_passenger_self_left[\s\S]{0,120}true, true/);
     expect(body).toMatch(/last_passenger_driver_removed[\s\S]{0,120}true, false/);
-    const v114Path = join(MIGRATIONS, '20261012190000_passenger_removed_last_v1_14.sql');
+    const v114Path = join(MIGRATIONS, '20261012221000_passenger_removed_last_v1_14.sql');
     if (existsSync(v114Path)) {
       const v114 = readFileSync(v114Path, 'utf8');
       expect(v114).toMatch(/last_passenger_driver_removed[\s\S]{0,120}true, true/);

@@ -1,5 +1,5 @@
--- v1.14: passageiro removido (último) — card «Acordo encerrado» (info, sem CTA) em leave_passenger.
--- Base leave_passenger: 20261012180000_driver_notif_passenger_exit.sql
+-- v1.14: passageiro removido (último) — card «Acordo encerrado» (info, sem CTA).
+-- Base leave_passenger: 20261012220000_driver_notif_passenger_exit.sql
 
 CREATE OR REPLACE FUNCTION public.leave_passenger(
   p_acordo_id uuid,
@@ -28,6 +28,7 @@ DECLARE
   v_oferta_flex boolean;
   v_origem text;
   v_destino text;
+  v_corpo_v110 text;
   v_corpo_v114 text;
 BEGIN
   IF v_uid IS NULL THEN
@@ -128,6 +129,12 @@ BEGIN
         p_acordo_id, txid_current(), 'last_passenger_driver_removed', true, true
       );
     END IF;
+  ELSIF v_uid = v_acordo.driver_id THEN
+    INSERT INTO public._acordo_cancel_notif_suppress (
+      acordo_id, txid, reason, suppress_driver, suppress_passenger
+    ) VALUES (
+      p_acordo_id, txid_current(), 'driver_removed_passenger_partial', true, true
+    );
   END IF;
 
   PERFORM public._maybe_fechar_acordo_sem_lugares_vivos(p_acordo_id);
@@ -161,7 +168,49 @@ BEGIN
   FROM public.acordos
   WHERE id = p_acordo_id;
 
-  IF v_uid IS DISTINCT FROM v_acordo.driver_id THEN
+  IF v_uid = v_acordo.driver_id AND NOT v_ultimo_passageiro_saiu THEN
+    SELECT
+      o.flexibilidade_rota,
+      NULLIF(btrim(COALESCE(o.origin_name, '')), ''),
+      NULLIF(btrim(COALESCE(o.destination_name, '')), '')
+    INTO v_oferta_flex, v_origem, v_destino
+    FROM public.ofertas_capacidade o
+    WHERE o.id = v_acordo.oferta_id;
+
+    IF COALESCE(v_oferta_flex, false)
+       OR v_origem IS NULL
+       OR v_destino IS NULL THEN
+      v_corpo_v110 := 'O motorista retirou-te do acordo. O teu lugar foi libertado.';
+    ELSE
+      v_corpo_v110 :=
+        'O motorista retirou-te do acordo '
+        || v_origem
+        || ' → '
+        || v_destino
+        || '. O teu lugar foi libertado.';
+    END IF;
+
+    BEGIN
+      INSERT INTO public.notificacoes (user_id, mensagem, tipo, metadata)
+      VALUES (
+        v_target,
+        v_corpo_v110,
+        'info',
+        jsonb_build_object(
+          'type', 'status',
+          'card', 'v1.10',
+          'titulo', 'Já não fazes parte deste acordo',
+          'acordo_id', p_acordo_id,
+          'reason', 'driver_removed_passenger_partial',
+          'txid', txid_current()
+        )
+      );
+    EXCEPTION
+      WHEN OTHERS THEN
+        RAISE WARNING 'Falha ao notificar passageiro removido (v1.10) acordo %: %',
+          p_acordo_id, SQLERRM;
+    END;
+  ELSIF v_uid IS DISTINCT FROM v_acordo.driver_id THEN
     SELECT NULLIF(btrim(COALESCE(p.nome_completo, '')), '')
     INTO v_pax_nome
     FROM public.perfis p

@@ -11,13 +11,12 @@ export const PERFIL_COLUNAS_GRANT_SELECT = [
   'tipo_perfil',
   'created_at',
   'onboarding_completed',
-  'iban_titular',
   'perfil_completo',
 ];
 
 /**
  * Colunas pedidas pelo AuthContext em `fetchProfile`.
- * PR segurança futuro: remover `'iban_titular'` desta lista (uma linha).
+ * IBAN/titular: `get_own_perfil_contacto` (não SELECT em perfis).
  *
  * @type {readonly string[]}
  */
@@ -27,7 +26,6 @@ export const PERFIL_COLUNAS_AUTH_CONTEXT = [
   'tipo_perfil',
   'created_at',
   'onboarding_completed',
-  'iban_titular',
   'perfil_completo',
 ];
 
