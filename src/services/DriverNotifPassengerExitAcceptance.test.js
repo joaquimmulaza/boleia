@@ -34,11 +34,37 @@ describe('Driver notif passenger exit — migração', () => {
     );
   });
 
+  /** @param {string} raw */
+  function extractApplyDueBody(raw) {
+    const m = raw.match(
+      /CREATE OR REPLACE FUNCTION public\.apply_due_reserva_expiry[\s\S]*?\$function\$;/,
+    );
+    return m?.[0] || '';
+  }
+
+  it('#269 soft: última redefinição antes do patch é #275 (20261012220000) com v1.12', () => {
+    const base275 = extractApplyDueBody(readMigration());
+    const older = extractApplyDueBody(
+      readFileSync(join(MIGRATIONS, '20261012181000_expiry_close_sem_lugares_vivos.sql'), 'utf8'),
+    );
+    expect(base275).toContain("'card', 'v1.12'");
+    expect(base275).toContain('Ficou um lugar livre');
+    expect(older).not.toContain("'card', 'v1.12'");
+    expect(older).not.toContain('Ficou um lugar livre');
+  });
+
   it('#269 soft: v1.12 partial expiry metadata inclui txid (migração dedicada)', () => {
     expect(existsSync(join(MIGRATIONS, MIGRATION_V112_TXID))).toBe(true);
     const sql = readFileSync(join(MIGRATIONS, MIGRATION_V112_TXID), 'utf8');
-    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\.apply_due_reserva_expiry/);
+    const base275 = extractApplyDueBody(readMigration());
+    const patched = extractApplyDueBody(sql);
+    expect(sql).toMatch(/20261012220000_driver_notif_passenger_exit/);
     expect(sql).not.toMatch(/CREATE OR REPLACE FUNCTION public\.leave_passenger/);
+    expect(patched).toContain("'card', 'v1.12'");
+    expect(patched.replace(
+      "'reason', 'reserva_expirada_lugar_livre',\n            'txid', txid_current()",
+      "'reason', 'reserva_expirada_lugar_livre'",
+    )).toBe(base275);
     expect(sql).toMatch(/'card',\s*'v1\.12'[\s\S]*'txid',\s*txid_current\(\)/);
     expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.apply_due_reserva_expiry/);
     expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION public\.apply_due_reserva_expiry\(uuid\) TO authenticated/);

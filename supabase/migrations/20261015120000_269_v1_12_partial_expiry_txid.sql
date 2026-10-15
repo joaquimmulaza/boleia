@@ -1,5 +1,8 @@
 -- #269 soft: notificação motorista v1.12 (expiração parcial) inclui txid como v1.11.
--- Base prod: 20261012220000_driver_notif_passenger_exit.sql (apply_due_reserva_expiry apenas).
+-- Base OBRIGATÓRIA (#275 / G1–G4): 20261012220000_driver_notif_passenger_exit.sql
+-- (última redefinição de apply_due_reserva_expiry antes desta — inclui card v1.12).
+-- NÃO usar 20261012181000 nem migrações ENG#18/P0 anteriores.
+-- Só esta função; leave_passenger permanece em 20261012220000 / 20261012221000.
 
 CREATE OR REPLACE FUNCTION public.apply_due_reserva_expiry(p_acordo_id uuid DEFAULT NULL)
 RETURNS integer
