@@ -242,7 +242,7 @@ describe('MyAgreements follow-up #278', () => {
     expect(within(sheet).queryByText(/P0001/i)).not.toBeInTheDocument();
   });
 
-  it('B2: motorista JC vê toast «Acordo rescindido por justa causa.»', async () => {
+  it('B2: motorista JC vê toast «Acordo terminado por justa causa.»', async () => {
     terminateAgreement.mockResolvedValue({
       id: 'acordo-e117',
       estado: 'cancelado_justificado',

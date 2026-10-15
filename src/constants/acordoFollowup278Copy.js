@@ -8,7 +8,7 @@ export const CONTACTOS_BLOQUEADOS_PROXIMO_PASSO =
 
 /** Toast — motorista (ou fallback quando copy passageiro não aplica). */
 export const TOAST_JC_MOTORISTA_ACORDO_RESCINDIDO =
-  'Acordo rescindido por justa causa.';
+  'Acordo terminado por justa causa.';
 
 /** Toast — passageiro JC, acordo continua activo para outros. */
 export const TOAST_JC_PASSAGEIRO_LUGAR_TERMINADO =
