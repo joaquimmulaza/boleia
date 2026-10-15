@@ -178,4 +178,36 @@ describe('MyAgreements — carregar pagamentos fase 1', () => {
       expect(timeline.indexOf('pagamentos:end')).toBeLessThan(listEndIdx);
     }
   });
+
+  it('deep link UUID inexistente/fora de RLS: sem crash, sem detalhe, sem dados stale', async () => {
+    const FOREIGN_UUID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+    getAgreementById.mockResolvedValue(null);
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        id: 'outro-acordo',
+        driver_id: 'driver-1',
+        estado: 'activo',
+        is_hidden_by_user: false,
+        ofertas_capacidade: { origin_name: 'A', destination_name: 'B', departure_time: '08:00' },
+        acordos_passageiros: [],
+      },
+    ]);
+
+    renderPage([`/acordos?openAcordoId=${FOREIGN_UUID}`]);
+
+    await waitFor(() => {
+      expect(getAgreementById).toHaveBeenCalledWith(FOREIGN_UUID, {
+        tipoPerfil: 'Motorista',
+        userId: 'driver-1',
+      });
+    });
+
+    await waitFor(() => {
+      expect(getAgreementsForDriver).toHaveBeenCalled();
+    });
+
+    expect(screen.queryByRole('dialog', { name: /Detalhe do acordo/i })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('motorista-pagamentos-panel')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ana Costa')).not.toBeInTheDocument();
+  });
 });

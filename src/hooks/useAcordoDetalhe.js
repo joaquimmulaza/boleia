@@ -1,18 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  getAcordoContactos,
-  getMesReferenciaAtual,
-  getObrigacaoPagamentoPassageiro,
-  getPagamentoForPassageiro,
-  listPagamentosByAcordo,
-  listPagamentosPendentesMotoristaAcordo,
-} from '../services/PaymentService';
-import { listMinhasAvaliacoesAcordo } from '../services/RatingService';
-import { listAdendaHistorico } from '../services/AgreementService';
-import {
-  contactosBloqueadosFallback,
-  deveChamarGetAcordoContactos,
-} from '../utils/acordoContactosGate.js';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { runAcordoDetalheLoad } from '../utils/runAcordoDetalheLoad.js';
 
 /**
  * @param {{
@@ -39,10 +26,12 @@ export function useAcordoDetalhe({ acordo, syncKey, tipoPerfil, userId }) {
   const [pagamentosAcordoLoading, setPagamentosAcordoLoading] = useState(false);
 
   const loadGenerationRef = useRef(0);
+  const openAcordoIdRef = useRef(/** @type {string | null} */ (null));
   const acordoLatestRef = useRef(acordo);
 
   useEffect(() => {
     acordoLatestRef.current = acordo;
+    openAcordoIdRef.current = acordo?.id ?? null;
   }, [acordo]);
 
   const resetDetalhe = useCallback(() => {
@@ -61,29 +50,22 @@ export function useAcordoDetalhe({ acordo, syncKey, tipoPerfil, userId }) {
     setPagamentosAcordoLoading(false);
   }, []);
 
-  /**
-   * @param {object} acordoRow
-   * @param {{ background?: boolean }} [options]
-   */
-  const carregarDetalhe = useCallback(
-    async (acordoRow, options = {}) => {
-      const { background = false } = options;
-      if (!acordoRow?.id || !userId) return;
-
-      const minhaLinhaAcordo = (acordoRow.acordos_passageiros || []).find(
-        (p) => p.passenger_id === userId,
-      );
-      const podeContactos = deveChamarGetAcordoContactos({
-        acordoEstado: acordoRow.estado,
-        tipoPerfil,
-        minhaLinhaEstado: minhaLinhaAcordo?.estado,
-      });
-
-      const generation = ++loadGenerationRef.current;
-      const mesAtual = getMesReferenciaAtual();
-      const isStale = () => generation !== loadGenerationRef.current;
-
-      if (!background) {
+  const setters = useMemo(
+    () => ({
+      setPagamentosAcordo,
+      setPagamento,
+      setObrigacaoPagamento,
+      setMotoristaPagamentos,
+      setContactos,
+      setAvaliacoesAcordo,
+      setHistoricoPreco,
+      setMotoristaPagamentosLoading,
+      setPassageiroPagamentoLoading,
+      setContactosLoading,
+      setAvaliacoesLoading,
+      setHistoricoLoading,
+      setPagamentosAcordoLoading,
+      clearForegroundSections: () => {
         setMotoristaPagamentos([]);
         setPagamentosAcordo([]);
         setPagamento(null);
@@ -91,138 +73,31 @@ export function useAcordoDetalhe({ acordo, syncKey, tipoPerfil, userId }) {
         setContactos(null);
         setAvaliacoesAcordo([]);
         setHistoricoPreco([]);
-      }
-
-      if (!background) {
+      },
+      startForegroundLoading: (podeContactos) => {
         setPagamentosAcordoLoading(true);
         if (tipoPerfil === 'Motorista') setMotoristaPagamentosLoading(true);
         if (tipoPerfil === 'Passageiro') setPassageiroPagamentoLoading(true);
         if (podeContactos) setContactosLoading(true);
         setAvaliacoesLoading(true);
         setHistoricoLoading(true);
-      }
+      },
+    }),
+    [tipoPerfil],
+  );
 
-      const linhaPassageiro =
-        tipoPerfil === 'Passageiro'
-          ? (acordoRow.acordos_passageiros || []).find((p) => p.passenger_id === userId)
-          : null;
-
-      void listPagamentosByAcordo(acordoRow.id)
-        .then((rows) => {
-          if (isStale()) return;
-          setPagamentosAcordo(Array.isArray(rows) ? rows : []);
-        })
-        .catch((err) => {
-          if (!isStale()) console.error('Erro ao carregar pagamentos do acordo:', err);
-        })
-        .finally(() => {
-          if (!isStale()) setPagamentosAcordoLoading(false);
-        });
-
-      if (tipoPerfil === 'Motorista') {
-        void listPagamentosPendentesMotoristaAcordo(acordoRow.id)
-          .then((rows) => {
-            if (isStale()) return;
-            setMotoristaPagamentos(Array.isArray(rows) ? rows : []);
-          })
-          .catch((err) => {
-            if (!isStale()) {
-              console.error('Erro ao listar pagamentos motorista:', err);
-              setMotoristaPagamentos([]);
-            }
-          })
-          .finally(() => {
-            if (!isStale()) setMotoristaPagamentosLoading(false);
-          });
-      }
-
-      if (tipoPerfil === 'Passageiro') {
-        if (linhaPassageiro?.id) {
-          void getObrigacaoPagamentoPassageiro(linhaPassageiro.id)
-            .then((payload) => {
-              if (isStale()) return;
-              setPagamento(payload?.pagamento ?? null);
-              setObrigacaoPagamento(payload?.obrigacao ?? null);
-            })
-            .catch(async (err) => {
-              if (isStale()) return;
-              console.error('Erro ao carregar obrigação:', err);
-              try {
-                const pagamentos = await listPagamentosByAcordo(acordoRow.id);
-                const row =
-                  pagamentos.find(
-                    (p) =>
-                      p.passenger_id === userId
-                      && String(p.mes_referencia || '').slice(0, 10) === mesAtual,
-                  ) ?? (await getPagamentoForPassageiro(acordoRow.id, userId, mesAtual));
-                if (!isStale()) {
-                  setPagamento(row);
-                  setObrigacaoPagamento(null);
-                }
-              } catch {
-                if (!isStale()) {
-                  setPagamento(null);
-                  setObrigacaoPagamento(null);
-                }
-              }
-            })
-            .finally(() => {
-              if (!isStale()) setPassageiroPagamentoLoading(false);
-            });
-        } else {
-          setPagamento(null);
-          setObrigacaoPagamento(null);
-          setPassageiroPagamentoLoading(false);
-        }
-      }
-
-      if (podeContactos) {
-        void getAcordoContactos(acordoRow.id)
-          .then((payload) => {
-            if (isStale()) return;
-            setContactos(payload);
-          })
-          .catch((err) => {
-            if (!isStale()) {
-              if (err?.code !== 'P0001') {
-                console.error('Erro ao carregar contactos:', err);
-              }
-              setContactos(contactosBloqueadosFallback());
-            }
-          })
-          .finally(() => {
-            if (!isStale()) setContactosLoading(false);
-          });
-      } else {
-        setContactos(null);
-        setContactosLoading(false);
-      }
-
-      void listMinhasAvaliacoesAcordo(acordoRow.id)
-        .then((avs) => {
-          if (isStale()) return;
-          setAvaliacoesAcordo(Array.isArray(avs) ? avs : []);
-        })
-        .catch((err) => {
-          if (!isStale()) console.error('Erro ao carregar avaliações:', err);
-        })
-        .finally(() => {
-          if (!isStale()) setAvaliacoesLoading(false);
-        });
-
-      void listAdendaHistorico(acordoRow.id)
-        .then((historico) => {
-          if (isStale()) return;
-          setHistoricoPreco(Array.isArray(historico) ? historico : []);
-        })
-        .catch((err) => {
-          if (!isStale()) console.error('Erro ao carregar histórico de preço:', err);
-        })
-        .finally(() => {
-          if (!isStale()) setHistoricoLoading(false);
-        });
+  const carregarDetalhe = useCallback(
+    (acordoRow, options = {}) => {
+      runAcordoDetalheLoad(acordoRow, {
+        ...options,
+        tipoPerfil,
+        userId,
+        openAcordoIdRef,
+        loadGenerationRef,
+        setters,
+      });
     },
-    [tipoPerfil, userId],
+    [tipoPerfil, userId, setters],
   );
 
   const revalidateSilencioso = useCallback(
@@ -234,12 +109,11 @@ export function useAcordoDetalhe({ acordo, syncKey, tipoPerfil, userId }) {
     const row = acordoLatestRef.current;
     if (!syncKey || !row?.id) {
       loadGenerationRef.current += 1;
-      // Limpar secções ao fechar detalhe (syncKey nulo).
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset intencional ao desmontar contexto
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset intencional ao fechar detalhe
       resetDetalhe();
       return;
     }
-    void carregarDetalhe(row, { background: false });
+    carregarDetalhe(row, { background: false });
   }, [syncKey, carregarDetalhe, resetDetalhe]);
 
   const pagamentoLoading =

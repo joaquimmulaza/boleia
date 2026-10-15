@@ -47,6 +47,20 @@ const acordoMotorista = {
   ],
 };
 
+const acordoMotoristaA = {
+  id: 'acordo-A',
+  estado: 'activo',
+  driver_id: 'driver-1',
+  acordos_passageiros: [{ id: 'ap-a', passenger_id: 'pax-a', estado: 'activo' }],
+};
+
+const acordoMotoristaB = {
+  id: 'acordo-B',
+  estado: 'activo',
+  driver_id: 'driver-1',
+  acordos_passageiros: [{ id: 'ap-b', passenger_id: 'pax-b', estado: 'activo' }],
+};
+
 /** @param {number} ms */
 function delay(ms) {
   return new Promise((resolve) => {
@@ -166,6 +180,67 @@ describe('useAcordoDetalhe — carregar pagamentos fase 1', () => {
     await act(async () => {
       await revalidatePromise;
     });
+
+    await waitFor(() => {
+      expect(result.current.motoristaPagamentos[0]?.pagamento_id).toBe('mp-2');
+    });
+    expect(result.current.motoristaPagamentosLoading).toBe(false);
+    expect(result.current.motoristaPagamentos[0]?.passenger_nome).toBe('João');
+  });
+
+  it('refresh silencioso de A não escreve pagamentos/contactos quando B está aberto', async () => {
+    /** @type {((v: object[]) => void) | null} */
+    let resolvePagamentosA = null;
+
+    listPagamentosPendentesMotoristaAcordo.mockImplementation((acordoId) => {
+      if (acordoId === 'acordo-A') {
+        return new Promise((resolve) => {
+          resolvePagamentosA = resolve;
+        });
+      }
+      return Promise.resolve([
+        { pagamento_id: 'pag-B', passenger_nome: 'Certo B', estado: 'em_custodia' },
+      ]);
+    });
+
+    getAcordoContactos.mockImplementation((acordoId) => {
+      if (acordoId === 'acordo-A') {
+        return delay(50).then(() => ({ bloqueado: false, passageiros: [{ nome: 'Contacto-A' }] }));
+      }
+      return Promise.resolve({ bloqueado: false, passageiros: [{ nome: 'Contacto-B' }] });
+    });
+
+    const { result } = renderHook(
+      ({ acordo }) =>
+        useAcordoDetalhe({
+          acordo,
+          syncKey: buildAcordoDetalheSyncKey(acordo),
+          tipoPerfil: 'Motorista',
+          userId: 'driver-1',
+        }),
+      { initialProps: { acordo: acordoMotoristaB } },
+    );
+
+    await waitFor(() => {
+      expect(result.current.motoristaPagamentos[0]?.pagamento_id).toBe('pag-B');
+    });
+
+    let silentPromise;
+    act(() => {
+      silentPromise = result.current.revalidateSilencioso(acordoMotoristaA);
+    });
+
+    await act(async () => {
+      resolvePagamentosA?.([
+        { pagamento_id: 'pag-A', passenger_nome: 'Errado A', estado: 'em_custodia' },
+      ]);
+      await silentPromise;
+    });
+
+    expect(result.current.motoristaPagamentos[0]?.pagamento_id).toBe('pag-B');
+    expect(result.current.motoristaPagamentos.some((r) => r.pagamento_id === 'pag-A')).toBe(false);
+    expect(getAcordoContactos).toHaveBeenCalledWith('acordo-A');
+    expect(result.current.contactos?.passageiros?.[0]?.nome).not.toBe('Contacto-A');
   });
 
   it('falha num pedido não apaga as outras secções', async () => {
