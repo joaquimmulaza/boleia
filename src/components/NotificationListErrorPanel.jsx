@@ -7,6 +7,14 @@ import {
   NOTIFICATION_LIST_RETRY_BUTTON,
 } from '../utils/notificationListCopy';
 
+/** Margens laterais alinhadas à lista (`NotificationListItem` usa `px-5`). */
+export const NOTIFICATION_LIST_ERROR_BANNER_SHELL_CLASS =
+  'box-border w-full min-w-0 px-5 pt-2 pb-1';
+
+/** Largura fluida — proibido `mx-*` / `w-[…]` fixo no Alert da faixa. */
+export const NOTIFICATION_LIST_ERROR_BANNER_ALERT_CLASS =
+  'box-border w-full min-w-0 max-w-full border-destructive/30 bg-destructive/5 dark:bg-destructive/10';
+
 /**
  * Erro da lista do sino — faixa (com lista visível) ou ecrã inteiro.
  *
@@ -25,20 +33,24 @@ export default function NotificationListErrorPanel({
 
   if (isBanner) {
     return (
-      <Alert
-        variant="destructive"
-        className="mx-5 mt-2 mb-1 border-destructive/30 bg-destructive/5 dark:bg-destructive/10"
-        data-testid="notification-list-error-banner"
+      <div
+        className={NOTIFICATION_LIST_ERROR_BANNER_SHELL_CLASS}
+        data-testid="notification-list-error-banner-shell"
       >
-        <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm font-medium text-destructive dark:text-red-300">
-            {NOTIFICATION_LIST_LOAD_ERROR}
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-9 shrink-0 gap-2 rounded-full px-4 text-sm font-semibold border-destructive/40"
+        <Alert
+          variant="destructive"
+          className={NOTIFICATION_LIST_ERROR_BANNER_ALERT_CLASS}
+          data-testid="notification-list-error-banner"
+        >
+          <AlertDescription className="flex min-w-0 flex-col gap-3">
+            <p className="min-w-0 text-sm font-medium text-destructive dark:text-red-300">
+              {NOTIFICATION_LIST_LOAD_ERROR}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 w-fit max-w-full shrink-0 gap-2 rounded-full px-4 text-sm font-semibold border-destructive/40"
             disabled={retrying}
             aria-busy={retrying}
             onClick={onRetry}
@@ -47,9 +59,10 @@ export default function NotificationListErrorPanel({
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
             ) : null}
             {NOTIFICATION_LIST_RETRY_BUTTON}
-          </Button>
-        </AlertDescription>
-      </Alert>
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </div>
     );
   }
 
