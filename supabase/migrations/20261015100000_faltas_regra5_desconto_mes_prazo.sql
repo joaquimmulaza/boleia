@@ -359,5 +359,23 @@ AS $$
     );
 $$;
 
+REVOKE ALL ON FUNCTION public._falta_regra5_instant() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public._falta_regra5_instant() FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._falta_regra5_instant() TO service_role;
+
+REVOKE ALL ON FUNCTION public._passageiro_falta_prazo_limite(date) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public._passageiro_falta_prazo_limite(date) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._passageiro_falta_prazo_limite(date) TO service_role;
+
 GRANT EXECUTE ON FUNCTION public._passageiro_falta_aviso_valido(date, timestamptz) TO authenticated;
 REVOKE EXECUTE ON FUNCTION public._passageiro_falta_aviso_valido(date, timestamptz) FROM anon;
+
+REVOKE ALL ON FUNCTION public._resolve_desconto_mes_falta(uuid, uuid, date, text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public._resolve_desconto_mes_falta(uuid, uuid, date, text) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._resolve_desconto_mes_falta(uuid, uuid, date, text) TO service_role;
+
+GRANT EXECUTE ON FUNCTION public.log_falta(uuid, date, text, text, uuid, text) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.log_falta(uuid, date, text, text, uuid, text) FROM anon;
+
+GRANT EXECUTE ON FUNCTION public._desconto_faltas_pagamento(uuid, uuid, date) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public._desconto_faltas_pagamento(uuid, uuid, date) FROM anon;
