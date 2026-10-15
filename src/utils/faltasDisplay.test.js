@@ -6,22 +6,131 @@ import {
   isFutureFaltaDate,
   formatFaltaDiaCurto,
   resolveFaltasHubCard,
+  resolveDescontoFaltasTotal,
+  sumDescontoFaltasParaPassageiro,
 } from './faltasDisplay';
 
 describe('faltasDisplay', () => {
+  const refOct15 = new Date('2026-10-15T12:00:00Z');
   const refOct1 = new Date('2026-10-01T12:00:00Z');
+  const MES = '2026-10-01';
 
-  it('filtra faltas do mês corrente em Luanda até hoje (exclui futuras)', () => {
+  it('filtra faltas do mês corrente em Luanda (inclui futuras no mês)', () => {
     const faltas = [
       { id: '1', data_falta: '2026-09-30', desconto_kz: 100 },
       { id: '2', data_falta: '2026-10-01', desconto_kz: 200 },
       { id: '3', data_falta: '2026-10-15', desconto_kz: 1272.73 },
       { id: '4', data_falta: '2026-11-01', desconto_kz: 50 },
+      { id: '5', data_falta: '2026-10-25', desconto_kz: 300 },
     ];
 
     const esteMes = filterFaltasEsteMes(faltas, refOct1);
 
-    expect(esteMes.map((f) => f.id)).toEqual(['2']);
+    expect(esteMes.map((f) => f.id)).toEqual(['2', '3', '5']);
+  });
+
+  it('em custódia com desconto_faltas_kz 0 usa soma client-side (passageiro)', () => {
+    const faltas = [
+      { tipo: 'Passageiro', passenger_id: 'pax-1', desconto_kz: 500 },
+      { tipo: 'Motorista', desconto_kz: 650 },
+      { tipo: 'Passageiro', passenger_id: 'pax-2', desconto_kz: 200 },
+    ];
+    const pagamentos = [
+      {
+        passenger_id: 'pax-1',
+        mes_referencia: MES,
+        estado: 'em_custodia',
+        desconto_faltas_kz: 0,
+      },
+    ];
+    expect(
+      resolveDescontoFaltasTotal(pagamentos, faltas, {
+        tipoPerfil: 'Passageiro',
+        passengerId: 'pax-1',
+        refDate: refOct15,
+      }),
+    ).toBe(1150);
+  });
+
+  it('pagamento liquidado usa desconto_faltas_kz (passageiro)', () => {
+    const faltas = [{ tipo: 'Passageiro', passenger_id: 'pax-1', desconto_kz: 500 }];
+    const pagamentos = [
+      {
+        passenger_id: 'pax-1',
+        mes_referencia: MES,
+        estado: 'liquidado',
+        desconto_faltas_kz: 3000,
+      },
+    ];
+    expect(
+      resolveDescontoFaltasTotal(pagamentos, faltas, {
+        tipoPerfil: 'Passageiro',
+        passengerId: 'pax-1',
+        refDate: refOct15,
+      }),
+    ).toBe(3000);
+  });
+
+  it('motorista liquidado: soma desconto_faltas_kz de cada passageiro (sem dedupe)', () => {
+    const faltas = [
+      { tipo: 'Passageiro', passenger_id: 'pax-1', desconto_kz: 400 },
+      { tipo: 'Passageiro', passenger_id: 'pax-2', desconto_kz: 300 },
+      { tipo: 'Motorista', desconto_kz: 500 },
+    ];
+    const pagamentos = [
+      {
+        passenger_id: 'pax-1',
+        mes_referencia: MES,
+        estado: 'liquidado',
+        desconto_faltas_kz: 900,
+      },
+      {
+        passenger_id: 'pax-2',
+        mes_referencia: MES,
+        estado: 'liquidado',
+        desconto_faltas_kz: 800,
+      },
+    ];
+    expect(
+      resolveDescontoFaltasTotal(pagamentos, faltas, {
+        tipoPerfil: 'Motorista',
+        refDate: refOct15,
+      }),
+    ).toBe(1700);
+  });
+
+  it('motorista em custódia: falta Motorista × passageiros activos + faltas pax', () => {
+    const faltas = [
+      { tipo: 'Passageiro', passenger_id: 'pax-1', desconto_kz: 400 },
+      { tipo: 'Motorista', desconto_kz: 500 },
+    ];
+    expect(
+      resolveDescontoFaltasTotal([], faltas, {
+        tipoPerfil: 'Motorista',
+        nPassageirosActivos: 3,
+        refDate: refOct15,
+      }),
+    ).toBe(1900);
+  });
+
+  it('motorista: 3 activos e 1 falta Motorista 500 Kz → total 1500 Kz', () => {
+    const faltas = [{ tipo: 'Motorista', desconto_kz: 500 }];
+    expect(
+      resolveDescontoFaltasTotal([], faltas, {
+        tipoPerfil: 'Motorista',
+        nPassageirosActivos: 3,
+        refDate: refOct15,
+      }),
+    ).toBe(1500);
+  });
+
+  it('sumDescontoFaltasParaPassageiro inclui motorista e só o passageiro alvo', () => {
+    const faltas = [
+      { tipo: 'Passageiro', passenger_id: 'pax-1', desconto_kz: 400 },
+      { tipo: 'Passageiro', passenger_id: 'pax-2', desconto_kz: 300 },
+      { tipo: 'Motorista', desconto_kz: 500 },
+    ];
+    expect(sumDescontoFaltasParaPassageiro(faltas, 'pax-1')).toBe(900);
   });
 
   it('soma descontos como valores positivos', () => {
