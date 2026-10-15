@@ -68,6 +68,11 @@ describe('AddressInput', () => {
 
     const input = screen.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
     expect(input).not.toBeRequired();
+    expect(input.className).toMatch(/border-\[#718096\]/);
+    expect(input.className).toMatch(/dark:border-input/);
+    expect(input.className).toMatch(/bg-card/);
+    expect(input.className).toMatch(/dark:bg-background/);
+    expect(input.className.split(/\s+/)).not.toContain('bg-background');
   });
 
   it('associa label ao input usando id ou fallback para name', () => {
@@ -349,6 +354,11 @@ describe('AddressInput', () => {
     const input = screen.getByRole('combobox', { name: /Origem/i });
     fireEvent.focus(input);
     fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(selectPlace).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.keyDown(input, { key: 'Enter' });
 
     expect(onSubmit).not.toHaveBeenCalled();
     await waitFor(() => {
@@ -373,6 +383,9 @@ describe('AddressInput', () => {
 
     const input = screen.getByRole('combobox', { name: /Origem/i });
     fireEvent.focus(input);
+    expect(input).not.toHaveAttribute('aria-activedescendant');
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
     expect(input).toHaveAttribute('aria-activedescendant', 'origin_name-geocoder-listbox-option-0');
 
     fireEvent.keyDown(input, { key: 'ArrowDown' });
@@ -380,6 +393,67 @@ describe('AddressInput', () => {
 
     fireEvent.keyDown(input, { key: 'ArrowUp' });
     expect(input).toHaveAttribute('aria-activedescendant', 'origin_name-geocoder-listbox-option-0');
+
+    fireEvent.keyDown(input, { key: 'ArrowUp' });
+    expect(input).not.toHaveAttribute('aria-activedescendant');
+  });
+
+  it('ao fechar a lista limpa aria-activedescendant e Enter não selecciona opção escondida', async () => {
+    mockSuggestions = [
+      { place_id: 'photon-1', description: 'Talatona, Luanda' },
+      { place_id: 'photon-2', description: 'Viana, Viana' },
+    ];
+
+    render(
+      <AddressInput
+        name="origin_name"
+        label="Origem"
+        value="Tal"
+        onChange={vi.fn()}
+      />,
+    );
+
+    const input = screen.getByRole('combobox', { name: /Origem/i });
+    fireEvent.focus(input);
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(input).toHaveAttribute('aria-activedescendant', 'origin_name-geocoder-listbox-option-0');
+
+    fireEvent.keyDown(input, { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(screen.queryByRole('listbox', { name: 'Sugestões de locais' })).not.toBeInTheDocument();
+    });
+    expect(input).not.toHaveAttribute('aria-activedescendant');
+
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(selectPlace).not.toHaveBeenCalled();
+  });
+
+  it('porta o listbox para o mount fora do painel de drag', () => {
+    mockSuggestions = [{ place_id: 'photon-1', description: 'Talatona, Luanda' }];
+
+    render(
+      <div role="dialog" aria-modal="true" aria-labelledby="dlg-title">
+        <div data-geocoder-sheet-boundary>
+          <h2 id="dlg-title">Dialog</h2>
+          <AddressInput
+            name="origin_name"
+            label="Origem"
+            value="Tal"
+            onChange={vi.fn()}
+          />
+        </div>
+        <div data-geocoder-sheet-portal data-testid="geocoder-sheet-portal" />
+      </div>,
+    );
+
+    const input = screen.getByRole('combobox', { name: /Origem/i });
+    fireEvent.focus(input);
+
+    const listbox = screen.getByRole('listbox', { name: 'Sugestões de locais' });
+    const portalMount = screen.getByTestId('geocoder-sheet-portal');
+    expect(portalMount.contains(listbox)).toBe(true);
+    expect(screen.getByRole('dialog').contains(listbox)).toBe(true);
   });
 
   it('erro de rede mostra copy final, retry e Usar texto livre', () => {

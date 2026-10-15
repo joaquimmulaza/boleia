@@ -20,7 +20,7 @@ BEGIN
   WHERE user_id = p_passenger_id
     AND mensagem = 'Pagamento mensal disponível — envia o comprovativo em Acordos.'
     AND lower(COALESCE(metadata->>'type', '')) = 'payment_update'
-    AND (metadata->>'pagamento_id')::uuid = p_pagamento_id;
+    AND metadata->>'pagamento_id' = p_pagamento_id::text;
 END;
 $function$;
 

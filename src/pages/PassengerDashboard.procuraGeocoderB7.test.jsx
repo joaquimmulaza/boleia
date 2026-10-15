@@ -140,6 +140,7 @@ describe('PassengerDashboard — geocoder B7', () => {
 
     const originInput = await screen.findByRole('combobox', { name: /^Origem$/i });
     expect(originInput).toHaveValue('Talatona');
+    expect(originInput.className).toMatch(/border-\[#718096\]/);
 
     fireEvent.focus(originInput);
 

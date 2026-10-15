@@ -57,10 +57,6 @@ export function propostaHubDeepLink(metadata) {
  * @returns {string}
  */
 export function statusCardDeepLink(metadata) {
-  const card = String(metadata?.card || '').toLowerCase();
-  if (card === 'v1.10' || card === 'v1.11') {
-    return acordosDeepLink(metadata, null);
-  }
   return acordosDeepLink(metadata, null);
 }
 
