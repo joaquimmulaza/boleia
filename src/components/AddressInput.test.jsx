@@ -72,7 +72,7 @@ describe('AddressInput', () => {
     const input = screen.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
     expect(input).not.toBeRequired();
     expect(input.className).toMatch(/border-\[#718096\]/);
-    expect(input.className).toMatch(/dark:border-input/);
+    expect(input.className).toMatch(/dark:border-muted-foreground/);
     expect(input.className).toMatch(/bg-background/);
     expect(input.className.split(/\s+/)).toContain('bg-background');
   });

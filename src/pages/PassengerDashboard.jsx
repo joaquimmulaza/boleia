@@ -1796,7 +1796,15 @@ const PassengerDashboard = () => {
       )}
 
       {!loading && view === 'form' && (
-        <form onSubmit={handleSubmitProcura} className="space-y-4 bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-100 shadow-sm">
+        <form
+          onSubmit={handleSubmitProcura}
+          data-testid="procura-form"
+          className="flex max-h-[calc(100dvh-10rem)] flex-col overflow-hidden bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm"
+        >
+          <div
+            data-testid="procura-form-scroll"
+            className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain p-5"
+          >
           {editing ? (
             <button
               type="button"
@@ -2080,14 +2088,20 @@ const PassengerDashboard = () => {
                 : 'Valor máximo para o carro completo no acordo.'}
             </p>
           </label>
+          </div>
 
-          <button
-            type="submit"
-            className="w-full bg-primary text-white font-bold py-4 rounded-xl"
-            disabled={savingProcura}
+          <div
+            data-testid="procura-form-submit-footer"
+            className="sticky bottom-0 z-[1] shrink-0 border-t border-slate-100 bg-white p-5 pt-3 dark:border-slate-800 dark:bg-slate-900"
           >
-            {editing ? 'Guardar alterações' : 'Guardar procura'}
-          </button>
+            <button
+              type="submit"
+              className="w-full bg-primary text-white font-bold py-4 rounded-xl"
+              disabled={savingProcura}
+            >
+              {editing ? 'Guardar alterações' : 'Guardar procura'}
+            </button>
+          </div>
         </form>
       )}
 

@@ -161,6 +161,38 @@ describe('PassengerDashboard — geocoder B7', () => {
     expect(screen.getByRole('heading', { name: /Editar procura/i })).toBeInTheDocument();
   });
 
+  it('editar procura (#273): erro geocoder inline mantém «Guardar alterações» no footer sticky', async () => {
+    getPlacePredictions.mockRejectedValue(new Error('offline'));
+
+    Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true });
+    Object.defineProperty(window, 'innerHeight', { value: 844, configurable: true });
+
+    render(
+      <MemoryRouter>
+        <PassengerDashboard />
+      </MemoryRouter>,
+    );
+
+    await abrirMinhaProcura();
+    fireEvent.click(await screen.findByRole('button', { name: /Editar procura/i }));
+
+    const originInput = await screen.findByRole('combobox', { name: /^Origem$/i });
+    fireEvent.change(originInput, { target: { value: 'Talaton' } });
+
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('geocoder-network-error')).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+
+    const footer = screen.getByTestId('procura-form-submit-footer');
+    const guardar = screen.getByRole('button', { name: /Guardar alterações/i });
+    expect(footer).toContainElement(guardar);
+    expect(footer.className).toMatch(/sticky/);
+    expect(screen.getByTestId('procura-form-scroll').className).toMatch(/overflow-y-auto/);
+  });
+
   it('editar procura: focus no valor guardado sem escrever não mostra Usar nem «Não encontrámos»', async () => {
     render(
       <MemoryRouter>
