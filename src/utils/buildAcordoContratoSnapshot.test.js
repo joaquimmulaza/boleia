@@ -50,7 +50,20 @@ describe('buildAcordoContratoSnapshot', () => {
     expect(snap.nLabel).toBe('Individual');
   });
 
-  it('N=1 com primeiro nome do passageiro substitui Individual', () => {
+  it('nLabel explícito (fonte única) prevalece sobre primeiroNomePassageiro', () => {
+    const snap = buildAcordoContratoSnapshot(
+      {
+        modo_preco: 'POR_PASSAGEIRO',
+        n_passageiros_contrato: 1,
+        valor_mensal_por_passageiro_kz: 22000,
+        valor_mensal_total_kz: 22000,
+      },
+      { nLabel: 'Individual', primeiroNomePassageiro: 'Critiquito Prod Passenger' },
+    );
+    expect(snap.nLabel).toBe('Individual');
+  });
+
+  it('N=1 mantém Individual mesmo com primeiro nome (Pessoas no acordo)', () => {
     const snap = buildAcordoContratoSnapshot(
       {
         modo_preco: 'POR_PASSAGEIRO',
@@ -61,7 +74,7 @@ describe('buildAcordoContratoSnapshot', () => {
       { primeiroNomePassageiro: 'Ana Costa' },
     );
 
-    expect(snap.nLabel).toBe('Ana');
+    expect(snap.nLabel).toBe('Individual');
   });
 
   it('campos em falta — incomplete sem inventar defaults', () => {

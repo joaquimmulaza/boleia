@@ -6,6 +6,7 @@ import DevPerfilCaptureShell from '../pages/DevPerfilCapture';
 import DevPerfilCaptureMotoristaShell from '../pages/DevPerfilCaptureMotorista';
 import DevPagamentoPanelCapture from '../pages/DevPagamentoPanelCapture';
 import DevAcordosChipCapture from '../pages/DevAcordosChipCapture';
+import DevHotfixProdQaCapture from '../pages/DevHotfixProdQaCapture';
 import DevNotifCards269Capture from '../pages/DevNotifCards269Capture';
 import { isDevCaptureRoutesEnabled } from '../utils/devCaptureAccess';
 
@@ -31,6 +32,7 @@ export default function DevAppRoutes() {
         <Route index element={<Profile />} />
       </Route>
       <Route path="acordos-chips" element={<DevAcordosChipCapture />} />
+      <Route path="hotfix-prod-qa-acordos" element={<DevHotfixProdQaCapture />} />
       <Route path="notif-cards-269" element={<DevNotifCards269Capture />} />
     </Routes>
   );

@@ -21,7 +21,11 @@ import {
   isPagamentoEmExcessoAnalise,
 } from '../utils/pagamentoObrigacaoCopy';
 import { basenameComprovativoPath } from '../utils/comprovativoPath';
-import { getPlatformIban, uploadComprovativo } from '../services/PaymentService';
+import {
+  getPlatformIban,
+  isTransferenciaPlataformaDisponivel,
+  uploadComprovativo,
+} from '../services/PaymentService';
 import FeedbackAlert from './FeedbackAlert';
 
 /**
@@ -66,7 +70,7 @@ function AcordoPagamentoPanel({
 
   const obrigacaoNorm = normalizeObrigacaoSnapshot(obrigacao);
   const platformIban = getPlatformIban();
-  const ibanConfigurado = Boolean(platformIban);
+  const ibanConfigurado = isTransferenciaPlataformaDisponivel();
   const estadoNorm = String(pagamento.estado || '').toLowerCase();
   const emExcesso = isPagamentoEmExcessoAnalise(pagamento);
   const obrigacaoValorZero = obrigacaoNorm != null && Number(obrigacaoNorm.valor) === 0;
