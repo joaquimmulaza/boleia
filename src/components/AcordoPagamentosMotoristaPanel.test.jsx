@@ -196,6 +196,28 @@ describe('AcordoPagamentosMotoristaPanel — v1.6', () => {
     );
   });
 
+  it('acordo encerrado: linha pendente não mostra chip «Pagamento pendente»', () => {
+    render(
+      <AcordoPagamentosMotoristaPanel
+        acordoTerminado
+        rows={[
+          {
+            pagamento_id: 'pg-prod',
+            passenger_id: 'pax-prod',
+            passenger_nome: 'Critiquito Prod Passenger',
+            estado: 'pendente_pagamento',
+            valor: 22000,
+            valor_em_divida: 22000,
+          },
+        ]}
+      />,
+    );
+    const row = screen.getByTestId('motorista-pagamento-pax-prod');
+    expect(row).toHaveTextContent(/22[\s\u00a0]?000 Kz/);
+    expect(row.textContent).not.toMatch(/Pagamento pendente/i);
+    expect(row).toHaveTextContent(/Pagamento cancelado/);
+  });
+
   it('acordo terminado com várias secções: Pagamentos deste acordo', () => {
     render(
       <AcordoPagamentosMotoristaPanel

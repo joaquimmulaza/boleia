@@ -6,7 +6,8 @@ import {
   valorEmDividaParaExibir,
 } from '../utils/pagamentoObrigacaoCopy';
 import {
-  labelEstadoPagamento,
+  labelEstadoPagamentoMotoristaCabecalho,
+  chipClassEstadoPagamentoMotoristaCabecalho,
   chipClassEstadoPagamento,
   PAYMENT_STATES,
 } from '../utils/paymentStatus';
@@ -139,9 +140,9 @@ function AcordoPagamentosMotoristaPanel({
                     ) : null}
                   </div>
                   <span
-                    className={`shrink-0 text-xs font-semibold px-2 py-1 rounded-full ${chipClassEstadoPagamento(row.estado)}`}
+                    className={`shrink-0 text-xs font-semibold px-2 py-1 rounded-full ${chipClassEstadoPagamentoMotoristaCabecalho(row.estado, { acordoTerminado })}`}
                   >
-                    {labelEstadoPagamento(row.estado, { placement: 'cabecalho' })}
+                    {labelEstadoPagamentoMotoristaCabecalho(row.estado, { acordoTerminado })}
                   </span>
                 </div>
               </li>,

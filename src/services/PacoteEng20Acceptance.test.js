@@ -2,7 +2,7 @@
  * PACOTE ENG #20 — E2E fluxos Partial 4 / 8 / 10 (audit E2E 2026-09-10).
  * Evidência Vitest: pagamento happy path · renovação M0→M1 · grupo/push.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -51,6 +51,10 @@ describe('PACOTE ENG #20 — E2E fluxos Partial 4 / 8 / 10', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   describe('Fluxo 4 — Pagamento/comprovativo + admin activation (happy path)', () => {
@@ -107,13 +111,11 @@ describe('PACOTE ENG #20 — E2E fluxos Partial 4 / 8 / 10', () => {
     it('regressão B2: getPlatformIban devolve env quando configurado', () => {
       vi.stubEnv('VITE_PLATFORM_IBAN', 'AO06004000000000000000000');
       expect(getPlatformIban()).toBe('AO06004000000000000000000');
-      vi.unstubAllEnvs();
     });
 
     it('regressão B2: getPlatformIban null sem env (panel empty state)', () => {
       vi.stubEnv('VITE_PLATFORM_IBAN', '');
       expect(getPlatformIban()).toBeNull();
-      vi.unstubAllEnvs();
     });
   });
 
