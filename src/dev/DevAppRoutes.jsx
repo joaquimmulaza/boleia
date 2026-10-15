@@ -10,6 +10,7 @@ import DevAcordosChipCapture from '../pages/DevAcordosChipCapture';
 import DevMotoristaJustaCausaCapture from '../pages/DevMotoristaJustaCausaCapture';
 import DevJustaCausaConfirmCapture from '../pages/DevJustaCausaConfirmCapture';
 import DevHotfixProdQaCapture from '../pages/DevHotfixProdQaCapture';
+import DevFollowup278Capture from '../pages/DevFollowup278Capture';
 import DevNotifCards269Capture from '../pages/DevNotifCards269Capture';
 import DevNotifV112Capture from '../pages/DevNotifV112Capture';
 import DevNotifBellLoadingCapture from '../pages/DevNotifBellLoadingCapture';
@@ -44,6 +45,7 @@ export default function DevAppRoutes() {
       <Route path="motorista-jc-passageiro" element={<DevMotoristaJustaCausaCapture />} />
       <Route path="justa-causa-confirm" element={<DevJustaCausaConfirmCapture />} />
       <Route path="hotfix-prod-qa-acordos" element={<DevHotfixProdQaCapture />} />
+      <Route path="followup-278-acordos" element={<DevFollowup278Capture />} />
       <Route path="notif-cards-269" element={<DevNotifCards269Capture />} />
       <Route path="notif-v112" element={<DevNotifV112Capture />} />
       <Route path="notif-bell-loading" element={<DevNotifBellLoadingCapture />} />

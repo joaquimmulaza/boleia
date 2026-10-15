@@ -1,5 +1,5 @@
 import { acordoEstadoListaChipProps } from './acordoEstadoDisplay.js';
-import { isActivoPassageiro } from './estadoPassageiro.js';
+import { contagemLugaresVivos } from './estadoPassageiro.js';
 import {
   mostrarChipLugarPassageiroSemDuplicarAcordo,
 } from './estadoPassageiro.js';
@@ -41,7 +41,7 @@ export function resolveAcordoListaCabecalhoUi({
 }) {
   const linhas = acordo?.acordos_passageiros || [];
   const isPassageiro = tipoPerfil === 'Passageiro';
-  const nPax = linhas.filter((p) => isActivoPassageiro(p.estado)).length;
+  const { total: nVivos } = contagemLugaresVivos(linhas);
 
   const estadoChip = acordoEstadoListaChipProps(acordo, viewerUserId, {
     ignorarChipPorLugares: isPassageiro,
@@ -66,11 +66,14 @@ export function resolveAcordoListaCabecalhoUi({
     if (isPassageiro) {
       return labelPessoasNoAcordoContrato(acordo?.n_passageiros_contrato);
     }
-    if (nPax === 0) return null;
-    return (
-      labelPessoasNoAcordoContrato(acordo?.n_passageiros_contrato)
-      ?? (nPax === 1 ? 'Individual' : `Grupo · ${nPax} pessoas`)
-    );
+    const contrato = labelPessoasNoAcordoContrato(acordo?.n_passageiros_contrato);
+    if (nVivos === 0) {
+      return contrato ?? 'Individual';
+    }
+    if (nVivos === 1) {
+      return 'Individual';
+    }
+    return `Grupo · ${nVivos} pessoas`;
   })();
 
   return {

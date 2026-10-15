@@ -4,8 +4,13 @@
  * @returns {string}
  */
 export function formatPrimeiroNome(nomeCompleto) {
-  const trimmed = String(nomeCompleto || '').trim();
-  if (!trimmed) return 'Passageiro';
-  const [primeiro] = trimmed.split(/\s+/);
-  return primeiro || 'Passageiro';
+  const parts = String(nomeCompleto || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length === 0) return 'Passageiro';
+  if (parts.length >= 2 && /^qa$/i.test(parts[0])) {
+    return parts[1];
+  }
+  return parts[0];
 }

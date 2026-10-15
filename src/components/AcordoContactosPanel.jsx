@@ -1,5 +1,6 @@
 import React from 'react';
 import { Phone, Lock } from 'lucide-react';
+import { CONTACTOS_BLOQUEADOS_PROXIMO_PASSO } from '../constants/acordoFollowup278Copy.js';
 
 /**
  * Contactos do acordo — só visíveis após em_custodia (payload do RPC).
@@ -52,7 +53,7 @@ function AcordoContactosPanel({
                 className="text-xs font-medium text-amber-800 dark:text-amber-200 text-pretty"
                 data-testid="contactos-proximo-passo"
               >
-                Próximo passo: envia o comprovativo de transferência na secção Pagamento mensal abaixo.
+                {CONTACTOS_BLOQUEADOS_PROXIMO_PASSO}
               </p>
             ) : null}
             {passageirosAguardarPagamento.length > 0 ? (

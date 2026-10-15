@@ -296,7 +296,10 @@ export default function DevAcordosChipCapture() {
             nPassageirosContrato={acordoPaxARls.n_passageiros_contrato}
             tipoPerfil="Passageiro"
             viewerUserId="pax-a"
-            minhaLinhaEstado={paxALugarEstado}
+            minhaLinha={{
+              passenger_id: 'pax-a',
+              estado: paxALugarEstado,
+            }}
             onClose={noop}
             podeRegistarFaltas={false}
             podeEncerrar={false}
