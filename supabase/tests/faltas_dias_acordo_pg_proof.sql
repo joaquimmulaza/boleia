@@ -48,7 +48,13 @@ BEGIN
     RAISE EXCEPTION 'FAIL: dias_semana NULL devia fallback Seg–Sex nov/2026 = 21, obteve %',
       public.count_dias_viagem_mes('2026-11-01'::date, NULL);
   END IF;
-  RAISE NOTICE 'PASS: ISODOW + divisores out/nov Seg–Sex e Ter–Sex + fallback NULL';
+  IF public.count_dias_viagem_mes(date_trunc('month', DATE '2026-11-01')::date, ARRAY[1, 2, 3, 4, 5]) <> 21 THEN
+    RAISE EXCEPTION 'FAIL: date_trunc mês de 2026-11-01 devia dar 21 dias Seg–Sex';
+  END IF;
+  IF public.count_dias_viagem_mes(date_trunc('month', DATE '2026-12-01')::date, ARRAY[1, 2, 3, 4, 5]) <> 23 THEN
+    RAISE EXCEPTION 'FAIL: date_trunc mês de 2026-12-01 devia dar 23 dias Seg–Sex';
+  END IF;
+  RAISE NOTICE 'PASS: ISODOW + divisores out/nov/dez + trunc dia 1 sem TZ';
 END $$;
 
 \echo '=== dias acordo — fixture acordo + custódia ==='
@@ -215,6 +221,32 @@ BEGIN
   END IF;
   IF v_row.desconto_kz = v_row_nov.desconto_kz THEN
     RAISE EXCEPTION 'FAIL (5c): descontos out vs nov deviam diferir';
+  END IF;
+
+  -- (6) 01/11/2026 domingo rejeitado (Seg–Sex)
+  PERFORM public._dias_acordo_expect_sqlstate(
+    '(6) domingo 01/11/2026',
+    format(
+      $q$SELECT public.log_falta(%L, '2026-11-01'::date, 'Motorista', NULL, NULL, 'ambas')$q$,
+      v_acordo
+    ),
+    'BCF03'
+  );
+
+  -- (7) dia 1 do mês civil: dez/2026 Seg–Sex divisor 23 (2026-12-01 terça)
+  SELECT * INTO v_row FROM public.log_falta(
+    v_acordo, '2026-12-01'::date, 'Motorista', NULL, NULL, 'ambas'
+  );
+  IF v_row.desconto_kz IS DISTINCT FROM ROUND(22000::numeric / 23::numeric, 2) THEN
+    RAISE EXCEPTION 'FAIL (7): 2026-12-01 desconto devia 22000/23, obteve %', v_row.desconto_kz;
+  END IF;
+
+  -- (8) nov/2026 divisor 21 (primeira segunda; mês truncado a partir de 2026-11-01)
+  SELECT * INTO v_row_nov FROM public.log_falta(
+    v_acordo, '2026-11-02'::date, 'Motorista', NULL, NULL, 'ambas'
+  );
+  IF v_row_nov.desconto_kz IS DISTINCT FROM ROUND(22000::numeric / 21::numeric, 2) THEN
+    RAISE EXCEPTION 'FAIL (8): 2026-11-02 desconto devia 22000/21, obteve %', v_row_nov.desconto_kz;
   END IF;
 
   RAISE NOTICE 'PASS: log_falta + handle_falta_desconto dias de viagem + divisor mensal';

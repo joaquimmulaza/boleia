@@ -42,9 +42,10 @@ describe('faltasDiasAcordo — convenção 1=Seg … 7=Dom', () => {
     expect(countDiasViagemMes('2026-11-01', [2, 3, 4, 5])).toBe(16);
   });
 
-  it('Seg–Sex: out/2026=22, nov/2026=21; NULL faz fallback Seg–Sex', () => {
+  it('Seg–Sex: out/2026=22, nov/2026=21, dez/2026=23; NULL faz fallback Seg–Sex', () => {
     expect(countDiasViagemMes('2026-10-01', [1, 2, 3, 4, 5])).toBe(22);
     expect(countDiasViagemMes('2026-11-01', [1, 2, 3, 4, 5])).toBe(21);
+    expect(countDiasViagemMes('2026-12-01', [1, 2, 3, 4, 5])).toBe(23);
     expect(countDiasViagemMes('2026-11-01', null)).toBe(21);
   });
 });

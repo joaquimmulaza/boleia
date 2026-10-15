@@ -86,10 +86,7 @@ BEGIN
   WHERE a.id = NEW.id_acordo;
 
   v_dias := public.count_dias_viagem_mes(
-    date_trunc(
-      'month',
-      (NEW.data_falta::timestamp AT TIME ZONE 'Africa/Luanda')::date
-    )::date,
+    date_trunc('month', NEW.data_falta)::date,
     v_dias_semana
   );
 

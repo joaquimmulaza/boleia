@@ -20,7 +20,8 @@ describe('FaltasDiasAcordo — migração SQL', () => {
 
   it('handle_falta_desconto usa count_dias_viagem_mes do mês da falta (não acordos.dias_uteis_mes)', () => {
     expect(sql).toMatch(/count_dias_viagem_mes\(/);
-    expect(sql).toMatch(/Africa\/Luanda/);
+    expect(sql).toMatch(/date_trunc\('month', NEW\.data_falta\)/);
+    expect(sql).not.toMatch(/AT TIME ZONE/);
     expect(sql).not.toMatch(/a\.dias_uteis_mes/);
     expect(sql).not.toMatch(/CREATE OR REPLACE FUNCTION public\.accept_proposal/);
   });
