@@ -107,7 +107,7 @@ function DriverOfertaCard({
         type="button"
         data-testid="driver-oferta-detail-trigger"
         onClick={onOpenDetail}
-        className="w-full text-left px-5 pb-5 pt-3 space-y-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+        className="w-full text-left px-5 pb-5 pt-3 space-y-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
         aria-label="Ver detalhe da oferta"
       >
         <OfertaRotaTitulo oferta={oferta} />
