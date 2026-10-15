@@ -50,6 +50,20 @@ export async function getPagamentoForPassageiroMes(acordoId, passengerId, mesRef
  * @param {string} acordoId
  * @returns {Promise<object[]>}
  */
+/**
+ * Preview de desconto de faltas para um pagamento (mês em custódia).
+ * @param {string} pagamentoId
+ * @returns {Promise<number>}
+ */
+export async function getDescontoFaltasPreview(pagamentoId) {
+  const { data, error } = await supabase.rpc('get_desconto_faltas_preview', {
+    p_pagamento_id: pagamentoId,
+  });
+
+  if (error) throw error;
+  return Number(data) || 0;
+}
+
 export async function listPagamentosByAcordo(acordoId) {
   const dev = getFaltasCaptureDevBridge();
   if (dev?.listPagamentosByAcordo) {

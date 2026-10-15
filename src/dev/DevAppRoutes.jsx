@@ -13,6 +13,7 @@ import DevHotfixProdQaCapture from '../pages/DevHotfixProdQaCapture';
 import DevFollowup278Capture from '../pages/DevFollowup278Capture';
 import DevNotifCards269Capture from '../pages/DevNotifCards269Capture';
 import DevNotifV112Capture from '../pages/DevNotifV112Capture';
+import DevLogAbsenceModalCapture from '../pages/DevLogAbsenceModalCapture';
 import DevGeocoderEditarProcuraCapture from '../pages/DevGeocoderEditarProcuraCapture';
 import DevGeocoderEditarProcuraLayoutCapture from '../pages/DevGeocoderEditarProcuraLayoutCapture';
 import DevGeocoderEditarGrupoCapture from '../pages/DevGeocoderEditarGrupoCapture';
@@ -52,6 +53,7 @@ export default function DevAppRoutes() {
       <Route path="followup-278-acordos" element={<DevFollowup278Capture />} />
       <Route path="notif-cards-269" element={<DevNotifCards269Capture />} />
       <Route path="notif-v112" element={<DevNotifV112Capture />} />
+      <Route path="log-absence-modal-passageiro" element={<DevLogAbsenceModalCapture />} />
       <Route path="geocoder-editar-procura" element={<DevGeocoderEditarProcuraCapture />} />
       <Route
         path="geocoder-editar-procura-layout"

@@ -3,9 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import AbsenceTracker from './AbsenceTracker';
 import { expectNoUserFacingJargon } from '../test/jargonBan';
-import { FALTA_FUTURA_CHIP } from '../copy/faltasFutureChip';
 import { formatFaltaMotoristaRepartidaConta } from '../copy/faltasMotoristaRepartidaConta';
-
 const mockNavigate = vi.fn();
 let mockAcordoId = 'acordo-uuid-001';
 
@@ -25,12 +23,14 @@ const {
   mockGetAgreementsForDriver,
   mockGetAgreementsForPassenger,
   mockListPagamentosByAcordo,
+  mockGetDescontoFaltasPreview,
 } = vi.hoisted(() => ({
   mockGetAbsences: vi.fn(),
   mockLogAbsence: vi.fn(),
   mockGetAgreementsForDriver: vi.fn(),
   mockGetAgreementsForPassenger: vi.fn(),
   mockListPagamentosByAcordo: vi.fn(),
+  mockGetDescontoFaltasPreview: vi.fn(),
 }));
 
 vi.mock('../contexts/AuthContext', () => ({
@@ -49,6 +49,7 @@ vi.mock('../services/AgreementService', () => ({
 
 vi.mock('../services/PaymentService', () => ({
   listPagamentosByAcordo: mockListPagamentosByAcordo,
+  getDescontoFaltasPreview: mockGetDescontoFaltasPreview,
 }));
 
 vi.mock('react-router-dom', () => ({
@@ -97,12 +98,14 @@ describe('AbsenceTracker — marketplace', () => {
     mockAcordoId = 'acordo-uuid-001';
     mockListPagamentosByAcordo.mockResolvedValue([
       {
+        id: 'pg-out',
         passenger_id: 'user-1',
         estado: 'em_custodia',
         mes_referencia: MES_REF_OUT,
         desconto_faltas_kz: 0,
       },
     ]);
+    mockGetDescontoFaltasPreview.mockResolvedValue(1363.64);
     mockGetAbsences.mockResolvedValue([
       {
         id: 'f1',
@@ -141,6 +144,7 @@ describe('AbsenceTracker — marketplace', () => {
 
   it('no dia 1 do mês em Luanda mostra falta registada nesse dia', async () => {
     vi.setSystemTime(new Date('2026-10-01T12:00:00Z'));
+    mockGetDescontoFaltasPreview.mockResolvedValue(1363);
     mockGetAbsences.mockResolvedValue([
       {
         id: 'f1',
@@ -157,7 +161,61 @@ describe('AbsenceTracker — marketplace', () => {
     expect(screen.getByTestId('desconto-falta-total')).toHaveTextContent('1363');
   });
 
+  it('Total a descontar em custódia usa preview RPC (não soma cliente)', async () => {
+    mockGetDescontoFaltasPreview.mockResolvedValue(1000);
+    mockListPagamentosByAcordo.mockResolvedValue([
+      {
+        id: 'pg-cust',
+        passenger_id: 'user-1',
+        mes_referencia: '2026-10-01',
+        estado: 'em_custodia',
+      },
+    ]);
+    mockGetAbsences.mockResolvedValue([
+      {
+        id: 'f-set-cred-out',
+        data_falta: '2026-09-08',
+        desconto_mes_referencia: '2026-10-01',
+        desconto_kz: 1000,
+      },
+      {
+        id: 'f-extra',
+        data_falta: '2026-10-02',
+        desconto_kz: 800,
+      },
+    ]);
+
+    render(<AbsenceTracker />);
+    await waitFor(() => {
+      expect(mockGetDescontoFaltasPreview).toHaveBeenCalledWith('pg-cust');
+    });
+    const totalBlock = screen.getByText(/Total a descontar/i).closest('div');
+    expect(totalBlock).toHaveTextContent('1000');
+  });
+
+  it('Total a descontar liquidado usa desconto_faltas_kz', async () => {
+    mockGetDescontoFaltasPreview.mockClear();
+    mockListPagamentosByAcordo.mockResolvedValue([
+      {
+        id: 'pg-liq',
+        passenger_id: 'user-1',
+        mes_referencia: '2026-10-01',
+        estado: 'liquidado',
+        desconto_faltas_kz: 750,
+      },
+    ]);
+
+    render(<AbsenceTracker />);
+    await waitFor(() => {
+      expect(screen.getByText(/Total a descontar/i)).toBeInTheDocument();
+    });
+    expect(mockGetDescontoFaltasPreview).not.toHaveBeenCalled();
+    const totalBlock = screen.getByText(/Total a descontar/i).closest('div');
+    expect(totalBlock).toHaveTextContent('750');
+  });
+
   it('apresenta desconto com sinal coerente entre total e histórico', async () => {
+    mockGetDescontoFaltasPreview.mockResolvedValue(1363);
     mockGetAbsences.mockResolvedValue([
       {
         id: 'f1',
@@ -185,8 +243,10 @@ describe('AbsenceTracker — marketplace', () => {
 
   it('em custódia com desconto_faltas_kz 0 mostra soma das faltas (fixture 3d9b352b)', async () => {
     mockAcordoId = '3d9b352b-0000-0000-0000-000000000001';
+    mockGetDescontoFaltasPreview.mockRejectedValue(new Error('preview indisponível'));
     mockListPagamentosByAcordo.mockResolvedValue([
       {
+        id: 'pg-fixture',
         passenger_id: 'user-1',
         estado: 'em_custodia',
         mes_referencia: MES_REF_OUT,
@@ -226,7 +286,7 @@ describe('AbsenceTracker — marketplace', () => {
 
     expect(await screen.findAllByTestId('absence-card')).toHaveLength(3);
     expect(screen.getByTestId('desconto-falta-total')).toHaveTextContent('2000');
-    expect(screen.getByTestId('falta-futura-chip')).toHaveTextContent(FALTA_FUTURA_CHIP);
+    expect(screen.getByTestId('falta-chip-prevista')).toHaveTextContent('Prevista');
   });
 
   it('pagamento liquidado mostra desconto_faltas_kz do servidor', async () => {
@@ -477,6 +537,53 @@ describe('AbsenceTracker — marketplace', () => {
     const flexCard = screen.getByText('Acordo flexível · 1 pessoa').closest('button');
     expect(flexCard).not.toHaveTextContent('Origem');
     expect(flexCard).not.toHaveTextContent('Destino');
+  });
+
+  it('preview RPC em erro: fallback cliente e registo activo', async () => {
+    mockGetDescontoFaltasPreview.mockRejectedValue(new Error('RPC falhou'));
+    mockGetAbsences.mockResolvedValue([
+      {
+        id: 'f1',
+        id_acordo: 'acordo-uuid-001',
+        data_falta: FALTA_ONTEM,
+        tipo: 'Passageiro',
+        passenger_id: 'user-1',
+        desconto_kz: 900,
+        viagem: 'ambas',
+      },
+    ]);
+    render(<AbsenceTracker />);
+    expect(await screen.findByTestId('desconto-falta-total')).toHaveTextContent('900');
+    expect(await screen.findByRole('button', { name: /Registar Falta/i })).toBeEnabled();
+  });
+
+  it('motorista com zero passageiros activos: total 0 e sem linha repartida', async () => {
+    mockAuth = {
+      user: { id: 'driver-1' },
+      tipoPerfil: 'Motorista',
+      profileLoading: false,
+    };
+    mockGetAgreementsForDriver.mockResolvedValue([
+      {
+        id: 'acordo-uuid-001',
+        estado: 'activo',
+        acordos_passageiros: [],
+      },
+    ]);
+    mockListPagamentosByAcordo.mockResolvedValue([]);
+    mockGetAbsences.mockResolvedValue([
+      {
+        id: 'f-mot',
+        id_acordo: 'acordo-uuid-001',
+        data_falta: FALTA_ONTEM,
+        tipo: 'Motorista',
+        desconto_kz: 500,
+        viagem: 'ambas',
+      },
+    ]);
+    render(<AbsenceTracker />);
+    expect(await screen.findByTestId('desconto-falta-total')).toHaveTextContent('0');
+    expect(screen.queryByTestId('falta-motorista-repartida-conta')).not.toBeInTheDocument();
   });
 
   it('não expõe jargon de produto na UI de faltas', async () => {

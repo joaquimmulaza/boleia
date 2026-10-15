@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   filterFaltasEsteMes,
+  filterFaltasDescontoMesAtual,
+  descontoMesReferenciaFalta,
   sumDescontoFaltas,
   todayLuandaISO,
   isFutureFaltaDate,
@@ -140,6 +142,28 @@ describe('faltasDisplay', () => {
     ]);
 
     expect(total).toBeCloseTo(1909.09, 2);
+  });
+
+  it('descontoMesReferenciaFalta usa coluna ou trunca data_falta ao mês', () => {
+    expect(
+      descontoMesReferenciaFalta({
+        data_falta: '2026-09-08',
+        desconto_mes_referencia: '2026-10-01',
+      }),
+    ).toBe('2026-10-01');
+    expect(descontoMesReferenciaFalta({ data_falta: '2026-09-08' })).toBe('2026-09-01');
+  });
+
+  it('Total a descontar: agrupa por desconto_mes_referencia (Set creditada em Out)', () => {
+    const faltas = [
+      { id: 'set-no-out', data_falta: '2026-09-08', desconto_mes_referencia: '2026-10-01', desconto_kz: 1000 },
+      { id: 'out-native', data_falta: '2026-10-02', desconto_kz: 500 },
+      { id: 'set-only', data_falta: '2026-09-15', desconto_mes_referencia: '2026-09-01', desconto_kz: 800 },
+    ];
+
+    const outubro = filterFaltasDescontoMesAtual(faltas, refOct1);
+    expect(outubro.map((f) => f.id)).toEqual(['set-no-out', 'out-native']);
+    expect(sumDescontoFaltas(outubro)).toBe(1500);
   });
 
   it('devolve hoje em Luanda (YYYY-MM-DD)', () => {

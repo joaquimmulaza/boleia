@@ -14,6 +14,10 @@ describe('faltasMotoristaRepartidaConta', () => {
     expect(FALTA_MOTORISTA_CONTA_PLURAL).toContain('no total');
   });
 
+  it('n=0 devolve string vazia (soft Maestro)', () => {
+    expect(formatFaltaMotoristaRepartidaConta(0, 1500)).toBe('');
+  });
+
   it('singular (n=1): «1 passageiro · total Kz» sem «no total»', () => {
     const linha = formatFaltaMotoristaRepartidaConta(1, 500);
     expect(linha).toBe(`1 passageiro · ${formatKwanza(500)} Kz`);
