@@ -304,13 +304,15 @@ describe('AdminPagamentos', () => {
   });
 
   describe('tab Resolução manual — cartão de excesso', () => {
-    const acordoId = '79687aac-b123-4567-89ab-cdef01234567';
+    /** Caso prod: pagamento vs acordo com prefixos distintos */
+    const acordoId = 'e4eea60c-0cbe-4723-841d-5fd0b47c9b65';
+    const pagamentoId = '79687aac-0154-4b2e-9c1d-8a3f2e1d0c9b';
 
     it('valor principal é o excesso a devolver, não a quota nem valor_devido_kz', async () => {
       listPagamentosPendentesValidacao.mockResolvedValue([]);
       listPagamentosResolucaoAdmin.mockResolvedValue([
         {
-          id: '79687aac-0000-0000-0000-000000000001',
+          id: pagamentoId,
           acordo_id: acordoId,
           estado: 'em_custodia',
           valor_kz: 22000,
@@ -328,7 +330,7 @@ describe('AdminPagamentos', () => {
         expect(screen.getByTestId('admin-resolucao-lista')).toBeInTheDocument();
       });
 
-      const card = screen.getByTestId('resolucao-pagamento-79687aac-0000-0000-0000-000000000001');
+      const card = screen.getByTestId(`resolucao-pagamento-${pagamentoId}`);
       expect(within(card).getByTestId('resolucao-excesso-principal')).toHaveTextContent(/11\s?000/);
       expect(within(card).getByTestId('resolucao-excesso-principal')).not.toHaveTextContent(/22\s?000/);
     });
@@ -414,7 +416,7 @@ describe('AdminPagamentos', () => {
       listPagamentosPendentesValidacao.mockResolvedValue([]);
       listPagamentosResolucaoAdmin.mockResolvedValue([
         {
-          id: 'pag-res-2',
+          id: pagamentoId,
           acordo_id: acordoId,
           estado: 'liquidado',
           valor_kz: 22000,
@@ -431,8 +433,10 @@ describe('AdminPagamentos', () => {
         expect(screen.getByTestId('resolucao-acordo-id')).toBeInTheDocument();
       });
       const acordoEl = screen.getByTestId('resolucao-acordo-id');
-      expect(acordoEl).toHaveTextContent(`${ADMIN_RESOLUCAO_COPY.idAcordo}: 79687aac`);
+      expect(acordoEl).toHaveTextContent(`${ADMIN_RESOLUCAO_COPY.idAcordo}: e4eea60c`);
       expect(acordoEl).toHaveAttribute('title', acordoId);
+      expect(acordoEl.textContent).not.toMatch(/79687aac/);
+      expect(screen.getByText(new RegExp(`Pagamento ${pagamentoId}`))).toBeInTheDocument();
     });
 
     it('botão copiar grava UUID completo e mostra toast ID copiado.', async () => {
@@ -442,7 +446,7 @@ describe('AdminPagamentos', () => {
       listPagamentosPendentesValidacao.mockResolvedValue([]);
       listPagamentosResolucaoAdmin.mockResolvedValue([
         {
-          id: 'pag-res-copy',
+          id: pagamentoId,
           acordo_id: acordoId,
           estado: 'em_custodia',
           valor_kz: 22000,
@@ -456,7 +460,7 @@ describe('AdminPagamentos', () => {
       fireEvent.click(screen.getByRole('tab', { name: /Resolução manual/i }));
 
       await waitFor(() => {
-        expect(screen.getByTestId('resolucao-copiar-acordo-pag-res-copy')).toBeInTheDocument();
+        expect(screen.getByTestId(`resolucao-copiar-acordo-${pagamentoId}`)).toBeInTheDocument();
       });
 
       fireEvent.click(
@@ -464,7 +468,9 @@ describe('AdminPagamentos', () => {
       );
 
       await waitFor(() => {
+        expect(writeText).toHaveBeenCalledTimes(1);
         expect(writeText).toHaveBeenCalledWith(acordoId);
+        expect(writeText).not.toHaveBeenCalledWith(pagamentoId);
         expect(screen.getByTestId('resolucao-id-copiado-toast')).toHaveTextContent(
           TOAST_ID_ACORDO_COPIADO,
         );
