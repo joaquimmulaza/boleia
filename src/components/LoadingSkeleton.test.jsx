@@ -17,4 +17,10 @@ describe('LoadingSkeleton', () => {
     const { container } = render(<LoadingSkeleton variant="profile" />);
     expect(container.querySelector('[data-testid="skeleton-profile"]')).toBeInTheDocument();
   });
+
+  it('renderiza variante notificationBell (lista do sino)', () => {
+    const { container } = render(<LoadingSkeleton variant="notificationBell" count={3} />);
+    expect(container.querySelector('[data-testid="notification-list-skeleton"]')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-testid="notification-list-skeleton-row"]').length).toBe(3);
+  });
 });

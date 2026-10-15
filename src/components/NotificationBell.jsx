@@ -1,23 +1,57 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Bell, BellRing, BellOff } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
 import { usePushNotifications } from '../hooks/usePushNotifications';
-import { resolveNotificationRoute } from '../utils/notificationRouter';
+import {
+  resolveNotificationListDestination,
+  shouldNavigateOnListTap,
+} from '../utils/notificationCatalog';
 import { useAuth } from '../contexts/AuthContext';
 import OverlayShell from './OverlayShell';
 import SheetDragHandle from './SheetDragHandle';
 import NotificationListItem from './NotificationListItem';
+import NotificationListSkeleton from './NotificationListSkeleton';
+import NotificationListErrorPanel from './NotificationListErrorPanel';
 import { Button } from './ui/button';
 
 export default function NotificationBell() {
   const { user } = useAuth();
   const userId = user?.id || null;
-  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications(userId);
+  const {
+    notifications,
+    unreadCount,
+    listLoading,
+    listError,
+    refetchNotifications,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+  } = useNotifications(userId);
+  const refetchOnOpenDoneRef = useRef(false);
   const { isSupported, permission, isSubscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    return new URLSearchParams(window.location.search).get('notificacoes') === '1';
+  });
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('notificacoes') !== '1') {
+      return;
+    }
+    params.delete('notificacoes');
+    const qs = params.toString();
+    navigate(
+      { pathname: location.pathname, search: qs ? `?${qs}` : '' },
+      { replace: true },
+    );
+  }, [location.search, location.pathname, navigate]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -36,14 +70,39 @@ export default function NotificationBell() {
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      refetchOnOpenDoneRef.current = false;
+      return;
+    }
+    if (!refetchOnOpenDoneRef.current) {
+      refetchOnOpenDoneRef.current = true;
+      void refetchNotifications();
+    }
+  }, [isOpen, refetchNotifications]);
+
   const handleNotificationClick = (notif) => {
     if (!notif.lida) {
       markAsRead(notif.id);
     }
+    if (!shouldNavigateOnListTap(notif)) {
+      return;
+    }
     setIsOpen(false);
+    const targetUrl = resolveNotificationListDestination(notif);
+    if (targetUrl) {
+      navigate(targetUrl);
+    }
+  };
 
-    const targetUrl = resolveNotificationRoute(notif);
-    navigate(targetUrl);
+  const hasLoadedList = notifications.length > 0;
+  const showFullSkeleton = listLoading && !hasLoadedList;
+  const showFullError = Boolean(listError) && !listLoading && !hasLoadedList;
+  const showErrorBanner = Boolean(listError) && hasLoadedList;
+  const listRefetching = listLoading && hasLoadedList;
+
+  const handleRetry = () => {
+    void refetchNotifications();
   };
 
   const handlePushToggle = async () => {
@@ -132,22 +191,46 @@ export default function NotificationBell() {
             ) : null}
 
             <div className="flex-1 overflow-y-auto overscroll-none pb-safe min-h-0">
-              {notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-40 text-gray-500 dark:text-gray-400">
-                  <Bell size={48} className="mb-4 opacity-20" strokeWidth={1.5} aria-hidden="true" />
-                  <p className="text-sm">Sem notificações no momento.</p>
-                </div>
+              {showFullSkeleton ? (
+                <NotificationListSkeleton rows={3} />
               ) : (
-                <ul className="divide-y divide-gray-100 dark:divide-gray-800/50">
-                  {notifications.map((notif) => (
-                    <NotificationListItem
-                      key={notif.id}
-                      notif={notif}
-                      onActivate={() => handleNotificationClick(notif)}
-                      onDelete={() => deleteNotification(notif.id)}
+                <>
+                  {showErrorBanner ? (
+                    <NotificationListErrorPanel
+                      layout="banner"
+                      retrying={listRefetching}
+                      onRetry={handleRetry}
                     />
-                  ))}
-                </ul>
+                  ) : null}
+                  {showFullError ? (
+                    <NotificationListErrorPanel
+                      layout="full"
+                      retrying={listLoading}
+                      onRetry={handleRetry}
+                    />
+                  ) : null}
+                  {!showFullError && notifications.length === 0 ? (
+                    <div
+                      className="flex flex-col items-center justify-center h-40 text-gray-500 dark:text-gray-400"
+                      data-testid="notification-list-empty"
+                    >
+                      <Bell size={48} className="mb-4 opacity-20" strokeWidth={1.5} aria-hidden="true" />
+                      <p className="text-sm">Sem notificações no momento.</p>
+                    </div>
+                  ) : null}
+                  {hasLoadedList ? (
+                    <ul className="divide-y divide-gray-100 dark:divide-gray-800/50">
+                      {notifications.map((notif) => (
+                        <NotificationListItem
+                          key={notif.id}
+                          notif={notif}
+                          onActivate={() => handleNotificationClick(notif)}
+                          onDelete={() => deleteNotification(notif.id)}
+                        />
+                      ))}
+                    </ul>
+                  ) : null}
+                </>
               )}
             </div>
           </div>

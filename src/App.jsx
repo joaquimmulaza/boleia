@@ -41,6 +41,7 @@ import { isDevCaptureRoutesEnabled } from './utils/devCaptureAccess';
 const LazyDevRoutes = lazy(() => import('./dev/DevAppRoutes.jsx'));
 
 const RootRoute = () => {
+  const location = useLocation();
   const {
     session,
     loading,
@@ -61,8 +62,10 @@ const RootRoute = () => {
     return <Navigate to="/auth?mode=completar-perfil" replace />;
   }
   if (session) {
-    if (tipoPerfil === 'Motorista') return <Navigate to="/motorista" replace />;
-    return <Navigate to="/passageiro" replace />;
+    const params = new URLSearchParams(location.search);
+    const notifBell = params.get('notificacoes') === '1' ? '?notificacoes=1' : '';
+    if (tipoPerfil === 'Motorista') return <Navigate to={`/motorista${notifBell}`} replace />;
+    return <Navigate to={`/passageiro${notifBell}`} replace />;
   }
 
   return <LandingPage />;

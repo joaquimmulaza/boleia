@@ -94,7 +94,7 @@ describe('PACOTE ENG #16 — eventos domínio + deep-links', () => {
           acordo_id: 'a-1',
           adenda_estado: 'pendente_passageiro',
         }),
-      ).toBe('/acordos?openAcordoId=a-1&focus=adenda');
+      ).toBe('/acordos?openAcordoId=a-1&focus=preco-proximo-mes');
     });
 
     it('renewal_available abre secção renovação', () => {
@@ -108,7 +108,7 @@ describe('PACOTE ENG #16 — eventos domínio + deep-links', () => {
     it('payout_liquidated abre acordo (motorista)', () => {
       expect(
         notificationRouteMap.payout_liquidated({ acordo_id: 'a-3' }),
-      ).toBe('/acordos?openAcordoId=a-3&focus=pagamento');
+      ).toBe('/acordos?openAcordoId=a-3&focus=motorista-pagamentos');
     });
 
     it('proposal_received mantém hub contraparte com foco propostas (ENG#33)', () => {
