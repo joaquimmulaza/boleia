@@ -30,6 +30,7 @@ describe('Pagamento anulação — card v1.15', () => {
     expect(p0).toMatch(/CREATE OR REPLACE FUNCTION public\._anular_pagamento_sem_divida/);
     expect(p0).not.toMatch(/_purge_pagamento_mensal_disponivel_notif/);
     expect(v15).toMatch(/PERFORM public\._purge_pagamento_mensal_disponivel_notif/);
+    expect(v15).toMatch(/metadata->>'pagamento_id' = p_pagamento_id::text/);
     expect(v15).toMatch(
       /lower\(NEW\.estado\) = 'anulado'\s*\n\s*AND lower\(COALESCE\(OLD\.estado, ''\)\) <> 'anulado'/,
     );
