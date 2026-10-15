@@ -9,23 +9,24 @@ import { fileURLToPath } from 'node:url';
 const ROOT = dirname(fileURLToPath(import.meta.url));
 
 describe('send-push — safe notification URL (B2)', () => {
-  it('edge function sanitiza link via _shared/safeNotificationLink', () => {
+  it('edge function usa catálogo partilhado para título e url', () => {
     const src = readFileSync(
       join(ROOT, '../../supabase/functions/send-push/index.ts'),
       'utf8',
     );
-    expect(src).toContain('resolvePushDataUrl');
-    expect(src).toContain('../_shared/safeNotificationLink.ts');
+    expect(src).toContain('resolveNotificationPushDestination');
+    expect(src).toContain('resolveNotificationTitle');
+    expect(src).toContain('../_shared/notificationCatalog.js');
     expect(src).not.toMatch(/url:\s*link\s*\|\|/);
+    expect(src).not.toContain('Nova Notificação');
   });
 
-  it('push usa metadata.titulo da BD quando existir (fallback Nova Notificação)', () => {
-    const src = readFileSync(
-      join(ROOT, '../../supabase/functions/send-push/index.ts'),
+  it('fallback de título no catálogo é Boleia Certa', () => {
+    const catalog = readFileSync(
+      join(ROOT, '../../supabase/functions/_shared/notificationCatalog.js'),
       'utf8',
     );
-    expect(src).toMatch(/metadata\.titulo/);
-    expect(src).toContain('Nova Notificação');
-    expect(src).toMatch(/title:\s*tituloPush/);
+    expect(catalog).toContain("FALLBACK_NOTIFICATION_TITLE = 'Boleia Certa'");
+    expect(catalog).not.toContain('Nova Notificação');
   });
 });

@@ -15,6 +15,11 @@ import DevNotifV112Capture from '../pages/DevNotifV112Capture';
 import DevGeocoderEditarProcuraCapture from '../pages/DevGeocoderEditarProcuraCapture';
 import DevGeocoderEditarProcuraLayoutCapture from '../pages/DevGeocoderEditarProcuraLayoutCapture';
 import DevGeocoderEditarGrupoCapture from '../pages/DevGeocoderEditarGrupoCapture';
+import DevOfertaEditRegressoCapture from '../pages/DevOfertaEditRegressoCapture';
+import DevNotifBellLoadingCapture from '../pages/DevNotifBellLoadingCapture';
+import DevNotifBellErrorCapture from '../pages/DevNotifBellErrorCapture';
+import DevNotifBellErrorBannerCapture from '../pages/DevNotifBellErrorBannerCapture';
+import DevNotifBellFetchErrorLive from '../pages/DevNotifBellFetchErrorLive';
 import DevFaltasCapture from './DevFaltasCapture';
 
 /**
@@ -51,6 +56,12 @@ export default function DevAppRoutes() {
         element={<DevGeocoderEditarProcuraLayoutCapture />}
       />
       <Route path="geocoder-editar-grupo" element={<DevGeocoderEditarGrupoCapture />} />
+      <Route path="oferta-edit-regresso" element={<DevOfertaEditRegressoCapture />} />
+      <Route path="notif-bell-loading" element={<DevNotifBellLoadingCapture />} />
+      <Route path="notif-bell-error" element={<DevNotifBellErrorCapture />} />
+      <Route path="notif-bell-error-banner" element={<DevNotifBellErrorBannerCapture />} />
+      <Route path="notif-bell-fetch-error" element={<DevNotifBellFetchErrorLive />} />
+      <Route path="notif-bell-fetch-error-with-list" element={<DevNotifBellFetchErrorLive />} />
       <Route path="faltas-capture/:acordoId" element={<DevFaltasCapture />} />
       <Route path="faltas-capture-liquidado/:acordoId" element={<DevFaltasCapture />} />
       <Route path="faltas-capture-motorista/:acordoId" element={<DevFaltasCapture />} />

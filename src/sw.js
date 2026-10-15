@@ -2,8 +2,7 @@
 import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
 import { drainQueue, OFFLINE_SYNC_TAG } from './services/offlineQueue';
-import { resolveNotificationRoute } from './utils/notificationRouter';
-import { sanitizeNotificationLink } from './utils/safeNotificationLink';
+import { resolveNotificationPushDestination } from './utils/notificationCatalog';
 import { networkFirstRuntime } from './utils/swNetworkFirst.js';
 import { SW_RUNTIME_CACHE_NAME } from './utils/swRuntimeCache.js';
 
@@ -116,7 +115,7 @@ self.addEventListener('notificationclick', function (event) {
     mensagem: event.notification.body,
   };
 
-  const urlToOpen = sanitizeNotificationLink(resolveNotificationRoute(notifData), '/');
+  const urlToOpen = resolveNotificationPushDestination(notifData);
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
