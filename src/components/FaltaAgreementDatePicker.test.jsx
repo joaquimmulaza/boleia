@@ -4,6 +4,22 @@ import { describe, it, expect, vi } from 'vitest';
 import FaltaAgreementDatePicker from './FaltaAgreementDatePicker';
 
 describe('FaltaAgreementDatePicker', () => {
+  it('domingo desactivado e segunda activa (ISO Seg–Sex)', () => {
+    render(
+      <FaltaAgreementDatePicker
+        id="dataFalta"
+        value=""
+        onChange={vi.fn()}
+        min="2026-10-01"
+        max="2026-10-31"
+        diasSemana={[1, 2, 3, 4, 5]}
+        initialMonth="2026-10-01"
+      />,
+    );
+    expect(screen.getByTestId('falta-dia-2026-10-04')).toBeDisabled();
+    expect(screen.getByTestId('falta-dia-2026-10-05')).not.toBeDisabled();
+  });
+
   it('desactiva sábado e domingo com acordo Seg–Sex', () => {
     render(
       <FaltaAgreementDatePicker

@@ -42,7 +42,6 @@ export default function DevLogAbsenceModalCapture() {
           onClose={() => {}}
           onSubmit={() => {}}
           quotaMensalKz={22000}
-          diasUteisMes={22}
           diasSemanaAcordo={diasSemana}
           referenceDate={refDate}
         />

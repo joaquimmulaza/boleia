@@ -20,7 +20,6 @@ describe('LogAbsenceModal — meia quota', () => {
         onClose={vi.fn()}
         onSubmit={vi.fn()}
         quotaMensalKz={30000}
-        diasUteisMes={22}
         diasSemanaAcordo={[1, 2, 3, 4, 5]}
       />,
     );
@@ -48,7 +47,6 @@ describe('LogAbsenceModal — meia quota', () => {
         onClose={vi.fn()}
         onSubmit={vi.fn()}
         quotaMensalKz={30000}
-        diasUteisMes={22}
         diasSemanaAcordo={[1, 2, 3, 4, 5]}
       />,
     );
@@ -69,7 +67,6 @@ describe('LogAbsenceModal — meia quota', () => {
         onClose={vi.fn()}
         onSubmit={onSubmit}
         quotaMensalKz={30000}
-        diasUteisMes={22}
         diasSemanaAcordo={[1, 2, 3, 4, 5]}
       />,
     );
@@ -83,6 +80,23 @@ describe('LogAbsenceModal — meia quota', () => {
         tipo: 'Motorista',
       }),
     );
+    vi.useRealTimers();
+  });
+
+  it('domingo desactivado e segunda activa no calendário (Seg–Sex)', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-06T12:00:00Z'));
+    render(
+      <LogAbsenceModal
+        isOpen
+        tipoPerfil="Motorista"
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        diasSemanaAcordo={[1, 2, 3, 4, 5]}
+      />,
+    );
+    expect(screen.getByTestId('falta-dia-2026-10-04')).toBeDisabled();
+    expect(screen.getByTestId('falta-dia-2026-10-05')).not.toBeDisabled();
     vi.useRealTimers();
   });
 

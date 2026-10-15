@@ -12,7 +12,7 @@ import {
   isPassageiroProprioFaltaDataSubmissivel,
 } from '../utils/passageiroFaltaPrazo';
 import { isDataDiaViagemAcordo } from '../utils/faltasDiasAcordo';
-import { computeFaltaDesconto } from '../utils/faltaDesconto';
+import { computeFaltaDescontoForIsoDate } from '../utils/faltaDesconto';
 import { formatKwanza } from '../utils/formatKwanza';
 import FaltaPrevistaBadge from './FaltaPrevistaBadge';
 import {
@@ -32,15 +32,17 @@ const VIAGENS = [
 ];
 
 /**
- * Desconto deste dia com a mesma fórmula da quota do acordo.
+ * Desconto deste dia (divisor = dias de viagem do mês da data, como no trigger SQL).
  * @param {number | null | undefined} quotaMensalKz
- * @param {number | null | undefined} diasUteisMes
+ * @param {string} isoDate
+ * @param {number[] | null | undefined} diasSemanaAcordo
  * @param {ViagemFalta} viagem
  * @returns {number | null}
  */
-function descontoDesteDia(quotaMensalKz, diasUteisMes, viagem) {
+function descontoDesteDia(quotaMensalKz, isoDate, diasSemanaAcordo, viagem) {
+  if (!isoDate) return null;
   try {
-    return computeFaltaDesconto(quotaMensalKz, diasUteisMes, viagem);
+    return computeFaltaDescontoForIsoDate(quotaMensalKz, isoDate, diasSemanaAcordo, viagem);
   } catch {
     return null;
   }
@@ -58,7 +60,6 @@ function descontoDesteDia(quotaMensalKz, diasUteisMes, viagem) {
  *   }) => void | Promise<void>,
  *   tipoPerfil?: 'Passageiro' | 'Motorista',
  *   quotaMensalKz?: number | null,
- *   diasUteisMes?: number | null,
  *   diasSemanaAcordo?: number[] | null,
  *   referenceDate?: Date,
  * }} props
@@ -69,7 +70,6 @@ const LogAbsenceModal = ({
   onSubmit,
   tipoPerfil,
   quotaMensalKz = null,
-  diasUteisMes = null,
   diasSemanaAcordo = null,
   referenceDate = new Date(),
 }) => {
@@ -94,7 +94,12 @@ const LogAbsenceModal = ({
     isPassageiroLocked,
     refDate: referenceDate,
   });
-  const descontoDia = descontoDesteDia(quotaMensalKz, diasUteisMes, formData.viagem);
+  const descontoDia = descontoDesteDia(
+    quotaMensalKz,
+    formData.dataFalta,
+    diasSemanaAcordo,
+    formData.viagem,
+  );
   const showPrevista = isPassageiroLocked && isFutureFaltaDate(formData.dataFalta, referenceDate);
   const dataHelpCopy = isPassageiroLocked
     ? FALTA_DATA_HELP_PASSAGEIRO

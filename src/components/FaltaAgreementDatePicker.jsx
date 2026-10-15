@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { isDataDiaViagemAcordo } from '../utils/faltasDiasAcordo';
+import { isoDowFromIsoDate, isDataDiaViagemAcordo } from '../utils/faltasDiasAcordo';
 import { firstDayOfMonthFromIso } from '../utils/faltasDisplay';
 
 const WEEKDAY_LABELS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
@@ -26,8 +26,8 @@ function parseMonth(mesInicio) {
   const month = Number(m[2]);
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
   const firstIso = `${m[1]}-${m[2]}-01`;
-  const firstDow = new Date(`${firstIso}T12:00:00Z`).getUTCDay();
-  const startPad = firstDow === 0 ? 6 : firstDow - 1;
+  const isoDow = isoDowFromIsoDate(firstIso);
+  const startPad = isoDow === 7 ? 6 : isoDow - 1;
   return { year, month, daysInMonth, startPad };
 }
 

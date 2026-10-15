@@ -1,6 +1,17 @@
 import { DIAS_UTEIS_DEFAULT } from './diasSemana.js';
 
 /**
+ * Converte `Date.getDay()` / `getUTCDay()` (0=Dom … 6=Sáb) para ISO (1=Seg … 7=Dom).
+ * @param {number} jsDay
+ * @returns {number}
+ */
+export function jsDayToIsoDow(jsDay) {
+  const d = Number(jsDay);
+  if (!Number.isFinite(d)) return NaN;
+  return d === 0 ? 7 : d;
+}
+
+/**
  * Dia da semana ISO (1=Seg … 7=Dom) a partir de YYYY-MM-DD.
  * @param {string} isoDate
  * @returns {number}
@@ -8,8 +19,7 @@ import { DIAS_UTEIS_DEFAULT } from './diasSemana.js';
 export function isoDowFromIsoDate(isoDate) {
   const iso = String(isoDate || '').slice(0, 10);
   const d = new Date(`${iso}T12:00:00Z`);
-  const utc = d.getUTCDay();
-  return utc === 0 ? 7 : utc;
+  return jsDayToIsoDow(d.getUTCDay());
 }
 
 /**
