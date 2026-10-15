@@ -70,9 +70,8 @@ describe('AddressInput', () => {
     expect(input).not.toBeRequired();
     expect(input.className).toMatch(/border-\[#718096\]/);
     expect(input.className).toMatch(/dark:border-input/);
-    expect(input.className).toMatch(/bg-card/);
-    expect(input.className).toMatch(/dark:bg-background/);
-    expect(input.className.split(/\s+/)).not.toContain('bg-background');
+    expect(input.className).toMatch(/bg-background/);
+    expect(input.className.split(/\s+/)).toContain('bg-background');
   });
 
   it('associa label ao input usando id ou fallback para name', () => {
@@ -454,6 +453,48 @@ describe('AddressInput', () => {
     const portalMount = screen.getByTestId('geocoder-sheet-portal');
     expect(portalMount.contains(listbox)).toBe(true);
     expect(screen.getByRole('dialog').contains(listbox)).toBe(true);
+  });
+
+  it('erro de rede renderiza inline no fluxo (sem painel fixed/portal)', () => {
+    mockErrorKind = 'network';
+    mockSuggestions = [];
+    mockResolvedInput = 'Talatona';
+
+    render(
+      <AddressInput
+        name="origin_name"
+        label="Origem"
+        value="Talatona"
+        onChange={vi.fn()}
+        allowFreeTextUse
+      />,
+    );
+
+    fireEvent.focus(screen.getByRole('combobox', { name: /Origem/i }));
+    const networkError = screen.getByTestId('geocoder-network-error');
+    const wrapper = screen.getByRole('combobox', { name: /Origem/i }).closest('.flex.flex-col.w-full.relative');
+    const label = wrapper?.querySelector('label');
+    expect(wrapper?.contains(networkError)).toBe(true);
+    expect(label?.nextElementSibling).toBe(networkError);
+    expect(networkError).not.toHaveAttribute('data-geocoder-floating-list');
+    expect(networkError.closest('[style*="position: fixed"]')).toBeNull();
+  });
+
+  it('sugestões mantêm listbox flutuante com data-geocoder-floating-list', () => {
+    mockSuggestions = [{ place_id: 'photon-1', description: 'Talatona, Luanda' }];
+
+    render(
+      <AddressInput
+        name="origin_name"
+        label="Origem"
+        value="Tal"
+        onChange={vi.fn()}
+      />,
+    );
+
+    fireEvent.focus(screen.getByRole('combobox', { name: /Origem/i }));
+    const listbox = screen.getByRole('listbox', { name: 'Sugestões de locais' });
+    expect(listbox.closest('[data-geocoder-floating-list]')).not.toBeNull();
   });
 
   it('erro de rede mostra copy final, retry e Usar texto livre', () => {

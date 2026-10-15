@@ -1980,7 +1980,6 @@ const PassengerDashboard = () => {
               onChange={handleChange}
               required
               aria-label="Hora preferida"
-              className="h-12 rounded-lg bg-light-gray dark:bg-slate-800 px-3 outline-none focus:ring-2 focus:ring-primary/50"
             />
           </label>
 
