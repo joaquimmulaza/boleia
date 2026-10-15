@@ -107,7 +107,7 @@ function DriverOfertaCard({
         type="button"
         data-testid="driver-oferta-detail-trigger"
         onClick={onOpenDetail}
-        className="w-full text-left px-5 pb-5 pt-3 space-y-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+        className="w-full text-left px-5 pb-5 pt-3 space-y-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
         aria-label="Ver detalhe da oferta"
       >
         <OfertaRotaTitulo oferta={oferta} />
@@ -135,14 +135,14 @@ function DriverOfertaCard({
         <button
           type="button"
           onClick={onVerProcuras}
-          className="text-sm font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1 w-fit"
+          className="text-sm font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1 w-fit focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 hover:opacity-80 rounded-sm"
         >
           Procuras compatíveis <ChevronRight size={16} aria-hidden="true" />
         </button>
         <button
           type="button"
           onClick={onVerPropostas}
-          className="w-full min-h-11 rounded-xl bg-primary/10 text-primary text-sm font-bold flex items-center justify-center gap-1"
+          className="w-full min-h-11 rounded-xl bg-primary/10 text-primary text-sm font-bold flex items-center justify-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 hover:bg-primary/20"
         >
           Ver propostas <ChevronRight size={16} aria-hidden="true" />
         </button>
