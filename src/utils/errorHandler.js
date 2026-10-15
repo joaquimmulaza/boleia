@@ -1,7 +1,10 @@
-import { mapLogFaltaError } from './logFaltaError.js';
+import { mapLogFaltaError, mapLogFaltaErrorToast } from './logFaltaError.js';
 
 export function getFriendlyErrorMessage(error) {
   if (!error) return 'Ocorreu um erro inesperado. Tente novamente.';
+
+  const logFaltaToast = mapLogFaltaErrorToast(error);
+  if (logFaltaToast) return logFaltaToast;
 
   const logFaltaMsg = mapLogFaltaError(error);
   if (logFaltaMsg) return logFaltaMsg;

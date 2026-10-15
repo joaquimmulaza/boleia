@@ -29,7 +29,7 @@ export const getAbsences = async (acordoId) => {
 
 /**
  * Regista uma nova falta.
- * Desconto calculado no trigger BD a partir de valor_mensal_por_passageiro_kz / dias_uteis_mes.
+ * Desconto calculado no trigger BD: quota / count_dias_viagem_mes(mês da falta, oferta.dias_semana).
  * @param {{
  *   id_acordo: string,
  *   data_falta: string,

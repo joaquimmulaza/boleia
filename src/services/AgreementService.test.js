@@ -792,7 +792,7 @@ describe('AgreementService', () => {
       });
       const result = await getAgreementsForDriver('driver-1');
       expect(mockSelect).toHaveBeenCalledWith(
-        '*, acordos_passageiros(*, perfis(nome_completo)), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota), acordos_adendas(*)',
+        '*, acordos_passageiros(*, perfis(nome_completo)), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota, dias_semana), acordos_adendas(*)',
       );
       expect(result).toHaveLength(1);
       expect(supabase.rpc).toHaveBeenCalledWith('apply_due_agreement_adendas', {
