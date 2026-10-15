@@ -119,7 +119,12 @@ import {
   filterMotoristaPagamentosLugaresVivos,
   filterContactosPassageirosVivos,
 } from '../utils/estadoPassageiro';
-import { formatPrimeiroNome } from '../utils/primeiroNome';
+import {
+  nomePassageiroFromLinha,
+  nomePassageiroUi,
+  iniciaisPassageiroUi,
+} from '../utils/passageiroNomeUi.js';
+import { resolveQuotaLinhaPassageiroUi } from '../utils/passageiroLinhaQuotaUi.js';
 import { resolveMotoristaJustaCausaPassageiroAlerts } from '../utils/driverJustaCausaPassageiroCopy';
 import MotoristaJustaCausaPassageiroAlert from '../components/MotoristaJustaCausaPassageiroAlert';
 import {
@@ -197,39 +202,6 @@ function isNoAcordo(estado) {
 }
 
 /**
- * @param {string | null | undefined} nome
- * @returns {string}
- */
-function iniciais(nome) {
-  const parts = String(nome || '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-}
-
-/**
- * @param {{ perfis?: { nome_completo?: string }, nome?: string, passenger_id?: string }} pax
- * @returns {string}
- */
-function nomePassageiro(pax) {
-  return pax?.perfis?.nome_completo || pax?.nome || 'Passageiro';
-}
-
-/**
- * Nome na UI — motorista vê só primeiro nome; passageiro mantém copy completa.
- * @param {{ perfis?: { nome_completo?: string }, nome?: string }} pax
- * @param {{ motorista?: boolean }} [opts]
- * @returns {string}
- */
-function nomePassageiroUi(pax, { motorista = false } = {}) {
-  const nome = nomePassageiro(pax);
-  return motorista ? formatPrimeiroNome(nome) : nome;
-}
-
-/**
  * Formata hora HH:MM a partir de time/timestamptz/string.
  * @param {string | null | undefined} raw
  * @returns {string | null}
@@ -259,7 +231,7 @@ function buildTerminateCounterpartyLabel({ contactos, tipoPerfil, linhas }) {
     return e === 'activo' || e === 'reservado';
   });
   if (activos.length === 1) {
-    return nomePassageiro(activos[0]);
+    return nomePassageiroFromLinha(activos[0]);
   }
   return 'os passageiros';
 }
@@ -1890,6 +1862,7 @@ const MyAgreements = () => {
                     chipFromList: chipCtxForAcordoPassageiro(selected.id, p.passenger_id),
                   });
                   const chipLugarLabel = labelChipFimLugar(p, chipCtxLinha);
+                  const quotaLinhaUi = resolveQuotaLinhaPassageiroUi(p, chipCtxLinha);
                   const saiu = mostrarChipFimLugar(chipLugarLabel)
                     && chipLugarLabel !== 'Reservado';
                   return (
@@ -1909,7 +1882,7 @@ const MyAgreements = () => {
                         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-600 dark:text-slate-300"
                         aria-hidden="true"
                       >
-                        {iniciais(nome)}
+                        {iniciaisPassageiroUi(nome)}
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
@@ -1925,15 +1898,22 @@ const MyAgreements = () => {
                           </Badge>
                         ) : null}
                       </div>
-                      <strong
-                        className={`tabular-nums text-sm shrink-0 ${
-                          highlighted
-                            ? 'text-lg font-bold text-primary'
-                            : 'text-slate-800 dark:text-slate-100'
-                        }`}
-                      >
-                        {formatKwanza(p.quota_mensal_kz)} Kz
-                      </strong>
+                      {quotaLinhaUi.kind === 'quota' ? (
+                        <strong
+                          className={`tabular-nums text-sm shrink-0 ${
+                            highlighted
+                              ? 'text-lg font-bold text-primary'
+                              : 'text-slate-800 dark:text-slate-100'
+                          }`}
+                        >
+                          {formatKwanza(quotaLinhaUi.kz)} Kz
+                        </strong>
+                      ) : null}
+                      {quotaLinhaUi.kind === 'text' ? (
+                        <span className="tabular-nums text-xs shrink-0 text-slate-500 dark:text-slate-400">
+                          {quotaLinhaUi.text}
+                        </span>
+                      ) : null}
                     </li>
                   );
                 })}

@@ -6,6 +6,12 @@ import {
   labelChipFimLugar,
   chipClassFimLugar,
 } from '../utils/acordoSeatEndChip';
+import {
+  nomePassageiroUi,
+  iniciaisPassageiroUi,
+} from '../utils/passageiroNomeUi.js';
+import { resolveQuotaLinhaPassageiroUi, QUOTA_LINHA_ANULADO } from '../utils/passageiroLinhaQuotaUi.js';
+import { ANULACAO_MOTIVO } from '../constants/anulacaoMotivos.js';
 import { LISTA_SECCAO_ACTIVOS, LISTA_SECCAO_ENCERRADOS } from '../constants/acordoFollowup278Copy.js';
 
 /**
@@ -80,6 +86,41 @@ export default function DevFollowup278Capture() {
           >
             {labelChipFimLugar({ estado: 'saiu', lugar_rescisao_modo: 'justa_causa' }, null)}
           </Badge>
+        </section>
+
+        <section data-testid="capture-269-passenger-rows" className="space-y-2">
+          <p className="text-xs font-semibold text-slate-500">#269 — linhas passageiro (motorista)</p>
+          {[
+            { id: 'pax-qa1', linha: { perfis: { nome_completo: 'QA Passageiro 3' }, estado: 'activo', quota_mensal_kz: 25000 } },
+            { id: 'pax-exp', linha: { perfis: { nome_completo: 'QA Passenger Three' }, estado: 'expirado', quota_mensal_kz: 25000 } },
+          ].map(({ id, linha }) => {
+            const nome = nomePassageiroUi(linha, { motorista: true });
+            const pagCtx = linha.estado === 'expirado'
+              ? {
+                estado: 'anulado',
+                anulacao_motivo: ANULACAO_MOTIVO.PRAZO_RESERVA_EXPIRADO,
+              }
+              : null;
+            const quotaUi = resolveQuotaLinhaPassageiroUi(linha, pagCtx);
+            return (
+              <div
+                key={id}
+                data-testid={`capture-row-${id}`}
+                className="flex items-center gap-3 rounded-xl border px-3 py-2.5"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xs font-bold">
+                  {iniciaisPassageiroUi(nome)}
+                </span>
+                <p className="flex-1 text-sm font-semibold">{nome}</p>
+                {quotaUi.kind === 'quota' ? (
+                  <strong className="text-sm tabular-nums">25 000 Kz</strong>
+                ) : null}
+                {quotaUi.kind === 'text' ? (
+                  <span className="text-xs text-slate-500">{QUOTA_LINHA_ANULADO}</span>
+                ) : null}
+              </div>
+            );
+          })}
         </section>
 
         <section data-testid="capture-lista-pax" className="space-y-3">
