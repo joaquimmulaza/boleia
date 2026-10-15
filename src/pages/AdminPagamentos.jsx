@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ExternalLink, FileText, Loader2 } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Copy, ExternalLink, FileText, Loader2 } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import PageShell from '../components/PageShell';
 import FeedbackAlert from '../components/FeedbackAlert';
@@ -29,6 +29,17 @@ import {
   chipClassEstadoPagamento,
 } from '../utils/paymentStatus';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
+import {
+  ADMIN_RESOLUCAO_COPY,
+  TOAST_ID_ACORDO_COPIADO,
+  computeExcessoReembolsoKz,
+  copyTextToClipboard,
+  formatAcordoIdCurto,
+  formatExcessoReembolsoPrincipal,
+  valorPagoEfectivoKz,
+} from '../utils/adminResolucaoPagamento';
+import { Card, CardContent, CardHeader } from '../components/ui/card';
+import { Button } from '../components/ui/button';
 
 /** @typedef {'validar' | 'custodia' | 'repasses' | 'resolucao'} AdminPagamentosTab */
 
@@ -38,6 +49,102 @@ const TABS = /** @type {const} */ ([
   { id: 'repasses', label: 'Repasses motorista' },
   { id: 'resolucao', label: 'Resolução manual' },
 ]);
+
+/**
+ * Cartão de resolução manual (excesso a devolver) — reutilizado na página admin e captura dev.
+ * @param {{
+ *   row: Record<string, unknown>,
+ *   copiedPagamentoId?: string | null,
+ *   onCopyAcordoId: (pagamentoId: string, acordoId: string) => void | Promise<void>,
+ * }} props
+ */
+export function AdminResolucaoPagamentoCard({ row, copiedPagamentoId, onCopyAcordoId }) {
+  const excessoKz = computeExcessoReembolsoKz(row);
+  const quotaPagaKz = valorPagoEfectivoKz(row);
+  const acordoCurto = formatAcordoIdCurto(/** @type {string | undefined} */ (row.acordo_id));
+
+  return (
+    <Card className="border-amber-200/80 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/20 shadow-none">
+      <CardHeader className="flex-row items-start justify-between gap-2 space-y-0 pb-2">
+        <div className="min-w-0 space-y-1">
+          <p
+            className="text-xs font-medium text-amber-900/80 dark:text-amber-100/80"
+            data-testid="resolucao-label-excesso"
+          >
+            <span className="hidden min-[391px]:inline">
+              {ADMIN_RESOLUCAO_COPY.excessoReembolso}
+            </span>
+            <span className="inline min-[391px]:hidden">
+              {ADMIN_RESOLUCAO_COPY.excessoReembolsoCurto}
+            </span>
+          </p>
+          <p
+            className="text-xl font-bold tabular-nums text-slate-900 dark:text-white"
+            data-testid="resolucao-excesso-principal"
+          >
+            {formatExcessoReembolsoPrincipal(excessoKz)}
+          </p>
+          <p
+            className="text-sm text-muted-foreground tabular-nums"
+            data-testid="resolucao-quota-paga"
+          >
+            {ADMIN_RESOLUCAO_COPY.quotaPaga}: {formatKwanza(quotaPagaKz)} Kz
+          </p>
+        </div>
+        <span
+          className={`shrink-0 text-xs font-bold px-2 py-1 rounded-full ${chipClassEstadoPagamento(/** @type {string} */ (row.estado))}`}
+        >
+          {labelEstadoPagamento(/** @type {string} */ (row.estado), { placement: 'cabecalho' })}
+        </span>
+      </CardHeader>
+      <CardContent className="space-y-2 pt-0">
+        {acordoCurto ? (
+          <div className="flex items-center gap-1 min-w-0">
+            <p
+              className="text-xs text-slate-500 font-mono truncate min-w-0"
+              data-testid="resolucao-acordo-id"
+              title={/** @type {string} */ (row.acordo_id)}
+            >
+              {ADMIN_RESOLUCAO_COPY.idAcordo}: {acordoCurto}
+            </p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-11 w-11 shrink-0"
+              aria-label={ADMIN_RESOLUCAO_COPY.copiarIdAcordoAria}
+              data-testid={`resolucao-copiar-acordo-${row.id}`}
+              onClick={() => void onCopyAcordoId(
+                /** @type {string} */ (row.id),
+                /** @type {string} */ (row.acordo_id),
+              )}
+            >
+              <Copy className="size-4" aria-hidden="true" />
+            </Button>
+          </div>
+        ) : null}
+        {copiedPagamentoId === row.id ? (
+          <FeedbackAlert
+            type="success"
+            text={TOAST_ID_ACORDO_COPIADO}
+            data-testid="resolucao-id-copiado-toast"
+          />
+        ) : null}
+        {row.resolucao_admin_motivo ? (
+          <p className="text-xs text-amber-900 dark:text-amber-100 text-pretty">
+            {String(row.resolucao_admin_motivo)}
+          </p>
+        ) : null}
+        <p
+          className="text-xs text-slate-400 font-mono truncate"
+          title={/** @type {string} */ (row.id)}
+        >
+          Pagamento {String(row.id)}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
 
 const AdminPagamentos = () => {
   const [rows, setRows] = useState([]);
@@ -53,6 +160,8 @@ const AdminPagamentos = () => {
   const [previewUrls, setPreviewUrls] = useState(/** @type {Record<string, string>} */ ({}));
   const [previewLoading, setPreviewLoading] = useState(/** @type {Record<string, boolean>} */ ({}));
   const [rejeicaoTarget, setRejeicaoTarget] = useState(/** @type {string | null} */ (null));
+  const [copiedPagamentoId, setCopiedPagamentoId] = useState(/** @type {string | null} */ (null));
+  const copyToastTimeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null));
 
   const mesReferenciaAtual = useMemo(() => getMesReferenciaAtual(), []);
   const mesReferenciaLabel = useMemo(
@@ -92,6 +201,12 @@ const AdminPagamentos = () => {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => () => {
+    if (copyToastTimeoutRef.current) {
+      clearTimeout(copyToastTimeoutRef.current);
+    }
+  }, []);
 
   const handlePreview = async (pagamentoId, storagePath) => {
     if (previewUrls[pagamentoId] || previewLoading[pagamentoId]) return;
@@ -152,6 +267,24 @@ const AdminPagamentos = () => {
       setFeedback({ type: 'error', text: getFriendlyErrorMessage(error) });
     } finally {
       setPeriodBusy(false);
+    }
+  };
+
+  const handleCopyAcordoId = async (pagamentoId, acordoId) => {
+    if (!pagamentoId || !acordoId) return;
+    try {
+      await copyTextToClipboard(acordoId);
+      if (copyToastTimeoutRef.current) {
+        clearTimeout(copyToastTimeoutRef.current);
+      }
+      setCopiedPagamentoId(pagamentoId);
+      copyToastTimeoutRef.current = setTimeout(() => {
+        setCopiedPagamentoId((current) => (current === pagamentoId ? null : current));
+        copyToastTimeoutRef.current = null;
+      }, 3000);
+    } catch (error) {
+      console.error('Erro ao copiar ID do acordo:', error);
+      setFeedback({ type: 'error', text: getFriendlyErrorMessage(error) });
     }
   };
 
@@ -510,27 +643,12 @@ const AdminPagamentos = () => {
           ) : (
             <ul className="space-y-3" data-testid="admin-resolucao-lista">
               {resolucaoRows.map((row) => (
-                <li
-                  key={row.id}
-                  className="rounded-xl border border-amber-200/80 bg-amber-50/50 dark:bg-amber-950/20 p-4 space-y-2"
-                  data-testid={`resolucao-pagamento-${row.id}`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold tabular-nums">
-                      {formatKwanza(row.valor_kz)} Kz
-                    </span>
-                    <span
-                      className={`text-xs font-bold px-2 py-1 rounded-full ${chipClassEstadoPagamento(row.estado)}`}
-                    >
-                      {labelEstadoPagamento(row.estado, { placement: 'cabecalho' })}
-                    </span>
-                  </div>
-                  {row.resolucao_admin_motivo ? (
-                    <p className="text-xs text-amber-900 dark:text-amber-100">
-                      {row.resolucao_admin_motivo}
-                    </p>
-                  ) : null}
-                  <p className="text-xs text-slate-500 font-mono truncate">ID {row.id}</p>
+                <li key={row.id} data-testid={`resolucao-pagamento-${row.id}`}>
+                  <AdminResolucaoPagamentoCard
+                    row={row}
+                    copiedPagamentoId={copiedPagamentoId}
+                    onCopyAcordoId={handleCopyAcordoId}
+                  />
                 </li>
               ))}
             </ul>
