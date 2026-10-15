@@ -415,6 +415,7 @@ const AbsenceTracker = () => {
         tipoPerfil={tipoPerfil}
         quotaMensalKz={acordoDetalhe?.valor_mensal_por_passageiro_kz}
         diasUteisMes={acordoDetalhe?.dias_uteis_mes}
+        diasSemanaAcordo={acordoDetalhe?.ofertas_capacidade?.dias_semana}
       />
     </PageShell>
   );

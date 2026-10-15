@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import OverlayShell from './OverlayShell';
 import SheetDragHandle from './SheetDragHandle';
+import FaltaAgreementDatePicker from './FaltaAgreementDatePicker';
 import {
   isFaltaEsteMesAteHoje,
   isFutureFaltaDate,
@@ -9,11 +10,16 @@ import {
 } from '../utils/faltasDisplay';
 import {
   isPassageiroProprioFaltaDataSubmissivel,
-  PASSAGEIRO_FALTA_PRAZO_COPY,
 } from '../utils/passageiroFaltaPrazo';
+import { isDataDiaViagemAcordo } from '../utils/faltasDiasAcordo';
 import { computeFaltaDesconto } from '../utils/faltaDesconto';
 import { formatKwanza } from '../utils/formatKwanza';
 import FaltaPrevistaBadge from './FaltaPrevistaBadge';
+import {
+  FALTA_DATA_HELP_MOTORISTA,
+  FALTA_DATA_HELP_PASSAGEIRO,
+  FALTA_DATA_INLINE_ERRO_DIA,
+} from '../copy/faltasLogAbsenceCopy.js';
 
 /**
  * @typedef {'ida' | 'regresso' | 'ambas'} ViagemFalta
@@ -53,6 +59,8 @@ function descontoDesteDia(quotaMensalKz, diasUteisMes, viagem) {
  *   tipoPerfil?: 'Passageiro' | 'Motorista',
  *   quotaMensalKz?: number | null,
  *   diasUteisMes?: number | null,
+ *   diasSemanaAcordo?: number[] | null,
+ *   referenceDate?: Date,
  * }} props
  */
 const LogAbsenceModal = ({
@@ -62,6 +70,8 @@ const LogAbsenceModal = ({
   tipoPerfil,
   quotaMensalKz = null,
   diasUteisMes = null,
+  diasSemanaAcordo = null,
+  referenceDate = new Date(),
 }) => {
   const perfilNorm = String(tipoPerfil || '').toLowerCase();
   const isPassageiro = perfilNorm === 'passageiro';
@@ -76,14 +86,19 @@ const LogAbsenceModal = ({
     observacao: '',
     viagem: /** @type {ViagemFalta} */ ('ambas'),
   }));
+  const [dataErro, setDataErro] = useState('');
 
   if (!isOpen) return null;
 
   const { min: minDataFalta, max: maxDataFalta } = resolveLogAbsenceDateBounds({
     isPassageiroLocked,
+    refDate: referenceDate,
   });
   const descontoDia = descontoDesteDia(quotaMensalKz, diasUteisMes, formData.viagem);
-  const showPrevista = isPassageiroLocked && isFutureFaltaDate(formData.dataFalta);
+  const showPrevista = isPassageiroLocked && isFutureFaltaDate(formData.dataFalta, referenceDate);
+  const dataHelpCopy = isPassageiroLocked
+    ? FALTA_DATA_HELP_PASSAGEIRO
+    : FALTA_DATA_HELP_MOTORISTA;
 
   const resetForm = () => {
     setFormData({
@@ -92,6 +107,7 @@ const LogAbsenceModal = ({
       observacao: '',
       viagem: 'ambas',
     });
+    setDataErro('');
   };
 
   const handleClose = () => {
@@ -99,19 +115,43 @@ const LogAbsenceModal = ({
     onClose();
   };
 
+  const validateData = (iso) => {
+    if (!iso) {
+      setDataErro('');
+      return false;
+    }
+    if (!isDataDiaViagemAcordo(iso, diasSemanaAcordo)) {
+      setDataErro(FALTA_DATA_INLINE_ERRO_DIA);
+      return false;
+    }
+    const boundsOk = isPassageiroLocked
+      ? isPassageiroProprioFaltaDataSubmissivel(iso, referenceDate)
+      : isFaltaEsteMesAteHoje(iso, referenceDate);
+    if (!boundsOk) {
+      setDataErro('');
+      return false;
+    }
+    setDataErro('');
+    return true;
+  };
+
+  const handleDataChange = (iso) => {
+    setFormData({ ...formData, dataFalta: iso });
+    validateData(iso);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!tipoDefault) return;
-    const dataOk = isPassageiroLocked
-      ? isPassageiroProprioFaltaDataSubmissivel(formData.dataFalta)
-      : isFaltaEsteMesAteHoje(formData.dataFalta);
-    if (!dataOk) return;
+    if (!validateData(formData.dataFalta)) return;
     onSubmit({
       ...formData,
       tipo: isPassageiroLocked ? tipoDefault : (formData.tipo || tipoDefault),
     });
     resetForm();
   };
+
+  const hasDataError = Boolean(dataErro);
 
   return (
     <OverlayShell
@@ -139,34 +179,41 @@ const LogAbsenceModal = ({
           Registar Falta
         </h3>
 
-        <label htmlFor="dataFalta" className="mt-1 text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+        <span id="dataFalta-label" className="mt-1 text-[13px] font-semibold text-slate-900 dark:text-slate-100">
           Data
-        </label>
+        </span>
         <div className="flex flex-wrap items-center gap-2">
-          <input
+          <FaltaAgreementDatePicker
             id="dataFalta"
-            type="date"
-            min={minDataFalta}
-            {...(maxDataFalta ? { max: maxDataFalta } : {})}
-            className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-1.5 text-[15px] text-slate-900 outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-900 dark:text-white"
             value={formData.dataFalta}
-            onChange={(e) => setFormData({ ...formData, dataFalta: e.target.value })}
-            required
+            onChange={handleDataChange}
+            min={minDataFalta}
+            max={maxDataFalta}
+            diasSemana={diasSemanaAcordo}
+            describedBy="dataFalta-help"
+            errorId="dataFalta-error"
+            hasError={hasDataError}
+            initialMonth={minDataFalta}
           />
           {showPrevista ? <FaltaPrevistaBadge /> : null}
         </div>
-        {isPassageiroLocked ? (
+        <p
+          id="dataFalta-help"
+          data-testid="falta-data-help"
+          className="whitespace-normal break-words text-xs leading-4 text-slate-500 dark:text-slate-400"
+        >
+          {dataHelpCopy}
+        </p>
+        {hasDataError ? (
           <p
-            className="text-xs leading-4 text-slate-500 dark:text-slate-400"
-            data-testid="falta-prazo-copy"
+            id="dataFalta-error"
+            role="alert"
+            data-testid="falta-data-error"
+            className="whitespace-normal break-words text-xs leading-4 text-red-600 dark:text-red-400"
           >
-            {PASSAGEIRO_FALTA_PRAZO_COPY}
+            {dataErro}
           </p>
-        ) : (
-          <p className="text-xs leading-4 text-slate-500 dark:text-slate-400">
-            Podes registar um dia deste mês, até hoje. Dias futuros e meses já fechados ficam de fora.
-          </p>
-        )}
+        ) : null}
 
         <label htmlFor="tipoFalta" className="mt-1 text-[13px] font-semibold text-slate-900 dark:text-slate-100">
           Tipo
@@ -269,7 +316,7 @@ const LogAbsenceModal = ({
           </button>
           <button
             type="submit"
-            disabled={!tipoDefault}
+            disabled={!tipoDefault || !formData.dataFalta || hasDataError}
             className="flex-1 rounded-xl bg-primary py-1.5 text-[15px] font-semibold text-[#06130b] disabled:opacity-60"
             title="Guardar"
           >
