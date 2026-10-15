@@ -97,7 +97,7 @@ export default function AcordoDetalheSheetHeader({
           ref={fecharRef}
           type="button"
           variant="ghost"
-          className="h-10 px-0 font-bold text-slate-600 dark:text-slate-300"
+          className="relative z-0 h-10 px-0 font-bold text-slate-600 dark:text-slate-300 focus-visible:z-20 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900"
           data-testid="acordo-detalhe-fechar"
           onClick={onClose}
         >
@@ -113,8 +113,8 @@ export default function AcordoDetalheSheetHeader({
       </div>
 
       <div className="space-y-2 mt-1">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center justify-between gap-2 pt-0.5">
+          <div className="relative z-10 flex flex-wrap items-center gap-2">
             <span
               data-testid="acordo-detalhe-estado-chip"
               role={estadoChip.role}
