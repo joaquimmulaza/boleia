@@ -79,6 +79,34 @@ export default function DevHotfixProdQaCapture() {
           />
         </section>
 
+        <section data-testid="capture-motorista-cancelamento-pendente">
+          <p className="text-xs font-semibold text-slate-500 mb-2">
+            1b — Motorista · cancelamento_pendente (aviso prévio)
+          </p>
+          <AcordoPagamentosMotoristaPanel
+            acordoTerminado={false}
+            rows={[
+              {
+                pagamento_id: 'pg-prev',
+                passenger_id: 'pax-1',
+                passenger_nome: 'Ana Costa',
+                estado: 'pendente_pagamento',
+                valor: 40000,
+                valor_em_divida: 40000,
+              },
+              {
+                pagamento_id: 'pg-comp',
+                passenger_id: 'pax-2',
+                passenger_nome: 'João Pedro',
+                estado: 'comprovativo_enviado',
+                valor: 0,
+                valor_em_divida: 0,
+                valor_comprovativo: 40000,
+              },
+            ]}
+          />
+        </section>
+
         <section data-testid="capture-s3-justa-causa">
           <p className="text-xs font-semibold text-slate-500 mb-2">2 — Passageiro · justa causa (S3)</p>
           <AcordoPagamentoEstadoCartao
