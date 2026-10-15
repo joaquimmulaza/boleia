@@ -65,6 +65,7 @@ describe('TimeInput', () => {
     );
 
     const input = screen.getByLabelText(/Hora de regresso/i);
+    fireEvent.focus(input);
     fireEvent.change(input, { target: { value: '25:00' } });
     fireEvent.blur(input);
     expect(screen.getByTestId(TIME_INPUT_ERROR_TEST_ID)).toHaveTextContent(

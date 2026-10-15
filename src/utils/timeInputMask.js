@@ -16,8 +16,31 @@ export function digitsFromTimeInput(raw) {
  * @returns {string}
  */
 export function maskTimeInputFromDigits(digits) {
-  if (digits.length <= 2) return digits;
-  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+  if (digits.length < 4) return digits;
+  return `${digits.slice(0, 2)}:${digits.slice(2, 4)}`;
+}
+
+/**
+ * Formata dígitos parciais para HH:MM no blur (ex.: 745 → 07:45, 7 → 07:00).
+ * @param {string} raw
+ * @returns {string}
+ */
+export function formatTimeInputOnBlur(raw) {
+  const digits = digitsFromTimeInput(raw);
+  if (!digits) return '';
+  let hhmm;
+  if (digits.length === 1) {
+    hhmm = `0${digits}00`;
+  } else if (digits.length === 2) {
+    hhmm = `${digits}00`;
+  } else if (digits.length === 3) {
+    hhmm = `0${digits}`;
+  } else {
+    hhmm = digits.slice(0, 4);
+  }
+  const h = hhmm.slice(0, 2);
+  const m = hhmm.slice(2, 4);
+  return `${h}:${m}`;
 }
 
 /**

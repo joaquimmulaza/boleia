@@ -237,6 +237,7 @@ const PassengerDashboard = () => {
     dias_semana: [...DIAS_UTEIS_DEFAULT],
     teto_mensal_kz: '',
   });
+  const [preferredTimeValid, setPreferredTimeValid] = useState(true);
   const [tipoProcura, setTipoProcura] = useState('individual'); // individual | grupo
   const [nMaximoGrupo, setNMaximoGrupo] = useState(4);
   const [modoTeto, setModoTeto] = useState(() => getModoTetoPreferido());
@@ -907,6 +908,7 @@ const PassengerDashboard = () => {
   const handleSubmitProcura = async (e) => {
     e.preventDefault();
     if (submitProcuraInFlightRef.current || savingProcura) return;
+    if (!preferredTimeValid) return;
     setFeedback({ type: '', text: '' });
     const built = buildProcuraPayload();
     if (!built.ok) {
@@ -2018,6 +2020,7 @@ const PassengerDashboard = () => {
               name="preferred_time"
               value={form.preferred_time}
               onChange={handleChange}
+              onValidityChange={setPreferredTimeValid}
               required
               aria-label="Hora preferida"
             />
@@ -2129,7 +2132,7 @@ const PassengerDashboard = () => {
             <button
               type="submit"
               className="w-full bg-primary text-white font-bold py-4 rounded-xl"
-              disabled={savingProcura}
+              disabled={savingProcura || !preferredTimeValid}
             >
               {editing ? 'Guardar alterações' : 'Guardar procura'}
             </button>

@@ -10,7 +10,7 @@ describe('timeInputMask', () => {
   it('máscara HH:MM a partir de dígitos', () => {
     expect(maskTimeInputRaw('1')).toBe('1');
     expect(maskTimeInputRaw('17')).toBe('17');
-    expect(maskTimeInputRaw('174')).toBe('17:4');
+    expect(maskTimeInputRaw('174')).toBe('174');
     expect(maskTimeInputRaw('1745')).toBe('17:45');
     expect(maskTimeInputRaw('17:45')).toBe('17:45');
   });

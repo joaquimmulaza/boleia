@@ -1,9 +1,10 @@
-import React, { useId, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import { Input } from './ui/input';
 import { cn } from '../lib/utils';
 import { ADDRESS_INPUT_SURFACE_CLASS } from '../utils/addressInputSurface.js';
 import { formatTime24h } from '../utils/formatTime.js';
 import {
+  formatTimeInputOnBlur,
   isValidTime24h,
   maskTimeInputRaw,
   normalizeTime24h,
@@ -19,6 +20,7 @@ export const TIME_INPUT_ERROR_TEST_ID = 'time-input-error';
  *   name: string;
  *   value: string;
  *   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+ *   onValidityChange?: (valid: boolean) => void;
  *   required?: boolean;
  *   disabled?: boolean;
  *   className?: string;
@@ -30,6 +32,7 @@ const TimeInput = ({
   name,
   value,
   onChange,
+  onValidityChange,
   required = false,
   disabled = false,
   className,
@@ -42,15 +45,16 @@ const TimeInput = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState('');
   const [error, setError] = useState('');
+  /** @type {[string | null, React.Dispatch<React.SetStateAction<string | null>>]} */
+  const [invalidDisplay, setInvalidDisplay] = useState(null);
 
   const committed = formatTime24h(value) || '';
-  const shownValue = isEditing ? editText : committed;
+  const shownValue = isEditing ? editText : invalidDisplay ?? committed;
 
-  const emitChange = (e, nextValue) => {
+  const emitChange = (nextValue) => {
     onChange({
-      ...e,
+      type: 'change',
       target: {
-        ...e.target,
         name,
         id: inputId,
         value: nextValue,
@@ -58,38 +62,62 @@ const TimeInput = ({
     });
   };
 
+  const computeValid = () => {
+    if (invalidDisplay || error) return false;
+    if (required && !committed) return false;
+    if (committed && !isValidTime24h(committed)) return false;
+    return true;
+  };
+
+  useEffect(() => {
+    onValidityChange?.(computeValid());
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- validity derivada de estado local + value
+  }, [invalidDisplay, error, committed, required, onValidityChange]);
+
   const handleFocus = () => {
     setIsEditing(true);
-    setEditText(committed);
+    setEditText(invalidDisplay ?? committed);
     setError('');
+    setInvalidDisplay(null);
   };
 
   const handleChange = (e) => {
     const masked = maskTimeInputRaw(e.target.value);
     setEditText(masked);
     setError('');
+    setInvalidDisplay(null);
     const normalized = normalizeTime24h(masked);
     if (normalized) {
-      emitChange(e, normalized);
+      emitChange(normalized);
     }
   };
 
-  const handleBlur = (e) => {
+  const handleBlur = () => {
     setIsEditing(false);
     const trimmed = editText.trim();
     if (!trimmed) {
+      setInvalidDisplay(null);
       if (required) {
         setError('Indica a hora.');
+        return;
       }
+      setError('');
+      emitChange('');
       return;
     }
-    if (!isValidTime24h(trimmed)) {
+
+    const candidate = formatTimeInputOnBlur(trimmed);
+    if (!isValidTime24h(candidate)) {
+      setInvalidDisplay(trimmed.includes(':') ? trimmed : candidate);
       setError(TIME_INPUT_INVALID_MESSAGE);
       return;
     }
-    const normalized = normalizeTime24h(trimmed);
+
+    const normalized = normalizeTime24h(candidate);
+    setInvalidDisplay(null);
+    setError('');
     if (normalized && normalized !== value) {
-      emitChange(e, normalized);
+      emitChange(normalized);
     }
   };
 

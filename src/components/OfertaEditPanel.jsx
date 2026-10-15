@@ -66,6 +66,9 @@ const OfertaEditPanel = ({
   const [pendingPayload, setPendingPayload] = useState(null);
   const [confirmImpactN, setConfirmImpactN] = useState(null);
   const [vagasTotais, setVagasTotais] = useState(vagasLimits.actual);
+  const [departureTimeValid, setDepartureTimeValid] = useState(true);
+  const [returnTimeValid, setReturnTimeValid] = useState(true);
+  const timesValid = departureTimeValid && returnTimeValid;
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -150,6 +153,10 @@ const OfertaEditPanel = ({
   const handleSubmit = (e) => {
     e.preventDefault();
     setMessage({ type: '', text: '' });
+
+    if (!timesValid) {
+      return;
+    }
 
     if (
       !ofertaFlexivel &&
@@ -311,6 +318,7 @@ const OfertaEditPanel = ({
             name="departure_time"
             value={formData.departure_time}
             onChange={handleChange}
+            onValidityChange={setDepartureTimeValid}
             required
             disabled={isBusy}
             aria-label="Hora de ida"
@@ -325,6 +333,7 @@ const OfertaEditPanel = ({
             name="return_time"
             value={formData.return_time}
             onChange={handleChange}
+            onValidityChange={setReturnTimeValid}
             disabled={isBusy}
             aria-label="Hora de regresso"
             className="h-11 rounded-lg bg-slate-50 dark:bg-slate-800 px-3"
@@ -419,7 +428,7 @@ const OfertaEditPanel = ({
         </button>
         <button
           type="submit"
-          disabled={isBusy}
+          disabled={isBusy || !timesValid}
           className="flex-1 min-h-11 bg-primary text-white font-bold rounded-xl disabled:opacity-60"
         >
           {saving ? 'A guardar…' : 'Guardar alterações'}
