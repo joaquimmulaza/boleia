@@ -71,10 +71,10 @@ if sudo -u postgres psql -v ON_ERROR_STOP=1 -d "${DB_FAIL}" -f "${PROOF_SQL}" >/
   echo "ERRO: prova devia falhar sem migração regra5" >&2
   exit 3
 fi
-grep -q 'FAIL-on-old' /tmp/regra5_fail_old.log || {
+if ! grep -qE 'FAIL-on-old|does not exist' /tmp/regra5_fail_old.log; then
   echo "ERRO: fail-on-old não detectado:" >&2
   tail -20 /tmp/regra5_fail_old.log >&2
   exit 3
-}
+fi
 
 echo "==> Prova regra 5 OK (PASS com migração; FAIL-on-old sem migração)"

@@ -18,7 +18,7 @@ describe('mapLogFaltaError', () => {
 
   it('não devolve a copy de prazo para outros erros de log_falta', () => {
     const outros = [
-      { code: 'BCF01', message: 'A data da falta já passou.' },
+      { code: 'P0001', message: 'Já não é possível registar esta falta. Só podes avisar até às 22:00 do dia anterior.' },
       { code: '42501', message: 'Sem permissão para registar faltas neste acordo.' },
       {
         code: 'P0001',

@@ -14,7 +14,9 @@ ALTER TABLE public.faltas
 COMMENT ON COLUMN public.faltas.desconto_mes_referencia IS
   'Primeiro dia do mês de pagamento onde o desconto se aplica (pode diferir do mês de data_falta se crédito).';
 
--- === Instant de referência (override só em provas PG via boleia.regra5_instant_override) ===
+-- === Instant de referência ===
+-- GUC `boleia.regra5_instant_override` (transaction-local): só provas PG em sessão postgres.
+-- Clientes PostgREST não expõem set_config; log_falta não aceita parâmetro de instante.
 CREATE OR REPLACE FUNCTION public._falta_regra5_instant()
 RETURNS timestamptz
 LANGUAGE sql
@@ -47,7 +49,7 @@ STABLE
 SET search_path TO 'public'
 AS $$
   SELECT
-    p_data_falta >= (COALESCE(p_ref, public._falta_regra5_instant()) AT TIME ZONE 'Africa/Luanda')::date
+    p_data_falta > (COALESCE(p_ref, public._falta_regra5_instant()) AT TIME ZONE 'Africa/Luanda')::date
     AND COALESCE(p_ref, public._falta_regra5_instant()) <= public._passageiro_falta_prazo_limite(p_data_falta);
 $$;
 
@@ -238,7 +240,6 @@ DECLARE
   v_is_driver boolean;
   v_is_passenger boolean;
   v_row public.faltas%ROWTYPE;
-  v_hoje_luanda date;
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'Não autenticado.';
@@ -288,15 +289,8 @@ BEGIN
       RAISE EXCEPTION 'Passageiro não activo neste acordo.';
     END IF;
 
-    v_hoje_luanda := (public._falta_regra5_instant() AT TIME ZONE 'Africa/Luanda')::date;
-
-    IF p_data_falta < v_hoje_luanda THEN
-      RAISE EXCEPTION
-        'A data da falta já passou.'
-        USING ERRCODE = 'BCF01';
-    END IF;
-
-    IF NOT public._passageiro_falta_aviso_valido(p_data_falta, public._falta_regra5_instant()) THEN
+    IF v_passenger_id = v_uid
+      AND NOT public._passageiro_falta_aviso_valido(p_data_falta, public._falta_regra5_instant()) THEN
       RAISE EXCEPTION
         'Já não é possível registar esta falta. Só podes avisar até às 22:00 do dia anterior.'
         USING ERRCODE = 'BCF02';

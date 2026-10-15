@@ -10,14 +10,15 @@ const ROOT = dirname(fileURLToPath(import.meta.url));
 const MIG = join(ROOT, '../../supabase/migrations/20261015100000_faltas_regra5_desconto_mes_prazo.sql');
 
 describe('Regra 5 faltas — migração SQL', () => {
-  it('define prazo passageiro 22:00 Luanda e códigos BCF01/BCF02', () => {
+  it('define prazo passageiro 22:00 Luanda e SQLSTATE BCF02 único', () => {
     const sql = readFileSync(MIG, 'utf8');
     expect(sql).toMatch(/Africa\/Luanda/);
     expect(sql).toMatch(/22:00:00/);
-    expect(sql).toMatch(/ERRCODE = 'BCF01'/);
+    expect(sql).not.toMatch(/BCF01/);
     expect(sql).toMatch(/ERRCODE = 'BCF02'/);
     expect(sql).toMatch(/22:00 do dia anterior/);
     expect(sql).toMatch(/desconto_mes_referencia/);
+    expect(sql).toMatch(/v_passenger_id = v_uid/);
   });
 
   it('_desconto_faltas_pagamento usa desconto_mes_referencia', () => {

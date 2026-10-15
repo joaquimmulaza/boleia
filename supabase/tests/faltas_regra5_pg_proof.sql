@@ -41,6 +41,13 @@ BEGIN
     RAISE EXCEPTION 'FAIL: data no passado devia ser inválida';
   END IF;
 
+  IF public._passageiro_falta_aviso_valido(
+    '2026-10-15'::date,
+    '2026-10-15 08:00:00+01'::timestamptz
+  ) IS NOT FALSE THEN
+    RAISE EXCEPTION 'FAIL: falta para hoje devia ser inválida (BCF02)';
+  END IF;
+
   RAISE NOTICE 'PASS: prazo passageiro (funções puras)';
 END $$;
 
@@ -114,10 +121,48 @@ BEGIN
   PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
   SET LOCAL ROLE authenticated;
 
+  PERFORM set_config('request.jwt.claim.sub', v_driver::text, true);
+  PERFORM set_config('boleia.regra5_instant_override', '2026-10-15 12:00:00+01', true);
+
+  SELECT * INTO v_row FROM public.log_falta(
+    v_acordo, '2026-10-14'::date, 'Motorista', NULL, NULL, 'ambas'
+  );
+  IF v_row.id IS NULL THEN
+    RAISE EXCEPTION 'FAIL (a): motorista tipo Motorista ontem devia passar';
+  END IF;
+
+  SELECT * INTO v_row FROM public.log_falta(
+    v_acordo, '2026-10-14'::date, 'Passageiro', NULL, v_pax, 'ambas'
+  );
+  IF v_row.id IS NULL THEN
+    RAISE EXCEPTION 'FAIL (b): motorista tipo Passageiro ontem devia passar';
+  END IF;
+
+  PERFORM set_config('request.jwt.claim.sub', v_pax::text, true);
+  PERFORM set_config('boleia.regra5_instant_override', '2026-10-15 12:00:00+01', true);
+
+  PERFORM public._regra5_expect_sqlstate(
+    '(c) passageiro falta para hoje',
+    format(
+      $q$SELECT public.log_falta(%L, '2026-10-15'::date, 'Passageiro', NULL, %L, 'ambas')$q$,
+      v_acordo, v_pax
+    ),
+    'BCF02'
+  );
+
+  PERFORM set_config('boleia.regra5_instant_override', '2026-10-15 21:00:00+01', true);
+
+  SELECT * INTO v_row FROM public.log_falta(
+    v_acordo, '2026-10-16'::date, 'Passageiro', NULL, v_pax, 'ambas'
+  );
+  IF v_row.id IS NULL THEN
+    RAISE EXCEPTION 'FAIL (d) antes 22:00: passageiro amanhã devia passar';
+  END IF;
+
   PERFORM set_config('boleia.regra5_instant_override', '2026-10-15 22:30:00+01', true);
 
   PERFORM public._regra5_expect_sqlstate(
-    'passageiro após 22:00 véspera',
+    '(d) passageiro amanhã após 22:00 véspera',
     format(
       $q$SELECT public.log_falta(%L, '2026-10-16'::date, 'Passageiro', NULL, %L, 'ambas')$q$,
       v_acordo, v_pax
@@ -128,12 +173,12 @@ BEGIN
   PERFORM set_config('boleia.regra5_instant_override', '2026-10-15 08:00:00+01', true);
 
   PERFORM public._regra5_expect_sqlstate(
-    'passageiro data passada',
+    'passageiro data passada (BCF02)',
     format(
       $q$SELECT public.log_falta(%L, '2026-10-14'::date, 'Passageiro', NULL, %L, 'ambas')$q$,
       v_acordo, v_pax
     ),
-    'BCF01'
+    'BCF02'
   );
 
   PERFORM set_config('boleia.regra5_instant_override', '2026-10-15 21:00:00+01', true);
@@ -177,6 +222,47 @@ BEGIN
   IF v_desconto_out <= 0 THEN
     RAISE EXCEPTION 'FAIL: desconto do mês corrente/crédito devia ser > 0 (%)', v_desconto_out;
   END IF;
+
+  PERFORM set_config('request.jwt.claim.sub', v_pax::text, true);
+  PERFORM set_config('boleia.regra5_instant_override', '2026-10-15 12:00:00+01', true);
+
+  SELECT * INTO v_row FROM public.log_falta(
+    v_acordo, '2026-11-05'::date, 'Passageiro', NULL, v_pax, 'ambas'
+  );
+
+  IF v_row.desconto_mes_referencia IS DISTINCT FROM '2026-11-01'::date THEN
+    RAISE EXCEPTION 'FAIL-on-old: falta Nov devia desconto_mes 2026-11-01, obteve %',
+      v_row.desconto_mes_referencia;
+  END IF;
+
+  IF public._desconto_faltas_pagamento(v_acordo, v_pax, v_mes_out) <> v_desconto_out THEN
+    RAISE EXCEPTION 'FAIL-on-old: falta Nov não devia alterar desconto Out (esperado %, obteve %)',
+      v_desconto_out, public._desconto_faltas_pagamento(v_acordo, v_pax, v_mes_out);
+  END IF;
+
+  RESET ROLE;
+  PERFORM set_config('session_replication_role', 'replica', true);
+  INSERT INTO public.faltas (
+    id_acordo, data_falta, tipo, passenger_id, viagem, desconto_kz, desconto_mes_referencia
+  ) VALUES (
+    v_acordo, '2026-09-08'::date, 'Passageiro', v_pax, 'ambas', 1000, v_mes_sep
+  );
+  PERFORM set_config('session_replication_role', 'origin', true);
+
+  IF public._desconto_faltas_pagamento(v_acordo, v_pax, v_mes_out)
+       <> v_desconto_out THEN
+    RAISE EXCEPTION 'FAIL-on-old: falta passageiro Setembro (mes ref Set) inflacionou Out (Out=% vs %)',
+      public._desconto_faltas_pagamento(v_acordo, v_pax, v_mes_out), v_desconto_out;
+  END IF;
+
+  PERFORM public._regra5_expect_sqlstate(
+    'passageiro falta mês passado via RPC',
+    format(
+      $q$SELECT public.log_falta(%L, '2026-09-08'::date, 'Passageiro', NULL, %L, 'ambas')$q$,
+      v_acordo, v_pax
+    ),
+    'BCF02'
+  );
 
   RAISE NOTICE 'PASS: log_falta + _desconto_faltas_pagamento regra 5';
 END $$;
