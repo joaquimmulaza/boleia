@@ -8,7 +8,7 @@ ROLES_FIRST="${ROOT}/supabase/tests/bootstrap_roles_first.sql"
 BOOTSTRAP_SQL="${ROOT}/supabase/tests/bootstrap_local_supabase.sql"
 LOCALFIX_PL="${ROOT}/supabase/tests/localfix_migration_sql.pl"
 SKIP_REGRA5_MIG="${SKIP_REGRA5_MIG:-0}"
-MIG_REGRA5="20261015100000_faltas_regra5_desconto_mes_prazo.sql"
+MIG_REGRA5_PREFIX="202610151"
 
 if ! command -v psql >/dev/null 2>&1; then
   echo "ERRO: psql não encontrado." >&2
@@ -36,7 +36,7 @@ apply_migrations_to_db() {
   shopt -s nullglob
   for f in "${ROOT}"/supabase/migrations/*.sql; do
     base="$(basename "$f")"
-    if [[ "${SKIP_REGRA5_MIG}" == "1" && "${base}" == "${MIG_REGRA5}" ]]; then
+    if [[ "${SKIP_REGRA5_MIG}" == "1" && "${base}" == ${MIG_REGRA5_PREFIX}* ]]; then
       echo "       skip ${base} (SKIP_REGRA5_MIG=1 — fail-on-old)"
       continue
     fi

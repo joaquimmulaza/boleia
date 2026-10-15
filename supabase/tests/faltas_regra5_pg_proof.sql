@@ -381,3 +381,113 @@ BEGIN
 
   RAISE NOTICE 'PASS: B2 legacy drop + preview RPC + liquidação alinhada';
 END $$;
+
+\echo '=== Regra 4 — falta Motorista só em lugar activo na data ==='
+DO $$
+DECLARE
+  v_driver uuid := 'f5111111-1111-4111-8111-111111111111';
+  v_pax uuid := 'f5222222-2222-4222-8222-222222222222';
+  v_pax_late uuid := 'f5333333-3333-4333-8333-333333333333';
+  v_acordo uuid := 'f5444444-4444-4444-8444-444444444444';
+  v_ap uuid := 'f5555555-5555-4555-8555-555555555555';
+  v_ap_late uuid := 'f5aaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  v_pg_out uuid := 'f5777777-7777-4777-8777-777777777777';
+  v_pg_late uuid := 'f5bbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  v_mes_out date := '2026-10-01'::date;
+  v_falta date := '2026-10-10'::date;
+  v_desconto integer;
+  v_has_r4 boolean := to_regprocedure(
+    'public._passageiro_lugar_activo_em_data(uuid,uuid,date)'
+  ) IS NOT NULL;
+BEGIN
+  PERFORM set_config('session_replication_role', 'replica', true);
+
+  INSERT INTO auth.users (id, email) VALUES
+    (v_pax_late, 'regra5-pax-late@test')
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO public.perfis (id, nome_completo, telefone, tipo_perfil) VALUES
+    (v_pax_late, 'Regra5 Pax Late', '931000003', 'Passageiro')
+  ON CONFLICT (id) DO NOTHING;
+
+  DELETE FROM public.faltas
+  WHERE id_acordo = v_acordo
+    AND COALESCE(desconto_mes_referencia, date_trunc('month', data_falta)::date) = v_mes_out;
+
+  UPDATE public.acordos_passageiros
+  SET
+    estado = 'activo',
+    saiu_em = NULL,
+    lugar_rescisao_em = NULL,
+    created_at = '2026-09-01 08:00:00+01'::timestamptz
+  WHERE id = v_ap;
+
+  UPDATE public.pagamentos_acordo
+  SET validado_em = '2026-09-02 10:00:00+01'::timestamptz
+  WHERE id = v_pg_out;
+
+  INSERT INTO public.faltas (
+    id_acordo, data_falta, tipo, passenger_id, viagem, desconto_kz, desconto_mes_referencia
+  ) VALUES (
+    v_acordo, v_falta, 'Motorista', NULL, 'ambas', 500, v_mes_out
+  );
+
+  v_desconto := public._desconto_faltas_pagamento(v_acordo, v_pax, v_mes_out);
+  IF v_desconto <> 500 THEN
+    IF v_has_r4 THEN
+      RAISE EXCEPTION 'FAIL R4 activo: esperava 500, obteve %', v_desconto;
+    ELSE
+      RAISE EXCEPTION 'FAIL-on-old R4 activo: esperava 500, obteve %', v_desconto;
+    END IF;
+  END IF;
+
+  UPDATE public.acordos_passageiros
+  SET estado = 'saiu', saiu_em = '2026-10-08 12:00:00+01'::timestamptz
+  WHERE id = v_ap;
+
+  v_desconto := public._desconto_faltas_pagamento(v_acordo, v_pax, v_mes_out);
+  IF v_desconto <> 0 THEN
+    IF v_has_r4 THEN
+      RAISE EXCEPTION 'FAIL R4 saiu antes: esperava 0, obteve %', v_desconto;
+    ELSE
+      RAISE EXCEPTION 'FAIL-on-old R4: motorista falta aplicada após saída (obteve %)', v_desconto;
+    END IF;
+  END IF;
+
+  UPDATE public.acordos_passageiros
+  SET estado = 'activo', saiu_em = NULL
+  WHERE id = v_ap;
+
+  DELETE FROM public.acordos_passageiros WHERE id = v_ap_late;
+  DELETE FROM public.pagamentos_acordo WHERE id = v_pg_late;
+
+  INSERT INTO public.acordos_passageiros (
+    id, acordo_id, passenger_id, estado, quota_mensal_kz, ordem_insercao, created_at
+  ) VALUES (
+    v_ap_late, v_acordo, v_pax_late, 'activo', 22000, 1,
+    '2026-10-15 08:00:00+01'::timestamptz
+  );
+
+  INSERT INTO public.pagamentos_acordo (
+    id, acordo_passageiro_id, acordo_id, passenger_id, driver_id,
+    valor_kz, valor_quota_original_kz, valor_payout_liquido_kz, take_rate_pct,
+    mes_referencia, estado, validado_em
+  ) VALUES (
+    v_pg_late, v_ap_late, v_acordo, v_pax_late, v_driver,
+    22000, 22000, 19800, 0.10, v_mes_out, 'em_custodia',
+    '2026-10-16 09:00:00+01'::timestamptz
+  );
+
+  v_desconto := public._desconto_faltas_pagamento(v_acordo, v_pax_late, v_mes_out);
+  IF v_desconto <> 0 THEN
+    IF v_has_r4 THEN
+      RAISE EXCEPTION 'FAIL R4 entrou depois: esperava 0, obteve %', v_desconto;
+    ELSE
+      RAISE EXCEPTION 'FAIL-on-old R4 entrou depois: obteve %', v_desconto;
+    END IF;
+  END IF;
+
+  PERFORM set_config('session_replication_role', 'origin', true);
+
+  RAISE NOTICE 'PASS: Regra 4 motorista × lugar activo na data';
+END $$;
