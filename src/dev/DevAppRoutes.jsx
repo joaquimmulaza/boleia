@@ -10,6 +10,7 @@ import DevMotoristaJustaCausaCapture from '../pages/DevMotoristaJustaCausaCaptur
 import DevJustaCausaConfirmCapture from '../pages/DevJustaCausaConfirmCapture';
 import DevHotfixProdQaCapture from '../pages/DevHotfixProdQaCapture';
 import DevNotifCards269Capture from '../pages/DevNotifCards269Capture';
+import DevGeocoderEditarProcuraCapture from '../pages/DevGeocoderEditarProcuraCapture';
 import { isDevCaptureRoutesEnabled } from '../utils/devCaptureAccess';
 
 /**
@@ -39,6 +40,7 @@ export default function DevAppRoutes() {
       <Route path="justa-causa-confirm" element={<DevJustaCausaConfirmCapture />} />
       <Route path="hotfix-prod-qa-acordos" element={<DevHotfixProdQaCapture />} />
       <Route path="notif-cards-269" element={<DevNotifCards269Capture />} />
+      <Route path="geocoder-editar-procura" element={<DevGeocoderEditarProcuraCapture />} />
     </Routes>
   );
 }
