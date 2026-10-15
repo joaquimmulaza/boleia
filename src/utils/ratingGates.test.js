@@ -11,6 +11,7 @@ import {
   buildSaidaRatingPrompt,
   counterpartySeesApenasAvaliado,
   countMotoristaRatingProgress,
+  isMotoristaRatingPromptActionable,
 } from './ratingGates.js';
 
 describe('ratingGates — elegibilidade ENG#32c', () => {
@@ -137,7 +138,7 @@ describe('ratingGates — elegibilidade ENG#32c', () => {
     expect(prompts[0]?.estado).toBe('feito');
   });
 
-  it('motorista M1: 2 activos com 1.º mês confirmado no acordo → denominador 2 (0 de 2)', () => {
+  it('motorista M1: lugar por pagar entra no denominador mas não tem CTA (0 de 2)', () => {
     const prompts = buildMotoristaRatingPrompts({
       acordoId: 'a1',
       passageiros: [
@@ -167,7 +168,43 @@ describe('ratingGates — elegibilidade ENG#32c', () => {
     const { feitos, total } = countMotoristaRatingProgress(prompts);
     expect(feitos).toBe(0);
     expect(total).toBe(2);
-    expect(prompts.filter((p) => p.estado === 'pendente')).toHaveLength(2);
+    expect(prompts.find((p) => p.acordoPassageiroId === 'ap2')?.estado).toBe('aguarda_pagamento');
+    expect(prompts.filter((p) => isMotoristaRatingPromptActionable(p))).toHaveLength(1);
+  });
+
+  it('passageiro: reentrada — pagamentos de um lugar não contam para outro (mesmo passenger_id)', () => {
+    const pagamentos = [
+      {
+        acordo_passageiro_id: 'ap-antigo',
+        passenger_id: 'pax-1',
+        estado: 'em_custodia',
+        validado_em: settledAt,
+        mes_referencia: '2026-09-01',
+      },
+    ];
+    const promptNovoLugar = buildPassageiroRatingPrompt({
+      acordoId: 'a1',
+      acordoPassageiroId: 'ap-novo',
+      passageiroEstado: 'activo',
+      pagamentos,
+      avaliacoes: [],
+      now: withinWindow,
+      driverNome: 'João M.',
+      avaliadorId: 'pax-1',
+    });
+    expect(promptNovoLugar).toBeNull();
+
+    const promptLugarComPagamento = buildPassageiroRatingPrompt({
+      acordoId: 'a1',
+      acordoPassageiroId: 'ap-antigo',
+      passageiroEstado: 'activo',
+      pagamentos,
+      avaliacoes: [],
+      now: withinWindow,
+      driverNome: 'João M.',
+      avaliadorId: 'pax-1',
+    });
+    expect(promptLugarComPagamento?.estado).toBe('pendente');
   });
 
   it('buildMotoristaRatingPrompts lista N passageiros com estados', () => {

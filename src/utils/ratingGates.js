@@ -3,7 +3,7 @@
  * M1 = primeiro período pago confirmado; M2 = saída. Sem labels M1/M2 na UI.
  */
 
-/** @typedef {'pendente' | 'feito' | 'expirado'} RatingPromptEstado */
+/** @typedef {'pendente' | 'feito' | 'expirado' | 'aguarda_pagamento'} RatingPromptEstado */
 /** @typedef {'primeiro_periodo' | 'saida'} RatingMomento */
 
 export const RATING_WINDOW_DAYS = 14;
@@ -130,11 +130,19 @@ function hasSubmitted(avaliacoes, acordoPassageiroId, momento, avaliadorId) {
  */
 function pagamentosForSeat(pagamentos, acordoPassageiroId, passengerId = null) {
   return (pagamentos || []).filter((p) => {
-    if (passengerId && p.passenger_id === passengerId) return true;
-    if (acordoPassageiroId && p.acordo_passageiro_id === acordoPassageiroId) return true;
+    if (p.acordo_passageiro_id && p.acordo_passageiro_id === acordoPassageiroId) return true;
+    if (!p.acordo_passageiro_id && passengerId && p.passenger_id === passengerId) return true;
     return false;
   });
 }
+
+/** Estados que entram no denominador «X de Y» (motorista M1). */
+const MOTORISTA_M1_DENOMINADOR_ESTADOS = new Set([
+  'pendente',
+  'feito',
+  'expirado',
+  'aguarda_pagamento',
+]);
 
 /**
  * Lugares que entram no denominador M1 do motorista (activo ou saiu — não expirado/reservado).
@@ -230,18 +238,35 @@ export function buildPassageiroRatingPrompt(input) {
 export function buildMotoristaRatingPrompts(input) {
   const { acordoId, passageiros, pagamentos, avaliacoes, now, driverId } = input;
 
-  const acordoSettledAt = getFirstSettledAt(pagamentos);
-
   return filterPassageirosMotoristaRatingM1(passageiros)
     .map((p) => {
       const seatPagamentos = pagamentosForSeat(pagamentos, p.id, p.passenger_id);
-      const settledAt = getFirstSettledAt(seatPagamentos) || acordoSettledAt;
+      const settledAt = getFirstSettledAt(seatPagamentos);
       const submitted = hasSubmitted(
         avaliacoes,
         p.id,
         RATING_MOMENTO.PRIMEIRO_PERIODO,
         driverId,
       );
+      const nome = p.perfis?.nome_completo || 'Passageiro';
+      const base = {
+        acordoId,
+        acordoPassageiroId: p.id,
+        passengerId: p.passenger_id,
+        momento: RATING_MOMENTO.PRIMEIRO_PERIODO,
+        contraparteNome: nome,
+        periodoLabel: '',
+        badgeLabel: 'Pendente',
+      };
+
+      if (!settledAt) {
+        // TODO(Copywriter): copy UI para lugar no denominador M1 à espera de pagamento liquidado próprio.
+        return {
+          ...base,
+          estado: /** @type {RatingPromptEstado} */ ('aguarda_pagamento'),
+        };
+      }
+
       const estado = resolveRatingPromptEstado({
         now,
         settledAt,
@@ -253,17 +278,11 @@ export function buildMotoristaRatingPrompts(input) {
       if (!estado) return null;
 
       const mesRef = seatPagamentos.find((pg) => isPeriodoLiquidado(pg.estado))?.mes_referencia;
-      const nome = p.perfis?.nome_completo || 'Passageiro';
 
       return {
-        acordoId,
-        acordoPassageiroId: p.id,
-        passengerId: p.passenger_id,
-        momento: RATING_MOMENTO.PRIMEIRO_PERIODO,
+        ...base,
         estado,
-        contraparteNome: nome,
         periodoLabel: mesRef ? formatMesRatingCurto(mesRef) : '',
-        badgeLabel: 'Pendente',
       };
     })
     .filter(Boolean);
@@ -342,15 +361,22 @@ export function hasMotoristaRatingPendente(prompts) {
 }
 
 /**
+ * CTA M1 motorista — só lugares com período liquidado próprio (alinhado a `_rating_first_settled_at`).
+ * @param {{ estado?: string } | null | undefined} prompt
+ * @returns {boolean}
+ */
+export function isMotoristaRatingPromptActionable(prompt) {
+  return prompt?.estado === 'pendente';
+}
+
+/**
  * Contagem para copy «Avaliaste X de Y».
  * @param {object[]} prompts
  * @returns {{ feitos: number, total: number }}
  */
 export function countMotoristaRatingProgress(prompts) {
   const rows = prompts || [];
-  const m1Rows = rows.filter(
-    (p) => p.estado === 'pendente' || p.estado === 'feito' || p.estado === 'expirado',
-  );
+  const m1Rows = rows.filter((p) => MOTORISTA_M1_DENOMINADOR_ESTADOS.has(p.estado));
   return {
     feitos: rows.filter((p) => p.estado === 'feito').length,
     total: m1Rows.length,

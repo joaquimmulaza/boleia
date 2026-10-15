@@ -79,11 +79,13 @@ export default function AvaliarPassageirosLista() {
         <ul className="space-y-3" data-testid="avaliar-passageiros-lista">
           {prompts.map((p) => {
             const pendente = p.estado === 'pendente';
+            const accionavel = pendente;
             return (
               <li key={p.acordoPassageiroId}>
                 <button
                   type="button"
-                  disabled={!pendente}
+                  disabled={!accionavel}
+                  aria-disabled={!accionavel}
                   onClick={() => {
                     if (!pendente) return;
                     navigate(
@@ -102,15 +104,17 @@ export default function AvaliarPassageirosLista() {
                       {p.lugarLabel} · {p.rotaLabel}
                     </p>
                   </div>
-                  <span
-                    className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${
-                      pendente
-                        ? 'bg-amber-100 text-amber-900'
-                        : 'bg-emerald-100 text-emerald-800'
-                    }`}
-                  >
-                    {pendente ? 'Pendente' : 'Avaliado'}
-                  </span>
+                  {pendente || p.estado === 'feito' ? (
+                    <span
+                      className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${
+                        pendente
+                          ? 'bg-amber-100 text-amber-900'
+                          : 'bg-emerald-100 text-emerald-800'
+                      }`}
+                    >
+                      {pendente ? 'Pendente' : 'Avaliado'}
+                    </span>
+                  ) : null}
                   {pendente ? (
                     <ChevronRight size={18} className="text-slate-400 shrink-0" aria-hidden="true" />
                   ) : null}
