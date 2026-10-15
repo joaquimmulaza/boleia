@@ -1,10 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { setAppBadgeCount } from '../utils/appBadge';
 
 export function useNotifications(userId) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [listLoading, setListLoading] = useState(() => Boolean(userId));
+  const [listError, setListError] = useState(null);
+  const initialFetchSettledRef = useRef(false);
 
   const deleteNotification = useCallback(async (notificationId) => {
     try {
@@ -29,6 +32,10 @@ export function useNotifications(userId) {
 
   const fetchNotifications = useCallback(async () => {
     if (!userId) return;
+    const isInitialLoad = !initialFetchSettledRef.current;
+    if (isInitialLoad) {
+      setListLoading(true);
+    }
     try {
       const { data, error } = await supabase
         .from('notificacoes')
@@ -39,8 +46,19 @@ export function useNotifications(userId) {
       if (error) throw error;
       setNotifications(data || []);
       setUnreadCount((data || []).filter(n => !n.lida).length);
+      if (isInitialLoad) {
+        setListError(null);
+      }
     } catch (err) {
       console.error('Erro ao buscar notificações:', err);
+      if (isInitialLoad) {
+        setListError('Não foi possível carregar as notificações.');
+      }
+    } finally {
+      if (isInitialLoad) {
+        initialFetchSettledRef.current = true;
+        setListLoading(false);
+      }
     }
   }, [userId]);
 
@@ -81,7 +99,16 @@ export function useNotifications(userId) {
   }, [userId]);
 
   useEffect(() => {
-    if (!userId) return;
+    initialFetchSettledRef.current = false;
+    if (!userId) {
+      setNotifications([]);
+      setUnreadCount(0);
+      setListLoading(false);
+      setListError(null);
+      return undefined;
+    }
+    setListLoading(true);
+    setListError(null);
 
     fetchNotifications();
 
@@ -148,5 +175,13 @@ export function useNotifications(userId) {
     return () => document.removeEventListener('visibilitychange', onVisibilityChange);
   }, [userId, fetchNotifications]);
 
-  return { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification };
+  return {
+    notifications,
+    unreadCount,
+    listLoading,
+    listError,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+  };
 }

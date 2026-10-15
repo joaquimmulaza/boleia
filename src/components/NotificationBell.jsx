@@ -11,12 +11,21 @@ import { useAuth } from '../contexts/AuthContext';
 import OverlayShell from './OverlayShell';
 import SheetDragHandle from './SheetDragHandle';
 import NotificationListItem from './NotificationListItem';
+import NotificationListSkeleton from './NotificationListSkeleton';
 import { Button } from './ui/button';
 
 export default function NotificationBell() {
   const { user } = useAuth();
   const userId = user?.id || null;
-  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications(userId);
+  const {
+    notifications,
+    unreadCount,
+    listLoading,
+    listError,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+  } = useNotifications(userId);
   const { isSupported, permission, isSubscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications();
   const [isOpen, setIsOpen] = useState(() => {
     if (typeof window === 'undefined') {
@@ -158,8 +167,24 @@ export default function NotificationBell() {
             ) : null}
 
             <div className="flex-1 overflow-y-auto overscroll-none pb-safe min-h-0">
-              {notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-40 text-gray-500 dark:text-gray-400">
+              {listLoading ? (
+                <NotificationListSkeleton rows={3} />
+              ) : listError ? (
+                <div
+                  role="alert"
+                  className="flex flex-col items-center justify-center h-40 px-6 text-center text-gray-600 dark:text-gray-300"
+                  data-testid="notification-list-error"
+                >
+                  <p className="text-sm font-medium">{listError}</p>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Tenta fechar e abrir outra vez.
+                  </p>
+                </div>
+              ) : notifications.length === 0 ? (
+                <div
+                  className="flex flex-col items-center justify-center h-40 text-gray-500 dark:text-gray-400"
+                  data-testid="notification-list-empty"
+                >
                   <Bell size={48} className="mb-4 opacity-20" strokeWidth={1.5} aria-hidden="true" />
                   <p className="text-sm">Sem notificações no momento.</p>
                 </div>

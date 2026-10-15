@@ -44,6 +44,8 @@ describe('useNotifications', () => {
   it('fetches notifications on mount', async () => {
     const { result } = renderHook(() => useNotifications('user-123'));
 
+    expect(result.current.listLoading).toBe(true);
+
     await act(async () => {
       await new Promise(resolve => setTimeout(resolve, 10));
     });
@@ -51,7 +53,27 @@ describe('useNotifications', () => {
     expect(supabase.from).toHaveBeenCalledWith('notificacoes');
     expect(result.current.notifications).toEqual(mockNotifications);
     expect(result.current.unreadCount).toBe(1);
+    expect(result.current.listLoading).toBe(false);
+    expect(result.current.listError).toBeNull();
     expect(setAppBadgeCount).toHaveBeenCalledWith(1);
+  });
+
+  it('primeira carga falhada — listError e não trata como lista vazia', async () => {
+    supabase.from.mockImplementation(() => ({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: null, error: { message: 'fail' } }),
+    }));
+
+    const { result } = renderHook(() => useNotifications('user-123'));
+
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    });
+
+    expect(result.current.listLoading).toBe(false);
+    expect(result.current.listError).toBeTruthy();
+    expect(result.current.notifications).toEqual([]);
   });
 
   it('marks a notification as read', async () => {

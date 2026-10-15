@@ -35,10 +35,15 @@ const mockNotifications = [
       },
     ];
 
+let mockListLoading = false;
+let mockListError = null;
+
 vi.mock('../hooks/useNotifications', () => ({
   useNotifications: () => ({
     notifications: mockNotifications,
-    unreadCount: 1,
+    unreadCount: mockListLoading ? 0 : 1,
+    listLoading: mockListLoading,
+    listError: mockListError,
     markAsRead,
     markAllAsRead,
     deleteNotification,
@@ -84,6 +89,8 @@ const renderBell = () =>
 describe('NotificationBell', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockListLoading = false;
+    mockListError = null;
     mockNotifications.length = 0;
     mockNotifications.push(
       {
@@ -101,6 +108,61 @@ describe('NotificationBell', () => {
         created_at: new Date(Date.now() - 3600000).toISOString(),
       },
     );
+  });
+
+  it('primeira carga: skeleton visível e vazio oculto (sem flash «Sem notificações…»)', () => {
+    mockListLoading = true;
+    mockNotifications.length = 0;
+
+    renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+
+    expect(screen.getByTestId('notification-list-skeleton')).toBeInTheDocument();
+    expect(screen.queryByTestId('notification-list-empty')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sem notificações no momento.')).not.toBeInTheDocument();
+  });
+
+  it('?notificacoes=1 no cold load abre o sheet com skeleton enquanto carrega', () => {
+    mockListLoading = true;
+    mockNotifications.length = 0;
+    window.history.replaceState({}, '', '/?notificacoes=1');
+
+    render(
+      <MemoryRouter initialEntries={['/?notificacoes=1']}>
+        <NotificationBell />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('notification-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('notification-list-skeleton')).toBeInTheDocument();
+    expect(screen.queryByText('Sem notificações no momento.')).not.toBeInTheDocument();
+
+    window.history.replaceState({}, '', '/');
+  });
+
+  it('após fetch vazio: mostra estado vazio (não skeleton)', () => {
+    mockListLoading = false;
+    mockNotifications.length = 0;
+
+    renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+
+    expect(screen.getByTestId('notification-list-empty')).toBeInTheDocument();
+    expect(screen.getByText('Sem notificações no momento.')).toBeInTheDocument();
+    expect(screen.queryByTestId('notification-list-skeleton')).not.toBeInTheDocument();
+  });
+
+  it('erro de carga separado do estado vazio', () => {
+    mockListLoading = false;
+    mockListError = 'Não foi possível carregar as notificações.';
+    mockNotifications.length = 0;
+
+    renderBell();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificações' }));
+
+    expect(screen.getByTestId('notification-list-error')).toBeInTheDocument();
+    expect(screen.queryByTestId('notification-list-empty')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sem notificações no momento.')).not.toBeInTheDocument();
   });
 
   it('renderiza bottom sheet F7 com handle e Fechar (não side drawer)', () => {
