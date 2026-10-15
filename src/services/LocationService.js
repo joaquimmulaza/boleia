@@ -150,7 +150,6 @@ const fetchPhotonRaw = async (query, signal) => {
     lat: String(LUANDA_PHOTON_LAT),
     lon: String(LUANDA_PHOTON_LON),
     limit: String(RESULTS_LIMIT),
-    lang: 'pt',
     countrycode: 'ao',
   });
 
