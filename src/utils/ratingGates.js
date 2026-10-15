@@ -130,9 +130,21 @@ function hasSubmitted(avaliacoes, acordoPassageiroId, momento, avaliadorId) {
  */
 function pagamentosForSeat(pagamentos, acordoPassageiroId, passengerId = null) {
   return (pagamentos || []).filter((p) => {
-    if (p.acordo_passageiro_id && p.acordo_passageiro_id === acordoPassageiroId) return true;
-    if (!p.acordo_passageiro_id && passengerId && p.passenger_id === passengerId) return true;
+    if (passengerId && p.passenger_id === passengerId) return true;
+    if (acordoPassageiroId && p.acordo_passageiro_id === acordoPassageiroId) return true;
     return false;
+  });
+}
+
+/**
+ * Lugares que entram no denominador M1 do motorista (activo ou saiu — não expirado/reservado).
+ * @param {Array<{ estado?: string }>} passageiros
+ * @returns {Array<object>}
+ */
+export function filterPassageirosMotoristaRatingM1(passageiros) {
+  return (passageiros || []).filter((p) => {
+    const e = String(p.estado || '').toLowerCase();
+    return e === 'activo' || e === 'saiu';
   });
 }
 
@@ -218,14 +230,12 @@ export function buildPassageiroRatingPrompt(input) {
 export function buildMotoristaRatingPrompts(input) {
   const { acordoId, passageiros, pagamentos, avaliacoes, now, driverId } = input;
 
-  return (passageiros || [])
-    .filter((p) => {
-      const e = String(p.estado || '').toLowerCase();
-      return e === 'activo' || e === 'saiu';
-    })
+  const acordoSettledAt = getFirstSettledAt(pagamentos);
+
+  return filterPassageirosMotoristaRatingM1(passageiros)
     .map((p) => {
       const seatPagamentos = pagamentosForSeat(pagamentos, p.id, p.passenger_id);
-      const settledAt = getFirstSettledAt(seatPagamentos);
+      const settledAt = getFirstSettledAt(seatPagamentos) || acordoSettledAt;
       const submitted = hasSubmitted(
         avaliacoes,
         p.id,
@@ -338,8 +348,11 @@ export function hasMotoristaRatingPendente(prompts) {
  */
 export function countMotoristaRatingProgress(prompts) {
   const rows = prompts || [];
+  const m1Rows = rows.filter(
+    (p) => p.estado === 'pendente' || p.estado === 'feito' || p.estado === 'expirado',
+  );
   return {
     feitos: rows.filter((p) => p.estado === 'feito').length,
-    total: rows.length,
+    total: m1Rows.length,
   };
 }

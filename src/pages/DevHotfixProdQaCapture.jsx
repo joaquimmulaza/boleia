@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import AcordoPagamentosMotoristaPanel from '../components/AcordoPagamentosMotoristaPanel';
+import AcordoRatingMotBanner from '../components/rating/AcordoRatingMotBanner';
+import AcordoDetalheSheetHeader from '../components/AcordoDetalheSheetHeader';
+import { buildMotoristaRatingPrompts } from '../utils/ratingGates';
 import AcordoContratoSnapshot from '../components/AcordoContratoSnapshot';
 import AcordoPagamentoEstadoCartao from '../components/AcordoPagamentoEstadoCartao';
 import { buildAcordoContratoSnapshot } from '../utils/buildAcordoContratoSnapshot';
@@ -15,6 +18,27 @@ import { ANULACAO_MOTIVO } from '../constants/anulacaoMotivos.js';
 /**
  * Captura DEV (390px) — hotfix prod QA acordos (#276 follow-up).
  */
+function CaptureSheetFecharFocado() {
+  const fecharRef = useRef(/** @type {HTMLButtonElement | null} */ (null));
+  useEffect(() => {
+    fecharRef.current?.focus();
+  }, []);
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 overflow-hidden">
+      <AcordoDetalheSheetHeader
+        acordoId="capture-acordo"
+        estadoAcordo="activo"
+        fecharRef={fecharRef}
+        onClose={() => {}}
+        podeRegistarFaltas={false}
+        podeEncerrar={false}
+        onRegistarFalta={() => {}}
+        onEncerrar={() => {}}
+      />
+    </div>
+  );
+}
+
 export default function DevHotfixProdQaCapture() {
   const acordoB4010c7e = {
     modo_preco: 'POR_PASSAGEIRO',
@@ -42,6 +66,34 @@ export default function DevHotfixProdQaCapture() {
     valor_kz: 22000,
     valor_payout_liquido_kz: 19800,
   };
+  const settledAt = '2026-10-12T11:39:06.000Z';
+  const ratingPromptsDoisPax = buildMotoristaRatingPrompts({
+    acordoId: '0d8cb19e-b8d9-4064-a4e4-7536649ac0ee',
+    passageiros: [
+      { id: 'ap1', passenger_id: 'p1', estado: 'activo', perfis: { nome_completo: 'Passageiro A' } },
+      { id: 'ap2', passenger_id: 'p2', estado: 'activo', perfis: { nome_completo: 'Passageiro B' } },
+    ],
+    pagamentos: [
+      {
+        acordo_passageiro_id: 'ap1',
+        passenger_id: 'p1',
+        estado: 'em_custodia',
+        validado_em: settledAt,
+        mes_referencia: '2026-10-01',
+      },
+      {
+        acordo_passageiro_id: 'ap2',
+        passenger_id: 'p2',
+        estado: 'pendente_pagamento',
+        validado_em: null,
+        mes_referencia: '2026-10-01',
+      },
+    ],
+    avaliacoes: [],
+    now: settledAt,
+    driverId: 'mot-capture',
+  });
+
   const reservaSemIban = resolvePassageiroReservaPagamento({
     minhaLinha: { estado: 'reservado', passenger_id: 'pax-aa66' },
     pagamento: pagamentoAa66,
@@ -133,14 +185,32 @@ export default function DevHotfixProdQaCapture() {
               </p>
               <Button
                 type="button"
-                className="w-full min-h-11"
+                className="w-full min-h-11 disabled:opacity-100 disabled:bg-slate-200 disabled:text-slate-700 dark:disabled:bg-slate-800 dark:disabled:text-slate-200"
                 disabled={!reservaSemIban.ctaReservaPagamentoAtivo}
+                data-testid="capture-disabled-pagamento-cta"
               >
                 {reservaSemIban.ctaReservaPagamentoLabel}
               </Button>
             </div>
           ) : null}
           <AcordoPagamentoPanel pagamento={pagamentoAa66} />
+        </section>
+
+        <section data-testid="capture-rating-mot-2pax">
+          <p className="text-xs font-semibold text-slate-500 mb-2">
+            6 — Motorista · Avaliar passageiros (2 lugares, 0 de 2)
+          </p>
+          <AcordoRatingMotBanner
+            prompts={ratingPromptsDoisPax}
+            onAvaliar={() => {}}
+          />
+        </section>
+
+        <section data-testid="capture-sheet-fechar-foco">
+          <p className="text-xs font-semibold text-slate-500 mb-2">
+            7 — Detalhe acordo · Fechar focado (anel vs chip)
+          </p>
+          <CaptureSheetFecharFocado />
         </section>
       </div>
     </div>
