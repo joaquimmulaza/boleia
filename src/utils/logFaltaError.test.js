@@ -1,10 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import {
+  LOG_FALTA_MSG_DIA_VIAGEM_SERVIDOR,
+  LOG_FALTA_SQLSTATE_DIA_VIAGEM,
   LOG_FALTA_MSG_PRAZO_PASSAGEIRO,
   LOG_FALTA_SQLSTATE_PRAZO_PASSAGEIRO,
   mapLogFaltaError,
+  mapLogFaltaErrorToast,
 } from './logFaltaError.js';
 import { getFriendlyErrorMessage } from './errorHandler.js';
+import {
+  FALTA_DATA_INLINE_ERRO_DIA,
+  FALTA_SERVIDOR_ERRO_DIA,
+} from '../copy/faltasLogAbsenceCopy.js';
 
 describe('mapLogFaltaError', () => {
   it('mapeia BCF02 para a copy de prazo passageiro', () => {
@@ -14,6 +21,21 @@ describe('mapLogFaltaError', () => {
         message: 'outro texto cru',
       }),
     ).toBe(LOG_FALTA_MSG_PRAZO_PASSAGEIRO);
+  });
+
+  it('mapeia BCF03 para erro inline aprovado', () => {
+    expect(
+      mapLogFaltaError({ code: LOG_FALTA_SQLSTATE_DIA_VIAGEM, message: 'cru' }),
+    ).toBe(FALTA_DATA_INLINE_ERRO_DIA);
+  });
+
+  it('toast BCF03 usa copy de servidor aprovada', () => {
+    expect(
+      mapLogFaltaErrorToast({ code: LOG_FALTA_SQLSTATE_DIA_VIAGEM }),
+    ).toBe(FALTA_SERVIDOR_ERRO_DIA);
+    expect(getFriendlyErrorMessage({ code: LOG_FALTA_SQLSTATE_DIA_VIAGEM })).toBe(
+      FALTA_SERVIDOR_ERRO_DIA,
+    );
   });
 
   it('não devolve a copy de prazo para outros erros de log_falta', () => {
@@ -30,7 +52,9 @@ describe('mapLogFaltaError', () => {
 
     for (const err of outros) {
       expect(mapLogFaltaError(err)).toBeNull();
+      expect(mapLogFaltaErrorToast(err)).toBeNull();
       expect(getFriendlyErrorMessage(err)).not.toBe(LOG_FALTA_MSG_PRAZO_PASSAGEIRO);
+      expect(getFriendlyErrorMessage(err)).not.toBe(FALTA_SERVIDOR_ERRO_DIA);
     }
   });
 });
