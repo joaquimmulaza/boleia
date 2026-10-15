@@ -284,6 +284,7 @@ describe('MyAgreements — marketplace 1:N', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllEnvs();
     resetOverlayStackForTests();
   });
 
@@ -323,13 +324,14 @@ describe('MyAgreements — marketplace 1:N', () => {
 
     renderPage();
 
-    fireEvent.click(await screen.findByRole('button', { name: /João/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
     const snapshot = within(dialog).getByTestId('acordo-contrato-snapshot');
-    expect(within(snapshot).getByText('João')).toBeInTheDocument();
+    expect(within(snapshot).getByText('Individual')).toBeInTheDocument();
     expect(within(snapshot).queryByText('Maria')).not.toBeInTheDocument();
-    expect(within(snapshot).queryByText('Individual')).not.toBeInTheDocument();
+    expect(within(dialog).getByTestId('passenger-row-pax-activo')).toHaveTextContent('João');
+    expect(within(dialog).getByTestId('passenger-row-pax-saiu')).toHaveTextContent('Maria');
   });
 
   it('actualiza lista quando hubRefresh notifica após aceite', async () => {
@@ -353,7 +355,7 @@ describe('MyAgreements — marketplace 1:N', () => {
     });
   });
 
-  it('motorista: detalhe N=1 mostra primeiro nome em Pessoas no acordo', async () => {
+  it('motorista: detalhe N=1 mostra Individual em Pessoas no acordo', async () => {
     getAgreementsForDriver.mockResolvedValue([
       {
         ...acordoMotorista,
@@ -372,17 +374,48 @@ describe('MyAgreements — marketplace 1:N', () => {
 
     renderPage();
 
-    fireEvent.click(await screen.findByRole('button', { name: /Ana/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
     const snapshot = within(dialog).getByTestId('acordo-contrato-snapshot');
-    expect(within(snapshot).getByText('Ana')).toBeInTheDocument();
-    expect(within(snapshot).queryByText('Individual')).not.toBeInTheDocument();
+    expect(within(snapshot).getByText('Individual')).toBeInTheDocument();
     expect(within(dialog).getByTestId('passenger-row-pax-1')).toHaveTextContent('Ana');
     expect(within(dialog).queryByText('Ana Costa')).not.toBeInTheDocument();
   });
 
-  it('motorista: acordo individual na lista mostra primeiro nome do passageiro', async () => {
+  it('b4010c7e — motorista encerrado individual: Individual no contrato e Passageiros · 0', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'driver-qa' }, tipoPerfil: 'Motorista' });
+    getAgreementsForDriver.mockResolvedValue([
+      {
+        ...acordoMotorista,
+        id: 'b4010c7e',
+        estado: 'cancelado',
+        n_passageiros_contrato: 1,
+        valor_mensal_por_passageiro_kz: 22000,
+        valor_mensal_total_kz: 22000,
+        acordos_passageiros: [
+          {
+            id: 'ap-crit',
+            passenger_id: 'pax-crit',
+            estado: 'saiu',
+            quota_mensal_kz: 22000,
+            perfis: { nome_completo: 'Critiquito Prod Passenger' },
+          },
+        ],
+      },
+    ]);
+    setupPagamentosDefault(false);
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    const snapshot = within(dialog).getByTestId('acordo-contrato-snapshot');
+    expect(within(snapshot).getByText('Individual')).toBeInTheDocument();
+    expect(within(snapshot).queryByText(/Critiquito/i)).not.toBeInTheDocument();
+    expect(within(dialog).getByText(/Passageiros · 0/i)).toBeInTheDocument();
+  });
+
+  it('motorista: acordo individual na lista mostra Individual no rotulo pessoas', async () => {
     getAgreementsForDriver.mockResolvedValue([
       {
         ...acordoMotorista,
@@ -401,8 +434,68 @@ describe('MyAgreements — marketplace 1:N', () => {
 
     renderPage();
 
-    expect(await screen.findByText('Ana')).toBeInTheDocument();
-    expect(screen.queryByText('Individual')).not.toBeInTheDocument();
+    const card = await screen.findByRole('button', { name: /Talatona/i });
+    expect(within(card).getByText('Individual')).toBeInTheDocument();
+  });
+
+  it('aa66b9a6 — passageiro reservado sem IBAN: banner com CTA inactivo alinhado ao painel', async () => {
+    vi.stubEnv('VITE_PLATFORM_IBAN', '');
+    mockAuth.mockReturnValue({ user: { id: 'pax-aa66' }, tipoPerfil: 'Passageiro' });
+    const acordoReservado = {
+      ...acordoPassageiro,
+      id: 'aa66b9a6',
+      acordos_passageiros: [
+        {
+          id: 'ap-aa66',
+          passenger_id: 'pax-aa66',
+          estado: 'reservado',
+          quota_mensal_kz: 22000,
+          perfis: { nome_completo: 'Passageiro QA' },
+        },
+      ],
+    };
+    getAgreementsForPassenger.mockResolvedValue([acordoReservado]);
+    mockPagamentosGate(acordoReservado, 'pax-aa66', false);
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).getByTestId('lugar-reservado-banner')).toHaveTextContent(
+      /Lugar reservado — aguarda pagamento/i,
+    );
+    expect(within(dialog).getByTestId('iban-nao-configurado')).toBeInTheDocument();
+    const cta = within(dialog).getByTestId('lugar-reservado-pagamento-cta');
+    expect(cta).toHaveTextContent(/Pagamento ainda não disponível/i);
+    expect(cta).toBeDisabled();
+    expect(within(dialog).queryByRole('button', { name: /^Ir para pagamento$/i })).not.toBeInTheDocument();
+  });
+
+  it('passageiro reservado sem pagamento RPC: não mostra CTA e indisponível em simultâneo', async () => {
+    mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
+    const acordoReservado = {
+      ...acordoPassageiro,
+      acordos_passageiros: [
+        {
+          id: 'ap-1',
+          passenger_id: 'pax-viewer',
+          estado: 'reservado',
+          quota_mensal_kz: 22000,
+          perfis: { nome_completo: 'Tu Mesmo' },
+        },
+      ],
+    };
+    getAgreementsForPassenger.mockResolvedValue([acordoReservado]);
+    mockPagamentosGate(acordoReservado, 'pax-viewer', false);
+    getObrigacaoPagamentoPassageiro.mockResolvedValue({
+      obrigacao: { valor: 22000, valor_em_divida: 22000, quota: 22000 },
+      pagamento: null,
+    });
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Talatona/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
+    expect(within(dialog).queryByTestId('lugar-reservado-pagamento-cta')).not.toBeInTheDocument();
+    expect(within(dialog).queryByText(/Pagamento ainda não disponível/i)).not.toBeInTheDocument();
   });
 
   it('acordo com oferta flexível não mostra placeholders Origem/Destino', async () => {
@@ -999,6 +1092,7 @@ describe('MyAgreements — marketplace 1:N', () => {
   });
 
   it('passageiro reservado: chip âmbar, glossário, contagens e CTA pagamento', async () => {
+    vi.stubEnv('VITE_PLATFORM_IBAN', 'AO06004000000000000000000');
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     const acordoReservado = {
       ...acordoPassageiro,
@@ -1186,6 +1280,7 @@ describe('MyAgreements — marketplace 1:N', () => {
   });
 
   it('passageiro reservado: CTA pagamento faz scroll ao painel', async () => {
+    vi.stubEnv('VITE_PLATFORM_IBAN', 'AO06004000000000000000000');
     mockAuth.mockReturnValue({ user: { id: 'pax-viewer' }, tipoPerfil: 'Passageiro' });
     const acordoReservado = {
       ...acordoPassageiro,

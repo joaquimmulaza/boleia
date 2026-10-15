@@ -308,6 +308,14 @@ export function getPlatformIban() {
 }
 
 /**
+ * Transferência manual disponível (IBAN plataforma configurado).
+ * @returns {boolean}
+ */
+export function isTransferenciaPlataformaDisponivel() {
+  return Boolean(getPlatformIban());
+}
+
+/**
  * URL assinada para preview do comprovativo (bucket privado).
  * @param {string | null | undefined} storagePath
  * @returns {Promise<string | null>}

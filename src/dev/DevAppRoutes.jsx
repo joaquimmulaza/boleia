@@ -8,6 +8,7 @@ import DevPagamentoPanelCapture from '../pages/DevPagamentoPanelCapture';
 import DevAcordosChipCapture from '../pages/DevAcordosChipCapture';
 import DevMotoristaJustaCausaCapture from '../pages/DevMotoristaJustaCausaCapture';
 import DevJustaCausaConfirmCapture from '../pages/DevJustaCausaConfirmCapture';
+import DevHotfixProdQaCapture from '../pages/DevHotfixProdQaCapture';
 import DevNotifCards269Capture from '../pages/DevNotifCards269Capture';
 import { isDevCaptureRoutesEnabled } from '../utils/devCaptureAccess';
 
@@ -35,6 +36,7 @@ export default function DevAppRoutes() {
       <Route path="acordos-chips" element={<DevAcordosChipCapture />} />
       <Route path="motorista-jc-passageiro" element={<DevMotoristaJustaCausaCapture />} />
       <Route path="justa-causa-confirm" element={<DevJustaCausaConfirmCapture />} />
+      <Route path="hotfix-prod-qa-acordos" element={<DevHotfixProdQaCapture />} />
       <Route path="notif-cards-269" element={<DevNotifCards269Capture />} />
     </Routes>
   );

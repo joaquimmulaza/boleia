@@ -4,15 +4,21 @@ import AcordoPagamentoPanel from './AcordoPagamentoPanel.jsx';
 
 vi.mock('../services/PaymentService', () => ({
   getPlatformIban: vi.fn(() => 'AO06004000000000000000000'),
+  isTransferenciaPlataformaDisponivel: vi.fn(() => true),
   uploadComprovativo: vi.fn(),
 }));
 
-import { getPlatformIban, uploadComprovativo } from '../services/PaymentService';
+import {
+  getPlatformIban,
+  isTransferenciaPlataformaDisponivel,
+  uploadComprovativo,
+} from '../services/PaymentService';
 
 describe('AcordoPagamentoPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getPlatformIban).mockReturnValue('AO06004000000000000000000');
+    vi.mocked(isTransferenciaPlataformaDisponivel).mockReturnValue(true);
   });
 
   it('acordo activo: resumo Valor a pagar sem desagregação proporcional', () => {
@@ -84,6 +90,7 @@ describe('AcordoPagamentoPanel', () => {
 
   it('sem IBAN: empty state e botão desactivado', () => {
     vi.mocked(getPlatformIban).mockReturnValue(null);
+    vi.mocked(isTransferenciaPlataformaDisponivel).mockReturnValue(false);
 
     render(
       <AcordoPagamentoPanel
