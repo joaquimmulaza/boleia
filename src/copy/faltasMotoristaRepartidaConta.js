@@ -1,18 +1,22 @@
-/**
- * TODO Copywriter: copy final da conta quando uma falta Motorista desconta em cada passageiro activo.
- * Placeholder até revisão de copy — usar {@link formatFaltaMotoristaRepartidaConta} na UI.
- */
-export const FALTA_MOTORISTA_REPARTIDA_CONTA_PLACEHOLDER = '{nPassageiros} · {totalKz}';
+import { formatKwanza } from '../utils/formatKwanza';
+
+/** Copy aprovado PM+Critiquito — falta Motorista, vista motorista (n = 1). */
+export const FALTA_MOTORISTA_CONTA_SINGULAR = '1 passageiro · {total} Kz';
+
+/** Copy aprovado PM+Critiquito — falta Motorista, vista motorista (n ≥ 2). */
+export const FALTA_MOTORISTA_CONTA_PLURAL = '{n} passageiros · {total} Kz no total';
 
 /**
+ * Linha da conta no card (total = desconto × passageiros activos nesse dia).
  * @param {number} nPassageirosActivos
- * @param {string} totalFormatado — ex. «1500» ou «1 500» (já formatado com formatKwanza)
+ * @param {number} totalKz
  * @returns {string}
  */
-export function formatFaltaMotoristaRepartidaConta(nPassageirosActivos, totalFormatado) {
+export function formatFaltaMotoristaRepartidaConta(nPassageirosActivos, totalKz) {
   const n = Number(nPassageirosActivos) || 0;
-  const rotuloPassageiros = n === 1 ? '1 passageiro' : `${n} passageiros`;
-  return FALTA_MOTORISTA_REPARTIDA_CONTA_PLACEHOLDER
-    .replace('{nPassageiros}', rotuloPassageiros)
-    .replace('{totalKz}', `${totalFormatado} Kz`);
+  const total = formatKwanza(totalKz);
+  if (n === 1) {
+    return FALTA_MOTORISTA_CONTA_SINGULAR.replace('{total}', total);
+  }
+  return FALTA_MOTORISTA_CONTA_PLURAL.replace('{n}', String(n)).replace('{total}', total);
 }

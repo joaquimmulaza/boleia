@@ -1,6 +1,7 @@
 import { isDevCaptureRoutesEnabled } from '../utils/devCaptureAccess';
 import {
   faltasCaptureGetAbsences,
+  faltasCaptureGetAgreementsForDriver,
   faltasCaptureGetAgreementsForPassenger,
   faltasCaptureListPagamentos,
 } from './faltasCaptureFixtures';
@@ -10,7 +11,9 @@ function isFaltasCaptureUrl() {
   if (typeof window === 'undefined') return false;
   const path = window.location.pathname;
   return path.includes('/__dev/faltas-capture/')
-    || path.includes('/__dev/faltas-capture-liquidado/');
+    || path.includes('/__dev/faltas-capture-liquidado/')
+    || path.includes('/__dev/faltas-capture-motorista/')
+    || path.includes('/__dev/faltas-capture-motorista-1pax/');
 }
 
 /**
@@ -27,5 +30,6 @@ export function getFaltasCaptureDevBridge() {
     getAbsences: faltasCaptureGetAbsences,
     listPagamentosByAcordo: faltasCaptureListPagamentos,
     getAgreementsForPassenger: faltasCaptureGetAgreementsForPassenger,
+    getAgreementsForDriver: faltasCaptureGetAgreementsForDriver,
   };
 }

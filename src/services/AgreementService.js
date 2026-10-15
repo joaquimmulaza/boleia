@@ -744,6 +744,11 @@ export async function listAdendaHistorico(acordoId) {
  * @param {string} driverId
  */
 export async function getAgreementsForDriver(driverId) {
+  const dev = getFaltasCaptureDevBridge();
+  if (dev?.getAgreementsForDriver) {
+    return dev.getAgreementsForDriver(driverId);
+  }
+
   await applyDueAdendasBestEffort(null);
   await applyDueTerminationsBestEffort(null);
   await applyDueNonRenewalsBestEffort(null);

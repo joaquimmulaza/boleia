@@ -304,10 +304,7 @@ const AbsenceTracker = () => {
               tipoPerfil,
             );
             const contaMotoristaRepartida = isMotoristaFalta
-              ? formatFaltaMotoristaRepartidaConta(
-                nPassageirosActivos,
-                formatKwanza(descontoLinhaKz),
-              )
+              ? formatFaltaMotoristaRepartidaConta(nPassageirosActivos, descontoLinhaKz)
               : null;
             return (
               <div
@@ -340,7 +337,7 @@ const AbsenceTracker = () => {
                     {contaMotoristaRepartida ? (
                       <span
                         data-testid="falta-motorista-repartida-conta"
-                        className="text-[13px] leading-[18px] text-slate-500 dark:text-slate-400"
+                        className="min-w-0 basis-full whitespace-normal break-words text-[13px] leading-[18px] text-slate-500 dark:text-slate-400"
                       >
                         {contaMotoristaRepartida}
                       </span>

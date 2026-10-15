@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import AbsenceTracker from './AbsenceTracker';
 import { expectNoUserFacingJargon } from '../test/jargonBan';
 import { FALTA_FUTURA_CHIP } from '../copy/faltasFutureChip';
+import { formatFaltaMotoristaRepartidaConta } from '../copy/faltasMotoristaRepartidaConta';
 
 const mockNavigate = vi.fn();
 let mockAcordoId = 'acordo-uuid-001';
@@ -302,11 +303,52 @@ describe('AbsenceTracker — marketplace', () => {
     ]);
     render(<AbsenceTracker />);
     expect(await screen.findAllByTestId('absence-card')).toHaveLength(1);
-    expect(screen.getByTestId('desconto-falta-total')).toHaveTextContent('1500');
-    expect(screen.getByTestId('falta-motorista-repartida-conta')).toHaveTextContent(
-      '3 passageiros · 1500 Kz',
-    );
-    expect(screen.getByTestId('desconto-falta-amount')).toHaveTextContent('1500');
+    const totalEl = screen.getByTestId('desconto-falta-total');
+    const contaEl = screen.getByTestId('falta-motorista-repartida-conta');
+    expect(totalEl).toHaveTextContent('1500');
+    expect(contaEl).toHaveTextContent(formatFaltaMotoristaRepartidaConta(3, 1500));
+    expect(contaEl.textContent).toContain(totalEl.textContent.replace(/\s*Kz\s*$/, '').trim());
+    expect(screen.getByTestId('desconto-falta-amount').textContent).toBe(totalEl.textContent);
+  });
+
+  it('motorista: 1 passageiro activo — copy singular e total alinhado', async () => {
+    mockAuth = {
+      user: { id: 'driver-1' },
+      tipoPerfil: 'Motorista',
+      profileLoading: false,
+    };
+    mockListPagamentosByAcordo.mockResolvedValue([
+      {
+        passenger_id: 'pax-1',
+        estado: 'em_custodia',
+        mes_referencia: MES_REF_OUT,
+        desconto_faltas_kz: 0,
+      },
+    ]);
+    mockGetAgreementsForDriver.mockResolvedValue([
+      {
+        id: 'acordo-uuid-001',
+        estado: 'activo',
+        acordos_passageiros: [{ passenger_id: 'pax-1', estado: 'activo' }],
+      },
+    ]);
+    mockGetAbsences.mockResolvedValue([
+      {
+        id: 'f-mot',
+        id_acordo: 'acordo-uuid-001',
+        data_falta: FALTA_ONTEM,
+        tipo: 'Motorista',
+        desconto_kz: 500,
+        viagem: 'ambas',
+      },
+    ]);
+    render(<AbsenceTracker />);
+    const totalEl = await screen.findByTestId('desconto-falta-total');
+    const contaEl = screen.getByTestId('falta-motorista-repartida-conta');
+    expect(totalEl).toHaveTextContent('500');
+    expect(contaEl).toHaveTextContent(formatFaltaMotoristaRepartidaConta(1, 500));
+    expect(contaEl.textContent).toContain(totalEl.textContent.replace(/\s*Kz\s*$/, '').trim());
+    expect(contaEl.textContent).not.toContain('no total');
   });
 
   it('refetch pagamentos após registar falta', async () => {
