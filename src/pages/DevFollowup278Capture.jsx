@@ -67,6 +67,21 @@ export default function DevFollowup278Capture() {
           </ul>
         </section>
 
+        <section
+          data-testid="capture-chip-jc-355"
+          className="mx-auto w-[355px] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3"
+        >
+          <p className="text-xs font-semibold text-slate-500 mb-2">355px — chip justa causa (1 linha)</p>
+          <Badge
+            variant="secondary"
+            className={`whitespace-nowrap text-xs font-bold ${chipClassFimLugar(
+              labelChipFimLugar({ estado: 'saiu', lugar_rescisao_modo: 'justa_causa' }, null),
+            )}`}
+          >
+            {labelChipFimLugar({ estado: 'saiu', lugar_rescisao_modo: 'justa_causa' }, null)}
+          </Badge>
+        </section>
+
         <section data-testid="capture-lista-pax" className="space-y-3">
           <p className="text-xs font-semibold text-slate-500">P1-e — lista passageiro (A saiu)</p>
           <p className="text-xs font-bold uppercase tracking-wide text-slate-400">

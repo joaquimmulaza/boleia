@@ -140,6 +140,7 @@ import {
 import {
   LISTA_SECCAO_ACTIVOS,
   LISTA_SECCAO_ENCERRADOS,
+  TOAST_JC_PASSAGEIRO_LUGAR_TERMINADO,
 } from '../constants/acordoFollowup278Copy.js';
 import { copyToastJustaCausaPassageiro } from '../utils/passageiroJustaCausaToast.js';
 import {
@@ -1090,7 +1091,7 @@ const MyAgreements = () => {
           acordoEstadoApos: estado,
           lugaresVivosAntes: lugaresVivosAntesJc,
         });
-        text = toastJc || 'Acordo rescindido por justa causa.';
+        text = toastJc || TOAST_JC_PASSAGEIRO_LUGAR_TERMINADO;
       }
 
       setMessage({ type: 'success', text });

@@ -1,6 +1,10 @@
 /**
- * Copy follow-up #278 — pendente OK PM (alterar num único sítio).
+ * Copy estados acordo/lugar — P0_ESTADOS_COPY v1.12 (FINAL PM).
  */
+
+/** Contactos bloqueados — helper «próximo passo» (passageiro reservado/pendente). */
+export const CONTACTOS_BLOQUEADOS_PROXIMO_PASSO =
+  'Próximo passo: envia o comprovativo de transferência na secção Pagamento mensal.';
 
 /** Toast — passageiro JC, acordo continua activo para outros. */
 export const TOAST_JC_PASSAGEIRO_LUGAR_TERMINADO =
@@ -8,7 +12,7 @@ export const TOAST_JC_PASSAGEIRO_LUGAR_TERMINADO =
 
 /** Toast — passageiro JC, último lugar / acordo encerrado. */
 export const TOAST_JC_PASSAGEIRO_ACORDO_ENCERRADO =
-  'Saíste por justa causa. O acordo foi encerrado.';
+  'Terminaste o teu lugar por justa causa. O acordo foi encerrado.';
 
 /** Chip neutro — saída voluntária. */
 export const CHIP_LUGAR_SAiu = 'Saiu';
