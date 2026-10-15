@@ -1,0 +1,159 @@
+-- Prova PostgreSQL — dias de viagem do acordo (Regra 5 P0)
+\set ON_ERROR_STOP on
+
+CREATE OR REPLACE FUNCTION public._dias_acordo_expect_sqlstate(p_label text, p_sql text, p_code text)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path TO 'public'
+AS $fn$
+BEGIN
+  EXECUTE p_sql;
+  RAISE EXCEPTION 'FAIL %: devia falhar com %', p_label, p_code;
+EXCEPTION
+  WHEN OTHERS THEN
+    IF SQLSTATE IS DISTINCT FROM p_code THEN
+      RAISE EXCEPTION 'FAIL %: esperava %, obteve % — %', p_label, p_code, SQLSTATE, SQLERRM;
+    END IF;
+END;
+$fn$;
+
+\echo '=== dias acordo — count_dias_viagem_mes Ter–Sex out/2026 ==='
+DO $$
+BEGIN
+  IF public.count_dias_viagem_mes('2026-10-01'::date, ARRAY[2, 3, 4, 5]) <> 18 THEN
+    RAISE EXCEPTION 'FAIL: out/2026 Ter–Sex devia ter 18 dias, obteve %',
+      public.count_dias_viagem_mes('2026-10-01'::date, ARRAY[2, 3, 4, 5]);
+  END IF;
+  RAISE NOTICE 'PASS: count_dias_viagem_mes [2,3,4,5] out/2026 = 18';
+END $$;
+
+\echo '=== dias acordo — fixture acordo + custódia ==='
+DO $$
+DECLARE
+  v_driver uuid := 'da111111-1111-4111-8111-111111111111';
+  v_pax uuid := 'da222222-2222-4222-8222-222222222222';
+  v_veiculo uuid;
+  v_oferta uuid;
+  v_oferta_ter_sex uuid;
+  v_procura uuid;
+  v_acordo uuid := 'da444444-4444-4444-8444-444444444444';
+  v_acordo_ts uuid := 'da444445-4444-4444-8444-444444444445';
+  v_ap uuid := 'da555555-5555-4555-8555-555555555555';
+  v_ap_ts uuid := 'da555556-5555-4555-8555-555555555556';
+  v_pg uuid := 'da666666-6666-4666-8666-666666666666';
+  v_pg_ts uuid := 'da666667-6666-4666-8666-666666666667';
+  v_row public.faltas%ROWTYPE;
+  v_ins public.faltas%ROWTYPE;
+BEGIN
+  PERFORM set_config('session_replication_role', 'replica', true);
+
+  INSERT INTO auth.users (id, email) VALUES
+    (v_driver, 'dias-acordo-driver@test'),
+    (v_pax, 'dias-acordo-pax@test')
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO public.perfis (id, nome_completo, telefone, tipo_perfil) VALUES
+    (v_driver, 'Dias Driver', '931000101', 'Motorista'),
+    (v_pax, 'Dias Pax', '931000102', 'Passageiro')
+  ON CONFLICT (id) DO NOTHING;
+
+  INSERT INTO public.veiculos (id_motorista, marca_modelo, matricula, capacidade_total, vagas_passageiros)
+  VALUES (v_driver, 'Proof', 'DA-001', 4, 3)
+  RETURNING id INTO v_veiculo;
+
+  INSERT INTO public.ofertas_capacidade (
+    id, driver_id, veiculo_id, flexibilidade_rota, departure_time, dias_semana,
+    vagas_disponiveis, vagas_totais, modo_preco, valor_mensal_ask_kz, estado
+  ) VALUES (
+    gen_random_uuid(), v_driver, v_veiculo, true, '07:00', ARRAY[1, 2, 3, 4, 5],
+    3, 3, 'POR_PASSAGEIRO', 22000, 'disponivel'
+  ) RETURNING id INTO v_oferta;
+
+  INSERT INTO public.ofertas_capacidade (
+    id, driver_id, veiculo_id, flexibilidade_rota, departure_time, dias_semana,
+    vagas_disponiveis, vagas_totais, modo_preco, valor_mensal_ask_kz, estado
+  ) VALUES (
+    gen_random_uuid(), v_driver, v_veiculo, true, '07:00', ARRAY[2, 3, 4, 5],
+    3, 3, 'POR_PASSAGEIRO', 22000, 'disponivel'
+  ) RETURNING id INTO v_oferta_ter_sex;
+
+  INSERT INTO public.procuras (id, owner_id, preferred_time, n_candidato, estado)
+  VALUES (gen_random_uuid(), v_pax, '07:30', 1, 'activa')
+  RETURNING id INTO v_procura;
+
+  INSERT INTO public.acordos (
+    id, oferta_id, procura_id, driver_id, modo_preco, n_passageiros_contrato,
+    valor_mensal_total_kz, valor_mensal_por_passageiro_kz, dias_uteis_mes, estado
+  ) VALUES (
+    v_acordo, v_oferta, v_procura, v_driver, 'POR_PASSAGEIRO', 1,
+    22000, 22000, 22, 'activo'
+  );
+
+  INSERT INTO public.acordos (
+    id, oferta_id, procura_id, driver_id, modo_preco, n_passageiros_contrato,
+    valor_mensal_total_kz, valor_mensal_por_passageiro_kz, dias_uteis_mes, estado
+  ) VALUES (
+    v_acordo_ts, v_oferta_ter_sex, v_procura, v_driver, 'POR_PASSAGEIRO', 1,
+    22000, 22000, 18, 'activo'
+  );
+
+  INSERT INTO public.acordos_passageiros (
+    id, acordo_id, passenger_id, estado, quota_mensal_kz, ordem_insercao
+  ) VALUES
+    (v_ap, v_acordo, v_pax, 'activo', 22000, 0),
+    (v_ap_ts, v_acordo_ts, v_pax, 'activo', 22000, 0);
+
+  INSERT INTO public.pagamentos_acordo (
+    id, acordo_passageiro_id, acordo_id, passenger_id, driver_id,
+    valor_kz, valor_quota_original_kz, valor_payout_liquido_kz, take_rate_pct, mes_referencia, estado
+  ) VALUES
+    (v_pg, v_ap, v_acordo, v_pax, v_driver, 22000, 22000, 19800, 0.10, '2026-10-01', 'em_custodia'),
+    (v_pg_ts, v_ap_ts, v_acordo_ts, v_pax, v_driver, 22000, 22000, 19800, 0.10, '2026-10-01', 'em_custodia');
+
+  PERFORM set_config('session_replication_role', 'origin', true);
+  PERFORM set_config('request.jwt.claim.sub', v_driver::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+  SET LOCAL ROLE authenticated;
+
+  -- (1) dia útil Seg–Sex com desconto
+  SELECT * INTO v_row FROM public.log_falta(
+    v_acordo, '2026-10-14'::date, 'Motorista', NULL, NULL, 'ambas'
+  );
+  IF v_row.desconto_kz IS NULL OR v_row.desconto_kz <= 0 THEN
+    RAISE EXCEPTION 'FAIL (1): desconto devia ser > 0 num dia de viagem';
+  END IF;
+
+  -- (2) sábado rejeitado
+  PERFORM public._dias_acordo_expect_sqlstate(
+    '(2) sábado',
+    format(
+      $q$SELECT public.log_falta(%L, '2026-10-10'::date, 'Motorista', NULL, NULL, 'ambas')$q$,
+      v_acordo
+    ),
+    'BCF03'
+  );
+
+  -- (3) INSERT directo sábado → desconto 0 (defesa trigger; bypass RLS como postgres)
+  RESET ROLE;
+  SET LOCAL ROLE postgres;
+  INSERT INTO public.faltas (id_acordo, data_falta, tipo, passenger_id, viagem)
+  VALUES (v_acordo, '2026-10-11'::date, 'Passageiro', v_pax, 'ambas')
+  RETURNING * INTO v_ins;
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', v_driver::text, true);
+  IF COALESCE(v_ins.desconto_kz, -1) <> 0 THEN
+    RAISE EXCEPTION 'FAIL (3): INSERT sábado devia desconto_kz=0, obteve %', v_ins.desconto_kz;
+  END IF;
+
+  -- (4) Ter–Sex rejeita segunda
+  PERFORM public._dias_acordo_expect_sqlstate(
+    '(4) segunda Ter–Sex',
+    format(
+      $q$SELECT public.log_falta(%L, '2026-10-05'::date, 'Motorista', NULL, NULL, 'ambas')$q$,
+      v_acordo_ts
+    ),
+    'BCF03'
+  );
+
+  RAISE NOTICE 'PASS: log_falta + handle_falta_desconto dias de viagem';
+END $$;
