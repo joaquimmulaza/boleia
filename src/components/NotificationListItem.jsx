@@ -1,6 +1,11 @@
 import React from 'react';
 import { CheckCircle, Info, AlertCircle } from 'lucide-react';
 import NotificationRowKebab from './NotificationRowKebab';
+import {
+  resolveNotificationMensagem,
+  resolveNotificationTitulo,
+  resolveNotificationTipo,
+} from '../utils/notificationDisplayMensagem';
 
 /**
  * @param {{ type?: string }} props
@@ -46,6 +51,13 @@ export default function NotificationListItem({
   onDelete,
   showKebab = true,
 }) {
+  const tituloVisivel = resolveNotificationTitulo(notif);
+  const mensagemVisivel = resolveNotificationMensagem(notif);
+  const tipoIcon = resolveNotificationTipo(notif) || notif.tipo;
+  const ariaLabel = tituloVisivel
+    ? `${tituloVisivel}. ${mensagemVisivel}`
+    : mensagemVisivel;
+
   let timeLabel = 'agora mesmo';
   if (notif.created_at) {
     const date = new Date(notif.created_at);
@@ -72,7 +84,7 @@ export default function NotificationListItem({
   return (
     <li
       role={onActivate ? 'button' : undefined}
-      aria-label={onActivate ? notif.mensagem : undefined}
+      aria-label={onActivate ? ariaLabel : undefined}
       tabIndex={onActivate ? 0 : undefined}
       onKeyDown={
         onActivate
@@ -91,18 +103,41 @@ export default function NotificationListItem({
       onClick={onActivate}
     >
       <div className="mt-0.5 shrink-0">
-        <NotificationIcon type={notif.tipo} />
+        <NotificationIcon type={tipoIcon} />
       </div>
       <div className="flex-1 min-w-0">
-        <p
-          className={`text-sm leading-relaxed ${
-            !notif.lida
-              ? 'font-semibold text-gray-900 dark:text-gray-100'
-              : 'text-gray-600 dark:text-gray-300'
-          }`}
-        >
-          {notif.mensagem}
-        </p>
+        {tituloVisivel ? (
+          <>
+            <p
+              className={`text-sm leading-snug ${
+                !notif.lida
+                  ? 'font-semibold text-gray-900 dark:text-gray-100'
+                  : 'font-medium text-gray-800 dark:text-gray-200'
+              }`}
+            >
+              {tituloVisivel}
+            </p>
+            <p
+              className={`mt-1 text-sm leading-relaxed ${
+                !notif.lida
+                  ? 'text-gray-800 dark:text-gray-200'
+                  : 'text-gray-600 dark:text-gray-300'
+              }`}
+            >
+              {mensagemVisivel}
+            </p>
+          </>
+        ) : (
+          <p
+            className={`text-sm leading-relaxed ${
+              !notif.lida
+                ? 'font-semibold text-gray-900 dark:text-gray-100'
+                : 'text-gray-600 dark:text-gray-300'
+            }`}
+          >
+            {mensagemVisivel}
+          </p>
+        )}
         <p className="mt-1.5 text-xs font-medium text-gray-400 dark:text-gray-500">{timeLabel}</p>
       </div>
       {!notif.lida ? (

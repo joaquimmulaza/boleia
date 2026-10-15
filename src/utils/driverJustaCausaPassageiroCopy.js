@@ -1,0 +1,153 @@
+import { formatPrimeiroNome } from './primeiroNome';
+import { formatCivilDateLuandaPtFromIso } from './rescisaoDisplay';
+
+/**
+ * v1.10 — motorista, detalhe do acordo, passageiro invocou justa causa (outros vivos).
+ *
+ * @param {{ nome: string, dataFormatada: string }} params
+ * @returns {string}
+ */
+/**
+ * @param {{ nome: string, dataFormatada: string, omitOutrosContinuam?: boolean }} params
+ * @returns {string}
+ */
+export function copyMotoristaJustaCausaParcial({ nome, dataFormatada, omitOutrosContinuam = false }) {
+  const base =
+    `O lugar de ${nome} terminou por justa causa a ${dataFormatada}. `
+    + 'Recebes a parte do mês desse lugar até essa data, menos a comissão da Boleia Certa.';
+  if (omitOutrosContinuam) {
+    return `${base} Não há penalização para ti.`;
+  }
+  return `${base} Os outros passageiros continuam no acordo e não há penalização para ti.`;
+}
+
+/**
+ * v1.10 — motorista, último passageiro por justa causa (acordo encerrado).
+ *
+ * @param {{ nome: string, dataFormatada: string }} params
+ * @returns {string}
+ */
+export function copyMotoristaJustaCausaUltimoPassageiro({ nome, dataFormatada }) {
+  return `O lugar de ${nome} terminou por justa causa a ${dataFormatada}, e o acordo foi encerrado porque era o último passageiro. Recebes a parte do mês até essa data, menos a comissão da Boleia Certa. A tua oferta continua publicada e não há penalização para ti.`;
+}
+
+/**
+ * @param {string | null | undefined} iso
+ * @returns {string}
+ */
+function dataRescisaoLugarFormatada(iso) {
+  return formatCivilDateLuandaPtFromIso(iso) || '';
+}
+
+/**
+ * Instantâneo da saída do lugar (justa causa ou saída voluntária).
+ *
+ * @param {object | null | undefined} p
+ * @returns {number | null} ms epoch ou null se lugar ainda vivo
+ */
+function timestampSaidaLugar(p) {
+  if (!p) return null;
+  const e = String(p.estado || '').toLowerCase();
+  if (e === 'activo' || e === 'reservado') return null;
+  if (p.lugar_rescisao_em) return new Date(p.lugar_rescisao_em).getTime();
+  if (p.updated_at) return new Date(p.updated_at).getTime();
+  return 0;
+}
+
+/**
+ * Saída mais recente entre todos os lugares (qualquer modo).
+ *
+ * @param {object[] | null | undefined} linhas
+ * @returns {object | null}
+ */
+function pickLinhaSaidaMaisRecente(linhas) {
+  let best = null;
+  let bestT = -1;
+  for (const row of linhas || []) {
+    const t = timestampSaidaLugar(row);
+    if (t == null) continue;
+    if (!best || t >= bestT) {
+      best = row;
+      bestT = t;
+    }
+  }
+  return best;
+}
+
+/**
+ * @param {object | null | undefined} pax
+ * @returns {string}
+ */
+function nomeMotoristaUi(pax) {
+  const raw = pax?.perfis?.nome_completo || pax?.nome_completo || 'Passageiro';
+  return formatPrimeiroNome(raw) || 'Passageiro';
+}
+
+/**
+ * Alertas no detalhe do acordo (vista motorista).
+ *
+ * @param {object | null | undefined} acordo
+ * @param {object[] | null | undefined} linhas
+ * @returns {{ id: string, variant: 'B' | 'B2', corpo: string }[]}
+ */
+export function resolveMotoristaJustaCausaPassageiroAlerts(acordo, linhas) {
+  if (!acordo || !Array.isArray(linhas) || linhas.length === 0) {
+    return [];
+  }
+
+  const estado = String(acordo.estado || '').toLowerCase();
+  const motivo = acordo.encerramento_motivo;
+  const ultimoEncerrado =
+    estado === 'cancelado' && motivo === 'sem_lugares_vivos';
+
+  const jcLinhas = linhas.filter(
+    (p) => String(p.lugar_rescisao_modo || '').toLowerCase() === 'justa_causa',
+  );
+  const ultimaSaidaGlobalRow = ultimoEncerrado ? pickLinhaSaidaMaisRecente(linhas) : null;
+  const ultimaSaidaJcRow = ultimoEncerrado ? pickLinhaSaidaMaisRecente(jcLinhas) : null;
+  const ultimaGlobalId = ultimaSaidaGlobalRow
+    ? String(ultimaSaidaGlobalRow.id || ultimaSaidaGlobalRow.passenger_id || '')
+    : '';
+  const ultimaJcId = ultimaSaidaJcRow
+    ? String(ultimaSaidaJcRow.id || ultimaSaidaJcRow.passenger_id || '')
+    : '';
+
+  return jcLinhas
+    .map((p) => {
+      const nome = nomeMotoristaUi(p);
+      const dataFormatada = dataRescisaoLugarFormatada(p.lugar_rescisao_em);
+      const rowId = String(p.id || p.passenger_id);
+
+      /** @type {'B' | 'B2' | null} */
+      let variant = 'B';
+      if (ultimoEncerrado) {
+        if (rowId === ultimaJcId && rowId === ultimaGlobalId) {
+          variant = 'B2';
+        } else if (rowId === ultimaJcId && rowId !== ultimaGlobalId) {
+          variant = 'B';
+        } else {
+          return null;
+        }
+      }
+
+      const corpo =
+        variant === 'B2'
+          ? copyMotoristaJustaCausaUltimoPassageiro({ nome, dataFormatada })
+          : copyMotoristaJustaCausaParcial({
+            nome,
+            dataFormatada,
+            omitOutrosContinuam: ultimoEncerrado,
+          });
+      return {
+        id: rowId,
+        variant,
+        corpo,
+      };
+    })
+    .filter(Boolean)
+    .filter((a) => {
+      if (ultimoEncerrado) return true;
+      if (a.variant === 'B2') return false;
+      return estado === 'activo' || estado === 'cancelamento_pendente';
+    });
+}
