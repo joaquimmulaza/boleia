@@ -1,5 +1,6 @@
 import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { isDevCaptureRoutesEnabled } from '../utils/devCaptureAccess';
 import Profile from '../pages/Profile';
 import DevPerfilPushPreview from '../pages/DevPerfilPushPreview';
 import DevPerfilCaptureShell from '../pages/DevPerfilCapture';
@@ -13,7 +14,7 @@ import DevNotifCards269Capture from '../pages/DevNotifCards269Capture';
 import DevNotifV112Capture from '../pages/DevNotifV112Capture';
 import DevGeocoderEditarProcuraCapture from '../pages/DevGeocoderEditarProcuraCapture';
 import DevGeocoderEditarGrupoCapture from '../pages/DevGeocoderEditarGrupoCapture';
-import { isDevCaptureRoutesEnabled } from '../utils/devCaptureAccess';
+import DevFaltasCapture from './DevFaltasCapture';
 
 /**
  * Rotas relativas a `/__dev/*` (lazy + `<Route path="/__dev/*" />` em App.jsx).
@@ -45,6 +46,10 @@ export default function DevAppRoutes() {
       <Route path="notif-v112" element={<DevNotifV112Capture />} />
       <Route path="geocoder-editar-procura" element={<DevGeocoderEditarProcuraCapture />} />
       <Route path="geocoder-editar-grupo" element={<DevGeocoderEditarGrupoCapture />} />
+      <Route path="faltas-capture/:acordoId" element={<DevFaltasCapture />} />
+      <Route path="faltas-capture-liquidado/:acordoId" element={<DevFaltasCapture />} />
+      <Route path="faltas-capture-motorista/:acordoId" element={<DevFaltasCapture />} />
+      <Route path="faltas-capture-motorista-1pax/:acordoId" element={<DevFaltasCapture />} />
     </Routes>
   );
 }
