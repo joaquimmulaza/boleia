@@ -1445,7 +1445,7 @@ const MyAgreements = () => {
                 </p>
                 <Button
                   type="button"
-                  className="w-full min-h-11"
+                  className="w-full min-h-11 disabled:opacity-100 disabled:bg-slate-200 disabled:text-slate-700 dark:disabled:bg-slate-800 dark:disabled:text-slate-200"
                   data-testid="lugar-reservado-pagamento-cta"
                   disabled={!reservaPagamentoUi.ctaReservaPagamentoAtivo}
                   onClick={() => scrollToAcordoFocus('pagamento')}

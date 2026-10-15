@@ -10,6 +10,7 @@ import {
   buildMotoristaRatingPrompts,
   buildSaidaRatingPrompt,
   counterpartySeesApenasAvaliado,
+  countMotoristaRatingProgress,
 } from './ratingGates.js';
 
 describe('ratingGates — elegibilidade ENG#32c', () => {
@@ -134,6 +135,40 @@ describe('ratingGates — elegibilidade ENG#32c', () => {
       driverId: 'mot-1',
     });
     expect(prompts[0]?.estado).toBe('feito');
+  });
+
+  it('motorista M1: lugar por pagar não entra no denominador (2 activos, 1 liquidado → 0 de 1)', () => {
+    const prompts = buildMotoristaRatingPrompts({
+      acordoId: 'a1',
+      passageiros: [
+        { id: 'ap1', passenger_id: 'p1', estado: 'activo', perfis: { nome_completo: 'Ana S.' } },
+        { id: 'ap2', passenger_id: 'p2', estado: 'activo', perfis: { nome_completo: 'Carlos M.' } },
+      ],
+      pagamentos: [
+        {
+          acordo_passageiro_id: 'ap1',
+          passenger_id: 'p1',
+          estado: 'em_custodia',
+          validado_em: settledAt,
+          mes_referencia: '2026-09-01',
+        },
+        {
+          acordo_passageiro_id: 'ap2',
+          passenger_id: 'p2',
+          estado: 'pendente_pagamento',
+          validado_em: null,
+          mes_referencia: '2026-09-01',
+        },
+      ],
+      avaliacoes: [],
+      now: withinWindow,
+      driverId: 'mot-1',
+    });
+    const { feitos, total } = countMotoristaRatingProgress(prompts);
+    expect(feitos).toBe(0);
+    expect(total).toBe(1);
+    expect(prompts).toHaveLength(1);
+    expect(prompts[0]?.acordoPassageiroId).toBe('ap1');
   });
 
   it('buildMotoristaRatingPrompts lista N passageiros com estados', () => {
