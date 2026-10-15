@@ -3,17 +3,14 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import AbsenceTracker from './AbsenceTracker';
 import { expectNoUserFacingJargon } from '../test/jargonBan';
-import {
-  filterFaltasEsteMes,
-  todayLuandaISO,
-} from '../utils/faltasDisplay';
+import { FALTA_FUTURA_AVISO_CHIP } from '../copy/faltasFutureChip';
 
 const mockNavigate = vi.fn();
 let mockAcordoId = 'acordo-uuid-001';
 
-const REF_MEIO_MES = new Date('2026-10-15T12:00:00Z');
 const FALTA_ONTEM = '2026-10-14';
 const FALTA_HOJE_OUT_1 = '2026-10-01';
+const MES_REF_OUT = '2026-10-01';
 
 let mockAuth = {
   user: { id: 'user-1' },
@@ -98,7 +95,12 @@ describe('AbsenceTracker — marketplace', () => {
     };
     mockAcordoId = 'acordo-uuid-001';
     mockListPagamentosByAcordo.mockResolvedValue([
-      { passenger_id: 'user-1', estado: 'em_custodia' },
+      {
+        passenger_id: 'user-1',
+        estado: 'em_custodia',
+        mes_referencia: MES_REF_OUT,
+        desconto_faltas_kz: 1363,
+      },
     ]);
     mockGetAbsences.mockResolvedValue([
       {
@@ -106,7 +108,7 @@ describe('AbsenceTracker — marketplace', () => {
         id_acordo: 'acordo-uuid-001',
         data_falta: FALTA_ONTEM,
         tipo: 'Passageiro',
-        desconto_kz: 1363.64,
+        desconto_kz: 1363,
         viagem: 'ambas',
       },
     ]);
@@ -143,13 +145,13 @@ describe('AbsenceTracker — marketplace', () => {
         id_acordo: 'acordo-uuid-001',
         data_falta: FALTA_HOJE_OUT_1,
         tipo: 'Passageiro',
-        desconto_kz: 1363.64,
+        desconto_kz: 1363,
         viagem: 'ambas',
       },
     ]);
     render(<AbsenceTracker />);
     expect(await screen.findByTestId('absence-card')).toBeInTheDocument();
-    expect(screen.getByTestId('desconto-falta-total')).toHaveTextContent('1363,64');
+    expect(screen.getByTestId('desconto-falta-total')).toHaveTextContent('1363');
   });
 
   it('apresenta desconto com sinal coerente entre total e histórico', async () => {
@@ -159,14 +161,14 @@ describe('AbsenceTracker — marketplace', () => {
         id_acordo: 'acordo-uuid-001',
         data_falta: FALTA_ONTEM,
         tipo: 'Passageiro',
-        desconto_kz: 1363.64,
+        desconto_kz: 1363,
         viagem: 'ambas',
       },
     ]);
     render(<AbsenceTracker />);
-    expect(await screen.findAllByText(/1363,64/)).toHaveLength(2);
-    expect(screen.queryByText(/-1363,64/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/−1363,64/)).not.toBeInTheDocument();
+    expect(await screen.findAllByText(/1363/)).toHaveLength(2);
+    expect(screen.queryByText(/-1363/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/−1363/)).not.toBeInTheDocument();
 
     const total = screen.getByTestId('desconto-falta-total');
     const linha = screen.getByTestId('desconto-falta-amount');
@@ -177,26 +179,30 @@ describe('AbsenceTracker — marketplace', () => {
     expect(linha.className).not.toMatch(/text-red/);
   });
 
-  it('usa filtro «Este mês» no total e no histórico', async () => {
-    const hoje = todayLuandaISO(REF_MEIO_MES);
+  it('mostra total do servidor e futuras no histórico (fixture QA 3d9b352b)', async () => {
     const futuro = '2026-10-25';
-    expect(filterFaltasEsteMes([
-      { data_falta: futuro, desconto_kz: 1272.73 },
-      { data_falta: hoje, desconto_kz: 500 },
-    ], REF_MEIO_MES).map((f) => f.data_falta)).toEqual([hoje]);
-
+    const hoje = '2026-10-15';
+    mockAcordoId = '3d9b352b-0000-0000-0000-000000000001';
+    mockListPagamentosByAcordo.mockResolvedValue([
+      {
+        passenger_id: 'user-1',
+        estado: 'em_custodia',
+        mes_referencia: MES_REF_OUT,
+        desconto_faltas_kz: 3000,
+      },
+    ]);
     mockGetAbsences.mockResolvedValue([
       {
         id: 'f-future',
-        id_acordo: 'acordo-uuid-001',
+        id_acordo: mockAcordoId,
         data_falta: futuro,
-        tipo: 'Motorista',
+        tipo: 'Passageiro',
         desconto_kz: 1272.73,
         viagem: 'ambas',
       },
       {
         id: 'f-today',
-        id_acordo: 'acordo-uuid-001',
+        id_acordo: mockAcordoId,
         data_falta: hoje,
         tipo: 'Passageiro',
         desconto_kz: 500,
@@ -206,10 +212,11 @@ describe('AbsenceTracker — marketplace', () => {
 
     render(<AbsenceTracker />);
 
-    expect(await screen.findByTestId('absence-card')).toBeInTheDocument();
-    expect(screen.getAllByTestId('absence-card')).toHaveLength(1);
-    expect(screen.queryByText('1272,73')).not.toBeInTheDocument();
-    expect(screen.getByTestId('desconto-falta-total')).toHaveTextContent('500');
+    expect(await screen.findAllByTestId('absence-card')).toHaveLength(2);
+    expect(screen.getByTestId('desconto-falta-total')).toHaveTextContent('3000');
+    expect(screen.getByTestId('falta-futura-chip')).toHaveTextContent(FALTA_FUTURA_AVISO_CHIP);
+    const linhas = await screen.findAllByTestId('desconto-falta-amount');
+    expect(linhas.some((el) => el.textContent?.includes('1272,73'))).toBe(true);
   });
 
   it('desactiva Registar Falta enquanto o perfil carrega', async () => {

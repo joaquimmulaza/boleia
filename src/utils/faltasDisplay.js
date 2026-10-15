@@ -32,7 +32,23 @@ export function isFutureFaltaDate(dataFalta, refDate = new Date()) {
 }
 
 /**
- * Falta pertence ao mês corrente em Luanda e não é futura.
+ * Falta pertence ao mês corrente em Luanda (inclui datas futuras no mês).
+ * @param {string} dataFalta
+ * @param {Date} [refDate]
+ * @returns {boolean}
+ */
+export function isFaltaEsteMes(dataFalta, refDate = new Date()) {
+  const iso = String(dataFalta || '').slice(0, 10);
+  if (!iso) return false;
+
+  const monthStart = firstDayCurrentMonthLuanda(refDate);
+  const monthEndExclusive = firstDayNextMonthLuanda(refDate);
+
+  return iso >= monthStart && iso < monthEndExclusive;
+}
+
+/**
+ * Falta pertence ao mês corrente em Luanda e não é futura (validação de registo).
  * @param {string} dataFalta
  * @param {Date} [refDate]
  * @returns {boolean}
@@ -40,11 +56,7 @@ export function isFutureFaltaDate(dataFalta, refDate = new Date()) {
 export function isFaltaEsteMesAteHoje(dataFalta, refDate = new Date()) {
   const iso = String(dataFalta || '').slice(0, 10);
   if (!iso) return false;
-
-  const monthStart = firstDayCurrentMonthLuanda(refDate);
-  const monthEndExclusive = firstDayNextMonthLuanda(refDate);
-
-  return iso >= monthStart && iso < monthEndExclusive && iso <= todayLuandaISO(refDate);
+  return isFaltaEsteMes(iso, refDate) && iso <= todayLuandaISO(refDate);
 }
 
 /**
@@ -53,7 +65,38 @@ export function isFaltaEsteMesAteHoje(dataFalta, refDate = new Date()) {
  * @returns {Array}
  */
 export function filterFaltasEsteMes(faltas, refDate = new Date()) {
-  return (faltas || []).filter((f) => isFaltaEsteMesAteHoje(f.data_falta, refDate));
+  return (faltas || []).filter((f) => isFaltaEsteMes(f.data_falta, refDate));
+}
+
+/**
+ * «Total a descontar» — valor persistido em pagamentos_acordo.desconto_faltas_kz
+ * (calculado na BD via _desconto_faltas_pagamento); nunca somar faltas no cliente.
+ *
+ * @param {Array<{ passenger_id?: string, mes_referencia?: string, desconto_faltas_kz?: number }>} pagamentos
+ * @param {{
+ *   tipoPerfil?: 'Passageiro' | 'Motorista',
+ *   passengerId?: string | null,
+ *   refDate?: Date,
+ * }} [options]
+ * @returns {number}
+ */
+export function resolveDescontoFaltasTotalServidor(pagamentos, options = {}) {
+  const mes = firstDayCurrentMonthLuanda(options.refDate ?? new Date());
+  const rows = (pagamentos || []).filter(
+    (row) => String(row.mes_referencia || '').slice(0, 10) === mes,
+  );
+
+  if (options.tipoPerfil === 'Motorista') {
+    return rows.reduce(
+      (acc, row) => acc + (Number(row.desconto_faltas_kz) || 0),
+      0,
+    );
+  }
+
+  const pid = options.passengerId;
+  if (!pid) return 0;
+  const row = rows.find((r) => r.passenger_id === pid);
+  return Number(row?.desconto_faltas_kz) || 0;
 }
 
 /** Classes partilhadas entre total e linhas do histórico. */

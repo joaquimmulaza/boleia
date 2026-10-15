@@ -12,14 +12,17 @@ import { allowsAssiduidadeFaltasForAcordo } from '../utils/paymentStatus';
 import LogAbsenceModal from '../components/LogAbsenceModal';
 import PageShell from '../components/PageShell';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import { Badge } from '../components/ui/badge';
+import { FALTA_FUTURA_AVISO_CHIP } from '../copy/faltasFutureChip';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import {
   DESCONTO_FALTA_AMOUNT_CLASS,
   filterFaltasEsteMes,
   formatFaltaDiaCurto,
+  isFutureFaltaDate,
+  resolveDescontoFaltasTotalServidor,
   resolveFaltasHubCard,
-  sumDescontoFaltas,
 } from '../utils/faltasDisplay';
 
 /**
@@ -49,11 +52,13 @@ const AbsenceTracker = () => {
   const [podeRegistarFaltas, setPodeRegistarFaltas] = useState(false);
   const [gateLoading, setGateLoading] = useState(false);
   const [acordoDetalhe, setAcordoDetalhe] = useState(null);
+  const [pagamentosAcordo, setPagamentosAcordo] = useState([]);
 
   const carregarGatePagamento = useCallback(async () => {
     if (!acordoId || !user?.id) {
       setPodeRegistarFaltas(false);
       setAcordoDetalhe(null);
+      setPagamentosAcordo([]);
       return;
     }
     setGateLoading(true);
@@ -64,6 +69,7 @@ const AbsenceTracker = () => {
           ? getAgreementsForDriver(user.id)
           : getAgreementsForPassenger(user.id),
       ]);
+      setPagamentosAcordo(pagamentos || []);
       const acordo = (acordos || []).find((a) => a.id === acordoId) || null;
       setAcordoDetalhe(acordo);
       let idsRequired = [];
@@ -82,6 +88,7 @@ const AbsenceTracker = () => {
       console.error('Erro ao verificar pagamento para faltas:', err);
       setPodeRegistarFaltas(false);
       setAcordoDetalhe(null);
+      setPagamentosAcordo([]);
     } finally {
       setGateLoading(false);
     }
@@ -134,7 +141,10 @@ const AbsenceTracker = () => {
   }, [acordoId, carregarFaltas, carregarAcordosActivos, carregarGatePagamento]);
 
   const faltasEsteMes = filterFaltasEsteMes(faltas);
-  const totalDesconto = sumDescontoFaltas(faltasEsteMes);
+  const totalDesconto = resolveDescontoFaltasTotalServidor(pagamentosAcordo, {
+    tipoPerfil,
+    passengerId: user?.id,
+  });
 
   const handleLogAbsence = async (formData) => {
     if (!acordoId) return;
@@ -278,6 +288,7 @@ const AbsenceTracker = () => {
         ) : (
           faltasEsteMes.map((falta) => {
             const viagem = labelViagemFalta(falta.viagem);
+            const futura = isFutureFaltaDate(falta.data_falta);
             return (
               <div
                 key={falta.id}
@@ -288,10 +299,19 @@ const AbsenceTracker = () => {
                   <span className="text-[15px] font-semibold leading-5 text-slate-900 dark:text-white">
                     {formatFaltaDiaCurto(falta.data_falta)}
                   </span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full border border-slate-200 bg-[#f6f8f6] px-2 py-0.5 text-[11px] font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
                       {falta.tipo}
                     </span>
+                    {futura ? (
+                      <Badge
+                        variant="outline"
+                        data-testid="falta-futura-chip"
+                        className="border-amber-300 bg-amber-50 px-2 py-0 text-[10px] font-semibold text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100"
+                      >
+                        {FALTA_FUTURA_AVISO_CHIP}
+                      </Badge>
+                    ) : null}
                     {viagem ? (
                       <span className="text-[13px] leading-[18px] text-slate-500 dark:text-slate-400">
                         {viagem}

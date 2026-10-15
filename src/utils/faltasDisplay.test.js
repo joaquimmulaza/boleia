@@ -6,22 +6,47 @@ import {
   isFutureFaltaDate,
   formatFaltaDiaCurto,
   resolveFaltasHubCard,
+  resolveDescontoFaltasTotalServidor,
 } from './faltasDisplay';
 
 describe('faltasDisplay', () => {
   const refOct1 = new Date('2026-10-01T12:00:00Z');
 
-  it('filtra faltas do mês corrente em Luanda até hoje (exclui futuras)', () => {
+  it('filtra faltas do mês corrente em Luanda (inclui futuras no mês)', () => {
     const faltas = [
       { id: '1', data_falta: '2026-09-30', desconto_kz: 100 },
       { id: '2', data_falta: '2026-10-01', desconto_kz: 200 },
       { id: '3', data_falta: '2026-10-15', desconto_kz: 1272.73 },
       { id: '4', data_falta: '2026-11-01', desconto_kz: 50 },
+      { id: '5', data_falta: '2026-10-25', desconto_kz: 300 },
     ];
 
     const esteMes = filterFaltasEsteMes(faltas, refOct1);
 
-    expect(esteMes.map((f) => f.id)).toEqual(['2']);
+    expect(esteMes.map((f) => f.id)).toEqual(['2', '3', '5']);
+  });
+
+  it('lê o total a descontar de pagamentos_acordo.desconto_faltas_kz (passageiro)', () => {
+    const ref = new Date('2026-10-15T12:00:00Z');
+    const pagamentos = [
+      {
+        passenger_id: 'pax-1',
+        mes_referencia: '2026-10-01',
+        desconto_faltas_kz: 3000,
+      },
+      {
+        passenger_id: 'pax-2',
+        mes_referencia: '2026-10-01',
+        desconto_faltas_kz: 999,
+      },
+    ];
+    expect(
+      resolveDescontoFaltasTotalServidor(pagamentos, {
+        tipoPerfil: 'Passageiro',
+        passengerId: 'pax-1',
+        refDate: ref,
+      }),
+    ).toBe(3000);
   });
 
   it('soma descontos como valores positivos', () => {
