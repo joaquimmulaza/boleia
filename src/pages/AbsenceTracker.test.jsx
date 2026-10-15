@@ -99,7 +99,7 @@ describe('AbsenceTracker — marketplace', () => {
         passenger_id: 'user-1',
         estado: 'em_custodia',
         mes_referencia: MES_REF_OUT,
-        desconto_faltas_kz: 1363,
+        desconto_faltas_kz: 0,
       },
     ]);
     mockGetAbsences.mockResolvedValue([
@@ -108,6 +108,7 @@ describe('AbsenceTracker — marketplace', () => {
         id_acordo: 'acordo-uuid-001',
         data_falta: FALTA_ONTEM,
         tipo: 'Passageiro',
+        passenger_id: 'user-1',
         desconto_kz: 1363,
         viagem: 'ambas',
       },
@@ -145,6 +146,7 @@ describe('AbsenceTracker — marketplace', () => {
         id_acordo: 'acordo-uuid-001',
         data_falta: FALTA_HOJE_OUT_1,
         tipo: 'Passageiro',
+        passenger_id: 'user-1',
         desconto_kz: 1363,
         viagem: 'ambas',
       },
@@ -161,6 +163,7 @@ describe('AbsenceTracker — marketplace', () => {
         id_acordo: 'acordo-uuid-001',
         data_falta: FALTA_ONTEM,
         tipo: 'Passageiro',
+        passenger_id: 'user-1',
         desconto_kz: 1363,
         viagem: 'ambas',
       },
@@ -179,45 +182,87 @@ describe('AbsenceTracker — marketplace', () => {
     expect(linha.className).not.toMatch(/text-red/);
   });
 
-  it('mostra total do servidor e futuras no histórico (fixture QA 3d9b352b)', async () => {
-    const futuro = '2026-10-25';
-    const hoje = '2026-10-15';
+  it('em custódia com desconto_faltas_kz 0 mostra soma das faltas (fixture 3d9b352b)', async () => {
     mockAcordoId = '3d9b352b-0000-0000-0000-000000000001';
     mockListPagamentosByAcordo.mockResolvedValue([
       {
         passenger_id: 'user-1',
         estado: 'em_custodia',
         mes_referencia: MES_REF_OUT,
-        desconto_faltas_kz: 3000,
+        desconto_faltas_kz: 0,
       },
     ]);
     mockGetAbsences.mockResolvedValue([
       {
         id: 'f-future',
         id_acordo: mockAcordoId,
-        data_falta: futuro,
+        data_falta: '2026-10-28',
         tipo: 'Passageiro',
-        desconto_kz: 1272.73,
+        passenger_id: 'user-1',
+        desconto_kz: 450,
+        viagem: 'regresso',
+      },
+      {
+        id: 'f-motorista',
+        id_acordo: mockAcordoId,
+        data_falta: '2026-10-14',
+        tipo: 'Motorista',
+        desconto_kz: 650,
         viagem: 'ambas',
       },
       {
-        id: 'f-today',
+        id: 'f-past',
         id_acordo: mockAcordoId,
-        data_falta: hoje,
+        data_falta: '2026-10-08',
         tipo: 'Passageiro',
-        desconto_kz: 500,
-        viagem: 'ambas',
+        passenger_id: 'user-1',
+        desconto_kz: 900,
+        viagem: 'ida',
       },
     ]);
 
     render(<AbsenceTracker />);
 
-    expect(await screen.findAllByTestId('absence-card')).toHaveLength(2);
-    expect(screen.getByTestId('desconto-falta-total')).toHaveTextContent('3000');
+    expect(await screen.findAllByTestId('absence-card')).toHaveLength(3);
+    expect(screen.getByTestId('desconto-falta-total')).toHaveTextContent('2000');
     expect(screen.getByTestId('falta-futura-chip')).toHaveTextContent(FALTA_FUTURA_CHIP);
-    expect(screen.getByTestId('falta-futura-chip').className).not.toMatch(/amber|red/);
-    const linhas = await screen.findAllByTestId('desconto-falta-amount');
-    expect(linhas.some((el) => el.textContent?.includes('1272,73'))).toBe(true);
+  });
+
+  it('pagamento liquidado mostra desconto_faltas_kz do servidor', async () => {
+    mockListPagamentosByAcordo.mockResolvedValue([
+      {
+        passenger_id: 'user-1',
+        estado: 'liquidado',
+        mes_referencia: MES_REF_OUT,
+        desconto_faltas_kz: 2000,
+      },
+    ]);
+    mockGetAbsences.mockResolvedValue([
+      {
+        id: 'f1',
+        id_acordo: 'acordo-uuid-001',
+        data_falta: FALTA_ONTEM,
+        tipo: 'Passageiro',
+        passenger_id: 'user-1',
+        desconto_kz: 500,
+        viagem: 'ambas',
+      },
+    ]);
+    render(<AbsenceTracker />);
+    expect(await screen.findByTestId('desconto-falta-total')).toHaveTextContent('2000');
+    expect(screen.queryByText('500')).not.toBeInTheDocument();
+  });
+
+  it('refetch pagamentos após registar falta', async () => {
+    mockLogAbsence.mockResolvedValue({ id: 'f2' });
+    render(<AbsenceTracker />);
+    fireEvent.click(await screen.findByRole('button', { name: /Registar Falta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Confirmar falta/i }));
+    await waitFor(() => {
+      expect(mockLogAbsence).toHaveBeenCalled();
+      expect(mockGetAbsences).toHaveBeenCalledTimes(2);
+      expect(mockListPagamentosByAcordo).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('desactiva Registar Falta enquanto o perfil carrega', async () => {
