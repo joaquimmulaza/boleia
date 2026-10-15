@@ -772,7 +772,7 @@ export async function getAgreementsForDriver(driverId) {
  * @param {string} passengerId
  */
 const ACORDO_DETALHE_SELECT =
-  '*, acordos_passageiros(*, perfis(nome_completo)), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota), acordos_adendas(*)';
+  '*, acordos_passageiros(*, perfis(nome_completo)), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota, dias_semana), acordos_adendas(*)';
 
 /**
  * Um acordo por ID (deep link) — sem apply_due_* nem lista completa.

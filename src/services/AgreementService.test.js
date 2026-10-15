@@ -810,11 +810,12 @@ describe('AgreementService', () => {
     it('getAgreementById (motorista) devolve acordo com select de detalhe', async () => {
       const acordoRow = { id: 'acordo-dl', driver_id: 'driver-1', estado: 'activo' };
       const maybeSingle = vi.fn().mockResolvedValue({ data: acordoRow, error: null });
+      const mockSelect = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle,
+      });
       supabase.from.mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnThis(),
-          maybeSingle,
-        }),
+        select: mockSelect,
       });
 
       const result = await getAgreementById('acordo-dl', {
@@ -824,6 +825,9 @@ describe('AgreementService', () => {
 
       expect(result?.id).toBe('acordo-dl');
       expect(supabase.from).toHaveBeenCalledWith('acordos');
+      expect(mockSelect).toHaveBeenCalledWith(
+        '*, acordos_passageiros(*, perfis(nome_completo)), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota, dias_semana), acordos_adendas(*)',
+      );
       expect(maybeSingle).toHaveBeenCalled();
       expect(supabase.rpc).not.toHaveBeenCalled();
     });
