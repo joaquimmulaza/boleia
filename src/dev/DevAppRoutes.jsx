@@ -12,6 +12,7 @@ import DevHotfixProdQaCapture from '../pages/DevHotfixProdQaCapture';
 import DevNotifCards269Capture from '../pages/DevNotifCards269Capture';
 import DevNotifV112Capture from '../pages/DevNotifV112Capture';
 import DevGeocoderEditarProcuraCapture from '../pages/DevGeocoderEditarProcuraCapture';
+import DevGeocoderEditarGrupoCapture from '../pages/DevGeocoderEditarGrupoCapture';
 import { isDevCaptureRoutesEnabled } from '../utils/devCaptureAccess';
 
 /**
@@ -43,6 +44,7 @@ export default function DevAppRoutes() {
       <Route path="notif-cards-269" element={<DevNotifCards269Capture />} />
       <Route path="notif-v112" element={<DevNotifV112Capture />} />
       <Route path="geocoder-editar-procura" element={<DevGeocoderEditarProcuraCapture />} />
+      <Route path="geocoder-editar-grupo" element={<DevGeocoderEditarGrupoCapture />} />
     </Routes>
   );
 }

@@ -261,7 +261,7 @@ describe('GrupoProcuraPanel — sheet Editar grupo (integração real)', () => {
       { timeout: 3000 },
     );
 
-    fireEvent.keyDown(pickup, { key: 'Escape' });
+    fireEvent.keyDown(document, { key: 'Escape' });
 
     await waitFor(() => {
       expect(screen.queryByRole('listbox', { name: 'Sugestões de locais' })).not.toBeInTheDocument();
