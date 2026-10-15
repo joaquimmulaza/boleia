@@ -18,9 +18,11 @@ describe('FaltasDiasAcordo — migração SQL', () => {
     expect(sql).toMatch(/NEW\.desconto_kz := 0/);
   });
 
-  it('accept_proposal congela dias_uteis_mes com dias da oferta', () => {
-    expect(sql).toMatch(/count_dias_viagem_mes\(v_mes_ref, v_oferta\.dias_semana\)/);
-    expect(sql).toMatch(/dias_uteis_mes,\s*\n\s*estado/);
+  it('handle_falta_desconto usa count_dias_viagem_mes do mês da falta (não acordos.dias_uteis_mes)', () => {
+    expect(sql).toMatch(/count_dias_viagem_mes\(/);
+    expect(sql).toMatch(/Africa\/Luanda/);
+    expect(sql).not.toMatch(/a\.dias_uteis_mes/);
+    expect(sql).not.toMatch(/CREATE OR REPLACE FUNCTION public\.accept_proposal/);
   });
 
   it('fallback Seg–Sex documentado em _dias_semana_acordo_efetivos', () => {

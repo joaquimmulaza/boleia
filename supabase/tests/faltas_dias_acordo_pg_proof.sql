@@ -17,14 +17,38 @@ EXCEPTION
 END;
 $fn$;
 
-\echo '=== dias acordo — count_dias_viagem_mes Ter–Sex out/2026 ==='
+\echo '=== dias acordo — ISODOW (nunca DOW) + divisores mensais ==='
 DO $$
 BEGIN
+  IF EXTRACT(ISODOW FROM DATE '2026-10-04') <> 7 THEN
+    RAISE EXCEPTION 'FAIL ISODOW: 2026-10-04 devia ser domingo (7)';
+  END IF;
+  IF EXTRACT(ISODOW FROM DATE '2026-10-05') <> 1 THEN
+    RAISE EXCEPTION 'FAIL ISODOW: 2026-10-05 devia ser segunda (1)';
+  END IF;
+  IF EXTRACT(DOW FROM DATE '2026-10-04') <> 0 THEN
+    RAISE EXCEPTION 'FAIL contraste DOW: domingo Postgres DOW deve ser 0';
+  END IF;
+
+  IF public.count_dias_viagem_mes('2026-10-01'::date, ARRAY[1, 2, 3, 4, 5]) <> 22 THEN
+    RAISE EXCEPTION 'FAIL: out/2026 Seg–Sex devia ter 22 dias';
+  END IF;
+  IF public.count_dias_viagem_mes('2026-11-01'::date, ARRAY[1, 2, 3, 4, 5]) <> 21 THEN
+    RAISE EXCEPTION 'FAIL: nov/2026 Seg–Sex devia ter 21 dias';
+  END IF;
   IF public.count_dias_viagem_mes('2026-10-01'::date, ARRAY[2, 3, 4, 5]) <> 18 THEN
     RAISE EXCEPTION 'FAIL: out/2026 Ter–Sex devia ter 18 dias, obteve %',
       public.count_dias_viagem_mes('2026-10-01'::date, ARRAY[2, 3, 4, 5]);
   END IF;
-  RAISE NOTICE 'PASS: count_dias_viagem_mes [2,3,4,5] out/2026 = 18';
+  IF public.count_dias_viagem_mes('2026-11-01'::date, ARRAY[2, 3, 4, 5]) <> 16 THEN
+    RAISE EXCEPTION 'FAIL: nov/2026 Ter–Sex devia ter 16 dias, obteve %',
+      public.count_dias_viagem_mes('2026-11-01'::date, ARRAY[2, 3, 4, 5]);
+  END IF;
+  IF public.count_dias_viagem_mes('2026-11-01'::date, NULL) <> 21 THEN
+    RAISE EXCEPTION 'FAIL: dias_semana NULL devia fallback Seg–Sex nov/2026 = 21, obteve %',
+      public.count_dias_viagem_mes('2026-11-01'::date, NULL);
+  END IF;
+  RAISE NOTICE 'PASS: ISODOW + divisores out/nov Seg–Sex e Ter–Sex + fallback NULL';
 END $$;
 
 \echo '=== dias acordo — fixture acordo + custódia ==='
@@ -43,7 +67,10 @@ DECLARE
   v_pg uuid := 'da666666-6666-4666-8666-666666666666';
   v_pg_ts uuid := 'da666667-6666-4666-8666-666666666667';
   v_row public.faltas%ROWTYPE;
+  v_row_nov public.faltas%ROWTYPE;
   v_ins public.faltas%ROWTYPE;
+  v_desconto_out numeric;
+  v_desconto_nov numeric;
 BEGIN
   PERFORM set_config('session_replication_role', 'replica', true);
 
@@ -94,7 +121,7 @@ BEGIN
     valor_mensal_total_kz, valor_mensal_por_passageiro_kz, dias_uteis_mes, estado
   ) VALUES (
     v_acordo_ts, v_oferta_ter_sex, v_procura, v_driver, 'POR_PASSAGEIRO', 1,
-    22000, 22000, 18, 'activo'
+    22000, 22000, 99, 'activo'
   );
 
   INSERT INTO public.acordos_passageiros (
@@ -114,6 +141,22 @@ BEGIN
   PERFORM set_config('request.jwt.claim.sub', v_driver::text, true);
   PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
   SET LOCAL ROLE authenticated;
+
+  -- (0) domingo rejeitado; segunda aceite (Seg–Sex)
+  PERFORM public._dias_acordo_expect_sqlstate(
+    '(0) domingo',
+    format(
+      $q$SELECT public.log_falta(%L, '2026-10-04'::date, 'Motorista', NULL, NULL, 'ambas')$q$,
+      v_acordo
+    ),
+    'BCF03'
+  );
+  SELECT * INTO v_row FROM public.log_falta(
+    v_acordo, '2026-10-05'::date, 'Motorista', NULL, NULL, 'ambas'
+  );
+  IF v_row.desconto_kz IS NULL OR v_row.desconto_kz <= 0 THEN
+    RAISE EXCEPTION 'FAIL (0): segunda-feira devia ter desconto > 0';
+  END IF;
 
   -- (1) dia útil Seg–Sex com desconto
   SELECT * INTO v_row FROM public.log_falta(
@@ -155,5 +198,24 @@ BEGIN
     'BCF03'
   );
 
-  RAISE NOTICE 'PASS: log_falta + handle_falta_desconto dias de viagem';
+  -- (5) divisor por mês da falta (Ter–Sex): out/2026=18 vs nov/2026=16; ignora acordos.dias_uteis_mes=99
+  SELECT * INTO v_row FROM public.log_falta(
+    v_acordo_ts, '2026-10-14'::date, 'Motorista', NULL, NULL, 'ambas'
+  );
+  SELECT * INTO v_row_nov FROM public.log_falta(
+    v_acordo_ts, '2026-11-11'::date, 'Motorista', NULL, NULL, 'ambas'
+  );
+  v_desconto_out := ROUND(22000::numeric / 18::numeric, 2);
+  v_desconto_nov := ROUND(22000::numeric / 16::numeric, 2);
+  IF v_row.desconto_kz IS DISTINCT FROM v_desconto_out THEN
+    RAISE EXCEPTION 'FAIL (5a): out/2026 desconto devia %, obteve %', v_desconto_out, v_row.desconto_kz;
+  END IF;
+  IF v_row_nov.desconto_kz IS DISTINCT FROM v_desconto_nov THEN
+    RAISE EXCEPTION 'FAIL (5b): nov/2026 desconto devia %, obteve %', v_desconto_nov, v_row_nov.desconto_kz;
+  END IF;
+  IF v_row.desconto_kz = v_row_nov.desconto_kz THEN
+    RAISE EXCEPTION 'FAIL (5c): descontos out vs nov deviam diferir';
+  END IF;
+
+  RAISE NOTICE 'PASS: log_falta + handle_falta_desconto dias de viagem + divisor mensal';
 END $$;
