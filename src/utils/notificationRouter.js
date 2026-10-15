@@ -77,7 +77,7 @@ export function acordosDeepLink(metadata, focus) {
 }
 
 export const notificationRouteMap = {
-  status: (metadata) => acordosDeepLink(metadata, null),
+  status: (metadata) => statusCardDeepLink(metadata),
   agreement_update: (metadata) => {
     const adendaEstado = String(metadata?.adenda_estado || '').toLowerCase();
     if (ADENDA_PENDENTE_ESTADOS.has(adendaEstado)) {
@@ -102,7 +102,6 @@ export const notificationRouteMap = {
   proposal_cancelled: (metadata) => notificationRouteMap.proposal_received(metadata),
   waitlist_promoted: () => '/passageiro',
   match_available: () => '/passageiro',
-  status: (metadata) => statusCardDeepLink(metadata),
 };
 
 /**
