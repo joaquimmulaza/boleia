@@ -197,7 +197,56 @@ describe('GrupoProcuraPanel — sheet Editar grupo (integração real)', () => {
 
     const dialog = screen.getByRole('dialog');
     const listbox = screen.getByRole('listbox', { name: 'Sugestões de locais' });
+    const portal = screen.getByTestId('geocoder-sheet-portal');
     expect(dialog.contains(listbox)).toBe(true);
+    expect(portal.contains(listbox)).toBe(true);
+  });
+
+  it('arrastar na listbox não move nem fecha o sheet', async () => {
+    await abrirSheetEditar();
+    const pickup = screen.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
+    fireEvent.change(pickup, { target: { value: 'Talatona' } });
+
+    await waitFor(
+      () => {
+        expect(screen.getByRole('listbox', { name: 'Sugestões de locais' })).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+
+    const sheet = screen.getByTestId('editar-grupo-sheet');
+    const panel = sheet.querySelector('[data-geocoder-sheet-boundary]');
+    expect(panel).toBeTruthy();
+
+    const option = screen.getByRole('option', { name: /Talatona, Município do Talatona/i });
+    fireEvent.pointerDown(option, { clientX: 120, clientY: 420, button: 0, pointerId: 11 });
+    fireEvent.pointerMove(window, { clientX: 120, clientY: 720, button: 0, pointerId: 11 });
+    fireEvent.pointerUp(window, { clientX: 120, clientY: 720, button: 0, pointerId: 11 });
+
+    expect(screen.getByTestId('editar-grupo-sheet')).toBeInTheDocument();
+    expect(screen.getByRole('listbox', { name: 'Sugestões de locais' })).toBeInTheDocument();
+    expect(panel.style.transform).toBe('');
+  });
+
+  it('iniciar drag no handle fecha a lista de sugestões', async () => {
+    await abrirSheetEditar();
+    const pickup = screen.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
+    fireEvent.change(pickup, { target: { value: 'Talatona' } });
+
+    await waitFor(
+      () => {
+        expect(screen.getByRole('listbox', { name: 'Sugestões de locais' })).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+
+    const handle = screen.getByTestId('sheet-drag-handle');
+    fireEvent.pointerDown(handle, { clientX: 200, clientY: 300, button: 0, pointerId: 12 });
+    fireEvent.pointerMove(window, { clientX: 200, clientY: 420, button: 0, pointerId: 12 });
+
+    await waitFor(() => {
+      expect(screen.queryByRole('listbox', { name: 'Sugestões de locais' })).not.toBeInTheDocument();
+    });
   });
 
   it('Escape com lista aberta fecha só a lista; Escape de novo fecha o sheet', async () => {

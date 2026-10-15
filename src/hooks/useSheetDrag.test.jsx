@@ -34,4 +34,35 @@ describe('useSheetDrag + SheetFecharButton', () => {
 
     expect(onDismiss).toHaveBeenCalled();
   });
+
+  it('não inicia drag quando o gesto começa na lista flutuante do geocoder', () => {
+    const onDismiss = vi.fn();
+    render(
+      <OverlayShell
+        variant="bottom"
+        testId="sheet-test"
+        dialogLabelledBy="sheet-title"
+        onDismiss={onDismiss}
+      >
+        <h2 id="sheet-title">Sheet</h2>
+      </OverlayShell>,
+    );
+
+    const portal = screen.getByTestId('geocoder-sheet-portal');
+    const list = document.createElement('div');
+    list.setAttribute('data-geocoder-floating-list', '');
+    list.setAttribute('role', 'listbox');
+    list.textContent = 'Sugestões';
+    portal.appendChild(list);
+
+    const panel = document.querySelector('[data-geocoder-sheet-boundary]');
+    expect(panel).toBeTruthy();
+
+    fireEvent.pointerDown(list, { clientX: 120, clientY: 420, button: 0, pointerId: 9 });
+    fireEvent.pointerMove(window, { clientX: 120, clientY: 720, button: 0, pointerId: 9 });
+    fireEvent.pointerUp(window, { clientX: 120, clientY: 720, button: 0, pointerId: 9 });
+
+    expect(onDismiss).not.toHaveBeenCalled();
+    expect(panel.style.transform).toBe('');
+  });
 });

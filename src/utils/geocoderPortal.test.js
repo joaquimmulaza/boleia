@@ -6,7 +6,24 @@ describe('resolveGeocoderPortalContainer', () => {
     document.body.innerHTML = '';
   });
 
-  it('usa o dialog aria-modal quando o campo está dentro dele', () => {
+  it('prefere o mount fora do painel de drag quando existe', () => {
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    const boundary = document.createElement('div');
+    boundary.setAttribute('data-geocoder-sheet-boundary', '');
+    const portal = document.createElement('div');
+    portal.setAttribute('data-geocoder-sheet-portal', '');
+    const anchor = document.createElement('div');
+    boundary.appendChild(anchor);
+    dialog.appendChild(boundary);
+    dialog.appendChild(portal);
+    document.body.appendChild(dialog);
+
+    expect(resolveGeocoderPortalContainer(anchor)).toBe(portal);
+  });
+
+  it('usa o dialog aria-modal quando não há mount dedicado', () => {
     const dialog = document.createElement('div');
     dialog.setAttribute('role', 'dialog');
     dialog.setAttribute('aria-modal', 'true');

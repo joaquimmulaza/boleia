@@ -13,6 +13,7 @@ import { ADDRESS_INPUT_SURFACE_CLASS } from '../utils/addressInputSurface.js';
 import { GEOCODER_DISMISS_CHROME_SELECTOR } from '../utils/geocoderDismissChrome.js';
 import { resolveGeocoderPortalContainer } from '../utils/geocoderPortal.js';
 import { getTopOverlay, popOverlay, pushOverlay } from '../utils/overlayStack.js';
+import { SHEET_DRAG_START_EVENT } from '../utils/sheetDragEvents.js';
 
 /**
  * Campo de endereço com autocomplete Photon/OSM (combobox a11y).
@@ -194,6 +195,19 @@ const AddressInput = ({
 
   const listPanelOpen = showDropdown && trimmedInputLength > 2;
   const floatingLayout = useFloatingGeocoderPanel(anchorRef, listPanelOpen);
+
+  useLayoutEffect(() => {
+    if (!listPanelOpen || !anchorRef.current) return;
+    setPortalContainer(resolveGeocoderPortalContainer(anchorRef.current));
+  }, [listPanelOpen]);
+
+  useEffect(() => {
+    const onSheetDragStart = () => {
+      closeDropdown();
+    };
+    document.addEventListener(SHEET_DRAG_START_EVENT, onSheetDragStart);
+    return () => document.removeEventListener(SHEET_DRAG_START_EVENT, onSheetDragStart);
+  }, [closeDropdown]);
 
   useEffect(() => {
     if (!listPanelOpen) return undefined;

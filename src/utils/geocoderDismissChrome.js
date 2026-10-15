@@ -12,3 +12,13 @@ export const GEOCODER_SHEET_BOUNDARY_SELECTOR = `[${GEOCODER_SHEET_BOUNDARY_ATTR
 export const GEOCODER_SHEET_HEADER_ATTR = 'data-geocoder-sheet-header';
 
 export const GEOCODER_SHEET_HEADER_SELECTOR = `[${GEOCODER_SHEET_HEADER_ATTR}]`;
+
+/** Lista flutuante do geocoder (portal) — não inicia drag do sheet. */
+export const GEOCODER_FLOATING_LIST_ATTR = 'data-geocoder-floating-list';
+
+export const GEOCODER_FLOATING_LIST_SELECTOR = `[${GEOCODER_FLOATING_LIST_ATTR}]`;
+
+/** Mount do portal **fora** do painel transformado, dentro do dialog do sheet. */
+export const GEOCODER_SHEET_PORTAL_ATTR = 'data-geocoder-sheet-portal';
+
+export const GEOCODER_SHEET_PORTAL_SELECTOR = `[${GEOCODER_SHEET_PORTAL_ATTR}]`;

@@ -429,27 +429,31 @@ describe('AddressInput', () => {
     expect(selectPlace).not.toHaveBeenCalled();
   });
 
-  it('porta o listbox para dentro do dialog aria-modal', () => {
+  it('porta o listbox para o mount fora do painel de drag', () => {
     mockSuggestions = [{ place_id: 'photon-1', description: 'Talatona, Luanda' }];
 
     render(
       <div role="dialog" aria-modal="true" aria-labelledby="dlg-title">
-        <h2 id="dlg-title">Dialog</h2>
-        <AddressInput
-          name="origin_name"
-          label="Origem"
-          value="Tal"
-          onChange={vi.fn()}
-        />
+        <div data-geocoder-sheet-boundary>
+          <h2 id="dlg-title">Dialog</h2>
+          <AddressInput
+            name="origin_name"
+            label="Origem"
+            value="Tal"
+            onChange={vi.fn()}
+          />
+        </div>
+        <div data-geocoder-sheet-portal data-testid="geocoder-sheet-portal" />
       </div>,
     );
 
-    const dialog = screen.getByRole('dialog');
     const input = screen.getByRole('combobox', { name: /Origem/i });
     fireEvent.focus(input);
 
     const listbox = screen.getByRole('listbox', { name: 'Sugestões de locais' });
-    expect(dialog.contains(listbox)).toBe(true);
+    const portalMount = screen.getByTestId('geocoder-sheet-portal');
+    expect(portalMount.contains(listbox)).toBe(true);
+    expect(screen.getByRole('dialog').contains(listbox)).toBe(true);
   });
 
   it('erro de rede mostra copy final, retry e Usar texto livre', () => {

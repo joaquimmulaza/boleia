@@ -70,6 +70,14 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
     pickup_lng: null,
   });
 
+  const dismissEditarSheet = useCallback(() => {
+    if (!busy) setEditarOpen(false);
+  }, [busy]);
+
+  const dismissApagarSheet = useCallback(() => {
+    if (!busy) setApagarOpen(false);
+  }, [busy]);
+
   const carregar = useCallback(async () => {
     if (!procura?.id) {
       setLoading(false);
@@ -573,16 +581,10 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
           overlayClassName="bg-slate-900/60 dark:bg-black/80"
           panelClassName="bg-white dark:bg-slate-900 shadow-2xl"
           testId="editar-grupo-sheet"
-          onDismiss={() => {
-            if (!busy) setEditarOpen(false);
-          }}
+          dialogLabelledBy="editar-grupo-title"
+          onDismiss={dismissEditarSheet}
         >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="editar-grupo-title"
-            className="space-y-4 px-4 pb-sheet"
-          >
+          <div className="flex flex-col gap-4 px-4 pb-sheet">
             <div data-geocoder-sheet-header>
               <SheetDragHandle />
               <div
@@ -669,9 +671,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
           overlayClassName="bg-slate-900/60 dark:bg-black/80"
           panelClassName="bg-white dark:bg-slate-900 shadow-2xl"
           testId="apagar-grupo-sheet"
-          onDismiss={() => {
-            if (!busy) setApagarOpen(false);
-          }}
+          onDismiss={dismissApagarSheet}
         >
           <div className="space-y-4 px-4 pb-sheet">
             <SheetDragHandle />
