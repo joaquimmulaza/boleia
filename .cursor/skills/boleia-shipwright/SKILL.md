@@ -45,7 +45,7 @@ Invariantes: …
 Ficheiros / áreas: …
 Spec/Quick: path
 Obrigatório: tlc-spec-driven se preciso; TDD; antes de código — Graphify: graphify_find/graphify_node → callers/callees → graphify_impact ou impact_and_risk + graphify_tests_for nos símbolos tocados; VERDICT code-reviewer (+ ui-qa se UI); abrir PR; NÃO merge main
-PR — primeira linha exacta: Task: https://app.notion.com/p/3fa2eca203c981498c2fc9794edac86e (link real da task Notion; nunca TBD/pending/página de projecto)
+PR — primeira linha exacta: Task: {url Notion da task} (link real da task; nunca TBD/pending/página de projecto; se não existir task, pedir ao Projects Manager primeiro)
 PR — secção Graphify: colar blast radius (impact_and_risk) + lista de testes (graphify_tests_for)
 HANDOFF no fim do trabalho.
 ```
