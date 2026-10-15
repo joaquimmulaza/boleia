@@ -18,6 +18,8 @@ vi.mock('../services/AgreementService', () => ({
   terminateAgreement: vi.fn(),
   countLugaresVivosAcordo: vi.fn(),
   listAnulacaoMotivoLugarAcordos: vi.fn().mockResolvedValue([]),
+  listAdendaHistorico: vi.fn().mockResolvedValue([]),
+  getAgreementById: vi.fn(),
 }));
 
 vi.mock('../services/PaymentService', async (importOriginal) => {
@@ -26,12 +28,14 @@ vi.mock('../services/PaymentService', async (importOriginal) => {
     ...actual,
     listPagamentosByAcordo: vi.fn().mockResolvedValue([]),
     getObrigacaoPagamentoPassageiro: vi.fn(),
-    getAcordoContactos: vi.fn(),
+    getAcordoContactos: vi.fn().mockResolvedValue({ bloqueado: false, passageiros: [], motorista: null }),
+    listPagamentosPendentesMotoristaAcordo: vi.fn().mockResolvedValue([]),
   };
 });
 
 vi.mock('../services/RatingService', () => ({
   listRatingPromptsForAcordo: vi.fn().mockResolvedValue([]),
+  listMinhasAvaliacoesAcordo: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('../hooks/useNetworkStatus', () => ({

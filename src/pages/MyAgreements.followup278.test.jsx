@@ -39,6 +39,7 @@ vi.mock('../contexts/AuthContext', () => ({
 vi.mock('../services/AgreementService', () => ({
   getAgreementsForDriver: vi.fn(),
   getAgreementsForPassenger: vi.fn(),
+  getAgreementById: vi.fn(),
   leavePassenger: vi.fn(),
   countLugaresVivosAcordo: vi.fn(),
   terminateAgreement: vi.fn(),
@@ -173,6 +174,10 @@ describe('MyAgreements follow-up #278', () => {
     getAgreementsForDriver.mockResolvedValue([acordoActivoMulti]);
     getAgreementsForPassenger.mockResolvedValue([]);
     countLugaresVivosAcordo.mockResolvedValue(2);
+    getAcordoContactos.mockResolvedValue({ bloqueado: false, passageiros: [], motorista: null });
+    getObrigacaoPagamentoPassageiro.mockResolvedValue(null);
+    listAnulacaoMotivoLugarAcordos.mockResolvedValue([]);
+    listPagamentosPendentesMotoristaAcordo.mockResolvedValue([]);
   });
 
   it('P1-a: motorista vê Pagamento pendente quando BD é pendente_pagamento (acordo activo)', async () => {

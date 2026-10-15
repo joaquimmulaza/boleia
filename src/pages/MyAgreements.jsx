@@ -5,11 +5,11 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   getAgreementsForDriver,
   getAgreementsForPassenger,
+  getAgreementById,
   leavePassenger,
   countLugaresVivosAcordo,
   terminateAgreement,
   rejectAgreementTermination,
-  listAdendaHistorico,
 } from '../services/AgreementService';
 import { resolveIdempotencyKey } from '../utils/callRpcWithOfflineFallback.js';
 import { terminateConfirmIdempotencyKey } from '../utils/terminateIdempotency.js';
@@ -43,6 +43,12 @@ import {
   acordoPrecisaLiveRefresh,
   useAcordoDetalheLiveRefresh,
 } from '../hooks/useAcordoDetalheLiveRefresh';
+import { useAcordoDetalhe } from '../hooks/useAcordoDetalhe';
+import { buildAcordoDetalheSyncKey } from '../utils/acordoDetalheSyncKey.js';
+import {
+  parseOpenAcordoIdFromSearch,
+  sanitizeOpenAcordoId,
+} from '../utils/authOpenAcordoRedirect.js';
 import { labelRotaOferta } from '../utils/ofertaLabels';
 import { buildAcordoContratoSnapshot } from '../utils/buildAcordoContratoSnapshot';
 import { resolvePessoasAcordoUi } from '../utils/resolvePessoasAcordoUi';
@@ -77,12 +83,7 @@ import {
 } from '../utils/adendaNegociacao.js';
 import { isJanelaPropostaPrecoAberta, labelMesActualPt } from '../utils/precoProximoMes.js';
 import {
-  getPagamentoForPassageiro,
-  getAcordoContactos,
-  listPagamentosByAcordo,
   getMesReferenciaAtual,
-  getObrigacaoPagamentoPassageiro,
-  listPagamentosPendentesMotoristaAcordo,
   listAnulacaoMotivoLugarAcordos,
 } from '../services/PaymentService';
 import {
@@ -103,7 +104,6 @@ import {
 } from '../utils/paymentStatus';
 import AcordoRatingBanner from '../components/rating/AcordoRatingBanner';
 import AcordoRatingMotBanner from '../components/rating/AcordoRatingMotBanner';
-import { listMinhasAvaliacoesAcordo } from '../services/RatingService';
 import {
   buildPassageiroRatingPrompt,
   buildMotoristaRatingPrompts,
@@ -135,10 +135,7 @@ import {
   copyJustaCausaTerminateTitle,
   isJustaCausaConfirmSubmitDisabled,
 } from '../utils/justaCausaTerminateConfirmCopy';
-import {
-  deveChamarGetAcordoContactos,
-  contactosBloqueadosFallback,
-} from '../utils/acordoContactosGate.js';
+import { deveChamarGetAcordoContactos } from '../utils/acordoContactosGate.js';
 import {
   partitionAcordosLista,
 } from '../utils/acordoListGrouping.js';
@@ -341,15 +338,33 @@ const MyAgreements = () => {
   /** @type {[Record<string, true>, React.Dispatch<React.SetStateAction<Record<string, true>>>]} */
   const [pendingLeaveIds, setPendingLeaveIds] = useState({});
 
-  const [historicoPreco, setHistoricoPreco] = useState(/** @type {object[]} */ ([]));
-  const [pagamento, setPagamento] = useState(/** @type {object | null} */ (null));
-  const [obrigacaoPagamento, setObrigacaoPagamento] = useState(/** @type {object | null} */ (null));
-  const [motoristaPagamentos, setMotoristaPagamentos] = useState(/** @type {object[]} */ ([]));
-  const [pagamentosAcordo, setPagamentosAcordo] = useState(/** @type {object[]} */ ([]));
-  const [contactos, setContactos] = useState(/** @type {object | null} */ (null));
-  const [pagamentoLoading, setPagamentoLoading] = useState(false);
-  const [contactosLoading, setContactosLoading] = useState(false);
-  const [avaliacoesAcordo, setAvaliacoesAcordo] = useState(/** @type {object[]} */ ([]));
+  const selectedDetalheSyncKey = buildAcordoDetalheSyncKey(selected);
+
+  const {
+    pagamentosAcordo,
+    pagamento,
+    obrigacaoPagamento,
+    motoristaPagamentos,
+    contactos,
+    avaliacoesAcordo,
+    historicoPreco,
+    motoristaPagamentosLoading,
+    passageiroPagamentoLoading,
+    pagamentosAcordoLoading,
+    pagamentoLoading,
+    contactosLoading,
+    carregarPagamentoContactos,
+    revalidateSilencioso,
+  } = useAcordoDetalhe({
+    acordo: selected,
+    syncKey: selectedDetalheSyncKey,
+    tipoPerfil,
+    userId: user?.id,
+  });
+
+  const revalidateDetalheRef = useRef(revalidateSilencioso);
+  revalidateDetalheRef.current = revalidateSilencioso;
+
   const [chipContextPorAcordo, setChipContextPorAcordo] = useState(
     /** @type {Record<string, Record<string, { anulacao_motivo?: string | null, estado?: string | null }>>} */ ({}),
   );
@@ -361,104 +376,6 @@ const MyAgreements = () => {
     },
     [chipContextPorAcordo],
   );
-
-  const carregarPagamentoContactos = useCallback(async (acordo) => {
-    if (!acordo?.id || !user?.id) return;
-
-    const minhaLinhaAcordo = (acordo.acordos_passageiros || []).find(
-      (p) => p.passenger_id === user.id,
-    );
-    const podeContactos = deveChamarGetAcordoContactos({
-      acordoEstado: acordo.estado,
-      tipoPerfil,
-      minhaLinhaEstado: minhaLinhaAcordo?.estado,
-    });
-    setPagamentoLoading(true);
-    setContactosLoading(podeContactos);
-    if (tipoPerfil === 'Motorista') {
-      setMotoristaPagamentos([]);
-    }
-    try {
-      const pagamentos = await listPagamentosByAcordo(acordo.id);
-      setPagamentosAcordo(pagamentos);
-      const mesAtual = getMesReferenciaAtual();
-      if (tipoPerfil === 'Passageiro') {
-        const linha = (acordo.acordos_passageiros || []).find((p) => p.passenger_id === user.id);
-        if (linha?.id) {
-          try {
-            const payload = await getObrigacaoPagamentoPassageiro(linha.id);
-            setPagamento(payload?.pagamento ?? null);
-            setObrigacaoPagamento(payload?.obrigacao ?? null);
-          } catch (err) {
-            console.error('Erro ao carregar obrigação:', err);
-            const row = pagamentos.find(
-              (p) => p.passenger_id === user.id && String(p.mes_referencia || '').slice(0, 10) === mesAtual,
-            )
-              ?? await getPagamentoForPassageiro(acordo.id, user.id, mesAtual);
-            setPagamento(row);
-            setObrigacaoPagamento(null);
-          }
-        } else {
-          setPagamento(null);
-          setObrigacaoPagamento(null);
-        }
-      } else {
-        setPagamento(null);
-        setObrigacaoPagamento(null);
-        if (tipoPerfil === 'Motorista') {
-          try {
-            const rows = await listPagamentosPendentesMotoristaAcordo(acordo.id);
-            setMotoristaPagamentos(rows);
-          } catch (err) {
-            console.error('Erro ao listar pagamentos motorista:', err);
-            setMotoristaPagamentos([]);
-          }
-        }
-      }
-
-      if (podeContactos) {
-        try {
-          const payload = await getAcordoContactos(acordo.id);
-          setContactos(payload);
-        } catch (err) {
-          setContactos(contactosBloqueadosFallback());
-          if (err?.code !== 'P0001') {
-            console.error('Erro ao carregar contactos:', err);
-          }
-        }
-      } else {
-        setContactos(null);
-      }
-
-      const avs = await listMinhasAvaliacoesAcordo(acordo.id);
-      setAvaliacoesAcordo(avs || []);
-      const historico = await listAdendaHistorico(acordo.id);
-      setHistoricoPreco(historico || []);
-    } catch (err) {
-      console.error('Erro ao carregar pagamento/contactos:', err);
-    } finally {
-      setPagamentoLoading(false);
-      setContactosLoading(false);
-    }
-  }, [user?.id, tipoPerfil]);
-
-  const selectedDetalheSyncKey = selected
-    ? `${selected.id}:${String(selected.estado || '').toLowerCase()}`
-    : null;
-
-  useEffect(() => {
-    if (!selectedDetalheSyncKey || !selected) {
-      setPagamento(null);
-      setObrigacaoPagamento(null);
-      setMotoristaPagamentos([]);
-      setPagamentosAcordo([]);
-      setContactos(null);
-      setAvaliacoesAcordo([]);
-      setHistoricoPreco([]);
-      return;
-    }
-    void carregarPagamentoContactos(selected);
-  }, [selectedDetalheSyncKey, selected, carregarPagamentoContactos]);
 
   const closeTerminateFlow = () => {
     setTerminatePickerOpen(false);
@@ -528,7 +445,8 @@ const MyAgreements = () => {
   const selectAcordo = useCallback(
     (acordo) => {
       if (!acordo?.id) {
-        focusConsumedKeyRef.current = null;
+        userDismissedOpenAcordoRef.current = true;
+        focusScrollDoneKeyRef.current = null;
         pendingFocusRef.current = null;
         const returnTo = acordoSheetReturnFocusRef.current;
         acordoSheetReturnFocusRef.current = null;
@@ -538,6 +456,8 @@ const MyAgreements = () => {
         focusReturnableElement(returnTo);
         return;
       }
+      userDismissedOpenAcordoRef.current = false;
+      focusScrollDoneKeyRef.current = null;
       setSelected(acordo);
       syncOpenAcordoQuery(acordo.id);
     },
@@ -616,6 +536,11 @@ const MyAgreements = () => {
         if (!prev?.id) return prev;
         const found = filtered.find((a) => a.id === prev.id);
         if (!found) return null;
+        if (found !== prev) {
+          queueMicrotask(() => {
+            revalidateDetalheRef.current?.(found);
+          });
+        }
         return found;
       });
       return filtered;
@@ -671,6 +596,9 @@ const MyAgreements = () => {
 
   const pendingFocusRef = useRef(/** @type {string | null} */ (null));
   const focusConsumedKeyRef = useRef(/** @type {string | null} */ (null));
+  const focusScrollDoneKeyRef = useRef(/** @type {string | null} */ (null));
+  /** Evita reabrir o sheet logo após dismiss enquanto a query openAcordoId ainda não sincronizou. */
+  const userDismissedOpenAcordoRef = useRef(false);
 
   /** @param {string} focus */
   const scrollToAcordoFocus = useCallback((focus) => {
@@ -695,19 +623,73 @@ const MyAgreements = () => {
   }, []);
 
   useEffect(() => {
-    if (isLoading) return;
+    const params = new URLSearchParams(locationSearchRef.current);
+    if (!params.get('openAcordoId') && !location.state?.openAcordoId) {
+      userDismissedOpenAcordoRef.current = false;
+    }
+  }, [location.search, location.state]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const rawOpenAcordoId = params.get('openAcordoId') || location.state?.openAcordoId;
+    const validatedOpenAcordoId =
+      parseOpenAcordoIdFromSearch(location.search)
+      || sanitizeOpenAcordoId(location.state?.openAcordoId);
+    if (!rawOpenAcordoId || !user?.id) return undefined;
+
+    if (userDismissedOpenAcordoRef.current) return undefined;
+
+    if (selected?.id === rawOpenAcordoId) return undefined;
+
+    const found = acordos.find((a) => a.id === rawOpenAcordoId);
+    if (found) {
+      setSelected((prev) => (prev?.id === found.id ? prev : found));
+      return undefined;
+    }
+
+    if (!validatedOpenAcordoId || selected?.id === validatedOpenAcordoId) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    void getAgreementById(validatedOpenAcordoId, { tipoPerfil, userId: user.id })
+      .then((row) => {
+        if (cancelled) return;
+        if (!row || row.is_hidden_by_user) {
+          if (acordos.length > 0) syncOpenAcordoQuery(null);
+          return;
+        }
+        setSelected(row);
+      })
+      .catch((err) => {
+        console.error('Erro ao abrir acordo por deep link:', err);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    location.search,
+    location.state,
+    user?.id,
+    tipoPerfil,
+    acordos,
+    selected?.id,
+    syncOpenAcordoQuery,
+  ]);
+
+  useEffect(() => {
     const params = new URLSearchParams(location.search);
     const openAcordoId = params.get('openAcordoId') || location.state?.openAcordoId;
     const focus = params.get('focus');
-    if (!openAcordoId) return;
+    if (!openAcordoId || selected?.id !== openAcordoId) return;
+
     const found = acordos.find((a) => a.id === openAcordoId);
-    if (!found) {
-      if (acordos.length > 0) {
-        syncOpenAcordoQuery(null);
-      }
+    if (!found && acordos.length > 0) {
+      syncOpenAcordoQuery(null);
       return;
     }
-    setSelected((prev) => (prev?.id === found.id ? prev : found));
+
     if (!acordoSheetReturnFocusRef.current) {
       const card = document.querySelector(`[data-acordo-card-id="${openAcordoId}"]`);
       if (card instanceof HTMLElement) {
@@ -727,12 +709,12 @@ const MyAgreements = () => {
       );
     }
   }, [
-    isLoading,
     acordos,
     location.search,
     location.state,
     navigate,
     location.pathname,
+    selected?.id,
     syncOpenAcordoQuery,
     stripFocusFromUrl,
   ]);
@@ -763,7 +745,7 @@ const MyAgreements = () => {
 
     const focus = pendingFocusRef.current;
     if (focus === 'pagamento') {
-      if (pagamentoLoading) return undefined;
+      if (passageiroPagamentoLoading) return undefined;
       const section = document.querySelector('[data-testid="acordo-pagamento-section"]');
       if (!section) {
         if (tipoPerfil === 'Motorista') {
@@ -772,7 +754,7 @@ const MyAgreements = () => {
         return undefined;
       }
     }
-    if (focus === 'motorista-pagamentos' && pagamentoLoading) {
+    if (focus === 'motorista-pagamentos' && motoristaPagamentosLoading) {
       return undefined;
     }
 
@@ -784,9 +766,22 @@ const MyAgreements = () => {
     ) {
       return undefined;
     }
+    const scrollOnceKey = `${selected.id}:${focus}`;
+    if (focusScrollDoneKeyRef.current === scrollOnceKey) {
+      return undefined;
+    }
+    focusScrollDoneKeyRef.current = scrollOnceKey;
     scrollToAcordoFocus(focus);
     return undefined;
-  }, [selected, scrollToAcordoFocus, pagamentoLoading, pagamento, user?.id, tipoPerfil]);
+  }, [
+    selected,
+    scrollToAcordoFocus,
+    passageiroPagamentoLoading,
+    motoristaPagamentosLoading,
+    pagamento,
+    user?.id,
+    tipoPerfil,
+  ]);
 
   useEffect(() => {
     setRescisaoConfirmadaLocal(false);
@@ -1414,7 +1409,7 @@ const MyAgreements = () => {
       ? resolvePassageiroReservaPagamento({
         minhaLinha,
         pagamento: pagamentoViewer,
-        pagamentoLoading,
+        pagamentoLoading: passageiroPagamentoLoading,
         obrigacao: obrigacaoPagamento,
       })
       : null;
@@ -1423,7 +1418,7 @@ const MyAgreements = () => {
         ? copyCartaoEstadoPagamentoPassageiro(pagamentoUiPassageiro.variant, {
           pagamento: pagamentoViewer,
           obrigacao: obrigacaoPagamento,
-          pagamentoLoading,
+          pagamentoLoading: passageiroPagamentoLoading,
         })
         : null;
     const motoristaJcPassageiroAlerts = isMotorista
@@ -1517,7 +1512,7 @@ const MyAgreements = () => {
                 }
                 mostrarUploadNoCartao={cartaoEstadoPagamento.mostrarUploadNoCartao}
                 uploadSlot={
-                  pagamento && !pagamentoLoading ? (
+                  pagamento && !passageiroPagamentoLoading ? (
                     <AcordoPagamentoPanel
                       layout="uploadButton"
                       pagamento={pagamento}
@@ -1811,7 +1806,7 @@ const MyAgreements = () => {
           {isMotorista ? (
             <AcordoPagamentosMotoristaPanel
               rows={motoristaPagamentosVivos}
-              loading={pagamentoLoading}
+              loading={motoristaPagamentosLoading}
               acordoTerminado={isAcordoEncerradoPagamentoUi(selected.estado)}
               multiplePaymentSections={false}
             />
@@ -1954,7 +1949,7 @@ const MyAgreements = () => {
             </p>
           )}
 
-          {activo && !podeRegistarFaltas && !pagamentoLoading ? (
+          {activo && !podeRegistarFaltas && !pagamentosAcordoLoading ? (
             <p
               className="text-xs text-slate-500 text-pretty px-1"
               data-testid="faltas-gate-pagamento"

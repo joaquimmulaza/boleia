@@ -9,6 +9,7 @@ import {
   rejectAgreementTermination,
   getAgreementsForDriver,
   getAgreementsForPassenger,
+  getAgreementById,
   countLugaresVivosAcordo,
 } from './AgreementService.js';
 import { resolveAgreementPricing } from '../utils/resolveAgreementPricing.js';
@@ -804,6 +805,63 @@ describe('AgreementService', () => {
       expect(supabase.rpc).toHaveBeenCalledWith('apply_due_reserva_expiry', {
         p_acordo_id: null,
       });
+    });
+
+    it('getAgreementById (motorista) devolve acordo com select de detalhe', async () => {
+      const acordoRow = { id: 'acordo-dl', driver_id: 'driver-1', estado: 'activo' };
+      const maybeSingle = vi.fn().mockResolvedValue({ data: acordoRow, error: null });
+      const mockSelect = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle,
+      });
+      supabase.from.mockReturnValue({
+        select: mockSelect,
+      });
+
+      const result = await getAgreementById('acordo-dl', {
+        tipoPerfil: 'Motorista',
+        userId: 'driver-1',
+      });
+
+      expect(result?.id).toBe('acordo-dl');
+      expect(supabase.from).toHaveBeenCalledWith('acordos');
+      expect(mockSelect).toHaveBeenCalledWith(
+        '*, acordos_passageiros(*, perfis(nome_completo)), ofertas_capacidade(origin_name, destination_name, departure_time, flexibilidade_rota, dias_semana), acordos_adendas(*)',
+      );
+      expect(maybeSingle).toHaveBeenCalled();
+      expect(supabase.rpc).not.toHaveBeenCalled();
+    });
+
+    it('getAgreementById devolve null quando maybeSingle não encontra linha', async () => {
+      supabase.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        }),
+      });
+
+      const result = await getAgreementById('acordo-inexistente', {
+        tipoPerfil: 'Motorista',
+        userId: 'driver-1',
+      });
+
+      expect(result).toBeNull();
+    });
+
+    it('getAgreementById propaga erro Supabase', async () => {
+      supabase.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: null,
+            error: { message: 'RLS', code: '42501' },
+          }),
+        }),
+      });
+
+      await expect(
+        getAgreementById('acordo-x', { tipoPerfil: 'Motorista', userId: 'driver-1' }),
+      ).rejects.toMatchObject({ code: '42501' });
     });
 
     it('getAgreementsForPassenger via acordos_passageiros e aplica lazy RPCs', async () => {
