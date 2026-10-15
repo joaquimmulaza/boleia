@@ -110,20 +110,21 @@ import {
   buildSaidaRatingPrompt,
 } from '../utils/ratingGates';
 import {
-  isActivoPassageiro,
   isReservadoPassageiro,
   isExpiradoPassageiro,
   formatContagemPassageiros,
-  labelChipEstadoPassageiro,
-  chipClassEstadoPassageiro,
   GLOSSARIO_ESTADOS_LUGAR,
-  mostrarChipEstadoLugarPassageiro,
   estadoPassageiroParaChip,
   lugaresVivosFromLinhas,
   filterMotoristaPagamentosLugaresVivos,
   filterContactosPassageirosVivos,
 } from '../utils/estadoPassageiro';
-import { formatPrimeiroNome } from '../utils/primeiroNome';
+import {
+  nomePassageiroFromLinha,
+  nomePassageiroUi,
+  iniciaisPassageiroUi,
+} from '../utils/passageiroNomeUi.js';
+import { resolveQuotaLinhaPassageiroUi } from '../utils/passageiroLinhaQuotaUi.js';
 import { resolveMotoristaJustaCausaPassageiroAlerts } from '../utils/driverJustaCausaPassageiroCopy';
 import MotoristaJustaCausaPassageiroAlert from '../components/MotoristaJustaCausaPassageiroAlert';
 import {
@@ -134,13 +135,36 @@ import {
   copyJustaCausaTerminateTitle,
   isJustaCausaConfirmSubmitDisabled,
 } from '../utils/justaCausaTerminateConfirmCopy';
+import {
+  deveChamarGetAcordoContactos,
+  contactosBloqueadosFallback,
+} from '../utils/acordoContactosGate.js';
+import {
+  partitionAcordosLista,
+} from '../utils/acordoListGrouping.js';
+import {
+  LISTA_SECCAO_ACTIVOS,
+  LISTA_SECCAO_ENCERRADOS,
+  TOAST_JC_MOTORISTA_ACORDO_RESCINDIDO,
+  TOAST_JC_PASSAGEIRO_LUGAR_TERMINADO,
+  TOAST_JC_PASSAGEIRO_ACORDO_ENCERRADO,
+} from '../constants/acordoFollowup278Copy.js';
+import { copyToastJustaCausaPassageiro } from '../utils/passageiroJustaCausaToast.js';
+import {
+  labelChipFimLugar,
+  chipClassFimLugar,
+  testIdChipLugarAcordo,
+  mostrarChipFimLugar,
+} from '../utils/acordoSeatEndChip.js';
+import { Badge } from '../components/ui/badge';
 
 /**
  * @param {string | null | undefined} estado
  * @returns {boolean}
  */
 function isActivo(estado) {
-  return isActivoPassageiro(estado);
+  const e = String(estado || '').toLowerCase();
+  return e === 'activo' || e === 'cancelamento_pendente';
 }
 
 /**
@@ -163,16 +187,6 @@ function passageiroMostraPainelPagamento(minhaLinha, pagamento, obrigacao) {
 }
 
 /**
- * RPC get_acordo_contactos só para acordos vigentes ou com rescisão pendente.
- * @param {string | null | undefined} estado
- * @returns {boolean}
- */
-function podeCarregarContactos(estado) {
-  const e = String(estado || '').toLowerCase();
-  return e === 'activo' || e === 'cancelamento_pendente';
-}
-
-/**
  * @param {string | null | undefined} estado
  * @param {{ anulacao_motivo?: string | null } | null | undefined} [pagamento]
  */
@@ -188,39 +202,6 @@ function isExpirado(estado, pagamento) {
 function isNoAcordo(estado) {
   const e = String(estado || '').toLowerCase();
   return e === 'activo' || e === 'reservado';
-}
-
-/**
- * @param {string | null | undefined} nome
- * @returns {string}
- */
-function iniciais(nome) {
-  const parts = String(nome || '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-}
-
-/**
- * @param {{ perfis?: { nome_completo?: string }, nome?: string, passenger_id?: string }} pax
- * @returns {string}
- */
-function nomePassageiro(pax) {
-  return pax?.perfis?.nome_completo || pax?.nome || 'Passageiro';
-}
-
-/**
- * Nome na UI — motorista vê só primeiro nome; passageiro mantém copy completa.
- * @param {{ perfis?: { nome_completo?: string }, nome?: string }} pax
- * @param {{ motorista?: boolean }} [opts]
- * @returns {string}
- */
-function nomePassageiroUi(pax, { motorista = false } = {}) {
-  const nome = nomePassageiro(pax);
-  return motorista ? formatPrimeiroNome(nome) : nome;
 }
 
 /**
@@ -253,7 +234,7 @@ function buildTerminateCounterpartyLabel({ contactos, tipoPerfil, linhas }) {
     return e === 'activo' || e === 'reservado';
   });
   if (activos.length === 1) {
-    return nomePassageiro(activos[0]);
+    return nomePassageiroFromLinha(activos[0]);
   }
   return 'os passageiros';
 }
@@ -384,7 +365,14 @@ const MyAgreements = () => {
   const carregarPagamentoContactos = useCallback(async (acordo) => {
     if (!acordo?.id || !user?.id) return;
 
-    const podeContactos = podeCarregarContactos(acordo.estado);
+    const minhaLinhaAcordo = (acordo.acordos_passageiros || []).find(
+      (p) => p.passenger_id === user.id,
+    );
+    const podeContactos = deveChamarGetAcordoContactos({
+      acordoEstado: acordo.estado,
+      tipoPerfil,
+      minhaLinhaEstado: minhaLinhaAcordo?.estado,
+    });
     setPagamentoLoading(true);
     setContactosLoading(podeContactos);
     if (tipoPerfil === 'Motorista') {
@@ -433,7 +421,7 @@ const MyAgreements = () => {
           const payload = await getAcordoContactos(acordo.id);
           setContactos(payload);
         } catch (err) {
-          setContactos(null);
+          setContactos(contactosBloqueadosFallback());
           if (err?.code !== 'P0001') {
             console.error('Erro ao carregar contactos:', err);
           }
@@ -891,8 +879,10 @@ const MyAgreements = () => {
     [terminateModo, tipoPerfil, justaCausaConfirmVariant],
   );
 
-  const activos = acordos.filter((a) => isActivo(a.estado));
-  const outros = acordos.filter((a) => !isActivo(a.estado));
+  const { activos, encerrados } = partitionAcordosLista(acordos, {
+    tipoPerfil,
+    viewerUserId: user?.id,
+  });
 
   const podeSairSoloAcordo = useMemo(() => {
     if (!selected || tipoPerfil !== 'Passageiro') return false;
@@ -994,6 +984,10 @@ const MyAgreements = () => {
 
     terminateInFlightRef.current = true;
     setTerminateBusy(true);
+    const lugaresVivosAntesJc =
+      modo === 'justa_causa' && tipoPerfil === 'Passageiro'
+        ? terminateLugaresVivosCount
+        : null;
     try {
       const input = { modo };
       const justificativa = justificativaOverride || terminateJustificativa;
@@ -1070,7 +1064,25 @@ const MyAgreements = () => {
       } else if (modo === 'aviso_previo' || estado === 'cancelamento_pendente') {
         text = 'Rescisão agendada. O acordo mantém-se activo até ao fim deste mês.';
       } else if (modo === 'justa_causa' || estado === 'cancelado_justificado') {
-        text = 'Acordo rescindido por justa causa.';
+        const toastJc = copyToastJustaCausaPassageiro({
+          tipoPerfil,
+          modo,
+          acordoEstadoApos: estado,
+          lugaresVivosAntes: lugaresVivosAntesJc,
+        });
+        if (toastJc) {
+          text = toastJc;
+        } else if (String(tipoPerfil || '') === 'Motorista') {
+          text = TOAST_JC_MOTORISTA_ACORDO_RESCINDIDO;
+        } else if (
+          estado === 'cancelado'
+          || estado === 'cancelado_justificado'
+          || estado === 'expirado'
+        ) {
+          text = TOAST_JC_PASSAGEIRO_ACORDO_ENCERRADO;
+        } else {
+          text = TOAST_JC_PASSAGEIRO_LUGAR_TERMINADO;
+        }
       }
 
       setMessage({ type: 'success', text });
@@ -1178,8 +1190,8 @@ const MyAgreements = () => {
       minhaLinha,
       minhaChipCtx: minhaChipCtxCard,
     });
-    const minhaEstadoLugarCard = minhaLinhaCabecalho
-      ? estadoPassageiroParaChip(minhaLinhaCabecalho.estado, minhaChipCtxCard)
+    const chipLugarLabelCard = minhaLinhaCabecalho
+      ? labelChipFimLugar(minhaLinhaCabecalho, minhaChipCtxCard)
       : null;
     const quotaCard =
       tipoPerfil === 'Passageiro'
@@ -1205,19 +1217,14 @@ const MyAgreements = () => {
             >
               {estadoChipCard.label}
             </span>
-            {mostrarChipLugarCard && minhaLinhaCabecalho ? (
-              <span
-                className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoPassageiro(minhaLinhaCabecalho.estado, minhaChipCtxCard)}`}
-                data-testid={
-                  minhaEstadoLugarCard === 'expirado'
-                    ? `acordo-lugar-expirado-chip-${acordo.id}`
-                    : minhaEstadoLugarCard === 'saiu'
-                      ? `acordo-lugar-saiu-chip-${acordo.id}`
-                      : `acordo-lugar-chip-${acordo.id}`
-                }
+            {mostrarChipLugarCard && minhaLinhaCabecalho && mostrarChipFimLugar(chipLugarLabelCard) ? (
+              <Badge
+                variant="secondary"
+                className={`text-xs font-bold ${chipClassFimLugar(chipLugarLabelCard)}`}
+                data-testid={testIdChipLugarAcordo(acordo.id, chipLugarLabelCard)}
               >
-                {labelChipEstadoPassageiro(minhaLinhaCabecalho.estado, minhaChipCtxCard)}
-              </span>
+                {chipLugarLabelCard}
+              </Badge>
             ) : null}
             {leavePending && (
               <span
@@ -1457,8 +1464,8 @@ const MyAgreements = () => {
             nPassageirosContrato={selected.n_passageiros_contrato}
             tipoPerfil={tipoPerfil}
             viewerUserId={user?.id}
-            minhaLinhaEstado={minhaLinha?.estado}
-            minhaLinhaPagamento={pagamentoViewer}
+            minhaLinha={minhaLinha}
+            minhaChipCtx={minhaChipCtxSheet}
             leavePending={leavePending}
             isBodyScrolled={acordoSheetHeaderScrolled}
             fecharRef={acordoSheetFecharRef}
@@ -1810,7 +1817,11 @@ const MyAgreements = () => {
             />
           ) : null}
 
-          {podeCarregarContactos(selected.estado) ? (
+          {deveChamarGetAcordoContactos({
+            acordoEstado: selected.estado,
+            tipoPerfil,
+            minhaLinhaEstado: minhaLinha?.estado,
+          }) ? (
             <AcordoContactosPanel
               contactos={contactosFiltrados}
               loading={contactosLoading}
@@ -1863,8 +1874,10 @@ const MyAgreements = () => {
                     viewerPassengerId: user?.id,
                     chipFromList: chipCtxForAcordoPassageiro(selected.id, p.passenger_id),
                   });
-                  const chipLugar = estadoPassageiroParaChip(p.estado, chipCtxLinha);
-                  const saiu = chipLugar === 'saiu' || chipLugar === 'terminado';
+                  const chipLugarLabel = labelChipFimLugar(p, chipCtxLinha);
+                  const quotaLinhaUi = resolveQuotaLinhaPassageiroUi(p, chipCtxLinha);
+                  const saiu = mostrarChipFimLugar(chipLugarLabel)
+                    && chipLugarLabel !== 'Reservado';
                   return (
                     <li
                       key={p.id || p.passenger_id}
@@ -1882,30 +1895,38 @@ const MyAgreements = () => {
                         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-600 dark:text-slate-300"
                         aria-hidden="true"
                       >
-                        {iniciais(nome)}
+                        {iniciaisPassageiroUi(nome)}
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                           {nome}
                         </p>
-                        {isActivo(p.estado) || mostrarChipEstadoLugarPassageiro(p.estado, chipCtxLinha) ? (
-                          <span
-                            className={`inline-flex text-xs font-bold px-2 py-0.5 rounded-full mt-0.5 ${chipClassEstadoPassageiro(p.estado, chipCtxLinha)}`}
+                        {mostrarChipFimLugar(chipLugarLabel) ? (
+                          <Badge
+                            variant="secondary"
+                            className={`mt-0.5 text-xs font-bold ${chipClassFimLugar(chipLugarLabel)}`}
                             data-testid={`passageiro-estado-chip-${p.passenger_id}`}
                           >
-                            {labelChipEstadoPassageiro(p.estado, chipCtxLinha)}
-                          </span>
+                            {chipLugarLabel}
+                          </Badge>
                         ) : null}
                       </div>
-                      <strong
-                        className={`tabular-nums text-sm shrink-0 ${
-                          highlighted
-                            ? 'text-lg font-bold text-primary'
-                            : 'text-slate-800 dark:text-slate-100'
-                        }`}
-                      >
-                        {formatKwanza(p.quota_mensal_kz)} Kz
-                      </strong>
+                      {quotaLinhaUi.kind === 'quota' ? (
+                        <strong
+                          className={`tabular-nums text-sm shrink-0 ${
+                            highlighted
+                              ? 'text-lg font-bold text-primary'
+                              : 'text-slate-800 dark:text-slate-100'
+                          }`}
+                        >
+                          {formatKwanza(quotaLinhaUi.kz)} Kz
+                        </strong>
+                      ) : null}
+                      {quotaLinhaUi.kind === 'text' ? (
+                        <span className="tabular-nums text-xs shrink-0 text-slate-500 dark:text-slate-400">
+                          {quotaLinhaUi.text}
+                        </span>
+                      ) : null}
                     </li>
                   );
                 })}
@@ -1983,16 +2004,18 @@ const MyAgreements = () => {
       {!isLoading && activos.length > 0 && (
         <div className="space-y-3 mb-6">
           <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-            Activos · {activos.length}
+            {LISTA_SECCAO_ACTIVOS} · {activos.length}
           </p>
           {activos.map(renderCard)}
         </div>
       )}
 
-      {!isLoading && outros.length > 0 && (
+      {!isLoading && encerrados.length > 0 && (
         <div className="space-y-3">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Outros</p>
-          {outros.map(renderCard)}
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+            {LISTA_SECCAO_ENCERRADOS} · {encerrados.length}
+          </p>
+          {encerrados.map(renderCard)}
         </div>
       )}
 
@@ -2292,7 +2315,7 @@ const MyAgreements = () => {
       ) : null}
 
       <TerminateConfirmSheet
-        isOpen={terminateConfirmOpen}
+        isOpen={terminateConfirmOpen && Boolean(terminateModo)}
         busy={terminateBusy}
         title={
           terminateModo === 'consensual'

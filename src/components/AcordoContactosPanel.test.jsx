@@ -17,8 +17,9 @@ describe('AcordoContactosPanel', () => {
     expect(screen.getByTestId('contactos-bloqueados')).toBeInTheDocument();
     expect(screen.queryByText('+244923000001')).not.toBeInTheDocument();
     expect(screen.getByTestId('contactos-proximo-passo')).toHaveTextContent(
-      /envia o comprovativo/i,
+      'Próximo passo: envia o comprovativo de transferência na secção Pagamento mensal.',
     );
+    expect(screen.getByTestId('contactos-proximo-passo').textContent).not.toMatch(/abaixo/i);
     expect(screen.queryByTestId('contactos-aguardar-pagamento')).not.toBeInTheDocument();
   });
 

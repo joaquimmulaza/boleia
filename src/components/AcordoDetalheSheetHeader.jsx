@@ -4,10 +4,11 @@ import SheetDragHandle from './SheetDragHandle';
 import AcordoDetalheKebabMenu from './AcordoDetalheKebabMenu';
 import { Button } from './ui/button';
 import {
-  labelChipEstadoPassageiro,
-  chipClassEstadoPassageiro,
-  estadoPassageiroParaChip,
-} from '../utils/estadoPassageiro';
+  labelChipFimLugar,
+  chipClassFimLugar,
+  mostrarChipFimLugar,
+  testIdChipLugarAcordo,
+} from '../utils/acordoSeatEndChip.js';
 import { resolveAcordoListaCabecalhoUi } from '../utils/resolveAcordoListaCabecalhoUi.js';
 
 /**
@@ -25,8 +26,8 @@ import { resolveAcordoListaCabecalhoUi } from '../utils/resolveAcordoListaCabeca
  *   nPassageirosContrato?: number | null,
  *   tipoPerfil?: string | null,
  *   viewerUserId?: string | null,
- *   minhaLinhaEstado?: string | null,
- *   minhaLinhaPagamento?: { anulacao_motivo?: string | null } | null,
+ *   minhaLinha?: { passenger_id?: string, estado?: string, lugar_rescisao_modo?: string | null, lugar_saida_iniciador?: string | null } | null,
+ *   minhaChipCtx?: { anulacao_motivo?: string | null, estado?: string | null } | null,
  *   leavePending?: boolean,
  *   isBodyScrolled?: boolean,
  *   fecharRef?: import('react').RefObject<HTMLButtonElement | null>,
@@ -52,8 +53,8 @@ export default function AcordoDetalheSheetHeader({
   nPassageirosContrato,
   tipoPerfil,
   viewerUserId,
-  minhaLinhaEstado,
-  minhaLinhaPagamento = null,
+  minhaLinha = null,
+  minhaChipCtx = null,
   leavePending = false,
   isBodyScrolled = false,
   fecharRef,
@@ -65,9 +66,6 @@ export default function AcordoDetalheSheetHeader({
   titulo = 'Detalhe do acordo',
   onKebabTriggerRef,
 }) {
-  const minhaEstadoLugar = minhaLinhaEstado
-    ? estadoPassageiroParaChip(minhaLinhaEstado, minhaLinhaPagamento)
-    : null;
   const acordoCabecalho = {
     estado: estadoAcordo,
     encerramento_motivo: encerramentoMotivoAcordo,
@@ -79,17 +77,22 @@ export default function AcordoDetalheSheetHeader({
     n_passageiros_contrato: nPassageirosContrato,
     acordos_passageiros: acordosPassageiros,
   };
-  const minhaLinha =
-    minhaLinhaEstado && viewerUserId
-      ? { passenger_id: viewerUserId, estado: minhaLinhaEstado }
+  const minhaLinhaCabecalho =
+    minhaLinha?.estado && viewerUserId
+      ? { ...minhaLinha, passenger_id: minhaLinha.passenger_id ?? viewerUserId }
       : null;
   const { estadoChip, mostrarChipLugar } = resolveAcordoListaCabecalhoUi({
     acordo: acordoCabecalho,
     viewerUserId,
     tipoPerfil,
-    minhaLinha,
-    minhaChipCtx: minhaLinhaPagamento,
+    minhaLinha: minhaLinhaCabecalho,
+    minhaChipCtx,
   });
+  const chipLugarLabel = minhaLinhaCabecalho
+    ? labelChipFimLugar(minhaLinhaCabecalho, minhaChipCtx)
+    : null;
+  const mostrarChipLugarHeader =
+    Boolean(mostrarChipLugar && minhaLinhaCabecalho && mostrarChipFimLugar(chipLugarLabel));
 
   return (
     <header
@@ -123,45 +126,40 @@ export default function AcordoDetalheSheetHeader({
         />
       </div>
 
-      <div className="space-y-2 mt-1">
-        <div className="flex items-center justify-between gap-2 pt-0.5">
-          <div className="relative z-10 flex flex-wrap items-center gap-2">
+      <div className="mt-1 space-y-2 pt-0.5">
+        <div
+          data-testid="acordo-detalhe-titulo-chips"
+          className="relative z-10 flex flex-wrap items-center gap-x-2 gap-y-2 min-w-0"
+        >
+          <h2
+            id="acordo-detail-title"
+            className="text-lg font-bold text-balance shrink-0 max-w-full"
+          >
+            {titulo}
+          </h2>
+          <span
+            data-testid="acordo-detalhe-estado-chip"
+            role={estadoChip.role}
+            aria-label={estadoChip.ariaLabel}
+            className={`shrink-0 whitespace-nowrap text-xs font-bold px-2.5 py-1 rounded-full ${estadoChip.className}`}
+          >
+            {estadoChip.label}
+          </span>
+          {mostrarChipLugarHeader ? (
             <span
-              data-testid="acordo-detalhe-estado-chip"
-              role={estadoChip.role}
-              aria-label={estadoChip.ariaLabel}
-              className={`text-xs font-bold px-2.5 py-1 rounded-full ${estadoChip.className}`}
+              className={`shrink-0 whitespace-nowrap text-xs font-bold px-2.5 py-1 rounded-full ${chipClassFimLugar(chipLugarLabel)}`}
+              data-testid={testIdChipLugarAcordo(acordoId, chipLugarLabel)}
             >
-              {estadoChip.label}
+              {chipLugarLabel}
             </span>
-            {mostrarChipLugar ? (
-              <span
-                className={`text-xs font-bold px-2.5 py-1 rounded-full ${chipClassEstadoPassageiro(
-                  minhaLinhaEstado,
-                  minhaLinhaPagamento,
-                )}`}
-                data-testid={
-                  minhaEstadoLugar === 'expirado'
-                    ? `acordo-lugar-expirado-chip-${acordoId}`
-                    : minhaEstadoLugar === 'saiu'
-                      ? `acordo-lugar-saiu-chip-${acordoId}`
-                      : `acordo-lugar-chip-${acordoId}`
-                }
-              >
-                {labelChipEstadoPassageiro(minhaLinhaEstado, minhaLinhaPagamento)}
-              </span>
-            ) : null}
-            {leavePending ? (
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
-                <Loader2 size={12} className="animate-spin shrink-0" aria-hidden="true" />
-                Saída Pendente (A sincronizar...)
-              </span>
-            ) : null}
-          </div>
+          ) : null}
+          {leavePending ? (
+            <span className="inline-flex shrink-0 whitespace-nowrap items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
+              <Loader2 size={12} className="animate-spin shrink-0" aria-hidden="true" />
+              Saída Pendente (A sincronizar...)
+            </span>
+          ) : null}
         </div>
-        <h2 id="acordo-detail-title" className="text-lg font-bold text-balance">
-          {titulo}
-        </h2>
       </div>
     </header>
   );

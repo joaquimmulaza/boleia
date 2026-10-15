@@ -194,12 +194,26 @@ const AddressInput = ({
       : undefined;
 
   const listPanelOpen = showDropdown && trimmedInputLength > 2;
-  const floatingLayout = useFloatingGeocoderPanel(anchorRef, listPanelOpen);
+
+  const showInlineGeocoderPanel =
+    listPanelOpen
+    && predictionsSettled
+    && !loading
+    && (
+      errorKind === 'network'
+      || Boolean(error)
+      || (suggestions.length === 0 && Boolean(emptyMessage))
+    );
+
+  const showFloatingGeocoderPanel =
+    listPanelOpen && (loading || suggestions.length > 0);
+
+  const floatingLayout = useFloatingGeocoderPanel(anchorRef, showFloatingGeocoderPanel);
 
   useLayoutEffect(() => {
-    if (!listPanelOpen || !anchorRef.current) return;
+    if (!showFloatingGeocoderPanel || !anchorRef.current) return;
     setPortalContainer(resolveGeocoderPortalContainer(anchorRef.current));
-  }, [listPanelOpen]);
+  }, [showFloatingGeocoderPanel]);
 
   useEffect(() => {
     const onSheetDragStart = () => {
@@ -210,7 +224,7 @@ const AddressInput = ({
   }, [closeDropdown]);
 
   useEffect(() => {
-    if (!listPanelOpen) return undefined;
+    if (!showFloatingGeocoderPanel && !showInlineGeocoderPanel) return undefined;
 
     const dismissOnSheetChrome = (event) => {
       const target = event.target;
@@ -222,7 +236,7 @@ const AddressInput = ({
 
     document.addEventListener('pointerdown', dismissOnSheetChrome, true);
     return () => document.removeEventListener('pointerdown', dismissOnSheetChrome, true);
-  }, [listPanelOpen, closeDropdown]);
+  }, [showFloatingGeocoderPanel, showInlineGeocoderPanel, closeDropdown]);
 
   useLayoutEffect(() => {
     if (!listPanelOpen) return undefined;
@@ -345,7 +359,26 @@ const AddressInput = ({
          <div className="mt-1 ml-1 text-xs text-red-500 font-medium">{error}</div>
       )}
 
-      {listPanelOpen && portalContainer
+      {showInlineGeocoderPanel ? (
+        <AutocompleteDropdown
+          inline
+          suggestions={suggestions}
+          loading={loading}
+          error={error}
+          errorKind={errorKind}
+          onSelect={handleSelect}
+          onRetry={retryLastFetch}
+          listboxId={listboxId}
+          activeIndex={activeIndex}
+          emptyMessage={emptyMessage}
+          freeTextActionLabel={
+            showFreeTextAction ? formatUseFreeTextLabel(inputValue) : undefined
+          }
+          onUseFreeText={showFreeTextAction ? handleUseFreeText : undefined}
+        />
+      ) : null}
+
+      {showFloatingGeocoderPanel && portalContainer
         ? createPortal(
             <AutocompleteDropdown
               ref={dropdownPanelRef}

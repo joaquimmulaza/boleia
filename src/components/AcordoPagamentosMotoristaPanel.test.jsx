@@ -93,8 +93,8 @@ describe('AcordoPagamentosMotoristaPanel — v1.6', () => {
     expect(screen.getByTestId('motorista-pagamento-comprovativo-pax-2')).toHaveTextContent(
       /comprovativo de 55[\s\u00a0]?000 Kz em validação/,
     );
-    expect(screen.getByText('Pagamento cancelado')).toBeInTheDocument();
-    expect(screen.queryByText('Em validação')).not.toBeInTheDocument();
+    expect(screen.getByText('Comprovativo enviado')).toBeInTheDocument();
+    expect(screen.queryByText('Pagamento cancelado')).not.toBeInTheDocument();
   });
 
   it('S4 acordo activo: comprovativo + prazo até data (sem countdown)', () => {
@@ -215,8 +215,8 @@ describe('AcordoPagamentosMotoristaPanel — v1.6', () => {
     );
     const row = screen.getByTestId('motorista-pagamento-pax-prod');
     expect(row).toHaveTextContent(/22[\s\u00a0]?000 Kz/);
-    expect(row.textContent).not.toMatch(/Pagamento pendente/i);
-    expect(row).toHaveTextContent(/Pagamento cancelado/);
+    expect(row).toHaveTextContent(/Pagamento pendente/i);
+    expect(row.textContent).not.toMatch(/Pagamento cancelado/i);
   });
 
   it('acordo terminado com várias secções: Pagamentos deste acordo', () => {

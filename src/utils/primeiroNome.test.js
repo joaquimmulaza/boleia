@@ -7,6 +7,11 @@ describe('formatPrimeiroNome', () => {
     expect(formatPrimeiroNome('João Pedro Costa')).toBe('João');
   });
 
+  it('contas QA: ignora prefixo QA', () => {
+    expect(formatPrimeiroNome('QA Passageiro 3')).toBe('Passageiro');
+    expect(formatPrimeiroNome('QA Passenger Three')).toBe('Passenger');
+  });
+
   it('fallback «Passageiro» quando vazio ou inválido', () => {
     expect(formatPrimeiroNome('')).toBe('Passageiro');
     expect(formatPrimeiroNome(null)).toBe('Passageiro');

@@ -176,14 +176,7 @@ export function isAcordoEncerradoPagamentoUi(estado) {
  * @param {{ acordoTerminado?: boolean }} [options]
  * @returns {string}
  */
-export function labelEstadoPagamentoMotoristaCabecalho(estadoPagamento, options = {}) {
-  const e = String(estadoPagamento || '').toLowerCase();
-  if (
-    options.acordoTerminado
-    && (e === PAYMENT_STATES.PENDENTE || e === PAYMENT_STATES.COMPROVATIVO)
-  ) {
-    return labelEstadoPagamento(PAYMENT_STATES.ANULADO, { placement: 'cabecalho' });
-  }
+export function labelEstadoPagamentoMotoristaCabecalho(estadoPagamento) {
   return labelEstadoPagamento(estadoPagamento, { placement: 'cabecalho' });
 }
 
@@ -193,14 +186,7 @@ export function labelEstadoPagamentoMotoristaCabecalho(estadoPagamento, options 
  * @param {{ acordoTerminado?: boolean }} [options]
  * @returns {string}
  */
-export function chipClassEstadoPagamentoMotoristaCabecalho(estadoPagamento, options = {}) {
-  const e = String(estadoPagamento || '').toLowerCase();
-  if (
-    options.acordoTerminado
-    && (e === PAYMENT_STATES.PENDENTE || e === PAYMENT_STATES.COMPROVATIVO)
-  ) {
-    return chipClassEstadoPagamento(PAYMENT_STATES.ANULADO);
-  }
+export function chipClassEstadoPagamentoMotoristaCabecalho(estadoPagamento) {
   return chipClassEstadoPagamento(estadoPagamento);
 }
 

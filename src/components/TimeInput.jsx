@@ -1,5 +1,7 @@
 import React from 'react';
+import { Input } from './ui/input';
 import { cn } from '../lib/utils';
+import { ADDRESS_INPUT_SURFACE_CLASS } from '../utils/addressInputSurface.js';
 
 /**
  * Input de hora em formato 24h (PT-AO/PT-PT) — sem AM/PM.
@@ -22,7 +24,7 @@ const TimeInput = ({
   id,
   'aria-label': ariaLabel,
 }) => (
-  <input
+  <Input
     type="time"
     lang="pt-PT"
     step="60"
@@ -32,7 +34,11 @@ const TimeInput = ({
     onChange={onChange}
     required={required}
     aria-label={ariaLabel}
-    className={cn('time-input-24h tabular-nums', className)}
+    className={cn(
+      'time-input-24h tabular-nums min-w-[6.75rem]',
+      ADDRESS_INPUT_SURFACE_CLASS,
+      className,
+    )}
   />
 );
 

@@ -32,7 +32,7 @@ describe('resolveAcordoListaCabecalhoUi', () => {
     expect(ui.rotuloPessoas).toBe('Individual');
   });
 
-  it('motorista — só reservado nas linhas: chip Reservado e sem grupo', () => {
+  it('motorista — só reservado nas linhas: chip Reservado e Grupo · N vivos', () => {
     const ui = resolveAcordoListaCabecalhoUi({
       acordo: {
         estado: 'activo',
@@ -46,6 +46,6 @@ describe('resolveAcordoListaCabecalhoUi', () => {
       tipoPerfil: 'Motorista',
     });
     expect(ui.estadoChip.label).toBe('Reservado');
-    expect(ui.rotuloPessoas).toBe(null);
+    expect(ui.rotuloPessoas).toBe('Grupo · 2 pessoas');
   });
 });

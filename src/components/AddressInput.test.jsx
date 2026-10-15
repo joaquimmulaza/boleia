@@ -2,11 +2,13 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AddressInput from './AddressInput';
+import OverlayShell from './OverlayShell';
 import {
   EMPTY_GEOCODER_MESSAGE,
   GEOCODER_FIELD_UNRESOLVED_TODO,
   formatUseFreeTextLabel,
 } from '../utils/addressGeocoderCopy';
+import { resetOverlayStackForTests } from '../utils/overlayStack';
 
 const fetchPredictions = vi.fn();
 const selectPlace = vi.fn();
@@ -34,6 +36,7 @@ vi.mock('../hooks/useAutocomplete', () => ({
 describe('AddressInput', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetOverlayStackForTests();
     mockSuggestions = [];
     mockLoading = false;
     mockErrorKind = null;
@@ -69,10 +72,9 @@ describe('AddressInput', () => {
     const input = screen.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i });
     expect(input).not.toBeRequired();
     expect(input.className).toMatch(/border-\[#718096\]/);
-    expect(input.className).toMatch(/dark:border-input/);
-    expect(input.className).toMatch(/bg-card/);
-    expect(input.className).toMatch(/dark:bg-background/);
-    expect(input.className.split(/\s+/)).not.toContain('bg-background');
+    expect(input.className).toMatch(/dark:border-muted-foreground/);
+    expect(input.className).toMatch(/bg-background/);
+    expect(input.className.split(/\s+/)).toContain('bg-background');
   });
 
   it('associa label ao input usando id ou fallback para name', () => {
@@ -454,6 +456,119 @@ describe('AddressInput', () => {
     const portalMount = screen.getByTestId('geocoder-sheet-portal');
     expect(portalMount.contains(listbox)).toBe(true);
     expect(screen.getByRole('dialog').contains(listbox)).toBe(true);
+  });
+
+  it('erro de rede renderiza inline no fluxo (sem painel fixed/portal)', () => {
+    mockErrorKind = 'network';
+    mockSuggestions = [];
+    mockResolvedInput = 'Talatona';
+
+    render(
+      <AddressInput
+        name="origin_name"
+        label="Origem"
+        value="Talatona"
+        onChange={vi.fn()}
+        allowFreeTextUse
+      />,
+    );
+
+    fireEvent.focus(screen.getByRole('combobox', { name: /Origem/i }));
+    const networkError = screen.getByTestId('geocoder-network-error');
+    const wrapper = screen.getByRole('combobox', { name: /Origem/i }).closest('.flex.flex-col.w-full.relative');
+    const label = wrapper?.querySelector('label');
+    expect(wrapper?.contains(networkError)).toBe(true);
+    expect(label?.nextElementSibling).toBe(networkError);
+    expect(networkError).not.toHaveAttribute('data-geocoder-floating-list');
+    expect(networkError.closest('[style*="position: fixed"]')).toBeNull();
+  });
+
+  it('com sugestões abertas não destaca a primeira opção por defeito', () => {
+    mockSuggestions = [
+      { place_id: 'photon-1', description: 'Talatona, Luanda' },
+      { place_id: 'photon-2', description: 'Viana, Viana' },
+    ];
+
+    render(
+      <AddressInput
+        name="origin_name"
+        label="Origem"
+        value="Tal"
+        onChange={vi.fn()}
+      />,
+    );
+
+    const input = screen.getByRole('combobox', { name: /Origem/i });
+    fireEvent.focus(input);
+    expect(input).not.toHaveAttribute('aria-activedescendant');
+    const options = screen.getAllByRole('option');
+    expect(options.every((opt) => opt.getAttribute('aria-selected') === 'false')).toBe(true);
+  });
+
+  it('Escape no documento com lista aberta fecha só a lista (formulário inline, sem sheet)', () => {
+    mockSuggestions = [{ place_id: 'photon-1', description: 'Talatona, Luanda' }];
+
+    render(
+      <AddressInput
+        name="origin_name"
+        label="Origem"
+        value="Tal"
+        onChange={vi.fn()}
+      />,
+    );
+
+    fireEvent.focus(screen.getByRole('combobox', { name: /Origem/i }));
+    expect(screen.getByRole('listbox', { name: 'Sugestões de locais' })).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(screen.queryByRole('listbox', { name: 'Sugestões de locais' })).not.toBeInTheDocument();
+  });
+
+  it('Escape no documento: lista primeiro, depois sheet (OverlayShell)', () => {
+    mockSuggestions = [{ place_id: 'photon-1', description: 'Talatona, Luanda' }];
+    const sheetDismiss = vi.fn();
+
+    render(
+      <OverlayShell testId="editar-sheet" dialogLabelledBy="t" onDismiss={sheetDismiss}>
+        <h2 id="t">Editar grupo</h2>
+        <AddressInput
+          name="edit_pickup_name"
+          label="Ponto de recolha (opcional)"
+          required={false}
+          value="Talatona"
+          onChange={vi.fn()}
+        />
+      </OverlayShell>,
+    );
+
+    fireEvent.focus(screen.getByRole('combobox', { name: /Ponto de recolha \(opcional\)/i }));
+    expect(screen.getByRole('listbox', { name: 'Sugestões de locais' })).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('listbox', { name: 'Sugestões de locais' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('editar-sheet')).toBeInTheDocument();
+    expect(sheetDismiss).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(sheetDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('sugestões mantêm listbox flutuante com data-geocoder-floating-list', () => {
+    mockSuggestions = [{ place_id: 'photon-1', description: 'Talatona, Luanda' }];
+
+    render(
+      <AddressInput
+        name="origin_name"
+        label="Origem"
+        value="Tal"
+        onChange={vi.fn()}
+      />,
+    );
+
+    fireEvent.focus(screen.getByRole('combobox', { name: /Origem/i }));
+    const listbox = screen.getByRole('listbox', { name: 'Sugestões de locais' });
+    expect(listbox.closest('[data-geocoder-floating-list]')).not.toBeNull();
   });
 
   it('erro de rede mostra copy final, retry e Usar texto livre', () => {

@@ -8,9 +8,13 @@ import { GEOCODER_FLOATING_LIST_ATTR } from '../utils/geocoderDismissChrome';
 
 /**
  * @param {boolean} floating
+ * @param {boolean} inline
  * @returns {string}
  */
-function shellPositionClass(floating) {
+function shellPositionClass(floating, inline) {
+  if (inline) {
+    return 'mt-2 rounded-xl border overflow-hidden';
+  }
   return floating
     ? 'rounded-xl shadow-lg overflow-hidden'
     : 'absolute top-full left-0 right-0 z-50 mt-2 rounded-xl shadow-lg overflow-hidden';
@@ -33,6 +37,7 @@ function shellPositionClass(floating) {
  *   onUseFreeText?: () => void,
  *   floatingStyle?: import('react').CSSProperties,
  *   maxListHeight?: number,
+ *   inline?: boolean,
  * }} props
  */
 const AutocompleteDropdown = React.forwardRef(function AutocompleteDropdown(
@@ -51,14 +56,15 @@ const AutocompleteDropdown = React.forwardRef(function AutocompleteDropdown(
     onUseFreeText,
     floatingStyle,
     maxListHeight = 240,
+    inline = false,
   },
   ref,
 ) {
-  const floating = Boolean(floatingStyle);
+  const floating = !inline && Boolean(floatingStyle);
   const floatingShellAttrs = floating
     ? { [GEOCODER_FLOATING_LIST_ATTR]: '' }
     : {};
-  const shellClass = `${shellPositionClass(floating)} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 ${
+  const shellClass = `${shellPositionClass(floating, inline)} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 ${
     floating ? 'pointer-events-auto' : ''
   }`;
   const listMaxStyle = { maxHeight: `${maxListHeight}px` };
@@ -75,10 +81,10 @@ const AutocompleteDropdown = React.forwardRef(function AutocompleteDropdown(
     return (
       <div
         ref={ref}
-        className={`${shellPositionClass(floating)} bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-800 rounded-xl shadow-lg overflow-hidden p-4 space-y-3 ${
-          floating ? 'pointer-events-auto' : ''
-        }`}
-        style={floatingStyle}
+        className={`${shellPositionClass(floating, inline)} bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-800 ${
+          inline ? '' : 'shadow-lg'
+        } overflow-hidden p-4 space-y-3 ${floating ? 'pointer-events-auto' : ''}`}
+        style={inline ? undefined : floatingStyle}
         role="alert"
         data-testid="geocoder-network-error"
         {...floatingShellAttrs}
