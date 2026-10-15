@@ -1535,7 +1535,7 @@ const PassengerDashboard = () => {
   };
 
   return (
-    <PageShell>
+    <PageShell className={view === 'form' ? 'pb-0' : undefined}>
       {(view === 'form' || !mostrarSegmented) && (
         <PageHeader
           title={

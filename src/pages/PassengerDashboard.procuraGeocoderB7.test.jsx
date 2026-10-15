@@ -191,8 +191,9 @@ describe('PassengerDashboard — geocoder B7', () => {
     expect(footer).toContainElement(guardar);
     expect(footer.className).toMatch(/sticky/);
     expect(footer.className).toMatch(/\bbottom-0\b/);
-    expect(footer.className).toMatch(/pb-\[var\(--shell-bottom-inset\)\]/);
-    expect(footer.className).toMatch(/-mb-\[var\(--shell-bottom-inset\)\]/);
+    expect(footer.className).toMatch(/\bpb-3\b/);
+    expect(footer.className).not.toMatch(/pb-\[var\(--shell-bottom-inset\)\]/);
+    expect(footer.className).not.toMatch(/-mb-\[var\(--shell-bottom-inset\)\]/);
     expect(screen.queryByTestId('procura-form-scroll')).not.toBeInTheDocument();
     expect(screen.getByTestId('procura-form').className).not.toMatch(/max-h-/);
   });

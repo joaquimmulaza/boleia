@@ -160,20 +160,10 @@ body {
   }
 }
 
-/* Hora 24h — ocultar AM/PM em WebKit/Blink; largura mínima para HH:MM */
+/* Hora 24h — input texto HH:MM (TimeInput) */
 .time-input-24h {
   min-width: 6.75rem;
   font-variant-numeric: tabular-nums;
-}
-.time-input-24h::-webkit-datetime-edit-ampm-field {
-  display: none;
-}
-.time-input-24h::-webkit-datetime-edit-fields-wrapper {
-  padding: 0;
-}
-.time-input-24h::-webkit-datetime-edit-hour-field,
-.time-input-24h::-webkit-datetime-edit-minute-field {
-  min-width: 1.35em;
 }
 
 /* TextFade — fade sem ellipsis. 1 linha à direita; 2 linhas cortam a 3.ª. */

@@ -60,8 +60,9 @@ describe('OfertaEditPanel', () => {
     );
 
     const regresso = screen.getByLabelText(/Hora de regresso/i);
-    expect(regresso).toHaveAttribute('type', 'time');
+    expect(regresso).toHaveAttribute('type', 'text');
     expect(regresso).toHaveValue('17:45');
+    expect(regresso).toHaveAttribute('inputMode', 'numeric');
     expect(regresso.className).toMatch(/time-input-24h/);
     expect(regresso.className).not.toMatch(/min-w-/);
   });

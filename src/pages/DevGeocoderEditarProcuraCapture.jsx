@@ -8,7 +8,9 @@ import {
   PROCURA_FORM_BODY_CLASS,
   PROCURA_FORM_CLASS,
   PROCURA_FORM_SUBMIT_FOOTER_CLASS,
+  PROCURA_FORM_SUBMIT_FOOTER_STANDALONE_SAFE_CLASS,
 } from '../utils/procuraFormLayout';
+import { cn } from '../lib/utils';
 
 const DIAS = [
   { valor: 1, label: 'Seg' },
@@ -36,7 +38,7 @@ export default function DevGeocoderEditarProcuraCapture() {
   };
 
   return (
-    <PageShell className="max-w-[390px] px-0">
+    <PageShell className="max-w-[390px] px-0 pb-0">
       <PageHeader
         title="Editar procura"
         subtitle="Corrige origem, destino, horário, dias ou teto."
@@ -107,7 +109,12 @@ export default function DevGeocoderEditarProcuraCapture() {
             />
           </label>
         </div>
-        <div className={PROCURA_FORM_SUBMIT_FOOTER_CLASS}>
+        <div
+          className={cn(
+            PROCURA_FORM_SUBMIT_FOOTER_CLASS,
+            PROCURA_FORM_SUBMIT_FOOTER_STANDALONE_SAFE_CLASS,
+          )}
+        >
           <button type="button" className="w-full bg-primary py-4 font-bold text-white rounded-xl">
             Guardar alterações
           </button>
