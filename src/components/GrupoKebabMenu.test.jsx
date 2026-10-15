@@ -56,6 +56,49 @@ describe('GrupoKebabMenu', () => {
     expect(onSair).toHaveBeenCalledTimes(1);
   });
 
+  it('Tab fecha o menu kebab do grupo', () => {
+    render(
+      <div>
+        <GrupoKebabMenu
+          canEditar
+          canApagar
+          canSair={false}
+          onEditar={vi.fn()}
+          onApagar={vi.fn()}
+          onSair={vi.fn()}
+        />
+        <button type="button" data-testid="seguinte">
+          Seguinte
+        </button>
+      </div>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Mais acções do grupo/i }));
+    expect(screen.getByTestId('grupo-kebab-menu')).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Tab', code: 'Tab', keyCode: 9 });
+    expect(screen.queryByTestId('grupo-kebab-menu')).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(screen.getByTestId('seguinte'));
+  });
+
+  it('Escape devolve foco ao trigger do kebab', () => {
+    render(
+      <GrupoKebabMenu
+        canEditar
+        canApagar={false}
+        canSair
+        onEditar={vi.fn()}
+        onApagar={vi.fn()}
+        onSair={vi.fn()}
+      />,
+    );
+    const trigger = screen.getByRole('button', { name: /Mais acções do grupo/i });
+    trigger.focus();
+    fireEvent.click(trigger);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByTestId('grupo-kebab-menu')).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(trigger);
+  });
+
   it('omite Apagar em vez de o mostrar desactivado', () => {
     render(
       <GrupoKebabMenu

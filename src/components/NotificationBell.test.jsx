@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import NotificationBell from './NotificationBell';
@@ -504,6 +504,33 @@ describe('NotificationBell', () => {
     const fechar = screen.getByRole('button', { name: 'Fechar' });
     expect(fechar.className).toMatch(/text-foreground/);
     document.documentElement.classList.remove('dark');
+  });
+
+  it('Tab não escapa do sheet de notificações', async () => {
+    renderBell();
+    const trigger = screen.getByRole('button', { name: 'Notificações' });
+    fireEvent.click(trigger);
+
+    const dialog = screen.getByRole('dialog', { name: 'Notificações' });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Fechar' }));
+    });
+
+    fireEvent.keyDown(document, { key: 'Tab', code: 'Tab', keyCode: 9 });
+    expect(dialog).toContainElement(document.activeElement);
+  });
+
+  it('Escape fecha o sheet e devolve foco ao sino', async () => {
+    renderBell();
+    const trigger = screen.getByRole('button', { name: 'Notificações' });
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => {
+      expect(screen.queryByTestId('notification-panel')).not.toBeInTheDocument();
+    });
+    expect(document.activeElement).toBe(trigger);
   });
 
   it('mantém o painel aberto ao clicar dentro da lista', () => {

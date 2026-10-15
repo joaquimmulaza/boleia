@@ -11,7 +11,10 @@ import {
   resolveSheetHeight,
   shouldDismissSheet,
 } from '../utils/sheetGesture';
-import { GEOCODER_FLOATING_LIST_SELECTOR } from '../utils/geocoderDismissChrome';
+import {
+  GEOCODER_DISMISS_CHROME_SELECTOR,
+  GEOCODER_FLOATING_LIST_SELECTOR,
+} from '../utils/geocoderDismissChrome';
 import { emitSheetDragStart } from '../utils/sheetDragEvents';
 
 const INTERACTIVE_SELECTOR =
@@ -24,6 +27,15 @@ const INTERACTIVE_SELECTOR =
 function isGeocoderFloatingListTarget(target) {
   if (!(target instanceof Element)) return false;
   return Boolean(target.closest(GEOCODER_FLOATING_LIST_SELECTOR));
+}
+
+/**
+ * @param {EventTarget | null} target
+ * @returns {boolean}
+ */
+function isDismissChromeTarget(target) {
+  if (!(target instanceof Element)) return false;
+  return Boolean(target.closest(GEOCODER_DISMISS_CHROME_SELECTOR));
 }
 
 /**
@@ -244,7 +256,8 @@ export function useSheetDrag({ enabled, onDismiss }) {
           drag.mode = 'horizontal';
           return;
         }
-        if (dy < 0 || canScrollUpFrom(drag.origin, panel)) {
+        const chromeDrag = isDismissChromeTarget(drag.origin);
+        if (dy < 0 || (!chromeDrag && canScrollUpFrom(drag.origin, panel))) {
           drag.mode = 'scroll';
           return;
         }

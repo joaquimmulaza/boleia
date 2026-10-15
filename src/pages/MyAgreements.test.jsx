@@ -3197,7 +3197,7 @@ describe('MyAgreements — cabeçalho fixo do sheet Detalhe do acordo', () => {
     resetOverlayStackForTests();
   });
 
-  it('cabeçalho sticky fora do corpo scrollável; Fechar e puxador permanecem no header', async () => {
+  it('cabeçalho fixo fora do corpo scrollável; Fechar e puxador permanecem no header', async () => {
     renderPage(['/acordos?openAcordoId=acordo-pax&focus=rescisao']);
 
     await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
@@ -3205,7 +3205,8 @@ describe('MyAgreements — cabeçalho fixo do sheet Detalhe do acordo', () => {
     const header = screen.getByTestId('acordo-detalhe-sheet-header');
     const body = screen.getByTestId('acordo-detalhe-sheet-body');
 
-    expect(header.className).toMatch(/\bsticky\b/);
+    expect(header.className).toMatch(/\bshrink-0\b/);
+    expect(body.className).toMatch(/overflow-y-auto/);
     expect(body).not.toContainElement(header);
     expect(within(header).getByTestId('sheet-drag-handle')).toBeInTheDocument();
     expect(within(header).getByTestId('acordo-detalhe-fechar')).toHaveAccessibleName(/Fechar/i);
@@ -3447,12 +3448,12 @@ describe('MyAgreements — cabeçalho fixo do sheet Detalhe do acordo', () => {
 
     await screen.findByRole('dialog', { name: /Detalhe do acordo/i });
     const header = screen.getByTestId('acordo-detalhe-sheet-header');
-    const panel = screen.getByTestId('acordo-detalhe-sheet');
+    const body = screen.getByTestId('acordo-detalhe-sheet-body');
 
     expect(header).toHaveAttribute('data-scrolled', 'false');
 
-    Object.defineProperty(panel, 'scrollTop', { value: 24, writable: true, configurable: true });
-    fireEvent.scroll(panel);
+    Object.defineProperty(body, 'scrollTop', { value: 24, writable: true, configurable: true });
+    fireEvent.scroll(body);
 
     await waitFor(() => {
       expect(header).toHaveAttribute('data-scrolled', 'true');

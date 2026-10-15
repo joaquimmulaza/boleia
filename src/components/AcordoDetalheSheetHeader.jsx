@@ -98,7 +98,8 @@ export default function AcordoDetalheSheetHeader({
     <header
       data-testid="acordo-detalhe-sheet-header"
       data-scrolled={isBodyScrolled ? 'true' : 'false'}
-      className={`sticky top-0 z-10 bg-white dark:bg-slate-900 px-5 pt-0 pb-3 border-b ${
+      data-geocoder-sheet-header
+      className={`shrink-0 bg-white dark:bg-slate-900 px-5 pt-0 pb-3 border-b ${
         isBodyScrolled
           ? 'border-slate-200/90 shadow-[0_4px_12px_-8px_rgba(15,23,42,0.35)] dark:border-slate-700 dark:shadow-[0_4px_12px_-8px_rgba(0,0,0,0.5)]'
           : 'border-slate-100/90 dark:border-slate-800'
@@ -106,7 +107,10 @@ export default function AcordoDetalheSheetHeader({
     >
       <SheetDragHandle />
 
-      <div className="flex items-center justify-between gap-3">
+      <div
+        className="flex items-center justify-between gap-3"
+        data-geocoder-dismiss-chrome
+      >
         <Button
           ref={fecharRef}
           type="button"
@@ -126,7 +130,7 @@ export default function AcordoDetalheSheetHeader({
         />
       </div>
 
-      <div className="mt-1 space-y-2 pt-0.5">
+      <div className="mt-1 space-y-2 pt-0.5" data-geocoder-dismiss-chrome>
         <div
           data-testid="acordo-detalhe-titulo-chips"
           className="relative z-10 flex flex-wrap items-center gap-x-2 gap-y-2 min-w-0"
