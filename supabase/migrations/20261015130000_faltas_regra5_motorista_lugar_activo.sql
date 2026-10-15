@@ -1,6 +1,6 @@
 -- Regra 4 (PM) / Maestro GO: falta Motorista só desconta em pagamento de lugar activo na data_falta.
 -- Início activo (PM opção 3): greatest(created_at Luanda, mês do 1.º pagamento em_custodia|liquidado).
--- Fim exclusivo (Luanda): saiu_em → lugar_rescisao_em → membros_grupo.saiu_em → reservado_expira_em
+-- Fim exclusivo (Luanda): saiu_em → lugar_rescisao_em → reservado_expira_em
 --   → acordos.cancelado_em / rescisao_effective_on; senão fim := inicio (exclui lugar).
 -- Falta no dia da saída não conta (p_data_falta >= fim). Reservado→saiu sem pagamento nunca activo.
 
@@ -69,27 +69,6 @@ BEGIN
 END;
 $function$;
 
-CREATE OR REPLACE FUNCTION public._passageiro_membro_grupo_saiu_em(
-  p_acordo_id uuid,
-  p_passenger_id uuid
-)
-RETURNS date
-LANGUAGE sql
-STABLE
-SET search_path TO public, pg_temp
-AS $$
-  SELECT (timezone('Africa/Luanda', mg.saiu_em))::date
-  FROM public.acordos a
-  JOIN public.membros_grupo mg
-    ON mg.grupo_id = a.grupo_id
-   AND mg.passenger_id = p_passenger_id
-  WHERE a.id = p_acordo_id
-    AND a.grupo_id IS NOT NULL
-    AND mg.saiu_em IS NOT NULL
-  ORDER BY mg.saiu_em DESC
-  LIMIT 1;
-$$;
-
 CREATE OR REPLACE FUNCTION public._passageiro_lugar_fim_activo_exclusive_em(p_acordo_passageiro_id uuid)
 RETURNS date
 LANGUAGE plpgsql
@@ -130,11 +109,6 @@ BEGIN
 
   IF v_ap.lugar_rescisao_em IS NOT NULL THEN
     RETURN (timezone('Africa/Luanda', v_ap.lugar_rescisao_em))::date;
-  END IF;
-
-  v_fim := public._passageiro_membro_grupo_saiu_em(v_ap.acordo_id, v_ap.passenger_id);
-  IF v_fim IS NOT NULL THEN
-    RETURN v_fim;
   END IF;
 
   IF v_ap.reservado_expira_em IS NOT NULL THEN
@@ -208,8 +182,6 @@ CREATE OR REPLACE FUNCTION public._desconto_faltas_pagamento(
 RETURNS integer
 LANGUAGE sql
 STABLE
-SECURITY DEFINER
-SET search_path TO public, pg_temp
 AS $$
   SELECT COALESCE(floor(COALESCE(SUM(f.desconto_kz), 0))::integer, 0)
   FROM public.faltas f
@@ -239,10 +211,6 @@ REVOKE ALL ON FUNCTION public._passageiro_lugar_inicio_activo_em(uuid) FROM PUBL
 REVOKE EXECUTE ON FUNCTION public._passageiro_lugar_inicio_activo_em(uuid) FROM anon, authenticated;
 GRANT EXECUTE ON FUNCTION public._passageiro_lugar_inicio_activo_em(uuid) TO service_role;
 
-REVOKE ALL ON FUNCTION public._passageiro_membro_grupo_saiu_em(uuid, uuid) FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public._passageiro_membro_grupo_saiu_em(uuid, uuid) FROM anon, authenticated;
-GRANT EXECUTE ON FUNCTION public._passageiro_membro_grupo_saiu_em(uuid, uuid) TO service_role;
-
 REVOKE ALL ON FUNCTION public._passageiro_lugar_fim_activo_exclusive_em(uuid) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public._passageiro_lugar_fim_activo_exclusive_em(uuid) FROM anon, authenticated;
 GRANT EXECUTE ON FUNCTION public._passageiro_lugar_fim_activo_exclusive_em(uuid) TO service_role;
@@ -251,5 +219,6 @@ REVOKE ALL ON FUNCTION public._passageiro_lugar_activo_em_data(uuid, uuid, date)
 REVOKE EXECUTE ON FUNCTION public._passageiro_lugar_activo_em_data(uuid, uuid, date) FROM anon, authenticated;
 GRANT EXECUTE ON FUNCTION public._passageiro_lugar_activo_em_data(uuid, uuid, date) TO service_role;
 
-GRANT EXECUTE ON FUNCTION public._desconto_faltas_pagamento(uuid, uuid, date) TO authenticated;
-REVOKE EXECUTE ON FUNCTION public._desconto_faltas_pagamento(uuid, uuid, date) FROM anon;
+REVOKE ALL ON FUNCTION public._desconto_faltas_pagamento(uuid, uuid, date) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public._desconto_faltas_pagamento(uuid, uuid, date) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._desconto_faltas_pagamento(uuid, uuid, date) TO service_role;

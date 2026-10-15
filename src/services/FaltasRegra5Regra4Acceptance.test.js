@@ -31,12 +31,27 @@ describe('Regra 4 faltas — motorista × lugar activo', () => {
     expect(sql).toMatch(/em_custodia.*liquidado/s);
   });
 
+  it('B1: _desconto_faltas_pagamento INVOKER (sem DEFINER/search_path) + REVOKE authenticated', () => {
+    const sql = readFileSync(MIG, 'utf8');
+    const descontoBlock = sql.slice(sql.indexOf('CREATE OR REPLACE FUNCTION public._desconto_faltas_pagamento'));
+    const nextFn = descontoBlock.indexOf('REVOKE ALL ON FUNCTION public.trg_acordos_passageiros');
+    const fnBody = nextFn > 0 ? descontoBlock.slice(0, nextFn) : descontoBlock;
+    expect(fnBody).not.toMatch(/SECURITY DEFINER/);
+    expect(fnBody).not.toMatch(/SET search_path/);
+    expect(fnBody).toMatch(/LANGUAGE sql\s*\nSTABLE/);
+    expect(sql).toMatch(
+      /REVOKE EXECUTE ON FUNCTION public\._desconto_faltas_pagamento\(uuid, uuid, date\) FROM anon, authenticated/,
+    );
+    expect(sql).toMatch(
+      /GRANT EXECUTE ON FUNCTION public\._desconto_faltas_pagamento\(uuid, uuid, date\) TO service_role/,
+    );
+  });
+
   it('REVOKE EXECUTE dos helpers _passageiro_lugar_* a authenticated', () => {
     const sql = readFileSync(MIG, 'utf8');
     expect(sql).toMatch(
       /REVOKE EXECUTE ON FUNCTION public\._passageiro_lugar_inicio_activo_em\(uuid\) FROM anon, authenticated/,
     );
-    expect(sql).toMatch(/SECURITY DEFINER/);
   });
 
   it('prova PG cobre casos 1–8, Fixture C e vigência', () => {
@@ -44,7 +59,9 @@ describe('Regra 4 faltas — motorista × lugar activo', () => {
     expect(proof).toMatch(/FAIL R4 \(1\) activo/);
     expect(proof).toMatch(/FAIL R4 \(5\) saiu sem timestamp/);
     expect(proof).toMatch(/FAIL R4 \(6\) JC dia saída/);
-    expect(proof).toMatch(/FAIL R4 \(8\) 1:1 sem grupo/);
+    expect(proof).toMatch(/FAIL R4 \(8\) 1:1 fim via acordos\.cancelado_em/);
+    expect(proof).toMatch(/FAIL B1: authenticated não devia executar _desconto_faltas_pagamento/);
+    expect(proof).toMatch(/get_desconto_faltas_preview\(v_pg_out\)/);
     expect(proof).toMatch(/FAIL Fixture C pax5/);
     expect(proof).toMatch(/created 5\/10 falta 3\/10/);
   });

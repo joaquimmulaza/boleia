@@ -307,10 +307,22 @@ BEGIN
 
   PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
 
+  v_esperado := public._desconto_faltas_pagamento(v_acordo, v_pax, v_mes_out);
+
   PERFORM set_config('request.jwt.claim.sub', v_pax::text, true);
   SET LOCAL ROLE authenticated;
+
+  BEGIN
+    PERFORM public._desconto_faltas_pagamento(v_acordo, v_pax, v_mes_out);
+    RAISE EXCEPTION 'FAIL B1: authenticated não devia executar _desconto_faltas_pagamento';
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      IF SQLSTATE IS DISTINCT FROM '42501' THEN
+        RAISE;
+      END IF;
+  END;
+
   v_preview := public.get_desconto_faltas_preview(v_pg_out);
-  v_esperado := public._desconto_faltas_pagamento(v_acordo, v_pax, v_mes_out);
   IF v_preview IS DISTINCT FROM v_esperado THEN
     RAISE EXCEPTION 'FAIL B3 pax: preview % != esperado %', v_preview, v_esperado;
   END IF;
@@ -585,11 +597,34 @@ BEGIN
   END IF;
 
   UPDATE public.acordos
-  SET grupo_id = NULL
+  SET grupo_id = NULL, cancelado_em = '2026-10-18'::date, rescisao_effective_on = NULL
   WHERE id = v_acordo;
 
-  IF public._passageiro_membro_grupo_saiu_em(v_acordo, v_pax) IS NOT NULL THEN
-    RAISE EXCEPTION 'FAIL R4 (8) 1:1 sem grupo devia não usar membros_grupo';
+  UPDATE public.acordos_passageiros
+  SET
+    estado = 'saiu',
+    saiu_em = NULL,
+    lugar_rescisao_em = NULL,
+    reservado_expira_em = NULL
+  WHERE id = v_ap;
+
+  IF public._passageiro_lugar_fim_activo_exclusive_em(v_ap) IS DISTINCT FROM '2026-10-18'::date THEN
+    RAISE EXCEPTION 'FAIL R4 (8) 1:1 fim via acordos.cancelado_em (sem membros_grupo)';
+  END IF;
+
+  DELETE FROM public.faltas
+  WHERE id_acordo = v_acordo
+    AND COALESCE(desconto_mes_referencia, date_trunc('month', data_falta)::date) = v_mes_out;
+
+  INSERT INTO public.faltas (
+    id_acordo, data_falta, tipo, passenger_id, viagem, desconto_kz, desconto_mes_referencia
+  ) VALUES (
+    v_acordo, '2026-10-18'::date, 'Motorista', NULL, 'ambas', v_unit, v_mes_out
+  );
+
+  v_desconto := public._desconto_faltas_pagamento(v_acordo, v_pax, v_mes_out);
+  IF v_desconto <> 0 THEN
+    RAISE EXCEPTION 'FAIL R4 (8) falta no dia cancelado_em: esperava 0, obteve %', v_desconto;
   END IF;
 
   PERFORM set_config('session_replication_role', 'origin', true);

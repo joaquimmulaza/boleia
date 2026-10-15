@@ -30,6 +30,17 @@ describe('resolvePassageiroTotalDescontoFaltasKz', () => {
     expect(fetchPreview).toHaveBeenCalledWith('pg-1');
   });
 
+  it('sem pagamento no mês: devolve null (não aplicável ao preview)', async () => {
+    const fetchPreview = vi.fn();
+    const total = await resolvePassageiroTotalDescontoFaltasKz(
+      pagamentos,
+      'pax-1',
+      { mesReferencia: '2026-11-01', fetchPreview },
+    );
+    expect(total).toBeNull();
+    expect(fetchPreview).not.toHaveBeenCalled();
+  });
+
   it('liquidado: usa desconto_faltas_kz persistido', async () => {
     const fetchPreview = vi.fn();
     const total = await resolvePassageiroTotalDescontoFaltasKz(
