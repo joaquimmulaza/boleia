@@ -573,16 +573,16 @@ const MyAgreements = () => {
 
   useEffect(() => {
     if (!selected?.id) return undefined;
-    const panel = document.querySelector('[data-testid="acordo-detalhe-sheet"]');
-    if (!(panel instanceof HTMLElement)) return undefined;
+    const body = document.querySelector('[data-testid="acordo-detalhe-sheet-body"]');
+    if (!(body instanceof HTMLElement)) return undefined;
 
     const onScroll = () => {
-      setAcordoSheetHeaderScrolled(panel.scrollTop > 0);
+      setAcordoSheetHeaderScrolled(body.scrollTop > 0);
     };
     onScroll();
-    panel.addEventListener('scroll', onScroll, { passive: true });
+    body.addEventListener('scroll', onScroll, { passive: true });
     return () => {
-      panel.removeEventListener('scroll', onScroll);
+      body.removeEventListener('scroll', onScroll);
       setAcordoSheetHeaderScrolled(false);
     };
   }, [selected?.id]);
@@ -1431,14 +1431,14 @@ const MyAgreements = () => {
         variant="bottom"
         onDismiss={() => selectAcordo(null)}
         panelTestId="acordo-detalhe-sheet"
-        panelClassName="bg-white dark:bg-slate-900 shadow-2xl"
+        panelClassName="bg-white dark:bg-slate-900 shadow-2xl flex flex-col !overflow-hidden max-h-[90dvh]"
       >
         <div
           ref={acordoSheetDialogRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby="acordo-detail-title"
-          className="min-h-0"
+          className="flex min-h-0 flex-1 flex-col"
         >
           <AcordoDetalheSheetHeader
             acordoId={selected.id}
@@ -1476,7 +1476,7 @@ const MyAgreements = () => {
 
           <div
             data-testid="acordo-detalhe-sheet-body"
-            className="px-5 pb-safe space-y-4"
+            className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-5 pb-safe space-y-4"
           >
             <p className="font-semibold text-slate-900 dark:text-white text-balance pt-2">
               {rota.origem} → {rota.destino}
