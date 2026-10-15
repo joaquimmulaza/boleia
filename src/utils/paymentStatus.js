@@ -176,7 +176,7 @@ export function isAcordoEncerradoPagamentoUi(estado) {
  * @param {{ acordoTerminado?: boolean }} [options]
  * @returns {string}
  */
-export function labelEstadoPagamentoMotoristaCabecalho(estadoPagamento, _options = {}) {
+export function labelEstadoPagamentoMotoristaCabecalho(estadoPagamento) {
   return labelEstadoPagamento(estadoPagamento, { placement: 'cabecalho' });
 }
 
@@ -186,7 +186,7 @@ export function labelEstadoPagamentoMotoristaCabecalho(estadoPagamento, _options
  * @param {{ acordoTerminado?: boolean }} [options]
  * @returns {string}
  */
-export function chipClassEstadoPagamentoMotoristaCabecalho(estadoPagamento, _options = {}) {
+export function chipClassEstadoPagamentoMotoristaCabecalho(estadoPagamento) {
   return chipClassEstadoPagamento(estadoPagamento);
 }
 

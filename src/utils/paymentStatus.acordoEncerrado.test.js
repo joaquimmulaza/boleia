@@ -14,17 +14,13 @@ describe('paymentStatus — acordo encerrado prevalece', () => {
   });
 
   it('P1-a: acordo encerrado + pendente_pagamento mantém estado da BD (não «Pagamento cancelado»)', () => {
-    expect(
-      labelEstadoPagamentoMotoristaCabecalho('pendente_pagamento', { acordoTerminado: true }),
-    ).toBe('Pagamento pendente');
-    expect(
-      labelEstadoPagamentoMotoristaCabecalho('pendente_pagamento', { acordoTerminado: true }),
-    ).not.toBe('Pagamento cancelado');
+    expect(labelEstadoPagamentoMotoristaCabecalho('pendente_pagamento')).toBe('Pagamento pendente');
+    expect(labelEstadoPagamentoMotoristaCabecalho('pendente_pagamento')).not.toBe(
+      'Pagamento cancelado',
+    );
   });
 
   it('acordo activo mantém «Pagamento pendente»', () => {
-    expect(
-      labelEstadoPagamentoMotoristaCabecalho('pendente_pagamento', { acordoTerminado: false }),
-    ).toBe('Pagamento pendente');
+    expect(labelEstadoPagamentoMotoristaCabecalho('pendente_pagamento')).toBe('Pagamento pendente');
   });
 });
