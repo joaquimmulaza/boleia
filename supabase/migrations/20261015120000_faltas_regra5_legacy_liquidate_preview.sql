@@ -1,4 +1,7 @@
 -- Regra 5 follow-up (B2/B3): remove overload legacy admin_liquidate_payment(uuid);
+-- Auditoria callers (2026-10-15): src/ PaymentService + AdminPagamentos (rpc 2-arg com
+-- p_idempotency_key); supabase/functions/ sem referências; scripts/ vazio; SQL provas
+-- (id, NULL) = overload 2-arg; prod pg_proc prosrc: nenhuma função SQL chama esta RPC.
 -- preview RPC alinhada a _desconto_faltas_pagamento.
 -- S2: trigger on_falta_calc_desconto já cobre INSERT OR UPDATE (t7).
 -- S3: GUC boleia.regra5_instant_override mantido em 20261015100000.
