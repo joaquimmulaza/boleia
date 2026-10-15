@@ -36,6 +36,10 @@ describe('Driver notif passenger exit — migração', () => {
   it('G2: apply_due_reserva_expiry card v1.12 com copy final', () => {
     const sql = readMigration();
     expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\.apply_due_reserva_expiry/);
+    expect(sql).toMatch(/NOT v_fecha_todo_lote/);
+    expect(sql).toMatch(
+      /lower\(v_row\.acordo_estado\)\s+IN\s*\(\s*'activo'\s*,\s*'cancelamento_pendente'\s*\)/,
+    );
     expect(sql).toMatch(/'card',\s*'v1\.12'/);
     expect(sql).toMatch(/'titulo',\s*'Ficou um lugar livre'/);
     expect(sql).toContain('A reserva de ');

@@ -95,7 +95,11 @@ BEGIN
     END IF;
 
 
-    IF v_vivos > 0 AND v_row.driver_id IS NOT NULL AND NOT v_fechou THEN
+    IF v_vivos > 0
+       AND v_row.driver_id IS NOT NULL
+       AND NOT v_fechou
+       AND NOT v_fecha_todo_lote
+       AND lower(v_row.acordo_estado) IN ('activo', 'cancelamento_pendente') THEN
       SELECT NULLIF(btrim(COALESCE(p.nome_completo, '')), '')
       INTO v_pax_nome
       FROM public.perfis p
@@ -108,19 +112,25 @@ BEGIN
         v_driver_msg := 'A reserva de um passageiro expirou. O acordo continua.';
       END IF;
 
-      INSERT INTO public.notificacoes (user_id, mensagem, tipo, metadata)
-      VALUES (
-        v_row.driver_id,
-        v_driver_msg,
-        'info',
-        jsonb_build_object(
-          'type', 'status',
-          'card', 'v1.12',
-          'titulo', 'Ficou um lugar livre',
-          'acordo_id', v_row.acordo_id,
-          'reason', 'reserva_expirada_lugar_livre'
-        )
-      );
+      BEGIN
+        INSERT INTO public.notificacoes (user_id, mensagem, tipo, metadata)
+        VALUES (
+          v_row.driver_id,
+          v_driver_msg,
+          'info',
+          jsonb_build_object(
+            'type', 'status',
+            'card', 'v1.12',
+            'titulo', 'Ficou um lugar livre',
+            'acordo_id', v_row.acordo_id,
+            'reason', 'reserva_expirada_lugar_livre'
+          )
+        );
+      EXCEPTION
+        WHEN OTHERS THEN
+          RAISE WARNING 'Falha ao notificar motorista expiração parcial (v1.12) acordo %: %',
+            v_row.acordo_id, SQLERRM;
+      END;
     END IF;
 
     IF NOT v_fecha_todo_lote AND NOT v_fechou THEN
@@ -407,21 +417,27 @@ BEGIN
           'O último passageiro saiu e o acordo foi encerrado. A tua oferta continua publicada.'
       END;
 
-      INSERT INTO public.notificacoes (user_id, mensagem, tipo, metadata, link)
-      VALUES (
-        v_acordo.driver_id,
-        v_mensagem_saida,
-        'info',
-        jsonb_build_object(
-          'type', 'status',
-          'card', 'v1.8',
-          'titulo', 'Acordo encerrado',
-          'acordo_id', p_acordo_id,
-          'reason', 'last_passenger_left',
-          'txid', txid_current()
-        ),
-        v_link
-      );
+      BEGIN
+        INSERT INTO public.notificacoes (user_id, mensagem, tipo, metadata, link)
+        VALUES (
+          v_acordo.driver_id,
+          v_mensagem_saida,
+          'info',
+          jsonb_build_object(
+            'type', 'status',
+            'card', 'v1.8',
+            'titulo', 'Acordo encerrado',
+            'acordo_id', p_acordo_id,
+            'reason', 'last_passenger_left',
+            'txid', txid_current()
+          ),
+          v_link
+        );
+      EXCEPTION
+        WHEN OTHERS THEN
+          RAISE WARNING 'Falha ao notificar motorista encerramento por último passageiro %: %',
+            p_acordo_id, SQLERRM;
+      END;
     ELSIF lower(v_estado_acordo) IN ('activo', 'cancelamento_pendente') THEN
       v_mensagem_saida := CASE
         WHEN v_pax_nome IS NOT NULL THEN
@@ -430,21 +446,27 @@ BEGIN
           'Um passageiro saiu do acordo.'
       END;
 
-      INSERT INTO public.notificacoes (user_id, mensagem, tipo, metadata, link)
-      VALUES (
-        v_acordo.driver_id,
-        v_mensagem_saida,
-        'warning',
-        jsonb_build_object(
-          'type', 'status',
-          'card', 'v1.7',
-          'titulo', 'Ficou um lugar livre',
-          'acordo_id', p_acordo_id,
-          'reason', 'passenger_self_left_partial',
-          'txid', txid_current()
-        ),
-        v_link
-      );
+      BEGIN
+        INSERT INTO public.notificacoes (user_id, mensagem, tipo, metadata, link)
+        VALUES (
+          v_acordo.driver_id,
+          v_mensagem_saida,
+          'warning',
+          jsonb_build_object(
+            'type', 'status',
+            'card', 'v1.7',
+            'titulo', 'Ficou um lugar livre',
+            'acordo_id', p_acordo_id,
+            'reason', 'passenger_self_left_partial',
+            'txid', txid_current()
+          ),
+          v_link
+        );
+      EXCEPTION
+        WHEN OTHERS THEN
+          RAISE WARNING 'Falha ao notificar motorista saída passageiro acordo %: %',
+            p_acordo_id, SQLERRM;
+      END;
     END IF;
   END IF;
 

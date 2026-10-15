@@ -18,7 +18,9 @@
      PERFORM public._expirar_lugar_reservado_sem_divida(...);
 +
 +    SELECT COUNT(*)::integer INTO v_vivos ... lugares activo/reservado;
-+    IF v_vivos > 0 AND v_row.driver_id IS NOT NULL THEN
++    IF v_vivos > 0 AND v_row.driver_id IS NOT NULL AND NOT v_fechou
++       AND NOT v_fecha_todo_lote
++       AND lower(v_row.acordo_estado) IN ('activo', 'cancelamento_pendente') THEN
 +      -- copy v1.12 (com/sem nome)
 +      INSERT INTO public.notificacoes (driver_id, metadata card v1.12, titulo, sem link)
 +    END IF;

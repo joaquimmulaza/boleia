@@ -17,6 +17,15 @@ DECLARE
   v_acordo_exp_noname uuid := 'd8888888-8888-4888-8888-888888888888';
   v_acordo_driver uuid := 'd9999999-9999-4999-8999-999999999999';
   v_acordo_driver_od uuid := 'daaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa01';
+  v_pax_dual_a uuid := 'd1212121-1212-4212-8212-121212121212';
+  v_pax_dual_b uuid := 'd1313131-1313-4313-8313-131313131313';
+  v_acordo_dual_close uuid := 'd1414141-1414-4414-8414-141414141414';
+  v_ap_dual_a uuid := 'd1515151-1515-4515-8515-151515151515';
+  v_ap_dual_b uuid := 'd1616161-1616-4616-8616-161616161616';
+  v_oferta_dual uuid;
+  v_acordo_cancel_dual uuid := 'd1717171-1717-4717-8717-171717171717';
+  v_ap_cancel_a uuid := 'd1818181-1818-4818-8818-181818181818';
+  v_ap_cancel_b uuid := 'd1919191-1919-4919-8919-191919191919';
   v_oferta_fixa uuid;
   v_ap_cp1 uuid := 'e4444444-4444-4444-8444-444444444441';
   v_ap_cp2 uuid := 'e4444444-4444-4444-8444-444444444442';
@@ -37,14 +46,18 @@ BEGIN
     (v_driver, 'dn-driver@test'),
     (v_pax_named, 'dn-pax-named@test'),
     (v_pax_noname, 'dn-pax-noname@test'),
-    (v_pax2, 'dn-pax2@test')
+    (v_pax2, 'dn-pax2@test'),
+    (v_pax_dual_a, 'dn-dual-a@test'),
+    (v_pax_dual_b, 'dn-dual-b@test')
   ON CONFLICT DO NOTHING;
 
   INSERT INTO public.perfis (id, nome_completo, telefone, tipo_perfil) VALUES
     (v_driver, 'DN Driver', '951000001', 'Motorista'),
     (v_pax_named, 'Ana Costa', '951000002', 'Passageiro'),
     (v_pax_noname, '   ', '951000003', 'Passageiro'),
-    (v_pax2, 'Bruno Lima', '951000004', 'Passageiro')
+    (v_pax2, 'Bruno Lima', '951000004', 'Passageiro'),
+    (v_pax_dual_a, 'Dual A', '951000005', 'Passageiro'),
+    (v_pax_dual_b, 'Dual B', '951000006', 'Passageiro')
   ON CONFLICT (id) DO UPDATE SET nome_completo = EXCLUDED.nome_completo;
 
   INSERT INTO public.veiculos (id_motorista, marca_modelo, matricula, capacidade_total, vagas_passageiros)
@@ -325,6 +338,71 @@ BEGIN
     RAISE EXCEPTION 'FAIL v1.14 com rota (n=%)', v_n;
   END IF;
 
+  -- G2b (a): duas reservas expiram no mesmo lote → acordo fecha; 0 cards v1.12
+  INSERT INTO public.ofertas_capacidade (
+    driver_id, veiculo_id, flexibilidade_rota, departure_time, vagas_disponiveis, vagas_totais,
+    modo_preco, valor_mensal_ask_kz, estado
+  ) VALUES (v_driver, v_veiculo, true, '09:30', 2, 4, 'POR_PASSAGEIRO', 20000, 'parcial')
+  RETURNING id INTO v_oferta_dual;
+
+  INSERT INTO public.acordos (
+    id, oferta_id, procura_id, driver_id, modo_preco, n_passageiros_contrato,
+    valor_mensal_total_kz, valor_mensal_por_passageiro_kz, estado, dias_uteis_mes
+  ) VALUES (
+    v_acordo_dual_close, v_oferta_dual, v_procura, v_driver, 'POR_PASSAGEIRO', 2, 40000, 20000, 'activo', 22
+  );
+
+  INSERT INTO public.acordos_passageiros (
+    id, acordo_id, passenger_id, estado, quota_mensal_kz, ordem_insercao, reservado_expira_em
+  ) VALUES
+    (v_ap_dual_a, v_acordo_dual_close, v_pax_dual_a, 'reservado', 20000, 0, now() - interval '3 hours'),
+    (v_ap_dual_b, v_acordo_dual_close, v_pax_dual_b, 'reservado', 20000, 1, now() - interval '2 hours');
+
+  DELETE FROM public.notificacoes;
+
+  PERFORM set_config('request.jwt.claim.sub', v_pax_dual_a::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+  SET LOCAL ROLE authenticated;
+  PERFORM public.apply_due_reserva_expiry(v_acordo_dual_close);
+  RESET ROLE;
+
+  SELECT COUNT(*)::integer INTO v_n
+  FROM public.notificacoes
+  WHERE user_id = v_driver AND metadata->>'card' = 'v1.12';
+
+  IF v_n <> 0 THEN
+    RAISE EXCEPTION 'FAIL G2b(a): lote fecha acordo — motorista não devia receber v1.12 (n=%)', v_n;
+  END IF;
+
+  -- G2b (b): acordo já cancelado, duas reservas expiram → 0 v1.12
+  INSERT INTO public.acordos (
+    id, oferta_id, procura_id, driver_id, modo_preco, n_passageiros_contrato,
+    valor_mensal_total_kz, valor_mensal_por_passageiro_kz, estado, dias_uteis_mes
+  ) VALUES (
+    v_acordo_cancel_dual, v_oferta, v_procura, v_driver, 'POR_PASSAGEIRO', 2, 40000, 20000, 'cancelado', 22
+  );
+
+  INSERT INTO public.acordos_passageiros (
+    id, acordo_id, passenger_id, estado, quota_mensal_kz, ordem_insercao, reservado_expira_em
+  ) VALUES
+    (v_ap_cancel_a, v_acordo_cancel_dual, v_pax_dual_a, 'reservado', 20000, 0, now() - interval '3 hours'),
+    (v_ap_cancel_b, v_acordo_cancel_dual, v_pax_dual_b, 'reservado', 20000, 1, now() - interval '2 hours');
+
+  DELETE FROM public.notificacoes;
+
+  PERFORM set_config('request.jwt.claim.sub', v_driver::text, true);
+  SET LOCAL ROLE authenticated;
+  PERFORM public.apply_due_reserva_expiry(v_acordo_cancel_dual);
+  RESET ROLE;
+
+  SELECT COUNT(*)::integer INTO v_n
+  FROM public.notificacoes
+  WHERE user_id = v_driver AND metadata->>'card' = 'v1.12';
+
+  IF v_n <> 0 THEN
+    RAISE EXCEPTION 'FAIL G2b(b): acordo cancelado — motorista não devia receber v1.12 (n=%)', v_n;
+  END IF;
+
   PERFORM set_config('session_replication_role', 'origin', true);
-  RAISE NOTICE 'PASS driver-notif-passenger-exit: G1 G2 G3 driver-remove';
+  RAISE NOTICE 'PASS driver-notif-passenger-exit: G1 G2 G2b G3 driver-remove';
 END $$;
