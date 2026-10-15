@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import AbsenceTracker from './AbsenceTracker';
 import { expectNoUserFacingJargon } from '../test/jargonBan';
-import { FALTA_FUTURA_AVISO_CHIP } from '../copy/faltasFutureChip';
+import { FALTA_FUTURA_CHIP } from '../copy/faltasFutureChip';
 
 const mockNavigate = vi.fn();
 let mockAcordoId = 'acordo-uuid-001';
@@ -214,7 +214,8 @@ describe('AbsenceTracker — marketplace', () => {
 
     expect(await screen.findAllByTestId('absence-card')).toHaveLength(2);
     expect(screen.getByTestId('desconto-falta-total')).toHaveTextContent('3000');
-    expect(screen.getByTestId('falta-futura-chip')).toHaveTextContent(FALTA_FUTURA_AVISO_CHIP);
+    expect(screen.getByTestId('falta-futura-chip')).toHaveTextContent(FALTA_FUTURA_CHIP);
+    expect(screen.getByTestId('falta-futura-chip').className).not.toMatch(/amber|red/);
     const linhas = await screen.findAllByTestId('desconto-falta-amount');
     expect(linhas.some((el) => el.textContent?.includes('1272,73'))).toBe(true);
   });

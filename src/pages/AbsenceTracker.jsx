@@ -13,7 +13,7 @@ import LogAbsenceModal from '../components/LogAbsenceModal';
 import PageShell from '../components/PageShell';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import { Badge } from '../components/ui/badge';
-import { FALTA_FUTURA_AVISO_CHIP } from '../copy/faltasFutureChip';
+import { FALTA_FUTURA_CHIP } from '../copy/faltasFutureChip';
 import { formatKwanza } from '../utils/formatKwanza';
 import { getFriendlyErrorMessage } from '../utils/errorHandler';
 import {
@@ -307,9 +307,9 @@ const AbsenceTracker = () => {
                       <Badge
                         variant="outline"
                         data-testid="falta-futura-chip"
-                        className="border-amber-300 bg-amber-50 px-2 py-0 text-[10px] font-semibold text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100"
+                        className="rounded-full border-slate-200 bg-[#f6f8f6] px-2 py-0.5 text-[11px] font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                       >
-                        {FALTA_FUTURA_AVISO_CHIP}
+                        {FALTA_FUTURA_CHIP}
                       </Badge>
                     ) : null}
                     {viagem ? (

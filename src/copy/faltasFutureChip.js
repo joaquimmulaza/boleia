@@ -1,3 +1,2 @@
-// copy: pending PM
-/** Chip de aviso em faltas com data futura no histórico. */
-export const FALTA_FUTURA_AVISO_CHIP = 'Aviso';
+/** Chip em faltas com data futura no histórico do mês. */
+export const FALTA_FUTURA_CHIP = 'Prevista';
