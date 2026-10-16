@@ -1,0 +1,56 @@
+--- src/components/GrupoProcuraPanel.jsx
++++ src/components/GrupoProcuraPanel.jsx
+@@ -525,7 +525,7 @@
+                 )}`}
+                 target="_blank"
+                 rel="noopener noreferrer"
+-                className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-800 dark:border-slate-700 dark:text-slate-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
++                className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 px-3 text-sm font-bold text-slate-800 dark:border-slate-700 dark:text-slate-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+               >
+                 Partilhar via WhatsApp
+               </a>
+@@ -564,7 +564,7 @@
+                   <button
+                     type="submit"
+                     disabled={busy || !telefone.trim()}
+-                    className="w-full min-h-12 bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60"
++                    className="w-full min-h-12 bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-xl disabled:opacity-60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+                   >
+                     Adicionar ao grupo
+                   </button>
+@@ -624,7 +624,7 @@
+                       aria-pressed={activo}
+                       aria-label={String(n)}
+                       onClick={() => setEditCapacidade(n)}
+-                      className={`size-9 shrink-0 whitespace-nowrap rounded-lg text-sm font-bold tabular-nums disabled:opacity-40 ${
++                      className={`size-9 shrink-0 whitespace-nowrap rounded-lg text-sm font-bold tabular-nums disabled:opacity-40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
+                         activo
+                           ? 'bg-primary text-white'
+                           : 'bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200'
+@@ -657,7 +657,7 @@
+               type="button"
+               disabled={busy}
+               onClick={handleGuardarEdicao}
+-              className="w-full min-h-12 bg-primary text-white font-bold rounded-xl disabled:opacity-60"
++              className="w-full min-h-12 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl disabled:opacity-60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+             >
+               Guardar
+             </button>
+@@ -683,15 +683,15 @@
+               type="button"
+               disabled={busy}
+               onClick={handleApagar}
+-              className="w-full min-h-12 bg-red-600 text-white font-bold rounded-xl disabled:opacity-60"
++              className="w-full min-h-12 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl disabled:opacity-60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+             >
+               Apagar grupo
+             </button>
+             <button
+               type="button"
+               disabled={busy}
+               onClick={() => setApagarOpen(false)}
+-              className="w-full min-h-12 border border-slate-200 font-bold rounded-xl dark:border-slate-700"
++              className="w-full min-h-12 border border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold rounded-xl dark:border-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+             >
+               Cancelar
+             </button>

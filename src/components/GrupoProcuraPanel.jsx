@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Users, UserPlus, MapPin } from 'lucide-react';
-import AddressInput from './AddressInput';
-import OverlayShell from './OverlayShell';
-import SheetDragHandle from './SheetDragHandle';
-import GrupoKebabMenu from './GrupoKebabMenu';
-import SheetFecharButton from './SheetFecharButton';
-import { getGrupoEditSheetSubtitle } from '../copy/grupoEditSheet';
+import React, { useState, useEffect, useCallback } from "react";
+import { Users, UserPlus, MapPin } from "lucide-react";
+import AddressInput from "./AddressInput";
+import OverlayShell from "./OverlayShell";
+import SheetDragHandle from "./SheetDragHandle";
+import GrupoKebabMenu from "./GrupoKebabMenu";
+import SheetFecharButton from "./SheetFecharButton";
+import { getGrupoEditSheetSubtitle } from "../copy/grupoEditSheet";
 import {
   createGrupo,
   addMembroGrupo,
@@ -19,10 +19,10 @@ import {
   updateGrupoCapacidade,
   updateMembroRecolha,
   apagarGrupo,
-} from '../services/GrupoService';
-import { findPassageiroByTelefone } from '../services/ProfileService';
-import { getFriendlyErrorMessage } from '../utils/errorHandler';
-import { grupoKebabActions, resolveGrupoPapel } from '../utils/grupoKebab';
+} from "../services/GrupoService";
+import { findPassageiroByTelefone } from "../services/ProfileService";
+import { getFriendlyErrorMessage } from "../utils/errorHandler";
+import { grupoKebabActions, resolveGrupoPapel } from "../utils/grupoKebab";
 
 const CAPACIDADES = [2, 3, 4, 5, 6, 7, 8];
 
@@ -51,12 +51,12 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [feedback, setFeedback] = useState({ type: '', text: '' });
+  const [feedback, setFeedback] = useState({ type: "", text: "" });
   const [nMaximo, setNMaximo] = useState(4);
-  const [telefone, setTelefone] = useState('');
+  const [telefone, setTelefone] = useState("");
   const [telefoneFallbackOpen, setTelefoneFallbackOpen] = useState(false);
   const [pickup, setPickup] = useState({
-    pickup_name: '',
+    pickup_name: "",
     pickup_lat: null,
     pickup_lng: null,
   });
@@ -65,7 +65,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
   const [apagarOpen, setApagarOpen] = useState(false);
   const [editCapacidade, setEditCapacidade] = useState(4);
   const [editPickup, setEditPickup] = useState({
-    pickup_name: '',
+    pickup_name: "",
     pickup_lat: null,
     pickup_lng: null,
   });
@@ -107,7 +107,10 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
       }
     } catch (err) {
       console.error(err);
-      setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+      setFeedback({
+        type: "error",
+        text: err.message || getFriendlyErrorMessage(err),
+      });
     } finally {
       setLoading(false);
     }
@@ -118,17 +121,17 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
   }, [carregar]);
 
   const labelTamanho = (n, max) => {
-    if (!grupo && n <= 1) return 'Individual';
+    if (!grupo && n <= 1) return "Individual";
     if (max != null) return `Grupo · ${n} de ${max}`;
-    if (n <= 1) return 'Grupo · 1 pessoa';
+    if (n <= 1) return "Grupo · 1 pessoa";
     return `Grupo · ${n} pessoas`;
   };
 
   const handleCriarGrupo = async () => {
     setBusy(true);
-    setFeedback({ type: '', text: '' });
+    setFeedback({ type: "", text: "" });
     try {
-      const criado = await createGrupo(procura.id, 'O meu grupo', nMaximo);
+      const criado = await createGrupo(procura.id, "O meu grupo", nMaximo);
       await addMembroGrupo(criado.id, {
         passenger_id: userId,
         pickup_name: procura.origin_name ?? null,
@@ -139,11 +142,17 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
         dropoff_lng: procura.destination_lng ?? null,
         ordem_insercao: 0,
       });
-      setFeedback({ type: 'success', text: 'Grupo criado. Já estás incluído.' });
+      setFeedback({
+        type: "success",
+        text: "Grupo criado. Já estás incluído.",
+      });
       await carregar();
       onGrupoChange?.();
     } catch (err) {
-      setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+      setFeedback({
+        type: "error",
+        text: err.message || getFriendlyErrorMessage(err),
+      });
     } finally {
       setBusy(false);
     }
@@ -153,27 +162,27 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
     e.preventDefault();
     if (!grupo) return;
     setBusy(true);
-    setFeedback({ type: '', text: '' });
+    setFeedback({ type: "", text: "" });
     try {
       const perfil = await findPassageiroByTelefone(telefone);
       if (perfil.id === userId) {
-        throw new Error('Já estás no grupo.');
+        throw new Error("Já estás no grupo.");
       }
       if (membros.some((m) => m.passenger_id === perfil.id)) {
-        throw new Error('Este colega já está no grupo.');
+        throw new Error("Este colega já está no grupo.");
       }
       const cleanPickupName = pickup.pickup_name?.trim() || null;
       const cleanPickupLat =
         cleanPickupName &&
         pickup.pickup_lat != null &&
-        pickup.pickup_lat !== '' &&
+        pickup.pickup_lat !== "" &&
         Number.isFinite(Number(pickup.pickup_lat))
           ? Number(pickup.pickup_lat)
           : null;
       const cleanPickupLng =
         cleanPickupName &&
         pickup.pickup_lng != null &&
-        pickup.pickup_lng !== '' &&
+        pickup.pickup_lng !== "" &&
         Number.isFinite(Number(pickup.pickup_lng))
           ? Number(pickup.pickup_lng)
           : null;
@@ -185,19 +194,19 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
         pickup_lng: cleanPickupLng,
         ordem_insercao: membros.length,
       });
-      setTelefone('');
-      setPickup({ pickup_name: '', pickup_lat: null, pickup_lng: null });
+      setTelefone("");
+      setPickup({ pickup_name: "", pickup_lat: null, pickup_lng: null });
       setFeedback({
-        type: 'success',
+        type: "success",
         text:
-          `${perfil.nome_completo || 'Colega'} adicionado ao grupo. ` +
-          'Propostas já enviadas mantêm o tamanho anterior — para o novo tamanho, cria uma nova proposta.',
+          `${perfil.nome_completo || "Colega"} adicionado ao grupo. ` +
+          "Propostas já enviadas mantêm o tamanho anterior — para o novo tamanho, cria uma nova proposta.",
       });
       await carregar();
       onGrupoChange?.();
     } catch (err) {
       setFeedback({
-        type: 'error',
+        type: "error",
         text: err.message || getFriendlyErrorMessage(err),
       });
     } finally {
@@ -207,19 +216,22 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
 
   const handleAprovar = async (membroId) => {
     setBusy(true);
-    setFeedback({ type: '', text: '' });
+    setFeedback({ type: "", text: "" });
     try {
       await aprovarEntrada(membroId);
       setFeedback({
-        type: 'success',
+        type: "success",
         text:
-          'Pedido aceite. O grupo cresceu. Propostas já enviadas mantêm o tamanho anterior — ' +
-          'para o novo tamanho, cria uma nova proposta.',
+          "Pedido aceite. O grupo cresceu. Propostas já enviadas mantêm o tamanho anterior — " +
+          "para o novo tamanho, cria uma nova proposta.",
       });
       await carregar();
       onGrupoChange?.();
     } catch (err) {
-      setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+      setFeedback({
+        type: "error",
+        text: err.message || getFriendlyErrorMessage(err),
+      });
     } finally {
       setBusy(false);
     }
@@ -227,13 +239,16 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
 
   const handleRejeitar = async (membroId) => {
     setBusy(true);
-    setFeedback({ type: '', text: '' });
+    setFeedback({ type: "", text: "" });
     try {
       await rejeitarEntrada(membroId);
-      setFeedback({ type: 'success', text: 'Pedido recusado.' });
+      setFeedback({ type: "success", text: "Pedido recusado." });
       await carregar();
     } catch (err) {
-      setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+      setFeedback({
+        type: "error",
+        text: err.message || getFriendlyErrorMessage(err),
+      });
     } finally {
       setBusy(false);
     }
@@ -242,17 +257,20 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
   const handleSair = async () => {
     if (!grupo) return;
     setBusy(true);
-    setFeedback({ type: '', text: '' });
+    setFeedback({ type: "", text: "" });
     try {
       await sairDoGrupo(grupo.id, userId);
       setFeedback({
-        type: 'success',
-        text: 'Saíste do grupo. Propostas abertas mantêm o tamanho com que foram enviadas.',
+        type: "success",
+        text: "Saíste do grupo. Propostas abertas mantêm o tamanho com que foram enviadas.",
       });
       await carregar();
       onGrupoChange?.();
     } catch (err) {
-      setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+      setFeedback({
+        type: "error",
+        text: err.message || getFriendlyErrorMessage(err),
+      });
     } finally {
       setBusy(false);
     }
@@ -264,7 +282,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
     const actual = Number(grupo?.n_maximo) || 4;
     setEditCapacidade(Math.max(floor, Math.min(8, actual)));
     setEditPickup({
-      pickup_name: eu?.pickup_name || '',
+      pickup_name: eu?.pickup_name || "",
       pickup_lat: eu?.pickup_lat ?? null,
       pickup_lng: eu?.pickup_lng ?? null,
     });
@@ -274,7 +292,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
   const handleGuardarEdicao = async () => {
     if (!grupo) return;
     setBusy(true);
-    setFeedback({ type: '', text: '' });
+    setFeedback({ type: "", text: "" });
     try {
       await updateGrupoCapacidade(grupo.id, editCapacidade);
       const eu = membros.find((membro) => membro.passenger_id === userId);
@@ -283,13 +301,16 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
       }
       setEditarOpen(false);
       setFeedback({
-        type: 'success',
-        text: 'Grupo actualizado. As propostas já enviadas mantêm o tamanho e o preço.',
+        type: "success",
+        text: "Grupo actualizado. As propostas já enviadas mantêm o tamanho e o preço.",
       });
       await carregar();
       onGrupoChange?.();
     } catch (err) {
-      setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+      setFeedback({
+        type: "error",
+        text: err.message || getFriendlyErrorMessage(err),
+      });
     } finally {
       setBusy(false);
     }
@@ -298,15 +319,18 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
   const handleApagar = async () => {
     if (!grupo) return;
     setBusy(true);
-    setFeedback({ type: '', text: '' });
+    setFeedback({ type: "", text: "" });
     try {
       await apagarGrupo(grupo.id, { procuraId: procura.id });
       setApagarOpen(false);
-      setFeedback({ type: 'success', text: 'Grupo apagado.' });
+      setFeedback({ type: "success", text: "Grupo apagado." });
       await carregar();
       onGrupoChange?.();
     } catch (err) {
-      setFeedback({ type: 'error', text: err.message || getFriendlyErrorMessage(err) });
+      setFeedback({
+        type: "error",
+        text: err.message || getFriendlyErrorMessage(err),
+      });
     } finally {
       setBusy(false);
     }
@@ -338,7 +362,8 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
     );
   }
 
-  const tamanho = membros.length > 0 ? membros.length : procura.n_candidato ?? 1;
+  const tamanho =
+    membros.length > 0 ? membros.length : (procura.n_candidato ?? 1);
   const max = grupo?.n_maximo ?? null;
   const cheio = max != null && tamanho >= max;
   const incompleto = grupo && max != null && tamanho < max;
@@ -385,9 +410,9 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
         <div
           role="alert"
           className={`rounded-xl px-3 py-2 text-sm font-medium ${
-            feedback.type === 'success'
-              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-              : 'bg-red-50 text-red-700 border border-red-200'
+            feedback.type === "success"
+              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+              : "bg-red-50 text-red-700 border border-red-200"
           }`}
         >
           {feedback.text}
@@ -397,23 +422,28 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
       {!grupo ? (
         <div className="space-y-3">
           <p className="text-sm text-slate-500 text-pretty">
-            Viajas sozinho por agora. Cria um grupo para incluir colegas — podes propor
-            acordo assim que houver quem queira viajar, mesmo sem o grupo cheio.
+            Viajas sozinho por agora. Cria um grupo para incluir colegas — podes
+            propor acordo assim que houver quem queira viajar, mesmo sem o grupo
+            cheio.
           </p>
           <fieldset className="space-y-2">
             <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200">
               Até quantas pessoas?
             </legend>
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Capacidade pretendida">
+            <div
+              className="flex flex-wrap gap-2"
+              role="group"
+              aria-label="Capacidade pretendida"
+            >
               {CAPACIDADES.map((n) => (
                 <button
                   key={n}
                   type="button"
                   onClick={() => setNMaximo(n)}
-                  className={`size-10 rounded-lg text-sm font-bold tabular-nums ${
+                  className={`size-10 rounded-lg text-sm font-bold tabular-nums transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
                     nMaximo === n
-                      ? 'bg-primary text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200'
+                      ? "bg-primary text-white"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
                   }`}
                 >
                   {n}
@@ -425,7 +455,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
             type="button"
             disabled={busy}
             onClick={handleCriarGrupo}
-            className="w-full flex items-center justify-center gap-2 bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60"
+            className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-xl disabled:opacity-60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
           >
             <UserPlus size={18} aria-hidden="true" />
             Criar grupo
@@ -435,8 +465,8 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
         <div className="space-y-4">
           {incompleto ? (
             <p className="text-sm text-slate-500 text-pretty">
-              Ainda há vagas. Podes propor ou negociar com o tamanho actual — não é preciso
-              encher o grupo.
+              Ainda há vagas. Podes propor ou negociar com o tamanho actual —
+              não é preciso encher o grupo.
             </p>
           ) : null}
 
@@ -447,17 +477,21 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
                 className="flex items-start gap-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2.5"
               >
                 <div className="mt-0.5 size-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-                  {(m.perfis?.nome_completo || '?').slice(0, 1).toUpperCase()}
+                  {(m.perfis?.nome_completo || "?").slice(0, 1).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                     {m.passenger_id === userId
-                      ? (papel.isOwner ? 'Tu (dono)' : 'Tu')
-                      : (m.perfis?.nome_completo || 'Passageiro')}
+                      ? papel.isOwner
+                        ? "Tu (dono)"
+                        : "Tu"
+                      : m.perfis?.nome_completo || "Passageiro"}
                   </p>
                   <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
                     <MapPin size={12} aria-hidden="true" />
-                    {m.pickup_name ? `Recolha: ${m.pickup_name}` : 'Sem ponto de recolha'}
+                    {m.pickup_name
+                      ? `Recolha: ${m.pickup_name}`
+                      : "Sem ponto de recolha"}
                   </p>
                 </div>
               </li>
@@ -476,17 +510,19 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
                     className="flex items-center gap-3 rounded-lg bg-amber-50/80 dark:bg-amber-950/20 px-3 py-2.5"
                   >
                     <div className="size-8 rounded-full bg-amber-100 flex items-center justify-center text-xs font-bold text-amber-800 shrink-0">
-                      {(p.perfis?.nome_completo || '?').slice(0, 1).toUpperCase()}
+                      {(p.perfis?.nome_completo || "?")
+                        .slice(0, 1)
+                        .toUpperCase()}
                     </div>
                     <p className="text-sm font-semibold flex-1 min-w-0 truncate">
-                      {p.perfis?.nome_completo || 'Passageiro'}
+                      {p.perfis?.nome_completo || "Passageiro"}
                     </p>
                     <div className="flex gap-2 shrink-0">
                       <button
                         type="button"
                         disabled={busy}
                         onClick={() => handleAprovar(p.id)}
-                        className="text-xs font-bold bg-primary text-white px-3 py-1.5 rounded-lg disabled:opacity-60"
+                        className="text-xs font-bold bg-primary hover:bg-primary/90 text-white px-3 py-1.5 rounded-lg disabled:opacity-60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
                       >
                         Aceitar
                       </button>
@@ -494,7 +530,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
                         type="button"
                         disabled={busy}
                         onClick={() => handleRejeitar(p.id)}
-                        className="text-xs font-bold border border-slate-200 px-3 py-1.5 rounded-lg disabled:opacity-60"
+                        className="text-xs font-bold border border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 px-3 py-1.5 rounded-lg disabled:opacity-60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
                       >
                         Recusar
                       </button>
@@ -506,26 +542,28 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
           ) : null}
 
           {cheio ? (
-            <p className="text-sm text-slate-500 text-pretty">Este grupo já está completo.</p>
+            <p className="text-sm text-slate-500 text-pretty">
+              Este grupo já está completo.
+            </p>
           ) : (
             <div className="border-t border-slate-100 pt-4 space-y-3">
               {papel.isOwner ? (
-              <button
-                type="button"
-                aria-expanded={telefoneFallbackOpen}
-                onClick={() => setTelefoneFallbackOpen((open) => !open)}
-                className="w-full min-h-12 bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60"
-              >
-                Convidar por telefone
-              </button>
+                <button
+                  type="button"
+                  aria-expanded={telefoneFallbackOpen}
+                  onClick={() => setTelefoneFallbackOpen((open) => !open)}
+                  className="w-full min-h-12 bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-xl disabled:opacity-60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+                >
+                  Convidar por telefone
+                </button>
               ) : null}
               <a
                 href={`https://wa.me/?text=${encodeURIComponent(
-                  'Junta-te ao meu grupo na Boleia Certa para partilharmos a boleia diária em Luanda.',
+                  "Junta-te ao meu grupo na Boleia Certa para partilharmos a boleia diária em Luanda.",
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-800 dark:border-slate-700 dark:text-slate-100"
+                className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 px-3 text-sm font-bold text-slate-800 dark:border-slate-700 dark:text-slate-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
               >
                 Partilhar via WhatsApp
               </a>
@@ -533,8 +571,8 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
               {telefoneFallbackOpen ? (
                 <form onSubmit={handleAdicionarMembro} className="space-y-3">
                   <p className="text-xs text-slate-500 text-pretty">
-                    Usa só se o colega ainda não aparecer na descoberta pública. Preferimos
-                    convites dentro da app.
+                    Usa só se o colega ainda não aparecer na descoberta pública.
+                    Preferimos convites dentro da app.
                   </p>
                   <label className="flex flex-col gap-1.5 text-sm font-semibold">
                     Telefone do colega
@@ -564,7 +602,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
                   <button
                     type="submit"
                     disabled={busy || !telefone.trim()}
-                    className="w-full min-h-12 bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60"
+                    className="w-full min-h-12 bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-xl disabled:opacity-60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
                   >
                     Adicionar ao grupo
                   </button>
@@ -591,26 +629,31 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
                 className="flex items-center justify-between gap-3"
                 data-geocoder-dismiss-chrome
               >
-              <h2
-                id="editar-grupo-title"
-                className="text-lg font-bold text-slate-900 dark:text-white"
-              >
-                Editar grupo
-              </h2>
-              <SheetFecharButton
-                disabled={busy}
-                data-testid="editar-grupo-fechar"
-                onClick={() => setEditarOpen(false)}
-              />
+                <h2
+                  id="editar-grupo-title"
+                  className="text-lg font-bold text-slate-900 dark:text-white"
+                >
+                  Editar grupo
+                </h2>
+                <SheetFecharButton
+                  disabled={busy}
+                  data-testid="editar-grupo-fechar"
+                  onClick={() => setEditarOpen(false)}
+                />
               </div>
             </div>
             {getGrupoEditSheetSubtitle() ? (
-              <p className="text-sm text-slate-500 text-pretty" data-testid="editar-grupo-subtitle">
+              <p
+                className="text-sm text-slate-500 text-pretty"
+                data-testid="editar-grupo-subtitle"
+              >
                 {getGrupoEditSheetSubtitle()}
               </p>
             ) : null}
             <fieldset className="min-w-0 space-y-2">
-              <legend className="text-sm font-semibold">Tamanho desejado</legend>
+              <legend className="text-sm font-semibold">
+                Tamanho desejado
+              </legend>
               <div className="grid grid-cols-7 gap-1.5">
                 {CAPACIDADES.map((n) => {
                   const floor = Math.max(2, membros.length);
@@ -624,10 +667,10 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
                       aria-pressed={activo}
                       aria-label={String(n)}
                       onClick={() => setEditCapacidade(n)}
-                      className={`size-9 shrink-0 whitespace-nowrap rounded-lg text-sm font-bold tabular-nums disabled:opacity-40 ${
+                      className={`size-9 shrink-0 whitespace-nowrap rounded-lg text-sm font-bold tabular-nums disabled:opacity-40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
                         activo
-                          ? 'bg-primary text-white'
-                          : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
+                          ? "bg-primary text-white"
+                          : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
                       }`}
                     >
                       {n}
@@ -636,7 +679,8 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
                 })}
               </div>
               <p className="text-xs text-slate-500">
-                Mínimo {Math.max(2, membros.length)} — os colegas têm de sair antes de reduzir.
+                Mínimo {Math.max(2, membros.length)} — os colegas têm de sair
+                antes de reduzir.
               </p>
             </fieldset>
             <AddressInput
@@ -657,7 +701,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
               type="button"
               disabled={busy}
               onClick={handleGuardarEdicao}
-              className="w-full min-h-12 bg-primary text-white font-bold rounded-xl disabled:opacity-60"
+              className="w-full min-h-12 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl disabled:opacity-60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
             >
               Guardar
             </button>
@@ -675,15 +719,18 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
         >
           <div className="space-y-4 px-4 pb-sheet">
             <SheetDragHandle />
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Apagar grupo?</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              Apagar grupo?
+            </h2>
             <p className="text-sm text-slate-500 text-pretty">
-              Só disponível quando és o único membro e não há acordo activo. Esta acção não se desfaz.
+              Só disponível quando és o único membro e não há acordo activo.
+              Esta acção não se desfaz.
             </p>
             <button
               type="button"
               disabled={busy}
               onClick={handleApagar}
-              className="w-full min-h-12 bg-red-600 text-white font-bold rounded-xl disabled:opacity-60"
+              className="w-full min-h-12 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl disabled:opacity-60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
             >
               Apagar grupo
             </button>
@@ -691,7 +738,7 @@ const GrupoProcuraPanel = ({ procura, userId, onGrupoChange }) => {
               type="button"
               disabled={busy}
               onClick={() => setApagarOpen(false)}
-              className="w-full min-h-12 border border-slate-200 font-bold rounded-xl dark:border-slate-700"
+              className="w-full min-h-12 border border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold rounded-xl dark:border-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
             >
               Cancelar
             </button>

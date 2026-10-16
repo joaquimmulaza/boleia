@@ -1,0 +1,11 @@
+--- src/components/GrupoProcuraPanel.jsx
++++ src/components/GrupoProcuraPanel.jsx
+@@ -525,7 +525,7 @@
+                 )}`}
+                 target="_blank"
+                 rel="noopener noreferrer"
+-                className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-800 dark:border-slate-700 dark:text-slate-100"
++                className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 px-3 text-sm font-bold text-slate-800 dark:border-slate-700 dark:text-slate-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+               >
+                 Partilhar via WhatsApp
+               </a>

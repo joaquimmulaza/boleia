@@ -1,34 +1,32 @@
-import React, { useState } from 'react';
-import { ChevronRight } from 'lucide-react';
-import OverlayShell from './OverlayShell';
-import SheetDragHandle from './SheetDragHandle';
-import FaltaAgreementDatePicker from './FaltaAgreementDatePicker';
+import React, { useState } from "react";
+import { ChevronRight } from "lucide-react";
+import OverlayShell from "./OverlayShell";
+import SheetDragHandle from "./SheetDragHandle";
+import FaltaAgreementDatePicker from "./FaltaAgreementDatePicker";
 import {
   isFaltaEsteMesAteHoje,
   isFutureFaltaDate,
   resolveLogAbsenceDateBounds,
-} from '../utils/faltasDisplay';
-import {
-  isPassageiroProprioFaltaDataSubmissivel,
-} from '../utils/passageiroFaltaPrazo';
-import { isDataDiaViagemAcordo } from '../utils/faltasDiasAcordo';
-import { computeFaltaDescontoForIsoDate } from '../utils/faltaDesconto';
-import { formatKwanza } from '../utils/formatKwanza';
-import FaltaPrevistaBadge from './FaltaPrevistaBadge';
+} from "../utils/faltasDisplay";
+import { isPassageiroProprioFaltaDataSubmissivel } from "../utils/passageiroFaltaPrazo";
+import { isDataDiaViagemAcordo } from "../utils/faltasDiasAcordo";
+import { computeFaltaDescontoForIsoDate } from "../utils/faltaDesconto";
+import { formatKwanza } from "../utils/formatKwanza";
+import FaltaPrevistaBadge from "./FaltaPrevistaBadge";
 import {
   FALTA_DATA_HELP_MOTORISTA,
   FALTA_DATA_HELP_PASSAGEIRO,
   FALTA_DATA_INLINE_ERRO_DIA,
-} from '../copy/faltasLogAbsenceCopy.js';
+} from "../copy/faltasLogAbsenceCopy.js";
 
 /**
  * @typedef {'ida' | 'regresso' | 'ambas'} ViagemFalta
  */
 
 const VIAGENS = [
-  { value: 'ambas', label: 'Ida e regresso (dia completo)' },
-  { value: 'ida', label: 'Só ida (meia quota)' },
-  { value: 'regresso', label: 'Só regresso (meia quota)' },
+  { value: "ambas", label: "Ida e regresso (dia completo)" },
+  { value: "ida", label: "Só ida (meia quota)" },
+  { value: "regresso", label: "Só regresso (meia quota)" },
 ];
 
 /**
@@ -42,7 +40,12 @@ const VIAGENS = [
 function descontoDesteDia(quotaMensalKz, isoDate, diasSemanaAcordo, viagem) {
   if (!isoDate) return null;
   try {
-    return computeFaltaDescontoForIsoDate(quotaMensalKz, isoDate, diasSemanaAcordo, viagem);
+    return computeFaltaDescontoForIsoDate(
+      quotaMensalKz,
+      isoDate,
+      diasSemanaAcordo,
+      viagem,
+    );
   } catch {
     return null;
   }
@@ -73,20 +76,24 @@ const LogAbsenceModal = ({
   diasSemanaAcordo = null,
   referenceDate = new Date(),
 }) => {
-  const perfilNorm = String(tipoPerfil || '').toLowerCase();
-  const isPassageiro = perfilNorm === 'passageiro';
-  const isMotorista = perfilNorm === 'motorista';
-  const tipoDefault = isPassageiro ? 'Passageiro' : isMotorista ? 'Motorista' : '';
+  const perfilNorm = String(tipoPerfil || "").toLowerCase();
+  const isPassageiro = perfilNorm === "passageiro";
+  const isMotorista = perfilNorm === "motorista";
+  const tipoDefault = isPassageiro
+    ? "Passageiro"
+    : isMotorista
+      ? "Motorista"
+      : "";
   /** Passageiro na própria vaga (não motorista a registar outro). */
   const isPassageiroLocked = isPassageiro;
 
   const [formData, setFormData] = useState(() => ({
-    dataFalta: '',
+    dataFalta: "",
     tipo: tipoDefault,
-    observacao: '',
-    viagem: /** @type {ViagemFalta} */ ('ambas'),
+    observacao: "",
+    viagem: /** @type {ViagemFalta} */ ("ambas"),
   }));
-  const [dataErro, setDataErro] = useState('');
+  const [dataErro, setDataErro] = useState("");
 
   if (!isOpen) return null;
 
@@ -100,19 +107,20 @@ const LogAbsenceModal = ({
     diasSemanaAcordo,
     formData.viagem,
   );
-  const showPrevista = isPassageiroLocked && isFutureFaltaDate(formData.dataFalta, referenceDate);
+  const showPrevista =
+    isPassageiroLocked && isFutureFaltaDate(formData.dataFalta, referenceDate);
   const dataHelpCopy = isPassageiroLocked
     ? FALTA_DATA_HELP_PASSAGEIRO
     : FALTA_DATA_HELP_MOTORISTA;
 
   const resetForm = () => {
     setFormData({
-      dataFalta: '',
+      dataFalta: "",
       tipo: tipoDefault,
-      observacao: '',
-      viagem: 'ambas',
+      observacao: "",
+      viagem: "ambas",
     });
-    setDataErro('');
+    setDataErro("");
   };
 
   const handleClose = () => {
@@ -122,7 +130,7 @@ const LogAbsenceModal = ({
 
   const validateData = (iso) => {
     if (!iso) {
-      setDataErro('');
+      setDataErro("");
       return false;
     }
     if (!isDataDiaViagemAcordo(iso, diasSemanaAcordo)) {
@@ -133,10 +141,10 @@ const LogAbsenceModal = ({
       ? isPassageiroProprioFaltaDataSubmissivel(iso, referenceDate)
       : isFaltaEsteMesAteHoje(iso, referenceDate);
     if (!boundsOk) {
-      setDataErro('');
+      setDataErro("");
       return false;
     }
-    setDataErro('');
+    setDataErro("");
     return true;
   };
 
@@ -151,7 +159,7 @@ const LogAbsenceModal = ({
     if (!validateData(formData.dataFalta)) return;
     onSubmit({
       ...formData,
-      tipo: isPassageiroLocked ? tipoDefault : (formData.tipo || tipoDefault),
+      tipo: isPassageiroLocked ? tipoDefault : formData.tipo || tipoDefault,
     });
     resetForm();
   };
@@ -174,7 +182,7 @@ const LogAbsenceModal = ({
           <button
             type="button"
             onClick={handleClose}
-            className="text-sm font-semibold text-slate-900 dark:text-white"
+            className="text-sm font-semibold text-slate-900 hover:text-slate-700 dark:text-white dark:hover:text-slate-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 rounded-sm"
           >
             Fechar
           </button>
@@ -184,7 +192,10 @@ const LogAbsenceModal = ({
           Registar Falta
         </h3>
 
-        <span id="dataFalta-label" className="mt-1 text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+        <span
+          id="dataFalta-label"
+          className="mt-1 text-[13px] font-semibold text-slate-900 dark:text-slate-100"
+        >
           Data
         </span>
         <div className="flex flex-wrap items-center gap-2">
@@ -220,7 +231,10 @@ const LogAbsenceModal = ({
           </p>
         ) : null}
 
-        <label htmlFor="tipoFalta" className="mt-1 text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+        <label
+          htmlFor="tipoFalta"
+          className="mt-1 text-[13px] font-semibold text-slate-900 dark:text-slate-100"
+        >
           Tipo
         </label>
         {isPassageiroLocked ? (
@@ -237,12 +251,17 @@ const LogAbsenceModal = ({
               id="tipoFalta"
               className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-1.5 pr-10 text-[15px] text-slate-900 outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-900 dark:text-white"
               value={formData.tipo || tipoDefault}
-              onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, tipo: e.target.value })
+              }
             >
               <option value="Motorista">Motorista</option>
               <option value="Passageiro">Passageiro</option>
             </select>
-            <ChevronRight className="pointer-events-none absolute right-4 top-1/2 size-3.5 -translate-y-1/2 text-slate-500" aria-hidden="true" />
+            <ChevronRight
+              className="pointer-events-none absolute right-4 top-1/2 size-3.5 -translate-y-1/2 text-slate-500"
+              aria-hidden="true"
+            />
           </div>
         )}
 
@@ -257,8 +276,8 @@ const LogAbsenceModal = ({
                 key={opcao.value}
                 className={`flex items-center gap-3 rounded-xl border px-3.5 py-1.5 text-sm text-slate-900 dark:text-slate-100 ${
                   selected
-                    ? 'border-[1.5px] border-primary bg-primary/10 font-semibold'
-                    : 'border-slate-200 font-normal dark:border-slate-700'
+                    ? "border-[1.5px] border-primary bg-primary/10 font-semibold"
+                    : "border-slate-200 font-normal dark:border-slate-700"
                 }`}
               >
                 <input
@@ -266,10 +285,12 @@ const LogAbsenceModal = ({
                   name="viagemFalta"
                   value={opcao.value}
                   checked={selected}
-                  onChange={() => setFormData({
-                    ...formData,
-                    viagem: /** @type {ViagemFalta} */ (opcao.value),
-                  })}
+                  onChange={() =>
+                    setFormData({
+                      ...formData,
+                      viagem: /** @type {ViagemFalta} */ (opcao.value),
+                    })
+                  }
                   className="size-4 accent-primary"
                 />
                 {opcao.label}
@@ -278,7 +299,10 @@ const LogAbsenceModal = ({
           })}
         </fieldset>
 
-        <label htmlFor="observacao" className="mt-1 text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+        <label
+          htmlFor="observacao"
+          className="mt-1 text-[13px] font-semibold text-slate-900 dark:text-slate-100"
+        >
           Observação (opcional)
         </label>
         <textarea
@@ -286,7 +310,9 @@ const LogAbsenceModal = ({
           className="min-h-10 w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-2 text-[15px] text-slate-900 outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-900 dark:text-white"
           placeholder="Adicionar notas sobre a ausência..."
           value={formData.observacao}
-          onChange={(e) => setFormData({ ...formData, observacao: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, observacao: e.target.value })
+          }
         />
 
         <div
@@ -294,9 +320,9 @@ const LogAbsenceModal = ({
           data-testid="falta-desconto-help"
         >
           <p className="text-xs leading-4 text-slate-500 dark:text-slate-400">
-            Ida e regresso descontam o dia completo da quota.
-            Só ida ou só regresso descontam metade (meia quota).
-            O valor calcula-se automaticamente com a quota do acordo.
+            Ida e regresso descontam o dia completo da quota. Só ida ou só
+            regresso descontam metade (meia quota). O valor calcula-se
+            automaticamente com a quota do acordo.
           </p>
         </div>
 
@@ -314,7 +340,7 @@ const LogAbsenceModal = ({
           <button
             type="button"
             onClick={handleClose}
-            className="flex-1 rounded-xl border border-slate-200 py-1.5 text-[15px] font-semibold text-slate-900 dark:border-slate-700 dark:text-white"
+            className="flex-1 rounded-xl border border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 py-1.5 text-[15px] font-semibold text-slate-900 dark:border-slate-700 dark:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
             title="Cancelar"
           >
             Cancelar
@@ -322,7 +348,7 @@ const LogAbsenceModal = ({
           <button
             type="submit"
             disabled={!tipoDefault || !formData.dataFalta || hasDataError}
-            className="flex-1 rounded-xl bg-primary py-1.5 text-[15px] font-semibold text-[#06130b] disabled:opacity-60"
+            className="flex-1 rounded-xl bg-primary hover:bg-primary/90 py-1.5 text-[15px] font-semibold text-[#06130b] disabled:opacity-60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
             title="Guardar"
           >
             Guardar
