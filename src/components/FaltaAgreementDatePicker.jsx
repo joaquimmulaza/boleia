@@ -6,6 +6,14 @@ import { firstDayOfMonthFromIso } from '../utils/faltasDisplay';
 
 const WEEKDAY_LABELS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
+// Caching the Intl.DateTimeFormat instance significantly improves performance
+// compared to instantiating on every render.
+const monthLabelFormatter = new Intl.DateTimeFormat('pt-PT', {
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
 /**
  * @param {string} mesInicio YYYY-MM-01
  * @returns {{ year: number, month: number, daysInMonth: number, startPad: number }}
@@ -84,11 +92,7 @@ export default function FaltaAgreementDatePicker({
   );
 
   const { year, month, daysInMonth, startPad } = parseMonth(viewMonth);
-  const monthLabel = new Intl.DateTimeFormat('pt-PT', {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(Date.UTC(year, month - 1, 1)));
+  const monthLabel = monthLabelFormatter.format(new Date(Date.UTC(year, month - 1, 1)));
 
   const cells = useMemo(() => {
     const items = [];
