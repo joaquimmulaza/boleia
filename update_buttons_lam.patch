@@ -1,0 +1,29 @@
+--- src/components/LogAbsenceModal.jsx
++++ src/components/LogAbsenceModal.jsx
+@@ -174,7 +174,7 @@
+           <button
+             type="button"
+             onClick={handleClose}
+-            className="text-sm font-semibold text-slate-900 dark:text-white"
++            className="text-sm font-semibold text-slate-900 hover:text-slate-700 dark:text-white dark:hover:text-slate-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 rounded-sm"
+           >
+             Fechar
+           </button>
+@@ -314,14 +314,14 @@
+           <button
+             type="button"
+             onClick={handleClose}
+-            className="flex-1 rounded-xl border border-slate-200 py-1.5 text-[15px] font-semibold text-slate-900 dark:border-slate-700 dark:text-white"
++            className="flex-1 rounded-xl border border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 py-1.5 text-[15px] font-semibold text-slate-900 dark:border-slate-700 dark:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+             title="Cancelar"
+           >
+             Cancelar
+           </button>
+           <button
+             type="submit"
+             disabled={!tipoDefault || !formData.dataFalta || hasDataError}
+-            className="flex-1 rounded-xl bg-primary py-1.5 text-[15px] font-semibold text-[#06130b] disabled:opacity-60"
++            className="flex-1 rounded-xl bg-primary hover:bg-primary/90 py-1.5 text-[15px] font-semibold text-[#06130b] disabled:opacity-60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+             title="Guardar"
+           >
+             Guardar
