@@ -71,12 +71,7 @@ export function addDaysLuandaISO(isoDate, days) {
   const base = String(isoDate || '').slice(0, 10);
   const d = new Date(`${base}T12:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: ADENDA_TIMEZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(d);
+  return luandaDateFmt.format(d);
 }
 
 /**
