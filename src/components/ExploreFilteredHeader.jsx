@@ -40,14 +40,14 @@ export default function ExploreFilteredHeader({ search, title }) {
         <button
           type="button"
           onClick={editHref}
-          className="rounded-full px-4 py-2 text-sm font-bold text-foreground"
+          className="rounded-full px-4 py-2 text-sm font-bold text-foreground hover:bg-accent/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
         >
           Editar
         </button>
         <button
           type="button"
           onClick={() => navigate('/explorar')}
-          className="rounded-full px-4 py-2 text-sm font-bold text-foreground"
+          className="rounded-full px-4 py-2 text-sm font-bold text-foreground hover:bg-accent/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
         >
           Limpar
         </button>

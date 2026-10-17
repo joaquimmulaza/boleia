@@ -16,3 +16,7 @@
 ## 2024-05-14 - Interactive elements lacking standardized focus visible styles
 **Learning:** Bespoke layout elements built using raw `<button>` elements (e.g. within card interactions like `DriverOfertaCard` or specific panels like `GrupoDescobertaPanel`) often miss out on the application's global design system focus indicators, compromising keyboard accessibility compared to the standard `<Button />` component.
 **Action:** Always scan for plain `<button>` tags during UI/UX sweeps and explicitly ensure they carry standard interaction classes, specifically `focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900`, along with appropriate hover transitions.
+
+## 2024-10-17 - Missing Focus and Hover on Route Summary Actions
+**Learning:** Bespoke layout elements, like the filtered search headers (e.g., `ExploreFilteredHeader.jsx`), often use plain `<button>` tags instead of standard generic `<Button />` components for specific formatting needs. These components are prone to missing interactive states like `hover` and standard accessibility features like `focus-visible`.
+**Action:** When working on UI headers or bespoke inline buttons, always verify and explicitly add standard Tailwind interactive classes (`hover:bg-accent/50`) and focus indicators (`focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900`) to maintain keyboard accessibility and visual interaction polish.
